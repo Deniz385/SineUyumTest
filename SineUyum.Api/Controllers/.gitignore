@@ -1,0 +1,82 @@
+# Visual Studio ve .NET için Standart .gitignore Dosyasý
+
+## Kullanýcýya özel dosyalar (User-specific files)
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## Visual Studio tarafýndan oluþturulan klasörler (Visual Studio generated folders)
+.vs/
+*.cr/
+*.[Cc]ache/
+ClientBin/
+[Bb]in/
+[Dd]ebug/
+[Dd]ebug[Ss]ymbols/
+[Oo]bj/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+build/
+bld/
+[Bb]uild[Ss]erver/
+[Dd]rop/
+[Ll]ogs/
+
+## Yeniden oluþturulabilir dosyalar (ReSharper)
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+## Test sonuçlarý dosyalarý (Test results)
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.[Pp]ublish.xml
+*.[Pp]ublish[Pp]rofiles
+*.builds
+*.pidb
+*.log
+*.scc
+
+## Paketler ve baðýmlýlýklar (Packages)
+*.nupkg
+*.nuget.props
+*.nuget.targets
+packages/
+*.lock.json
+
+## Hassas ve yerel ayar dosyalarý (Secrets and local settings)
+# UserSecrets C# projesi içindeki secrets.json dosyasýný gizler
+**/secrets.json
+
+# Yerel geliþtirme ortamýna özel appsettings dosyasý
+appsettings.Development.json
+
+## Çeþitli (Miscellaneous)
+*.docmd
+*.pdb
+*_i.c
+*_p.c
+*_i.h
+*.ilk
+*.meta
+*.obj
+*.pch
+*.pre
+*.pfx
+*.publishsettings
+.ntvs_analysis.dat
+.deploy_version
+~$*
+
+# Rider IDE dosyalarý
+.idea/
+
+# Kendi Projemize Özel Ekleme (Our Project-Specific Addition)
+# -------------------------------------------------------------------
+# SQLite veritabaný dosyalarýný yoksay
+*.db
+*.db-journal

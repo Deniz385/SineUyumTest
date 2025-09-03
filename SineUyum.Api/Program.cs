@@ -35,15 +35,27 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
     };
-    options.Events = new JwtBearerEvents { OnAuthenticationFailed = context => { Console.WriteLine("--- TOKEN DOÐRULAMASI BAÞARISIZ OLDU ---"); Console.WriteLine("Exception: " + context.Exception.ToString()); return Task.CompletedTask; }, OnTokenValidated = context => { Console.WriteLine("--- Token baþarýyla doðrulandý. ---"); return Task.CompletedTask; } };
+    options.Events = new JwtBearerEvents { OnAuthenticationFailed = context => { Console.WriteLine("--- TOKEN DOï¿½RULAMASI BAï¿½ARISIZ OLDU ---"); Console.WriteLine("Exception: " + context.Exception.ToString()); return Task.CompletedTask; }, OnTokenValidated = context => { Console.WriteLine("--- Token baï¿½arï¿½yla doï¿½rulandï¿½. ---"); return Task.CompletedTask; } };
 });
 
-// Authorization'ý ekliyoruz
+// Authorization'ï¿½ ekliyoruz
 builder.Services.AddAuthorization();
+builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options => { options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme { Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"", Name = "Authorization", In = Microsoft.OpenApi.Models.ParameterLocation.Header, Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey, Scheme = "Bearer" }); options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement { { new Microsoft.OpenApi.Models.OpenApiSecurityScheme { Reference = new Microsoft.OpenApi.Models.OpenApiReference { Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme, Id = "Bearer" } }, Array.Empty<string>() } }); });
+var corsPolicyName = "AllowReactApp";
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: corsPolicyName,
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:5173") // React uygulamasÄ±nÄ±n adresi
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+});
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -52,56 +64,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
     Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
 }
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
-
-// --- MÝNÝMAL API ENDPOINT'LERÝ ---
-
-// Register Endpoint'i
-app.MapPost("/register", async (UserManager<AppUser> userManager, RegisterDto registerDto) =>
-{
-    var user = new AppUser { UserName = registerDto.Username, Email = registerDto.Email };
-    var result = await userManager.CreateAsync(user, registerDto.Password);
-    return result.Succeeded ? Results.Ok("Kullanýcý baþarýyla oluþturuldu.") : Results.BadRequest(result.Errors);
-});
-
-// Login Endpoint'i
-app.MapPost("/login", async (UserManager<AppUser> userManager, IConfiguration config, LoginDto loginDto) =>
-{
-    var user = await userManager.FindByNameAsync(loginDto.Username);
-    if (user != null && await userManager.CheckPasswordAsync(user, loginDto.Password))
-    {
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, user.Id),
-            new(ClaimTypes.Name, user.UserName!) // <--- DEÐÝÞÝKLÝK BURADA
-        };
-
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["Jwt:Key"]!)); // <--- DEÐÝÞÝKLÝK BURADA
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
-        var tokenDescriptor = new SecurityTokenDescriptor
-        {
-            Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.Now.AddDays(7),
-            SigningCredentials = creds,
-            Issuer = config["Jwt:Issuer"],
-            Audience = config["Jwt:Audience"]
-        };
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        return Results.Ok(new { token = tokenHandler.WriteToken(token) });
-    }
-    return Results.Unauthorized();
-});
-
-// Korumalý Test Endpoint'i
-app.MapGet("/test-auth", (ClaimsPrincipal user) =>
-{
-    var username = user.FindFirstValue(ClaimTypes.Name);
-    return Results.Ok($"Token geçerli! Giriþ yapan kullanýcý: {username}");
-}).RequireAuthorization(); // <-- Bu endpoint'in yetki gerektirdiðini belirtiyoruz.
-
+app.MapControllers();
 app.Run();
 
 public partial class Program { }

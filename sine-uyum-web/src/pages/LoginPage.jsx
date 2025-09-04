@@ -4,8 +4,7 @@ import axios from 'axios'; // 1. Axios'u projemize dahil ediyoruz.
 
 // 2. API'mizin ana adresini bir değişkene atıyoruz.
 // Bu, gelecekte adresi değiştirmemiz gerektiğinde tek bir yerden yapmamızı sağlar.
-const API_URL = 'http://localhost:5074'; // Codespaces'teki HTTP adresimiz.
-
+const API_URL = 'https://super-duper-dollop-g959prvw5q539q6-5074.app.github.dev';
 export const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');

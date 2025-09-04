@@ -51,18 +51,28 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: corsPolicyName,
         policy =>
         {
-            policy.WithOrigins("http://localhost:5173") // React uygulamasının adresi
+            policy.WithOrigins("http://localhost:5173", "https://super-duper-dollop-g959prvw5q539q6-5173.app.github.dev/") // React uygulamasının adresi
+
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
 });
 var app = builder.Build();
 
+// Program.cs
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
-    Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
+    // app.UseSwaggerUI(); // <-- Bu eski satırı sil veya yorum yap
+
+    // YENİ BLOK:
+    app.UseSwaggerUI(options =>
+    {
+        // Bu satır, Swagger'ın hangi tanım dosyasını kullanacağını belirtir.
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "SineUyum API V1");
+        // Bu sihirli satır, ana dizinin ('/') Swagger arayüzü olmasını sağlar.
+        options.RoutePrefix = string.Empty; 
+    });
 }
 //app.UseHttpsRedirection();
 app.UseAuthentication();

@@ -7,6 +7,9 @@ import { Layout } from './components/Layout';
 // 1. Oluşturduğumuz AuthProvider'ı import edelim
 import { AuthProvider } from './context/AuthContext';
 import { RegisterPage } from './pages/RegisterPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { SearchResultsPage } from './pages/SearchResultsPage';
+import { MovieDetailPage } from './pages/MovieDetailPage';
 
 function App() {
   return (
@@ -27,6 +30,9 @@ function App() {
             }
           >
             <Route path="/home" element={<HomePage />} />
+            <Route path="/profile/:userId" element={<ProfilePage />} />
+            <Route path="/search" element={<SearchResultsPage />} />
+            <Route path="/movie/:movieId" element={<MovieDetailPage />} />
           </Route>
         </Routes>
       </AuthProvider>

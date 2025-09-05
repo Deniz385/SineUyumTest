@@ -1,36 +1,71 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
 
-// 1. Context'i oluşturuyoruz. Başlangıçta boş.
 const AuthContext = createContext(null);
 
-// 2. "Provider" component'ini oluşturuyoruz. Bu, tüm uygulamamızı saracak
-//    ve context'in değerlerini sağlayacak olan component'tir.
+// Bu yardımcı fonksiyon, token'dan kullanıcı bilgilerini güvenli bir şekilde çıkarır.
+const getUserFromToken = (token) => {
+  if (!token) return null;
+  try {
+    const decodedToken = jwtDecode(token);
+    // Token'ın süresinin dolup dolmadığını kontrol et
+    if (decodedToken.exp * 1000 < Date.now()) {
+      return null; // Süresi dolmuş token
+    }
+    
+    // --- DEĞİŞİKLİK BURADA ---
+    // ID için hem uzun ismi (nameidentifier) hem de kısa ismi (nameid) kontrol et.
+    // Hangisi varsa onu kullan.
+    const userId = decodedToken["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] || decodedToken.nameid;
+    const username = decodedToken["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] || decodedToken.unique_name;
+
+    return { id: userId, username: username };
+
+  } catch (error) {
+    console.error("Token çözümlenemedi:", error);
+    return null;
+  }
+};
+
+
 export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
-  // State'imizi localStorage'daki token değeriyle başlatıyoruz.
-  // Sayfa yenilendiğinde bile giriş durumunu korur.
   const [token, setToken] = useState(localStorage.getItem('token'));
+  const [user, setUser] = useState(null);
 
-  // Giriş yapıldığında çağrılacak fonksiyon
+  useEffect(() => {
+    const userData = getUserFromToken(token);
+    if (userData) {
+      setUser(userData);
+    } else {
+      // Geçersiz token varsa temizle
+      logoutAction();
+    }
+  }, []); // Bu useEffect'in sadece ilk açılışta bir kez çalışması yeterli
+
   const loginAction = (newToken) => {
-    if (newToken) {
+    const userData = getUserFromToken(newToken);
+    if (userData) {
       setToken(newToken);
       localStorage.setItem('token', newToken);
-      navigate('/home'); // Giriş sonrası anasayfaya yönlendir
+      setUser(userData);
+      navigate('/home');
+    } else {
+      console.error("Giriş denenen token geçersiz.");
     }
   };
 
-  // Çıkış yapıldığında çağrılacak fonksiyon
   const logoutAction = () => {
     setToken(null);
+    setUser(null);
     localStorage.removeItem('token');
-    navigate('/login'); // Çıkış sonrası login sayfasına yönlendir
+    navigate('/login');
   };
 
-  // Context aracılığıyla diğer component'lere sağlanacak olan değerler
   const value = {
     token,
+    user,
     loginAction,
     logoutAction,
   };
@@ -38,8 +73,6 @@ export const AuthProvider = ({ children }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// 3. Kendi hook'umuzu oluşturuyoruz. Bu, diğer component'lerin context'e
-//    daha kolay erişmesini sağlayacak. (örn: const { token } = useAuth();)
 export const useAuth = () => {
   return useContext(AuthContext);
 };

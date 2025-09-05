@@ -54,7 +54,7 @@ builder.Services.AddAuthentication(options =>
 
 // --- AUTHORIZATION SERVİSİ ---
 builder.Services.AddAuthorization();
-
+builder.Services.AddHttpClient();
 // --- CONTROLLERS & SWAGGER ---
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

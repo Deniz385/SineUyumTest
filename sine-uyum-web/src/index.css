@@ -1,4 +1,7 @@
-/* Genel Sıfırlama ve Font Ayarları */
+/* ==========================================================================
+   1. Genel Stiller ve Sıfırlamalar (Global Styles & Resets)
+   ========================================================================== */
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
@@ -8,126 +11,224 @@ body {
   color: #333;
 }
 
-/* Formları Ortalamak ve Stil Vermek İçin */
+/* ==========================================================================
+   2. Layout Konteynerleri (Layout Containers)
+   ========================================================================== */
+
+/* Giriş ve Kayıt gibi form sayfaları için genel konteyner */
 .form-container {
   width: 100%;
   max-width: 400px;
   margin: 80px auto;
   padding: 30px;
-  border: 1px solid #ddd;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   background-color: #fff;
 }
 
-.form-container h1 {
-  text-align: center;
-  margin-bottom: 25px;
-  color: #333;
-}
-
-.form-container input {
-  width: 100%;
-  padding: 12px;
-  margin-bottom: 15px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  box-sizing: border-box; /* Bu önemlidir */
-}
-
-.form-container button {
-  width: 100%;
-  padding: 12px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: bold;
-  transition: background-color 0.2s;
-}
-
-.form-container button:hover {
-  background-color: #0056b3;
-}
-
-.form-container button:disabled {
-  background-color: #aaa;
-  cursor: not-allowed;
-}
-
-.form-container p {
-  text-align: center;
-  margin-top: 20px;
-}
-
-.form-container a {
-  color: #007bff;
-  text-decoration: none;
-  font-weight: bold;
-}
-
-.form-container a:hover {
-  text-decoration: underline;
-}
-
-/* Hata ve Başarı Mesajları */
-.message {
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 15px;
-  text-align: center;
-}
-
-.error-message {
-  background-color: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-}
-
-.success-message {
-  background-color: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-}
-
+/* Profil, Arama Sonuçları gibi sayfalar için genel konteyner */
 .page-container {
   width: 100%;
   max-width: 800px;
   margin: 40px auto;
   padding: 30px;
   text-align: center;
-  border: 1px solid #ddd;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   background-color: #fff;
 }
 
-/* Genel amaçlı buton stili */
-.button {
-  padding: 12px 24px;
-  background-color: #007bff;
+
+/* ==========================================================================
+   3. Sayfa ve Bileşenlere Özel Stiller
+   ========================================================================== */
+
+/* --- Navbar --- */
+.user-search-input {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #495057;
+  background-color: #343a40;
   color: white;
-  border: none;
-  border-radius: 8px;
+  font-size: 14px;
+}
+
+/* --- Ana Sayfa (HomePage) Film Şeritleri --- */
+.movie-row-container {
+  display: flex;
+  flex-wrap: nowrap; /* Kartların alt satıra geçmesini engelle */
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 20px;
+  padding-left: 5px;
+  scrollbar-width: none; /* Firefox için kaydırma çubuğunu gizle */
+  -ms-overflow-style: none;  /* IE and Edge için */
+  cursor: grab; /* Kullanıcıya sürüklenebilir olduğunu belirt */
+  user-select: none; /* Sürüklerken metin seçilmesini engelle */
+}
+
+/* Chrome, Safari, Opera için kaydırma çubuğunu gizle */
+.movie-row-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Sürükleme aktifken imleci değiştir */
+.movie-row-container.active-drag {
+    cursor: grabbing;
+    cursor: -webkit-grabbing;
+}
+
+.movie-row-link {
+  text-decoration: none;
+  flex-shrink: 0; /* Kartların küçülmesini engelle */
+  width: 180px;
+  margin-right: 16px;
+}
+
+.movie-row-card {
+  width: 100%;
+  transition: transform 0.2s ease-in-out;
+}
+
+.movie-row-card:hover {
+  transform: scale(1.05);
   cursor: pointer;
-  font-size: 16px;
-  font-weight: bold;
-  transition: background-color 0.2s;
+}
+
+.movie-row-poster {
+  height: 270px;
+  object-fit: cover;
+}
+
+/* --- Film Detay Sayfası (MovieDetailPage) --- */
+.movie-detail-container {
+  display: flex;
+  flex-direction: row;
+  text-align: left;
+  gap: 30px;
+  max-width: 1200px; /* Sayfayı daha geniş yap */
+}
+
+.movie-detail-poster {
+  width: 300px;
+  height: 450px;
+  border-radius: 12px;
+  object-fit: cover;
+  align-self: flex-start; /* Dikeyde en üste hizala */
+}
+
+.movie-detail-info {
+  flex: 1;
+}
+
+.tmdb-score-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 4px solid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.cast-list-visual {
+  display: flex;
+  overflow-x: auto;
+  gap: 15px;
+  padding-bottom: 15px;
+}
+
+.actor-card-visual {
+  flex: 0 0 100px; /* Her kartın genişliği sabit */
+  text-align: center;
+}
+
+.actor-card-visual img {
+  width: 100%;
+  height: 150px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+/* --- Profil Sayfası (ProfilePage) --- */
+.compatibility-score {
+  background-color: #d4edda;
+  color: #155724;
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.compatibility-score h2,
+.compatibility-score p {
+  margin: 0 0 5px 0;
+}
+
+.rated-movies-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 20px;
   margin-top: 20px;
 }
 
-.button:hover {
-  background-color: #0056b3;
+.rated-movie-card {
+  background-color: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  text-align: center;
 }
 
-.button:disabled {
-  background-color: #aaa;
-  cursor: not-allowed;
+.rated-movie-card img {
+  width: 100%;
+  height: 225px;
+  object-fit: cover;
 }
 
-/* Kullanıcı listesi için stil */
+.rated-movie-card .rated-movie-info {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  height: 80px;
+  justify-content: space-between;
+}
+
+.rated-movie-card .rated-movie-info strong {
+  font-size: 0.9rem;
+}
+
+.rated-movie-card .rated-movie-info span {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+.common-movies-table {
+  margin-top: 30px;
+  text-align: left;
+}
+
+.common-movies-table table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+.common-movies-table th,
+.common-movies-table td {
+  border: 1px solid #ddd;
+  padding: 12px;
+}
+
+.common-movies-table th {
+  background-color: #f8f9fa;
+  font-weight: bold;
+}
+
+.common-movies-table td:nth-child(2),
+.common-movies-table td:nth-child(3) {
+  text-align: center;
+}
+
+/* --- Arama Sonuçları Sayfası (SearchResultsPage) --- */
 .user-list {
   margin-top: 30px;
   text-align: left;
@@ -145,3 +246,4 @@ body {
   margin-bottom: 5px;
   border-radius: 4px;
 }
+

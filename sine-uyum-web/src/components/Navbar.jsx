@@ -1,10 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { UserSearch } from './UserSearch';
+import { MovieSearchBar } from './MovieSearchBar'; // Yeni film arama barını import et
 
-// 1. Stil objelerinin içini dolduruyoruz
 const navStyle = {
-  backgroundColor: '#212529', // Koyu bir arkaplan
+  backgroundColor: '#212529',
   padding: '1rem 2rem',
   color: 'white',
   display: 'flex',
@@ -14,7 +15,7 @@ const navStyle = {
 };
 
 const linkStyle = {
-  color: '#f8f9fa', // Hafif kırık beyaz
+  color: '#f8f9fa',
   textDecoration: 'none',
   margin: '0 15px',
   fontSize: '1rem',
@@ -36,9 +37,8 @@ const buttonStyle = {
   fontFamily: 'inherit',
 };
 
-
 export const Navbar = () => {
-  const { token, logoutAction } = useAuth();
+  const { token, user, logoutAction } = useAuth();
 
   return (
     <nav style={navStyle}>
@@ -47,12 +47,14 @@ export const Navbar = () => {
           SineUyum
         </Link>
       </div>
-      <div>
-        {/* Token varsa, Anasayfa ve Çıkış Yap butonunu göster */}
-        {token && (
+
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        {token && user && (
           <>
-            <Link to="/home" style={linkStyle}>
-              Anasayfa
+            <MovieSearchBar /> {/* YENİ FİLM ARAMA BARI */}
+            <UserSearch />
+            <Link to={`/profile/${user.id}`} style={linkStyle}>
+              Profilim
             </Link>
             <button onClick={logoutAction} style={buttonStyle}>
               Çıkış Yap

@@ -1,8 +1,9 @@
+// sine-uyum-web/src/components/Navbar.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { UserSearch } from './UserSearch';
-import { MovieSearchBar } from './MovieSearchBar'; // Yeni film arama barını import et
+import { MovieSearchBar } from './MovieSearchBar';
 
 const navStyle = {
   backgroundColor: '#212529',
@@ -51,8 +52,14 @@ export const Navbar = () => {
       <div style={{ display: 'flex', alignItems: 'center' }}>
         {token && user && (
           <>
-            <MovieSearchBar /> {/* YENİ FİLM ARAMA BARI */}
+            <MovieSearchBar />
             <UserSearch />
+            <Link to="/messages" style={linkStyle}> 
+              Mesajlar
+            </Link>
+            <Link to="/watchlist" style={linkStyle}>
+              İzleme Listem
+            </Link>
             <Link to={`/profile/${user.id}`} style={linkStyle}>
               Profilim
             </Link>

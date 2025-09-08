@@ -1,3 +1,4 @@
+// SineUyum.Api/Controllers/MoviesController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
@@ -92,8 +93,6 @@ namespace SineUyum.Api.Controllers
             }
         }
 
-        // --- YENİ EKLENEN METOTLAR ---
-
         [HttpGet("popular")]
         public async Task<IActionResult> GetPopularMovies()
         {
@@ -125,4 +124,3 @@ namespace SineUyum.Api.Controllers
         }
     }
 }
-

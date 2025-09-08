@@ -74,24 +74,24 @@ namespace SineUyum.Api.Controllers
 
             return Ok(users);
         }
+        
         [HttpGet("search")]
-[Authorize]
-public async Task<IActionResult> SearchUsers([FromQuery] string query)
-{
-    // Arama metni boşsa veya hiç yoksa, boş bir liste döndür
-    if (string.IsNullOrWhiteSpace(query))
-    {
-        return Ok(new List<AppUser>());
-    }
+        [Authorize]
+        public async Task<IActionResult> SearchUsers([FromQuery] string query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return Ok(new List<AppUser>());
+            }
 
-    var users = await _userManager.Users
-        // UserName içinde arama metni geçen kullanıcıları bul (büyük/küçük harf duyarsız)
-        .Where(u => u.UserName.ToLower().Contains(query.ToLower()))
-        .Select(u => new { u.Id, u.UserName })
-        .ToListAsync();
+            // UserName'in null olma ihtimaline karşı kontrol ekleyelim
+            var users = await _userManager.Users
+                .Where(u => u.UserName != null && u.UserName.ToLower().Contains(query.ToLower()))
+                .Select(u => new { u.Id, u.UserName })
+                .ToListAsync();
 
-    return Ok(users);
-}
+            return Ok(users);
+        }
 
         // --- JWT TOKEN OLUŞTURMA ---
         private string CreateToken(AppUser user)
@@ -110,8 +110,8 @@ public async Task<IActionResult> SearchUsers([FromQuery] string query)
                 Subject = new ClaimsIdentity(claims),
                 Expires = DateTime.UtcNow.AddDays(7),
                 SigningCredentials = creds,
-                Issuer = _configuration["Jwt:Issuer"],
-                Audience = _configuration["Jwt:Audience"]
+                Issuer = _configuration["Jwt:Issuer"]!,
+                Audience = _configuration["Jwt:Audience"]!
             };
 
             var tokenHandler = new JwtSecurityTokenHandler();

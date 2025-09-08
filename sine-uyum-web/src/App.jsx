@@ -10,6 +10,10 @@ import { RegisterPage } from './pages/RegisterPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SearchResultsPage } from './pages/SearchResultsPage';
 import { MovieDetailPage } from './pages/MovieDetailPage';
+import { WatchlistPage } from './pages/WatchlistPage';
+import { EditProfilePage } from './pages/EditProfilePage';
+import { MessagesPage } from './pages/MessagesPage';
+import { ConversationPage } from './pages/ConversationPage';
 
 function App() {
   return (
@@ -33,6 +37,10 @@ function App() {
             <Route path="/profile/:userId" element={<ProfilePage />} />
             <Route path="/search" element={<SearchResultsPage />} />
             <Route path="/movie/:movieId" element={<MovieDetailPage />} />
+            <Route path="/watchlist" element={<WatchlistPage />} />
+            <Route path="/profile/edit" element={<EditProfilePage />} />
+            <Route path="/messages" element={<MessagesPage />} />
+            <Route path="/messages/:otherUserId" element={<ConversationPage />} />
           </Route>
         </Routes>
       </AuthProvider>

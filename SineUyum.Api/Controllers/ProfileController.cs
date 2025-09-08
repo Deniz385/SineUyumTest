@@ -1,9 +1,12 @@
+// SineUyum.Api/Controllers/ProfileController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
+using SineUyum.Api.Dtos; // Yeni DTO'yu ekledik
 using SineUyum.Api.Models;
+using System.Security.Claims; // Claims için eklendi
 
 namespace SineUyum.Api.Controllers
 {
@@ -21,7 +24,7 @@ namespace SineUyum.Api.Controllers
             _userManager = userManager;
         }
 
-        // GET: /api/profile/{userId}
+        // GET: /api/profile/{userId} - YENİ ALANLAR EKLENDİ
         [HttpGet("{userId}")]
         public async Task<IActionResult> GetUserProfile(string userId)
         {
@@ -32,8 +35,6 @@ namespace SineUyum.Api.Controllers
                 return NotFound("Kullanıcı bulunamadı.");
             }
 
-            // Kullanıcının oyladığı filmleri, film bilgileriyle birlikte çekiyoruz.
-            // Include(r => r.Movie) sayesinde ilgili filmin tüm detaylarını da alıyoruz.
             var userRatings = await _context.UserRatings
                 .Where(r => r.UserId == userId)
                 .Include(r => r.Movie) 
@@ -50,10 +51,41 @@ namespace SineUyum.Api.Controllers
             {
                 user.Id,
                 user.UserName,
+                user.Bio, // Bio eklendi
+                user.ProfileImageUrl, // Profil fotoğrafı URL'si eklendi
                 Ratings = userRatings
             };
 
             return Ok(profileData);
+        }
+
+        // --- YENİ METOT: Profili güncellemek için ---
+        [HttpPut]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto updateDto)
+        {
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (currentUserId == null)
+            {
+                return Unauthorized();
+            }
+
+            var user = await _userManager.FindByIdAsync(currentUserId);
+            if (user == null)
+            {
+                return NotFound("Kullanıcı bulunamadı.");
+            }
+
+            user.Bio = updateDto.Bio;
+            user.ProfileImageUrl = updateDto.ProfileImageUrl;
+
+            var result = await _userManager.UpdateAsync(user);
+
+            if (!result.Succeeded)
+            {
+                return BadRequest(result.Errors);
+            }
+
+            return Ok(new { message = "Profil başarıyla güncellendi." });
         }
     }
 }

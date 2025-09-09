@@ -8,9 +8,15 @@
     {
         public DbSet<Movie> Movies { get; set; }
         public DbSet<UserRating> UserRatings { get; set; }
+        public DbSet<Watchlist> Watchlists { get; set; }
         public DbSet<WatchlistItem> WatchlistItems { get; set; }
         public DbSet<UserFollow> UserFollows { get; set; }
         public DbSet<Message> Messages { get; set; }
+         public DbSet<CinemaEvent> CinemaEvents { get; set; }
+
+          public DbSet<EventGroup> EventGroups { get; set; }
+        public DbSet<EventGroupMember> EventGroupMembers { get; set; }
+        public DbSet<EventVote> EventVotes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

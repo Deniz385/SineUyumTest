@@ -10,7 +10,7 @@ using System.Security.Claims;
 namespace SineUyum.Api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/messages")]
     [Authorize]
     public class MessageController : ControllerBase
     {
@@ -30,6 +30,18 @@ namespace SineUyum.Api.Controllers
             if (senderId == createMessageDto.RecipientId)
                 return BadRequest("Kendinize mesaj gönderemezsiniz.");
 
+            if (string.IsNullOrWhiteSpace(createMessageDto.Content) && !createMessageDto.MovieId.HasValue && !createMessageDto.WatchlistId.HasValue)
+                return BadRequest("Mesaj içeriği boş olamaz.");
+
+            if (createMessageDto.WatchlistId.HasValue)
+            {
+                var listExists = await _context.Watchlists.AnyAsync(w => w.Id == createMessageDto.WatchlistId.Value && w.UserId == senderId);
+                if (!listExists)
+                {
+                    return Forbid("Kendinize ait olmayan bir listeyi paylaşamazsınız.");
+                }
+            }
+
             var recipient = await _context.Users.FindAsync(createMessageDto.RecipientId);
             if (recipient == null) return NotFound("Alıcı kullanıcı bulunamadı.");
 
@@ -38,6 +50,8 @@ namespace SineUyum.Api.Controllers
                 SenderId = senderId,
                 RecipientId = createMessageDto.RecipientId,
                 Content = createMessageDto.Content,
+                MovieId = createMessageDto.MovieId,
+                WatchlistId = createMessageDto.WatchlistId
             };
 
             await _context.Messages.AddAsync(message);
@@ -55,6 +69,9 @@ namespace SineUyum.Api.Controllers
             var messages = await _context.Messages
                 .Include(m => m.Sender)
                 .Include(m => m.Recipient)
+                .Include(m => m.Movie)
+                .Include(m => m.Watchlist)
+                    .ThenInclude(w => w!.User)
                 .Where(m => (m.RecipientId == currentUserId && m.SenderId == otherUserId) ||
                             (m.RecipientId == otherUserId && m.SenderId == currentUserId))
                 .OrderBy(m => m.MessageSent)
@@ -63,11 +80,22 @@ namespace SineUyum.Api.Controllers
                     m.Id,
                     m.SenderId,
                     SenderUsername = m.Sender.UserName,
-                    SenderProfileImageUrl = m.Sender.ProfileImageUrl,
                     m.RecipientId,
                     RecipientUsername = m.Recipient.UserName,
                     m.Content,
-                    m.MessageSent
+                    m.MessageSent,
+                    Movie = m.Movie == null ? null : new {
+                        Id = m.Movie.Id,
+                        Title = m.Movie.Title,
+                        PosterPath = m.Movie.PosterPath
+                    },
+                    // --- HATA DÜZELTMESİ BURADA ---
+                    // 'm.Watchlist.User?.UserName' yerine ternary operatörü kullanıyoruz.
+                    Watchlist = m.Watchlist == null ? null : new {
+                        Id = m.Watchlist.Id,
+                        Name = m.Watchlist.Name,
+                        OwnerUsername = m.Watchlist.User == null ? null : m.Watchlist.User.UserName
+                    }
                 })
                 .ToListAsync();
 
@@ -83,6 +111,7 @@ namespace SineUyum.Api.Controllers
             var messages = await _context.Messages
                 .Include(m => m.Sender)
                 .Include(m => m.Recipient)
+                .Include(m => m.Watchlist)
                 .Where(m => m.SenderId == currentUserId || m.RecipientId == currentUserId)
                 .OrderByDescending(m => m.MessageSent)
                 .ToListAsync();
@@ -93,12 +122,20 @@ namespace SineUyum.Api.Controllers
                 {
                     var lastMessage = g.First();
                     var otherUser = lastMessage.SenderId == currentUserId ? lastMessage.Recipient : lastMessage.Sender;
+                    
+                    string lastMessageContent = "Bir film önerdi.";
+                    if (lastMessage.WatchlistId.HasValue) {
+                         lastMessageContent = $"'{lastMessage.Watchlist?.Name}' listesini paylaştı.";
+                    } else if (!string.IsNullOrEmpty(lastMessage.Content)) {
+                        lastMessageContent = lastMessage.Content;
+                    }
+
                     return new 
                     {
                         OtherUserId = otherUser.Id,
                         OtherUserUsername = otherUser.UserName,
                         OtherUserProfileImageUrl = otherUser.ProfileImageUrl,
-                        LastMessageContent = lastMessage.Content,
+                        LastMessageContent = lastMessageContent,
                         LastMessageSent = lastMessage.MessageSent,
                         IsRead = lastMessage.DateRead != null || lastMessage.SenderId == currentUserId
                     };

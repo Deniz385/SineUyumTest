@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SineUyum.Api.Data;
 
@@ -10,9 +11,11 @@ using SineUyum.Api.Data;
 namespace SineUyum.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250909111200_AddEventAndSubscriptionModels")]
+    partial class AddEventAndSubscriptionModels
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.8");
@@ -234,9 +237,6 @@ namespace SineUyum.Api.Migrations
                     b.Property<DateTime>("EventDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("GroupSize")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("LocationName")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -294,33 +294,6 @@ namespace SineUyum.Api.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("EventGroupMembers");
-                });
-
-            modelBuilder.Entity("SineUyum.Api.Models.EventVote", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("EventGroupId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("MovieId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EventGroupId");
-
-                    b.HasIndex("MovieId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("EventVotes");
                 });
 
             modelBuilder.Entity("SineUyum.Api.Models.Message", b =>
@@ -570,33 +543,6 @@ namespace SineUyum.Api.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("SineUyum.Api.Models.EventVote", b =>
-                {
-                    b.HasOne("SineUyum.Api.Models.EventGroup", "EventGroup")
-                        .WithMany()
-                        .HasForeignKey("EventGroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SineUyum.Api.Models.Movie", "Movie")
-                        .WithMany()
-                        .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SineUyum.Api.Models.AppUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("EventGroup");
-
-                    b.Navigation("Movie");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("SineUyum.Api.Models.Message", b =>
                 {
                     b.HasOne("SineUyum.Api.Models.Movie", "Movie")
@@ -656,7 +602,7 @@ namespace SineUyum.Api.Migrations
                         .IsRequired();
 
                     b.HasOne("SineUyum.Api.Models.AppUser", "User")
-                        .WithMany("Ratings")
+                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -694,11 +640,6 @@ namespace SineUyum.Api.Migrations
                     b.Navigation("Movie");
 
                     b.Navigation("Watchlist");
-                });
-
-            modelBuilder.Entity("SineUyum.Api.Models.AppUser", b =>
-                {
-                    b.Navigation("Ratings");
                 });
 
             modelBuilder.Entity("SineUyum.Api.Models.EventGroup", b =>

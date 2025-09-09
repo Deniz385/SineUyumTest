@@ -167,6 +167,9 @@ namespace SineUyum.Api.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsSubscribed")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("INTEGER");
 
@@ -196,6 +199,9 @@ namespace SineUyum.Api.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("SubscriptionExpires")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("INTEGER");
 
@@ -215,6 +221,108 @@ namespace SineUyum.Api.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("SineUyum.Api.Models.CinemaEvent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("EventDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("GroupSize")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LocationName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("SelectedMovieId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SelectedMovieId");
+
+                    b.ToTable("CinemaEvents");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.EventGroup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CinemaEventId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SuggestedMovieIds")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CinemaEventId");
+
+                    b.ToTable("EventGroups");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.EventGroupMember", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("EventGroupId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventGroupId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("EventGroupMembers");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.EventVote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("EventGroupId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MovieId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventGroupId");
+
+                    b.HasIndex("MovieId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("EventVotes");
+                });
+
             modelBuilder.Entity("SineUyum.Api.Models.Message", b =>
                 {
                     b.Property<int>("Id")
@@ -222,7 +330,6 @@ namespace SineUyum.Api.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Content")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("DateRead")
@@ -230,6 +337,9 @@ namespace SineUyum.Api.Migrations
 
                     b.Property<DateTime>("MessageSent")
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("MovieId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("RecipientId")
                         .IsRequired()
@@ -239,11 +349,18 @@ namespace SineUyum.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("WatchlistId")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("MovieId");
 
                     b.HasIndex("RecipientId");
 
                     b.HasIndex("SenderId");
+
+                    b.HasIndex("WatchlistId");
 
                     b.ToTable("Messages");
                 });
@@ -313,6 +430,32 @@ namespace SineUyum.Api.Migrations
                     b.ToTable("UserRatings");
                 });
 
+            modelBuilder.Entity("SineUyum.Api.Models.Watchlist", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Watchlists");
+                });
+
             modelBuilder.Entity("SineUyum.Api.Models.WatchlistItem", b =>
                 {
                     b.Property<int>("Id")
@@ -325,15 +468,14 @@ namespace SineUyum.Api.Migrations
                     b.Property<int>("MovieId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                    b.Property<int>("WatchlistId")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
                     b.HasIndex("MovieId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("WatchlistId");
 
                     b.ToTable("WatchlistItems");
                 });
@@ -389,8 +531,78 @@ namespace SineUyum.Api.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SineUyum.Api.Models.CinemaEvent", b =>
+                {
+                    b.HasOne("SineUyum.Api.Models.Movie", "SelectedMovie")
+                        .WithMany()
+                        .HasForeignKey("SelectedMovieId");
+
+                    b.Navigation("SelectedMovie");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.EventGroup", b =>
+                {
+                    b.HasOne("SineUyum.Api.Models.CinemaEvent", "CinemaEvent")
+                        .WithMany()
+                        .HasForeignKey("CinemaEventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CinemaEvent");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.EventGroupMember", b =>
+                {
+                    b.HasOne("SineUyum.Api.Models.EventGroup", "EventGroup")
+                        .WithMany("Members")
+                        .HasForeignKey("EventGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SineUyum.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("EventGroup");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.EventVote", b =>
+                {
+                    b.HasOne("SineUyum.Api.Models.EventGroup", "EventGroup")
+                        .WithMany()
+                        .HasForeignKey("EventGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SineUyum.Api.Models.Movie", "Movie")
+                        .WithMany()
+                        .HasForeignKey("MovieId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SineUyum.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("EventGroup");
+
+                    b.Navigation("Movie");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SineUyum.Api.Models.Message", b =>
                 {
+                    b.HasOne("SineUyum.Api.Models.Movie", "Movie")
+                        .WithMany()
+                        .HasForeignKey("MovieId");
+
                     b.HasOne("SineUyum.Api.Models.AppUser", "Recipient")
                         .WithMany()
                         .HasForeignKey("RecipientId")
@@ -403,9 +615,17 @@ namespace SineUyum.Api.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SineUyum.Api.Models.Watchlist", "Watchlist")
+                        .WithMany()
+                        .HasForeignKey("WatchlistId");
+
+                    b.Navigation("Movie");
+
                     b.Navigation("Recipient");
 
                     b.Navigation("Sender");
+
+                    b.Navigation("Watchlist");
                 });
 
             modelBuilder.Entity("SineUyum.Api.Models.UserFollow", b =>
@@ -436,12 +656,23 @@ namespace SineUyum.Api.Migrations
                         .IsRequired();
 
                     b.HasOne("SineUyum.Api.Models.AppUser", "User")
-                        .WithMany()
+                        .WithMany("Ratings")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Movie");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.Watchlist", b =>
+                {
+                    b.HasOne("SineUyum.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
@@ -454,15 +685,30 @@ namespace SineUyum.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("SineUyum.Api.Models.AppUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
+                    b.HasOne("SineUyum.Api.Models.Watchlist", "Watchlist")
+                        .WithMany("Items")
+                        .HasForeignKey("WatchlistId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Movie");
 
-                    b.Navigation("User");
+                    b.Navigation("Watchlist");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.AppUser", b =>
+                {
+                    b.Navigation("Ratings");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.EventGroup", b =>
+                {
+                    b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.Watchlist", b =>
+                {
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

@@ -3,102 +3,235 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
-using SineUyum.Api.Dtos; // DTO'yu kullanmak için ekle
+using SineUyum.Api.Dtos;
 using SineUyum.Api.Models;
 using System.Security.Claims;
+using System.ComponentModel.DataAnnotations;
 
-[ApiController]
-[Route("api/[controller]")]
-[Authorize]
-public class WatchlistController : ControllerBase
+namespace SineUyum.Api.Controllers
 {
-    private readonly ApplicationDbContext _context;
-
-    public WatchlistController(ApplicationDbContext context)
+    [ApiController]
+    [Route("api/[controller]")]
+    [Authorize]
+    public class WatchlistController : ControllerBase
     {
-        _context = context;
-    }
+        private readonly ApplicationDbContext _context;
 
-    // GET metodu aynı kalıyor...
-    [HttpGet]
-    public async Task<IActionResult> GetWatchlist()
-    {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId == null) return Unauthorized();
-
-        var watchlist = await _context.WatchlistItems
-            .Where(wi => wi.UserId == userId)
-            .Include(wi => wi.Movie)
-            .Select(wi => new { wi.MovieId, wi.Movie.Title, wi.Movie.PosterPath, wi.AddedAt })
-            .OrderByDescending(wi => wi.AddedAt)
-            .ToListAsync();
-
-        return Ok(watchlist);
-    }
-
-    // --- DEĞİŞİKLİK BURADA BAŞLIYOR ---
-    // POST: api/watchlist
-    [HttpPost] // URL'den movieId parametresini kaldırdık
-    public async Task<IActionResult> AddToWatchlist([FromBody] AddWatchlistItemDto dto) // Parametreyi DTO olarak değiştirdik
-    {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId == null) return Unauthorized();
-
-        // Film veritabanında var mı kontrol et
-        var movie = await _context.Movies.FindAsync(dto.MovieId);
-        
-        // Eğer film yerel veritabanında yoksa, oluştur ve ekle
-        if (movie == null)
+        public WatchlistController(ApplicationDbContext context)
         {
-            movie = new Movie
+            _context = context;
+        }
+
+        // ... GetUserWatchlists, GetWatchlistDetails, CreateWatchlist ve UpdateWatchlist metodları aynı ...
+
+        [HttpGet]
+        public async Task<IActionResult> GetUserWatchlists()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var watchlists = await _context.Watchlists
+                .Where(w => w.UserId == userId)
+                .Select(w => new { w.Id, w.Name, w.Description, ItemCount = w.Items.Count() })
+                .OrderBy(w => w.Name)
+                .ToListAsync();
+
+            return Ok(watchlists);
+        }
+
+        [HttpGet("public/{listId}")]
+        public async Task<IActionResult> GetPublicWatchlistDetails(int listId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var watchlist = await _context.Watchlists
+                .Include(w => w.User)
+                .Where(w => w.Id == listId)
+                .Select(w => new
+                {
+                    w.Id,
+                    w.Name,
+                    w.Description,
+                    OwnerUsername = w.User.UserName,
+                    Items = w.Items.Select(i => new
+                    {
+                        i.MovieId,
+                        i.Movie.Title,
+                        i.Movie.PosterPath,
+                        i.AddedAt
+                    }).OrderByDescending(i => i.AddedAt).ToList()
+                })
+                .FirstOrDefaultAsync();
+
+            if (watchlist == null)
             {
-                Id = dto.MovieId,
-                Title = dto.Title,
-                PosterPath = dto.PosterPath
+                return NotFound("İstenen liste bulunamadı.");
+            }
+
+            return Ok(watchlist);
+        }
+        
+        [HttpGet("{listId}")]
+        public async Task<IActionResult> GetWatchlistDetails(int listId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var watchlist = await _context.Watchlists
+                .Where(w => w.Id == listId && w.UserId == userId)
+                .Select(w => new
+                {
+                    w.Id,
+                    w.Name,
+                    w.Description,
+                    Items = w.Items.Select(i => new
+                    {
+                        i.MovieId,
+                        i.Movie.Title,
+                        i.Movie.PosterPath,
+                        i.AddedAt
+                    }).OrderByDescending(i => i.AddedAt).ToList()
+                })
+                .FirstOrDefaultAsync();
+
+            if (watchlist == null)
+            {
+                return NotFound("Liste bulunamadı veya bu listeye erişim yetkiniz yok.");
+            }
+
+            return Ok(watchlist);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateWatchlist([FromBody] CreateWatchlistDto dto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var watchlist = new Watchlist
+            {
+                Name = dto.Name,
+                Description = dto.Description,
+                UserId = userId
             };
-            _context.Movies.Add(movie);
+
+            _context.Watchlists.Add(watchlist);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetWatchlistDetails), new { listId = watchlist.Id }, watchlist);
+        }
+        
+        [HttpPut("{listId}")]
+        public async Task<IActionResult> UpdateWatchlist(int listId, [FromBody] CreateWatchlistDto dto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var watchlist = await _context.Watchlists.FirstOrDefaultAsync(w => w.Id == listId && w.UserId == userId);
+
+            if (watchlist == null)
+            {
+                return NotFound("Liste bulunamadı veya bu listeye erişim yetkiniz yok.");
+            }
+
+            watchlist.Name = dto.Name;
+            watchlist.Description = dto.Description;
+
+            _context.Watchlists.Update(watchlist);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Liste başarıyla güncellendi." });
         }
 
-        var alreadyInWatchlist = await _context.WatchlistItems
-            .AnyAsync(wi => wi.UserId == userId && wi.MovieId == dto.MovieId);
-
-        if (alreadyInWatchlist)
+        // --- HATA DÜZELTMESİ BURADA ---
+        [HttpDelete("{listId}")]
+        public async Task<IActionResult> DeleteWatchlist(int listId)
         {
-            return BadRequest("Bu film zaten izleme listenizde.");
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var watchlist = await _context.Watchlists.FirstOrDefaultAsync(w => w.Id == listId && w.UserId == userId);
+
+            if (watchlist == null)
+            {
+                return NotFound("Liste bulunamadı veya bu listeye erişim yetkiniz yok.");
+            }
+
+            // 1. Bu listeye bağlı tüm WatchlistItem'ları bul ve sil
+            var itemsToDelete = _context.WatchlistItems.Where(i => i.WatchlistId == listId);
+            _context.WatchlistItems.RemoveRange(itemsToDelete);
+
+            // 2. Bu listenin paylaşıldığı tüm mesajları bul ve WatchlistId'lerini null yap
+            var messagesToUpdate = _context.Messages.Where(m => m.WatchlistId == listId);
+            await messagesToUpdate.ForEachAsync(m => m.WatchlistId = null);
+
+            // 3. Listenin kendisini sil
+            _context.Watchlists.Remove(watchlist);
+            
+            // 4. Tüm değişiklikleri veritabanına kaydet
+            await _context.SaveChangesAsync();
+            
+            return Ok(new { message = "Liste başarıyla silindi." });
         }
 
-        var watchlistItem = new WatchlistItem
+        // ... Diğer metodlar (AddMovieToWatchlist, RemoveMovieFromWatchlist) aynı kalıyor ...
+
+        [HttpPost("{listId}/movies")]
+        public async Task<IActionResult> AddMovieToWatchlist(int listId, [FromBody] AddWatchlistItemDto dto)
         {
-            UserId = userId,
-            MovieId = dto.MovieId
-        };
-
-        _context.WatchlistItems.Add(watchlistItem);
-        await _context.SaveChangesAsync();
-
-        return Ok(new { message = "Film izleme listesine eklendi." });
-    }
-    // --- DEĞİŞİKLİK BURADA BİTİYOR ---
-
-
-    // DELETE metodu aynı kalıyor...
-    [HttpDelete("{movieId}")]
-    public async Task<IActionResult> RemoveFromWatchlist(int movieId)
-    {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId == null) return Unauthorized();
-
-        var watchlistItem = await _context.WatchlistItems
-            .FirstOrDefaultAsync(wi => wi.UserId == userId && wi.MovieId == movieId);
-
-        if (watchlistItem == null)
-        {
-            return NotFound("Bu film izleme listenizde bulunamadı.");
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+            var watchlist = await _context.Watchlists.FirstOrDefaultAsync(w => w.Id == listId && w.UserId == userId);
+            if (watchlist == null)
+            {
+                return NotFound("Liste bulunamadı veya bu listeye erişim yetkiniz yok.");
+            }
+            var movie = await _context.Movies.FindAsync(dto.MovieId);
+            if (movie == null)
+            {
+                movie = new Movie { Id = dto.MovieId, Title = dto.Title, PosterPath = dto.PosterPath };
+                _context.Movies.Add(movie);
+            }
+            var alreadyInList = await _context.WatchlistItems.AnyAsync(i => i.WatchlistId == listId && i.MovieId == dto.MovieId);
+            if (alreadyInList)
+            {
+                return BadRequest("Bu film zaten bu listede mevcut.");
+            }
+            var watchlistItem = new WatchlistItem
+            {
+                WatchlistId = listId,
+                MovieId = dto.MovieId
+            };
+            _context.WatchlistItems.Add(watchlistItem);
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Film listeye eklendi." });
         }
 
-        _context.WatchlistItems.Remove(watchlistItem);
-        await _context.SaveChangesAsync();
-
-        return Ok(new { message = "Film izleme listesinden kaldırıldı." });
+        [HttpDelete("{listId}/movies/{movieId}")]
+        public async Task<IActionResult> RemoveMovieFromWatchlist(int listId, int movieId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+            var watchlistItem = await _context.WatchlistItems
+                .Include(i => i.Watchlist)
+                .FirstOrDefaultAsync(i => i.WatchlistId == listId && i.MovieId == movieId && i.Watchlist.UserId == userId);
+            if (watchlistItem == null)
+            {
+                return NotFound("Film bu listede bulunamadı veya listeye erişim yetkiniz yok.");
+            }
+            _context.WatchlistItems.Remove(watchlistItem);
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Film listeden kaldırıldı." });
+        }
+        
+        public class CreateWatchlistDto
+        {
+            [Required]
+            [MaxLength(100)]
+            public string Name { get; set; } = string.Empty;
+            [MaxLength(500)]
+            public string? Description { get; set; }
+        }
     }
 }

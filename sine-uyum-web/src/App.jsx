@@ -6,19 +6,24 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 // 1. Oluşturduğumuz AuthProvider'ı import edelim
 import { AuthProvider } from './context/AuthContext';
+import { CustomThemeProvider } from './context/ThemeContext';
 import { RegisterPage } from './pages/RegisterPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SearchResultsPage } from './pages/SearchResultsPage';
 import { MovieDetailPage } from './pages/MovieDetailPage';
 import { WatchlistPage } from './pages/WatchlistPage';
+import { WatchlistDetailPage } from './pages/WatchlistDetailPage';
 import { EditProfilePage } from './pages/EditProfilePage';
 import { MessagesPage } from './pages/MessagesPage';
 import { ConversationPage } from './pages/ConversationPage';
+import { MyEventPage } from './pages/MyEventPage';
+import { SubscriptionPage } from './pages/SubscriptionPage';
 
 function App() {
   return (
     <BrowserRouter>
       {/* 2. Tüm rotaları AuthProvider ile sarmalayalım */}
+      <CustomThemeProvider>
       <AuthProvider>
         <Routes>
           {/* Rotalarımız aynı kalıyor */}
@@ -38,12 +43,16 @@ function App() {
             <Route path="/search" element={<SearchResultsPage />} />
             <Route path="/movie/:movieId" element={<MovieDetailPage />} />
             <Route path="/watchlist" element={<WatchlistPage />} />
+            <Route path="/watchlist/:listId" element={<WatchlistDetailPage />} />
+            <Route path="/my-event" element={<MyEventPage />} />
+            <Route path="/subscription" element={<SubscriptionPage />} />
             <Route path="/profile/edit" element={<EditProfilePage />} />
             <Route path="/messages" element={<MessagesPage />} />
             <Route path="/messages/:otherUserId" element={<ConversationPage />} />
           </Route>
         </Routes>
       </AuthProvider>
+      </CustomThemeProvider>
     </BrowserRouter>
   );
 }

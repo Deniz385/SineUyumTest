@@ -6,7 +6,8 @@ import { useAuth } from '../context/AuthContext';
 
 const API_URL = 'https://super-duper-dollop-g959prvw5q539q6-5074.app.github.dev';
 
-export const MovieSearchBar = () => {
+// onMovieSelect prop'u eklendi.
+export const MovieSearchBar = ({ onMovieSelect }) => {
   const [open, setOpen] = useState(false);
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -23,7 +24,6 @@ export const MovieSearchBar = () => {
           params: { query: inputValue }
         }).then(response => {
           const movies = response.data.results || [];
-          // --- DÜZELTME: API'den gelen yanıtta olası tekrar eden filmleri ID'ye göre filtrele ---
           const uniqueMovies = Array.from(new Map(movies.map(movie => [movie.id, movie])).values());
           setOptions(uniqueMovies);
           setLoading(false);
@@ -41,7 +41,13 @@ export const MovieSearchBar = () => {
 
   const handleOnChange = (event, value) => {
     if (value && value.id) {
-      navigate(`/movie/${value.id}`);
+      // Eğer onMovieSelect prop'u verildiyse onu çağır
+      if (onMovieSelect) {
+        onMovieSelect(value);
+      } else {
+        // Yoksa eskisi gibi sayfaya yönlendir
+        navigate(`/movie/${value.id}`);
+      }
       setOpen(false);
       setOptions([]);
       setInputValue('');
@@ -51,7 +57,7 @@ export const MovieSearchBar = () => {
   return (
     <Autocomplete
       id="movie-search-autocomplete"
-      sx={{ width: 300, marginRight: 2 }}
+      sx={{ width: '100%', marginRight: 2 }} // Genişliği tam yapalım
       open={open}
       onOpen={() => setOpen(true)}
       onClose={() => setOpen(false)}
@@ -59,7 +65,6 @@ export const MovieSearchBar = () => {
       onInputChange={(event, newInputValue) => {
         setInputValue(newInputValue);
       }}
-      // --- DÜZELTME: Autocomplete'e seçenekleri nasıl karşılaştıracağını ID'ye göre belirtiyoruz ---
       isOptionEqualToValue={(option, value) => option.id === value.id}
       getOptionLabel={(option) => option.title || ""}
       options={options}
@@ -74,7 +79,8 @@ export const MovieSearchBar = () => {
           size="small"
           InputProps={{
             ...params.InputProps,
-            style: { color: 'white' },
+            // Navbar'da değilse rengi normal yap
+            style: onMovieSelect ? {} : { color: 'white' }, 
             endAdornment: (
               <>
                 {loading ? <CircularProgress color="inherit" size={20} /> : null}
@@ -82,7 +88,7 @@ export const MovieSearchBar = () => {
               </>
             ),
           }}
-          sx={{
+          sx={onMovieSelect ? {} : { // Navbar'da değilse border'ı normal yap
             '& .MuiOutlinedInput-root': {
               '& fieldset': { borderColor: '#6c757d' },
               '&:hover fieldset': { borderColor: 'white' },
@@ -104,4 +110,3 @@ export const MovieSearchBar = () => {
     />
   );
 };
-

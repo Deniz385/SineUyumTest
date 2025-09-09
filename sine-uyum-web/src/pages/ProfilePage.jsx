@@ -3,13 +3,27 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { Button, Box, Typography, Avatar } from '@mui/material';
+import { Button, Box, Typography, Avatar, Grid, Card, CardContent, Paper } from '@mui/material';
 import MessageIcon from '@mui/icons-material/Message';
+import StarIcon from '@mui/icons-material/Star'; // İkonlar
+import RateReviewIcon from '@mui/icons-material/RateReview';
+import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
 import { RecommendationModal } from '../components/RecommendationModal';
 import { FollowListModal } from '../components/FollowListModal';
 
 const API_URL = 'https://super-duper-dollop-g959prvw5q539q6-5074.app.github.dev';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
+
+// Yeni İstatistik Kartı Bileşeni
+const StatCard = ({ icon, value, label }) => (
+    <Grid item xs={6} sm={4}>
+        <Paper elevation={2} sx={{ p: 2, textAlign: 'center' }}>
+            {icon}
+            <Typography variant="h5" component="p" sx={{ fontWeight: 'bold' }}>{value}</Typography>
+            <Typography variant="body2" color="text.secondary">{label}</Typography>
+        </Paper>
+    </Grid>
+);
 
 export const ProfilePage = () => {
     const { userId } = useParams();
@@ -48,7 +62,6 @@ export const ProfilePage = () => {
                     setCompatibility(compatibilityRes.data);
                 }
             } catch (err) {
-                console.error("Profil verisi alınamadı:", err);
                 setError("Profil bilgileri yüklenirken bir hata oluştu.");
             } finally {
                 setIsLoading(false);
@@ -82,7 +95,6 @@ export const ProfilePage = () => {
             const response = await axios.get(`${API_URL}/api/compatibility/${userId}/recommendations`, { headers: { 'Authorization': `Bearer ${token}` } });
             setRecommendations(response.data);
         } catch (err) {
-            console.error("Öneriler alınamadı:", err);
             setRecommendations([]);
         } finally {
             setIsRecsLoading(false);
@@ -108,50 +120,44 @@ export const ProfilePage = () => {
     if (isLoading) return <div className="page-container">Yükleniyor...</div>;
     if (error) return <div className="page-container message error-message">{error}</div>;
 
+    const stats = profileData?.statistics;
+
     return (
         <>
-            <div className="page-container">
+            <div className="page-container" style={{maxWidth: '1200px'}}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 3 }}>
-                    <Avatar 
-                        src={profileData?.profileImageUrl} 
-                        sx={{ width: 100, height: 100, fontSize: '3rem' }}
-                    >
+                    <Avatar src={profileData?.profileImageUrl} sx={{ width: 120, height: 120, fontSize: '3.5rem' }}>
                         {profileData?.userName?.charAt(0).toUpperCase()}
                     </Avatar>
-                    <Box sx={{ flexGrow: 1 }}>
+                    <Box sx={{ flexGrow: 1, textAlign: 'left' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-                            <h1>{profileData?.userName}</h1>
+                            <Typography variant="h4" component="h1">{profileData?.userName}</Typography>
                             {isMyProfile ? (
                                 <Button component={Link} to="/profile/edit" variant="outlined">Profili Düzenle</Button>
                             ) : (
                                 <Box sx={{ display: 'flex', gap: 1 }}>
-                                    <Button 
-                                        variant="contained" 
-                                        startIcon={<MessageIcon />}
-                                        onClick={() => navigate(`/messages/${userId}`)}
-                                    >
-                                        Mesaj Gönder
-                                    </Button>
+                                    <Button variant="contained" startIcon={<MessageIcon />} onClick={() => navigate(`/messages/${userId}`)}>Mesaj Gönder</Button>
                                     <Button variant={followStatus.isFollowing ? "outlined" : "contained"} onClick={handleFollowToggle} disabled={isFollowLoading}>
                                         {isFollowLoading ? "İşleniyor..." : (followStatus.isFollowing ? "Takipten Çık" : "Takip Et")}
                                     </Button>
                                 </Box>
                             )}
                         </Box>
-                        <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
-                            <Typography onClick={() => handleOpenFollowList('followers')} sx={{ cursor: 'pointer' }}>
-                                <strong>{followStatus.followerCount}</strong> Takipçi
-                            </Typography>
-                            <Typography onClick={() => handleOpenFollowList('following')} sx={{ cursor: 'pointer' }}>
-                                <strong>{followStatus.followingCount}</strong> Takip
-                            </Typography>
+                        <Box sx={{ display: 'flex', gap: 3, mt: 1 }}>
+                            <Typography onClick={() => handleOpenFollowList('followers')} sx={{ cursor: 'pointer' }}><strong>{followStatus.followerCount}</strong> Takipçi</Typography>
+                            <Typography onClick={() => handleOpenFollowList('following')} sx={{ cursor: 'pointer' }}><strong>{followStatus.followingCount}</strong> Takip</Typography>
                         </Box>
+                        {profileData?.bio && <Typography variant="body1" sx={{ mt: 2, fontStyle: 'italic', maxWidth: '75ch' }}>"{profileData.bio}"</Typography>}
                     </Box>
                 </Box>
-                {profileData?.bio && (
-                    <Typography variant="body1" sx={{ mb: 3, fontStyle: 'italic', maxWidth: '75ch', textAlign: 'left' }}>
-                        "{profileData.bio}"
-                    </Typography>
+                
+                {/* --- YENİ İSTATİSTİK BÖLÜMÜ --- */}
+                {stats && (
+                    <Grid container spacing={2} sx={{ my: 3, justifyContent: 'center' }}>
+                        <StatCard icon={<RateReviewIcon color="primary" sx={{mb:1}}/>} value={stats.totalRatings} label="Film Oyladı" />
+                        <StatCard icon={<StarIcon color="warning" sx={{mb:1}}/>} value={`${stats.averageRating} / 10`} label="Puan Ortalaması" />
+                        <StatCard icon={<PlaylistPlayIcon color="secondary" sx={{mb:1}}/>} value={stats.totalMoviesInWatchlists} label="Listelerindeki Film" />
+                    </Grid>
                 )}
 
                 {!isMyProfile && compatibility && (
@@ -160,50 +166,32 @@ export const ProfilePage = () => {
                             <h2>Uyum Puanınız: %{compatibility.compatibilityScore}</h2>
                             <p>({compatibility.commonMovieCount} ortak filme göre hesaplandı)</p>
                             {compatibility.commonMovieCount > 0 && (
-                                <Button
-                                    variant="contained"
-                                    onClick={handleFetchRecommendations}
-                                    sx={{ mt: 2 }}
-                                >
-                                    Ortak Film Önerileri Alın
-                                </Button>
+                                <Button variant="contained" onClick={handleFetchRecommendations} sx={{ mt: 2 }}>Ortak Film Önerileri Alın</Button>
                             )}
                         </div>
-                        {compatibility.commonMovies.length > 0 && (
-                            <div className="common-movies-table">
-                            <h3>Ortak Oylanan Filmler</h3>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Film</th>
-                                        <th>Sizin Puanınız</th>
-                                        <th>Onun Puanı</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {compatibility.commonMovies.map(movie => (
-                                        <tr key={movie.movieId}>
-                                            <td>{movie.title}</td>
-                                            <td>{movie.currentUserRating} / 10</td>
-                                            <td>{movie.targetUserRating} / 10</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                        )}
                     </>
                 )}
                 
+                {/* --- YENİ "EN YÜKSEK PUANLILAR" BÖLÜMÜ --- */}
+                {stats?.topRatedMovies.length > 0 && (
+                    <Box sx={{ my: 4, textAlign: 'left' }}>
+                        <Typography variant="h5" component="h3" gutterBottom sx={{fontWeight: 'bold'}}>✨ 10/10 Verdiği Filmler</Typography>
+                         <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 2 }}>
+                            {stats.topRatedMovies.map(movie => (
+                                <Link to={`/movie/${movie.movieId}`} key={movie.movieId}>
+                                    <img src={movie.posterPath ? `${IMAGE_BASE_URL}${movie.posterPath}` : '/vite.svg'} alt={movie.title} style={{ height: '210px', borderRadius: '8px' }}/>
+                                </Link>
+                            ))}
+                        </Box>
+                    </Box>
+                )}
+
                 <hr />
-                <h2>Oylanan Filmler ({profileData?.ratings.length || 0})</h2>
+                <Typography variant="h5" component="h3" sx={{textAlign: 'left', mt: 3}}>Oylanan Tüm Filmler ({profileData?.ratings.length || 0})</Typography>
                 <div className="rated-movies-grid">
                     {profileData?.ratings.map(rating => (
                         <div key={rating.movieId} className="rated-movie-card">
-                            <img 
-                                src={rating.posterPath ? `${IMAGE_BASE_URL}${rating.posterPath}` : '/vite.svg'} 
-                                alt={`${rating.title} afişi`} 
-                            />
+                            <img src={rating.posterPath ? `${IMAGE_BASE_URL}${rating.posterPath}` : '/vite.svg'} alt={`${rating.title} afişi`}/>
                             <div className="rated-movie-info">
                                 <strong>{rating.title}</strong>
                                 <span>Verilen Puan: {rating.rating}/10</span>
@@ -213,21 +201,8 @@ export const ProfilePage = () => {
                 </div>
             </div>
             
-            {profileData && <RecommendationModal
-                open={isRecsModalOpen}
-                onClose={() => setIsRecsModalOpen(false)}
-                recommendations={recommendations}
-                isLoading={isRecsLoading}
-                targetUserName={profileData.userName}
-            />}
-
-            <FollowListModal
-                open={modalState.open}
-                onClose={() => setModalState({ open: false, type: '', title: '' })}
-                title={modalState.title}
-                list={listData}
-                isLoading={isListLoading}
-            />
+            {profileData && <RecommendationModal open={isRecsModalOpen} onClose={() => setIsRecsModalOpen(false)} recommendations={recommendations} isLoading={isRecsLoading} targetUserName={profileData.userName} />}
+            <FollowListModal open={modalState.open} onClose={() => setModalState({ open: false, type: '', title: '' })} title={modalState.title} list={listData} isLoading={isListLoading} />
         </>
     );
 };

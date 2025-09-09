@@ -4,9 +4,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
-using SineUyum.Api.Dtos; // Yeni DTO'yu ekledik
+using SineUyum.Api.Dtos;
 using SineUyum.Api.Models;
-using System.Security.Claims; // Claims için eklendi
+using System.Security.Claims;
 
 namespace SineUyum.Api.Controllers
 {
@@ -24,7 +24,7 @@ namespace SineUyum.Api.Controllers
             _userManager = userManager;
         }
 
-        // GET: /api/profile/{userId} - YENİ ALANLAR EKLENDİ
+        // --- YENİ İSTATİSTİKLERLE GÜNCELLENMİŞ METOT ---
         [HttpGet("{userId}")]
         public async Task<IActionResult> GetUserProfile(string userId)
         {
@@ -35,9 +35,11 @@ namespace SineUyum.Api.Controllers
                 return NotFound("Kullanıcı bulunamadı.");
             }
 
+            // Kullanıcının tüm oylarını al
             var userRatings = await _context.UserRatings
                 .Where(r => r.UserId == userId)
                 .Include(r => r.Movie) 
+                .OrderByDescending(r => r.Rating) // En yüksek puanlıları üste al
                 .Select(r => new 
                 {
                     r.MovieId,
@@ -47,19 +49,35 @@ namespace SineUyum.Api.Controllers
                 })
                 .ToListAsync();
 
+            // Kullanıcının listelerindeki toplam film sayısını al
+            var totalMoviesInWatchlists = await _context.Watchlists
+                .Where(w => w.UserId == userId)
+                .SelectMany(w => w.Items)
+                .CountAsync();
+
+            // Yeni İstatistikleri Hesapla
+            var stats = new {
+                totalRatings = userRatings.Count,
+                averageRating = userRatings.Any() ? Math.Round(userRatings.Average(r => r.Rating), 1) : 0,
+                totalMoviesInWatchlists = totalMoviesInWatchlists,
+                // En yüksek puanlı (10) filmlerden ilk 5'ini al
+                topRatedMovies = userRatings.Where(r => r.Rating == 10).Take(5).ToList() 
+            };
+
             var profileData = new 
             {
                 user.Id,
                 user.UserName,
-                user.Bio, // Bio eklendi
-                user.ProfileImageUrl, // Profil fotoğrafı URL'si eklendi
-                Ratings = userRatings
+                user.Bio,
+                user.ProfileImageUrl,
+                Ratings = userRatings, // Tüm oylanan filmleri de göndermeye devam ediyoruz
+                Statistics = stats // Yeni istatistikleri ekliyoruz
             };
 
             return Ok(profileData);
         }
 
-        // --- YENİ METOT: Profili güncellemek için ---
+        // Profili güncelleme metodu (Aynı kalıyor)
         [HttpPut]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto updateDto)
         {

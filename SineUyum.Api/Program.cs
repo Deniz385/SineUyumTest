@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using SineUyum.Api.Data;
 using SineUyum.Api.Models;
 using System.Text;
+using SineUyum.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +17,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy(corsPolicyName, policy =>
     {
         policy.WithOrigins(
-                "https://super-duper-dollop-g959prvw5q539q6-5173.app.github.dev"
+                "https://super-duper-dollop-g959prvw5q539q6-5173.app.github.dev",
+                "https://super-duper-dollop-g959prvw5q539q6-5074.app.github.dev"
             )
             .AllowAnyHeader()
             .AllowAnyMethod();
@@ -56,6 +58,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 builder.Services.AddHttpClient();
 // --- CONTROLLERS & SWAGGER ---
+builder.Services.AddScoped<MatchingService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

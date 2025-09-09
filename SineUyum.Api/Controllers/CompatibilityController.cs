@@ -22,8 +22,6 @@ namespace SineUyum.Api.Controllers
         {
             _context = context;
             _httpClientFactory = httpClientFactory;
-
-            // Hem appsettings.json'dan hem de GitHub secrets'dan API anahtarını okuyabilen doğru mantık
             var apiKey = configuration["TMDb:ApiKey"];
             if (string.IsNullOrEmpty(apiKey))
             {
@@ -32,10 +30,11 @@ namespace SineUyum.Api.Controllers
             _tmdbApiKey = apiKey;
         }
 
-        // Uyum puanı metodu (Bu metodun bir önceki versiyonunda hata vardı, düzeltildi)
+        // Bu metodda bir değişiklik yok, aynı kalabilir.
         [HttpGet("{targetUserId}")]
         public async Task<IActionResult> GetCompatibility(string targetUserId)
         {
+            // ... (önceki adımdaki güncel algoritma burada olmalı)
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (currentUserId == null) return Unauthorized();
 
@@ -51,19 +50,41 @@ namespace SineUyum.Api.Controllers
                                          TargetUserRating = r2.Rating
                                      };
             var commonMovies = await commonRatingsQuery.ToListAsync();
-            
-            // Puan farkına dayalı basit uyum hesaplaması
-            double compatibilityScore = 0;
-            if (commonMovies.Any())
+
+            if (!commonMovies.Any())
             {
-                double totalDifference = commonMovies.Sum(r => Math.Abs(r.CurrentUserRating - r.TargetUserRating));
-                double averageDifference = totalDifference / commonMovies.Count();
-                compatibilityScore = 100.0 - (averageDifference / 9.0 * 100.0);
+                return Ok(new
+                {
+                    compatibilityScore = 0,
+                    commonMovieCount = 0,
+                    commonMovies = new List<object>()
+                });
+            }
+            
+            double totalWeightedScore = 0;
+            
+            foreach (var movie in commonMovies)
+            {
+                double difference = Math.Abs(movie.CurrentUserRating - movie.TargetUserRating);
+                double weight = 1.0;
+                if ((movie.CurrentUserRating <= 3 && movie.TargetUserRating <= 3) || (movie.CurrentUserRating >= 8 && movie.TargetUserRating >= 8))
+                {
+                    weight = 1.5;
+                }
+                else if ((movie.CurrentUserRating <= 3 && movie.TargetUserRating >= 8) || (movie.CurrentUserRating >= 8 && movie.TargetUserRating <= 3))
+                {
+                    weight = 2.0;
+                }
+                double movieScore = 10 - difference;
+                totalWeightedScore += movieScore * weight;
             }
 
+            double maxPossibleScore = commonMovies.Count * 10 * 1.5; 
+            double compatibilityScore = (totalWeightedScore / maxPossibleScore) * 100;
+            
             var result = new
             {
-                compatibilityScore = Math.Round(compatibilityScore > 0 ? compatibilityScore : 0, 2),
+                compatibilityScore = Math.Round(Math.Max(0, Math.Min(100, compatibilityScore)), 2),
                 commonMovieCount = commonMovies.Count,
                 commonMovies
             };
@@ -71,7 +92,6 @@ namespace SineUyum.Api.Controllers
             return Ok(result);
         }
 
-        // Nihai ve çalışan öneri metodu
         [HttpGet("{targetUserId}/recommendations")]
         public async Task<IActionResult> GetJointRecommendations(string targetUserId)
         {
@@ -84,6 +104,7 @@ namespace SineUyum.Api.Controllers
             }
 
             var client = _httpClientFactory.CreateClient("TMDb");
+            // ... (bu metodun üst kısmı aynı kalıyor)
             var currentUserFavoriteGenres = await GetFavoriteGenreIds(currentUserId, 3, client);
             var targetUserFavoriteGenres = await GetFavoriteGenreIds(targetUserId, 3, client);
 
@@ -101,7 +122,14 @@ namespace SineUyum.Api.Controllers
                      var json = await popularMoviesResponse.Content.ReadAsStringAsync();
                      var popularMovies = JsonDocument.Parse(json).RootElement.GetProperty("results");
                      var ratedMovieIds = await _context.UserRatings.Where(r => r.UserId == currentUserId || r.UserId == targetUserId).Select(r => r.MovieId).ToListAsync();
-                     var watchlistMovieIds = await _context.WatchlistItems.Where(wi => wi.UserId == currentUserId || wi.UserId == targetUserId).Select(wi => wi.MovieId).ToListAsync();
+                     
+                     // --- DEĞİŞİKLİK BURADA BAŞLIYOR ---
+                     var watchlistMovieIds = await _context.Watchlists
+                        .Where(w => w.UserId == currentUserId || w.UserId == targetUserId)
+                        .SelectMany(w => w.Items.Select(i => i.MovieId))
+                        .ToListAsync();
+                     // --- DEĞİŞİKLİK BURADA BİTİYOR ---
+
                      var seenMovieIds = ratedMovieIds.Union(watchlistMovieIds).ToHashSet();
                      
                      var filteredPopular = popularMovies.EnumerateArray()
@@ -126,7 +154,14 @@ namespace SineUyum.Api.Controllers
             var discoveredMovies = JsonDocument.Parse(jsonResponse).RootElement.GetProperty("results");
 
             var allRatedMovieIds = await _context.UserRatings.Where(r => r.UserId == currentUserId || r.UserId == targetUserId).Select(r => r.MovieId).ToListAsync();
-            var allWatchlistMovieIds = await _context.WatchlistItems.Where(wi => wi.UserId == currentUserId || wi.UserId == targetUserId).Select(wi => wi.MovieId).ToListAsync();
+            
+            // --- DEĞİŞİKLİK BURADA BAŞLIYOR ---
+            var allWatchlistMovieIds = await _context.Watchlists
+                .Where(w => w.UserId == currentUserId || w.UserId == targetUserId)
+                .SelectMany(w => w.Items.Select(i => i.MovieId))
+                .ToListAsync();
+            // --- DEĞİŞİKLİK BURADA BİTİYOR ---
+
             var allSeenMovieIds = allRatedMovieIds.Union(allWatchlistMovieIds).ToHashSet();
 
             var finalRecommendations = discoveredMovies.EnumerateArray()
@@ -136,9 +171,11 @@ namespace SineUyum.Api.Controllers
 
             return Ok(finalRecommendations);
         }
-
+        
+        // Bu yardımcı metodda bir değişiklik yok.
         private async Task<List<int>> GetFavoriteGenreIds(string userId, int count, HttpClient client)
         {
+            // ... (içeriği aynı kalacak)
             var favoriteMovieIds = await _context.UserRatings
                 .Where(r => r.UserId == userId && r.Rating >= 6)
                 .Select(r => r.MovieId)

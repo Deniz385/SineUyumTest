@@ -20,13 +20,20 @@ namespace SineUyum.Api.Services
             if (cinemaEvent == null) throw new Exception("Etkinlik bulunamadı.");
             if (await _context.EventGroups.AnyAsync(g => g.CinemaEventId == eventId)) throw new Exception("Bu etkinlik için gruplar zaten oluşturulmuş.");
 
-            var availableSubscribers = await _context.Users
-                .Where(u => u.IsSubscribed && !_context.EventGroupMembers.Any(gm => gm.User.Id == u.Id && gm.EventGroup.CinemaEventId == eventId))
-                .Include(u => u.Ratings)
+            // --- DEĞİŞİKLİK BURADA: Artık tüm aboneler yerine, etkinliğe katılanları alıyoruz ---
+            var participants = await _context.EventParticipants
+                .Where(p => p.CinemaEventId == eventId && !_context.EventGroupMembers.Any(gm => gm.UserId == p.UserId && gm.EventGroup.CinemaEventId == eventId))
+                .Include(p => p.User)
+                .ThenInclude(u => u.Ratings)
                 .ToListAsync();
+
+            if (participants.Count < cinemaEvent.GroupSize)
+            {
+                throw new Exception("Yeterli katılımcı olmadığı için gruplar oluşturulamadı.");
+            }
             
-            var userRatingsDict = availableSubscribers.ToDictionary(u => u.Id, u => u.Ratings.ToDictionary(r => r.MovieId, r => r.Rating));
-            var userPool = availableSubscribers.Select(u => u.Id).ToList();
+            var userRatingsDict = participants.ToDictionary(p => p.UserId, p => p.User.Ratings.ToDictionary(r => r.MovieId, r => r.Rating));
+            var userPool = participants.Select(p => p.UserId).ToList();
             var random = new Random();
 
             while (userPool.Count >= cinemaEvent.GroupSize)
@@ -62,13 +69,9 @@ namespace SineUyum.Api.Services
             await _context.SaveChangesAsync();
         }
 
-        // --- YENİ VE BASİTLEŞTİRİLMİŞ ÖNERİ METODU ---
         private List<int> GetGroupMovieSuggestions(List<string> groupMemberIds, Dictionary<string, Dictionary<int, int>> allRatings)
         {
-            // Gruptaki herkesin gördüğü filmleri bir kenara ayır.
             var allSeenMovies = groupMemberIds.SelectMany(id => allRatings[id].Keys).ToHashSet();
-
-            // Gruptaki herkesin 8 ve üzeri puan verdiği filmleri bul (bunlar grubun "referans" filmleri)
             var collectiveFavorites = new Dictionary<int, int>();
             foreach (var memberId in groupMemberIds)
             {
@@ -77,38 +80,22 @@ namespace SineUyum.Api.Services
                     collectiveFavorites[rating.Key] = collectiveFavorites.GetValueOrDefault(rating.Key, 0) + 1;
                 }
             }
-            
-            // Grubun en az yarısının çok sevdiği filmleri "anahtar filmler" olarak al
             var keyMovies = collectiveFavorites.Where(kv => kv.Value >= groupMemberIds.Count / 2).Select(kv => kv.Key).ToList();
             if (!keyMovies.Any())
             {
-                // Eğer hiç ortak favori yoksa, en çok oy alan filmlerden birini anahtar yap
                 var mostRated = collectiveFavorites.OrderByDescending(kv => kv.Value).FirstOrDefault();
                 if(mostRated.Key != 0) keyMovies.Add(mostRated.Key);
             }
-
-            if (!keyMovies.Any()) return new List<int>(); // Hiç referans film bulunamazsa boş liste dön
-
-            // Anahtar filmlere yüksek puan veren diğer kullanıcıları bul (grup dışından)
+            if (!keyMovies.Any()) return new List<int>();
             var similarUsers = _context.UserRatings
                 .Where(r => keyMovies.Contains(r.MovieId) && r.Rating >= 8 && !groupMemberIds.Contains(r.UserId))
-                .Select(r => r.UserId)
-                .Distinct()
-                .Take(50) // Performans için benzer kullanıcı sayısını limitle
-                .ToList();
-
+                .Select(r => r.UserId).Distinct().Take(50).ToList();
             if (!similarUsers.Any()) return new List<int>();
-
-            // Bu benzer kullanıcıların sevdiği ama grubun henüz görmediği filmleri öneri olarak al
             var suggestions = _context.UserRatings
                 .Where(r => similarUsers.Contains(r.UserId) && r.Rating >= 9 && !allSeenMovies.Contains(r.MovieId))
                 .GroupBy(r => r.MovieId)
-                .Select(g => new { MovieId = g.Key, Score = g.Count() }) // En çok tekrar eden filmleri bul
-                .OrderByDescending(x => x.Score)
-                .Take(3)
-                .Select(x => x.MovieId)
-                .ToList();
-
+                .Select(g => new { MovieId = g.Key, Score = g.Count() })
+                .OrderByDescending(x => x.Score).Take(3).Select(x => x.MovieId).ToList();
             return suggestions;
         }
 
@@ -116,7 +103,6 @@ namespace SineUyum.Api.Services
         {
             var commonMovieIds = ratings1.Keys.Intersect(ratings2.Keys).ToList();
             if (!commonMovieIds.Any()) return 0;
-            
             double totalWeightedScore = 0;
             foreach (var movieId in commonMovieIds)
             {
@@ -129,7 +115,6 @@ namespace SineUyum.Api.Services
                 totalWeightedScore += (10 - difference) * weight;
             }
             double maxPossibleScore = commonMovieIds.Count * 10 * 1.5;
-            // --- HATA DÜZELTMESİ BURADA ---
             return maxPossibleScore > 0 ? (totalWeightedScore / maxPossibleScore) * 100 : 0;
         }
     }

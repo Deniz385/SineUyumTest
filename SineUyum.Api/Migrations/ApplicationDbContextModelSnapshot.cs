@@ -296,6 +296,31 @@ namespace SineUyum.Api.Migrations
                     b.ToTable("EventGroupMembers");
                 });
 
+            modelBuilder.Entity("SineUyum.Api.Models.EventParticipant", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CinemaEventId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CinemaEventId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("EventParticipants");
+                });
+
             modelBuilder.Entity("SineUyum.Api.Models.EventVote", b =>
                 {
                     b.Property<int>("Id")
@@ -566,6 +591,25 @@ namespace SineUyum.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("EventGroup");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.EventParticipant", b =>
+                {
+                    b.HasOne("SineUyum.Api.Models.CinemaEvent", "CinemaEvent")
+                        .WithMany()
+                        .HasForeignKey("CinemaEventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SineUyum.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CinemaEvent");
 
                     b.Navigation("User");
                 });

@@ -13,6 +13,7 @@
         public DbSet<UserFollow> UserFollows { get; set; }
         public DbSet<Message> Messages { get; set; }
          public DbSet<CinemaEvent> CinemaEvents { get; set; }
+         public DbSet<EventParticipant> EventParticipants { get; set; }
 
           public DbSet<EventGroup> EventGroups { get; set; }
         public DbSet<EventGroupMember> EventGroupMembers { get; set; }

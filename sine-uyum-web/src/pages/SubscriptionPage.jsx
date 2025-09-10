@@ -1,36 +1,32 @@
 // sine-uyum-web/src/pages/SubscriptionPage.jsx
-import React from 'react';
-import { Box, Typography, Button, Paper, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Typography, Button, Paper, List, ListItem, ListItemIcon, ListItemText, CircularProgress } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-
-
-const API_URL = 'https://super-duper-dollop-g959prvw5q539q6-5074.app.github.dev';
+import api from '../api/axiosConfig'; // Merkezi axios instance'ımızı kullanalım
 
 export const SubscriptionPage = () => {
     const navigate = useNavigate();
-    const { token, user } = useAuth();
-    // Bu fonksiyon, ödeme sistemi entegre edildiğinde kullanılacak.
-    // Şimdilik, veritabanını manuel olarak güncelleyeceğiz.
-    const handleSubscribeClick = async () => {
-        alert('Bu özellik yakında ödeme sistemi entegrasyonu ile tamamlanacaktır. Şimdilik, test etmek için veritabanından IsSubscribed alanını manuel olarak güncelleyebilirsiniz.');
+    const { logoutAction } = useAuth(); // logoutAction'ı alıyoruz
+    const [isLoading, setIsLoading] = useState(false);
 
-        // Örnek: Gerçek bir API çağrısı şöyle görünebilirdi:
-        /*
+    const handleSubscribeClick = async () => {
+        setIsLoading(true);
         try {
-            await axios.post(`${API_URL}/api/subscription/subscribe`, {}, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            // Başarılı olursa kullanıcıyı bilgilendir ve yönlendir.
-            alert('Aboneliğiniz başarıyla başlatıldı!');
-            // AuthContext'i güncelleyip yönlendirme yapmak gerekebilir.
-            navigate('/my-event'); 
+            // Yeni oluşturduğumuz endpoint'e istek atıyoruz
+            await api.post('/api/subscription/activate');
+            
+            alert('Aboneliğiniz başarıyla aktifleştirildi! Güncel durumun yansıması için yeniden giriş yapmanız gerekiyor.');
+
+            // Kullanıcıyı sistemden çıkarıp login sayfasına yönlendiriyoruz
+            // Böylece yeniden girdiğinde token'ı güncellenmiş ve abone durumu 'true' olacak.
+            logoutAction();
+
         } catch (error) {
             alert('Abonelik sırasında bir hata oluştu.');
+            setIsLoading(false);
         }
-        */
     };
 
     return (
@@ -60,8 +56,9 @@ export const SubscriptionPage = () => {
                     variant="contained" 
                     size="large" 
                     onClick={handleSubscribeClick}
+                    disabled={isLoading}
                 >
-                    Aylık 99.99 TL'ye Abone Ol
+                    {isLoading ? <CircularProgress size={24} /> : "Aboneliği Test Et"}
                 </Button>
             </Paper>
         </Box>

@@ -33,9 +33,12 @@ const PendingEvent = ({ event }) => (
 
 const MatchedEvent = ({ data, onVote }) => {
     const { user } = useAuth();
-    const group = data.groupInfo.group;
-    const votes = data.groupInfo.votes;
-    const suggestedMovies = data.groupInfo.suggestedMovies;
+    
+    const group = data.group;
+    const event = data.event;
+    const votes = data.votes?.$values || data.votes || [];
+    const suggestedMovies = data.suggestedMovies?.$values || data.suggestedMovies || [];
+    const groupMembers = group.members?.$values || group.members || [];
 
     const getVoteCount = (movieId) => votes.filter(v => v.movieId === movieId).length;
     const currentUserVoteId = votes.find(v => v.userId === user.id)?.movieId;
@@ -43,15 +46,15 @@ const MatchedEvent = ({ data, onVote }) => {
     return (
         <>
             <Paper elevation={3} sx={{ p: 3, mt: 4, mb: 4 }}>
-                <Typography variant="h5" component="h2">{data.groupInfo.event.locationName}</Typography>
+                <Typography variant="h5" component="h2">{event.locationName}</Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary', my: 2 }}>
                     <EventIcon sx={{ mr: 1 }} />
-                    <Typography variant="h6">{new Date(data.groupInfo.event.eventDate).toLocaleDateString('tr-TR', { weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</Typography>
+                    <Typography variant="h6">{new Date(event.eventDate).toLocaleDateString('tr-TR', { weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</Typography>
                 </Box>
                 <Typography variant="h6" component="h3" sx={{ mt: 4, mb: 2 }}>Masanız</Typography>
                 <AvatarGroup max={10} sx={{ justifyContent: 'center', mb: 2 }}>
-                    {group.members.map(member => (
-                        <Avatar key={member.Id} component={Link} to={`/profile/${member.Id}`} alt={member.userName} src={member.profileImageUrl} sx={{ width: 64, height: 64, border: '2px solid white' }} title={member.userName} />
+                    {groupMembers.map(member => (
+                        <Avatar key={member.id} component={Link} to={`/profile/${member.id}`} alt={member.userName} src={member.profileImageUrl} sx={{ width: 64, height: 64, border: '2px solid white' }} title={member.userName} />
                     ))}
                 </AvatarGroup>
             </Paper>
@@ -59,7 +62,8 @@ const MatchedEvent = ({ data, onVote }) => {
             <Typography variant="h5" component="h2" sx={{ mb: 3 }}>Film Oylaması</Typography>
             <Grid container spacing={3} justifyContent="center">
                 {suggestedMovies.map(movie => (
-                    <Grid item xs={12} sm={6} md={4} key={movie.id}>
+                    // --- DÜZELTME: "item" prop'u kaldırıldı ---
+                    <Grid xs={12} sm={6} md={4} key={movie.id}>
                         <Card sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                             <CardMedia component="img" height="350" image={movie.posterPath ? `${IMAGE_BASE_URL}${movie.posterPath}` : '/vite.svg'} alt={movie.title} />
                             <CardContent sx={{ flexGrow: 1 }}><Typography gutterBottom variant="h6" component="div">{movie.title}</Typography></CardContent>
@@ -116,7 +120,7 @@ export const MyEventPage = () => {
     const handleVote = async (movieId) => {
         try {
             await api.post('/api/event/vote', { 
-                groupId: statusData.groupInfo.group.id, 
+                groupId: statusData.group.id, 
                 movieId: movieId 
             });
             fetchEventStatus();
@@ -124,9 +128,8 @@ export const MyEventPage = () => {
             alert("Oyunuz kaydedilirken bir sorun oluştu.");
         }
     };
-
+    
     if (!user) {
-        // --- DÜZELTME 1 ---
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
                 <CircularProgress />
@@ -140,7 +143,6 @@ export const MyEventPage = () => {
 
     const renderContent = () => {
         if (isLoading) {
-            // --- DÜZELTME 2 ---
             return (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
                     <CircularProgress />

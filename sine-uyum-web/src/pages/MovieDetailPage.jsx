@@ -4,8 +4,8 @@ import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, Chip, CircularProgress, Button, IconButton, Modal, List, ListItem, ListItemButton, ListItemText, Divider } from '@mui/material';
 import { RatingModal } from '../components/RatingModal';
-import { AlertMessage } from '../components/AlertMessage';
 import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd';
+import { useSnackbar } from '../context/SnackbarProvider'; // <-- SNACKBAR KANCASINI İÇE AKTAR
 
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 
@@ -24,14 +24,13 @@ const modalStyle = {
 export const MovieDetailPage = () => {
     const { movieId } = useParams();
     const { user } = useAuth();
+    const { showSnackbar } = useSnackbar(); // <-- SNACKBAR FONKSİYONUNU AL
     const [movie, setMovie] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
-    const [ratingMessage, setRatingMessage] = useState({ type: '', text: '' });
     const [isWatchlistModalOpen, setIsWatchlistModalOpen] = useState(false);
     const [userLists, setUserLists] = useState([]);
-    const [watchlistMessage, setWatchlistMessage] = useState({ type: '', text: '' });
     const [refetchTrigger, setRefetchTrigger] = useState(0);
 
     const fetchMovieDetails = useCallback(async () => {
@@ -53,55 +52,47 @@ export const MovieDetailPage = () => {
     
     const handleOpenWatchlistModal = async () => {
         setIsWatchlistModalOpen(true);
-        setWatchlistMessage({ type: '', text: '' });
         try {
             const response = await api.get(`/api/watchlist`);
-            setUserLists(response.data);
+            // $values kontrolü eklendi
+            setUserLists(response.data.$values || response.data);
         } catch (err) {
-            setWatchlistMessage({ type: 'error', text: 'Listeleriniz yüklenemedi.' });
+            showSnackbar('Listeleriniz yüklenemedi.', 'error');
         }
     };
 
     const handleAddMovieToList = async (listId) => {
+        setIsWatchlistModalOpen(false);
         const movieData = { movieId: movie.id, title: movie.title, posterPath: movie.poster_path };
         try {
             await api.post(`/api/watchlist/${listId}/movies`, movieData);
-            setWatchlistMessage({ type: 'success', text: 'Film listeye başarıyla eklendi!' });
+            showSnackbar('Film listeye başarıyla eklendi!', 'success');
         } catch (err) {
             const errorMessage = err.response?.data?.message || 'Film listeye eklenemedi.';
-            setWatchlistMessage({ type: 'error', text: errorMessage });
-        } finally {
-            setIsWatchlistModalOpen(false);
+            showSnackbar(errorMessage, 'error');
         }
     };
 
-    // --- DÜZELTİLMİŞ METOT ---
     const handleRateMovie = async (movieToRate, rating) => {
-        setRatingMessage({ type: 'info', text: `'${movieToRate.title}' için puanınız kaydediliyor...` });
         try {
-            // Adım 1: Filmin veritabanında olduğundan emin ol. Backend hatayı görmezden gelecek.
             await api.post(`/api/ratings/addmovie`, { 
                 id: movieToRate.id, 
                 title: movieToRate.title, 
                 posterPath: movieToRate.poster_path 
             });
-
-            // Adım 2: Hata kontrolü olmadan doğrudan oylamayı gönder.
             await api.post(`/api/ratings`, { 
                 movieId: movieToRate.id, 
                 rating: rating 
             });
-
-            setRatingMessage({ type: 'success', text: `'${movieToRate.title}' filmine ${rating} puan verdiniz. Başarıyla kaydedildi!` });
-            setRefetchTrigger(prev => prev + 1); // Sayfayı yenilemek için trigger'ı ateşle
+            showSnackbar(`'${movieToRate.title}' filmine ${rating} puan verdiniz!`, 'success');
+            setRefetchTrigger(prev => prev + 1);
         } catch (error) {
-            // Sadece gerçek (beklenmedik) hataları göster
-            setRatingMessage({ type: 'error', text: 'Puan kaydedilirken bir hata oluştu.' });
+            showSnackbar('Puan kaydedilirken bir hata oluştu.', 'error');
         }
     };
     
     if (isLoading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
-    if (error) return <div className="page-container"><AlertMessage type="error" message={error} /></div>;
+    if (error) return <div className="page-container"><Typography color="error">{error}</Typography></div>;
     if (!movie) return null;
 
     const tmdbScore = Math.round(movie.vote_average * 10);
@@ -120,8 +111,6 @@ export const MovieDetailPage = () => {
                         <Button variant="contained" size="large" onClick={() => setIsRatingModalOpen(true)}>Bu Filmi Puanla</Button>
                         <IconButton onClick={handleOpenWatchlistModal} color="primary" title="Listeye Ekle"><BookmarkAddIcon fontSize="large" /></IconButton>
                     </Box>
-                    {watchlistMessage.text && <AlertMessage type={watchlistMessage.type} message={watchlistMessage.text} />}
-                    {ratingMessage.text && <AlertMessage type={ratingMessage.type} message={ratingMessage.text} sx={{ mt: 2 }} />}
                     <Box sx={{ my: 2 }}>{movie.genres.map(genre => <Chip label={genre.name} key={genre.id} sx={{ mr: 1, mb: 1 }} />)}</Box>
                     <Typography variant="body1" paragraph>{movie.overview}</Typography>
                     <Typography variant="subtitle1">**Süre:** {movie.runtime} dakika</Typography>
@@ -162,3 +151,4 @@ export const MovieDetailPage = () => {
         </>
     );
 };
+

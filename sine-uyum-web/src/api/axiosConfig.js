@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-export const API_URL = 'https://super-duper-dollop-g959prvw5q539q6-5074.app.github.dev';
+// API_URL'i .env dosyasından al. Eğer tanımlı değilse, localhost'u varsay.
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5074';
 
 const api = axios.create({
     baseURL: API_URL

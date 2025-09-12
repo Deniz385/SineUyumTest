@@ -1,9 +1,10 @@
-// SineUyum.Api/Controllers/MessageController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
+using SineUyum.Api.Hubs;
 using SineUyum.Api.Models;
 using System.Security.Claims;
 
@@ -15,10 +16,13 @@ namespace SineUyum.Api.Controllers
     public class MessageController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public MessageController(ApplicationDbContext context)
+
+        public MessageController(ApplicationDbContext context, IHubContext<NotificationHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         [HttpPost]
@@ -26,6 +30,9 @@ namespace SineUyum.Api.Controllers
         {
             var senderId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (senderId == null) return Unauthorized();
+            
+            var sender = await _context.Users.FindAsync(senderId);
+            if (sender == null) return Unauthorized();
 
             if (senderId == createMessageDto.RecipientId)
                 return BadRequest("Kendinize mesaj gönderemezsiniz.");
@@ -53,14 +60,27 @@ namespace SineUyum.Api.Controllers
                 MovieId = createMessageDto.MovieId,
                 WatchlistId = createMessageDto.WatchlistId
             };
-
             await _context.Messages.AddAsync(message);
+            
+            // --- BİLDİRİM OLUŞTURMA VE GÖNDERME ---
+            var notification = new Notification
+            {
+                UserId = createMessageDto.RecipientId, // Bildirim mesajın alıcısına gidecek
+                Message = $"{sender.UserName} size bir mesaj gönderdi.",
+                RelatedUrl = $"/messages/{senderId}" // Tıklayınca gönderenle olan sohbete gitsin
+            };
+            await _context.Notifications.AddAsync(notification);
+
             await _context.SaveChangesAsync();
+            
+            // SignalR ile anlık bildirimi gönder
+            await _hubContext.Clients.User(createMessageDto.RecipientId).SendAsync("ReceiveNotification", notification);
 
             return Ok(new { message = "Mesaj başarıyla gönderildi." });
         }
 
-        [HttpGet("thread/{otherUserId}")]
+        // ... GetMessageThread ve GetConversations metodları aynı kalacak ...
+         [HttpGet("thread/{otherUserId}")]
         public async Task<IActionResult> GetMessageThread(string otherUserId)
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -89,8 +109,6 @@ namespace SineUyum.Api.Controllers
                         Title = m.Movie.Title,
                         PosterPath = m.Movie.PosterPath
                     },
-                    // --- HATA DÜZELTMESİ BURADA ---
-                    // 'm.Watchlist.User?.UserName' yerine ternary operatörü kullanıyoruz.
                     Watchlist = m.Watchlist == null ? null : new {
                         Id = m.Watchlist.Id,
                         Name = m.Watchlist.Name,
@@ -146,3 +164,4 @@ namespace SineUyum.Api.Controllers
         }
     }
 }
+

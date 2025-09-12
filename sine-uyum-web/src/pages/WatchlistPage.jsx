@@ -18,7 +18,7 @@ const modalStyle = {
 };
 
 export const WatchlistPage = () => {
-    const { user } = useAuth(); // token yerine user kullanılıyor
+    const { user } = useAuth();
     const [watchlists, setWatchlists] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -27,18 +27,17 @@ export const WatchlistPage = () => {
     const [newListDesc, setNewListDesc] = useState('');
 
     const fetchWatchlists = useCallback(async () => {
-        if (!user) return; // user objesinin varlığı kontrol ediliyor
+        if (!user) return;
         setIsLoading(true);
         try {
-            // İstek 'api' üzerinden yapılıyor ve header kaldırılıyor
             const response = await api.get(`/api/watchlist`);
-            setWatchlists(response.data);
+            setWatchlists(response.data.$values || response.data);
         } catch (err) {
             setError('Listeler yüklenirken bir hata oluştu.');
         } finally {
             setIsLoading(false);
         }
-    }, [user]); // useCallback bağımlılığı 'user' olarak güncellendi
+    }, [user]);
 
     useEffect(() => {
         fetchWatchlists();
@@ -49,12 +48,11 @@ export const WatchlistPage = () => {
         if (!newListName.trim()) return;
 
         try {
-            // İstek 'api' üzerinden yapılıyor ve header kaldırılıyor
             await api.post(`/api/watchlist`, { name: newListName, description: newListDesc });
             setOpen(false);
             setNewListName('');
             setNewListDesc('');
-            fetchWatchlists(); // Listeyi yenile
+            fetchWatchlists();
         } catch (err) {
             setError("Yeni liste oluşturulurken bir hata oluştu.");
         }
@@ -76,7 +74,8 @@ export const WatchlistPage = () => {
                 ) : (
                     <Grid container spacing={3}>
                         {watchlists.map(list => (
-                            <Grid item xs={12} sm={6} md={4} key={list.id}>
+                            // --- DÜZELTME: "item" prop'u kaldırıldı ---
+                            <Grid xs={12} sm={6} md={4} key={list.id}>
                                 <Card component={Link} to={`/watchlist/${list.id}`} sx={{ textDecoration: 'none', height: '100%' }}>
                                     <CardContent>
                                         <Typography variant="h6">{list.name}</Typography>
@@ -101,3 +100,4 @@ export const WatchlistPage = () => {
         </>
     );
 };
+

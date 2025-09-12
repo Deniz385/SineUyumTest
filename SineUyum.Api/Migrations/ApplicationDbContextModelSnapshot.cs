@@ -407,6 +407,36 @@ namespace SineUyum.Api.Migrations
                     b.ToTable("Movies");
                 });
 
+            modelBuilder.Entity("SineUyum.Api.Models.Notification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RelatedUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Notifications");
+                });
+
             modelBuilder.Entity("SineUyum.Api.Models.UserFollow", b =>
                 {
                     b.Property<int>("Id")
@@ -670,6 +700,17 @@ namespace SineUyum.Api.Migrations
                     b.Navigation("Sender");
 
                     b.Navigation("Watchlist");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.Notification", b =>
+                {
+                    b.HasOne("SineUyum.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SineUyum.Api.Models.UserFollow", b =>

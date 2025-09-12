@@ -18,46 +18,52 @@ import { MyEventPage } from './pages/MyEventPage';
 import { SubscriptionPage } from './pages/SubscriptionPage';
 import { AdminPage } from './pages/AdminPage';
 import { AdminRoute } from './components/AdminRoute';
+import { SnackbarProvider } from './context/SnackbarProvider';
+import { NotificationProvider } from './context/NotificationContext';
 
 function App() {
   return (
     <BrowserRouter>
       <CustomThemeProvider>
         <AuthProvider>
-          <Routes>
-            {/* Herkesin erişebileceği rotalar */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/" element={<LoginPage />} />
+          <SnackbarProvider>
+            <NotificationProvider>
+              <Routes>
+                {/* Herkesin erişebileceği rotalar */}
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/" element={<LoginPage />} />
 
-            {/* Sadece GİRİŞ YAPMIŞ kullanıcıların erişebileceği ana rota grubu */}
-            <Route
-              element={
-                <ProtectedRoute>
-                  <Layout />
-                </ProtectedRoute>
-              }
-            >
-              {/* Hem normal kullanıcıların hem de adminlerin görebileceği rotalar */}
-              <Route path="/home" element={<HomePage />} />
-              <Route path="/profile/:userId" element={<ProfilePage />} />
-              <Route path="/search" element={<SearchResultsPage />} />
-              <Route path="/movie/:movieId" element={<MovieDetailPage />} />
-              <Route path="/watchlist" element={<WatchlistPage />} />
-              <Route path="/watchlist/:listId" element={<WatchlistDetailPage />} />
-              <Route path="/profile/edit" element={<EditProfilePage />} />
-              <Route path="/messages" element={<MessagesPage />} />
-              <Route path="/messages/:otherUserId" element={<ConversationPage />} />
-              <Route path="/my-event" element={<MyEventPage />} />
-              <Route path="/subscription" element={<SubscriptionPage />} />
-              
-              {/* Sadece ADMIN rolüne sahip kullanıcıların görebileceği rotalar */}
-              <Route element={<AdminRoute />}>
-                <Route path="/admin" element={<AdminPage />} />
-              </Route>
-            </Route>
+                {/* Sadece GİRİŞ YAPMIŞ kullanıcıların erişebileceği ana rota grubu */}
+                <Route
+                  element={
+                    <ProtectedRoute>
+                      <Layout />
+                    </ProtectedRoute>
+                  }
+                >
+                  {/* Hem normal kullanıcıların hem de adminlerin görebileceği rotalar */}
+                  <Route path="/home" element={<HomePage />} />
+                  <Route path="/profile/:userId" element={<ProfilePage />} />
+                  <Route path="/search" element={<SearchResultsPage />} />
+                  <Route path="/movie/:movieId" element={<MovieDetailPage />} />
+                  <Route path="/watchlist" element={<WatchlistPage />} />
+                  <Route path="/watchlist/:listId" element={<WatchlistDetailPage />} />
+                  <Route path="/profile/edit" element={<EditProfilePage />} />
+                  <Route path="/messages" element={<MessagesPage />} />
+                  <Route path="/messages/:otherUserId" element={<ConversationPage />} />
+                  <Route path="/my-event" element={<MyEventPage />} />
+                  <Route path="/subscription" element={<SubscriptionPage />} />
+                  
+                  {/* Sadece ADMIN rolüne sahip kullanıcıların görebileceği rotalar */}
+                  <Route element={<AdminRoute />}>
+                    <Route path="/admin" element={<AdminPage />} />
+                  </Route>
+                </Route>
 
-          </Routes>
+              </Routes>
+            </NotificationProvider>
+          </SnackbarProvider>
         </AuthProvider>
       </CustomThemeProvider>
     </BrowserRouter>
@@ -65,3 +71,4 @@ function App() {
 }
 
 export default App;
+

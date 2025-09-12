@@ -1,35 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axiosConfig'; // DÜZELTME: axios yerine merkezi api import ediliyor
 import { Autocomplete, TextField, CircularProgress, Box } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 
-const API_URL = 'https://super-duper-dollop-g959prvw5q539q6-5074.app.github.dev';
-
-// onMovieSelect prop'u eklendi.
 export const MovieSearchBar = ({ onMovieSelect }) => {
   const [open, setOpen] = useState(false);
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { user } = useAuth(); // DÜZELTME: token yerine user kullanılıyor
 
   useEffect(() => {
+    // Eğer kullanıcı giriş yapmamışsa arama yapma
+    if (!user) {
+        setOptions([]);
+        return;
+    }
+
     const delayDebounceFn = setTimeout(() => {
       if (inputValue) {
         setLoading(true);
-        axios.get(`${API_URL}/api/movies/search`, {
-          headers: { 'Authorization': `Bearer ${token}` },
+        // DÜZELTME: 'api' kullanılıyor ve header kaldırılıyor. Interceptor token'ı ekleyecek.
+        api.get(`/api/movies/search`, {
           params: { query: inputValue }
         }).then(response => {
           const movies = response.data.results || [];
           const uniqueMovies = Array.from(new Map(movies.map(movie => [movie.id, movie])).values());
           setOptions(uniqueMovies);
-          setLoading(false);
         }).catch(err => {
           console.error("Film arama hatası:", err);
-          setLoading(false);
+        }).finally(() => {
+            setLoading(false);
         });
       } else {
         setOptions([]);
@@ -37,15 +40,13 @@ export const MovieSearchBar = ({ onMovieSelect }) => {
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [inputValue, token]);
+  }, [inputValue, user]); // DÜZELTME: Bağımlılık 'user' olarak değiştirildi
 
   const handleOnChange = (event, value) => {
     if (value && value.id) {
-      // Eğer onMovieSelect prop'u verildiyse onu çağır
       if (onMovieSelect) {
         onMovieSelect(value);
       } else {
-        // Yoksa eskisi gibi sayfaya yönlendir
         navigate(`/movie/${value.id}`);
       }
       setOpen(false);
@@ -57,7 +58,7 @@ export const MovieSearchBar = ({ onMovieSelect }) => {
   return (
     <Autocomplete
       id="movie-search-autocomplete"
-      sx={{ width: '100%', marginRight: 2 }} // Genişliği tam yapalım
+      sx={{ width: '100%', marginRight: 2 }}
       open={open}
       onOpen={() => setOpen(true)}
       onClose={() => setOpen(false)}
@@ -79,7 +80,6 @@ export const MovieSearchBar = ({ onMovieSelect }) => {
           size="small"
           InputProps={{
             ...params.InputProps,
-            // Navbar'da değilse rengi normal yap
             style: onMovieSelect ? {} : { color: 'white' }, 
             endAdornment: (
               <>
@@ -88,7 +88,7 @@ export const MovieSearchBar = ({ onMovieSelect }) => {
               </>
             ),
           }}
-          sx={onMovieSelect ? {} : { // Navbar'da değilse border'ı normal yap
+          sx={onMovieSelect ? {} : {
             '& .MuiOutlinedInput-root': {
               '& fieldset': { borderColor: '#6c757d' },
               '&:hover fieldset': { borderColor: 'white' },

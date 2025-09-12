@@ -1,16 +1,13 @@
-// sine-uyum-web/src/pages/MyEventPage.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Box, Typography, CircularProgress, Paper, Avatar, AvatarGroup, Alert, Grid, Card, CardMedia, CardActions, Button, Chip } from '@mui/material';
+import { Box, Typography, CircularProgress, Paper, Avatar, AvatarGroup, Alert, Grid, Card, CardContent, CardMedia, CardActions, Button, Chip } from '@mui/material';
 import EventIcon from '@mui/icons-material/Event';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
-// --- DEĞİŞİKLİK 1: Eski axios yerine yeni 'api' instance'ını import ediyoruz ---
-import api from '../api/axiosConfig'; 
+import api from '../api/axiosConfig';
 
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 
-// ... (AvailableEvent, PendingEvent, MatchedEvent component'leri aynı kalıyor)
 const AvailableEvent = ({ event, onJoin }) => (
     <Paper elevation={3} sx={{ p: 4, mt: 4, textAlign: 'center' }}>
         <Typography variant="h5" component="h2" gutterBottom>Sıradaki Etkinlik</Typography>
@@ -36,8 +33,12 @@ const PendingEvent = ({ event }) => (
 
 const MatchedEvent = ({ data, onVote }) => {
     const { user } = useAuth();
-    const getVoteCount = (movieId) => data.groupInfo.votes.filter(v => v.movieId === movieId).length;
-    const currentUserVoteId = data.groupInfo.votes.find(v => v.userId === user.id)?.movieId;
+    const group = data.groupInfo.group;
+    const votes = data.groupInfo.votes;
+    const suggestedMovies = data.groupInfo.suggestedMovies;
+
+    const getVoteCount = (movieId) => votes.filter(v => v.movieId === movieId).length;
+    const currentUserVoteId = votes.find(v => v.userId === user.id)?.movieId;
 
     return (
         <>
@@ -49,15 +50,15 @@ const MatchedEvent = ({ data, onVote }) => {
                 </Box>
                 <Typography variant="h6" component="h3" sx={{ mt: 4, mb: 2 }}>Masanız</Typography>
                 <AvatarGroup max={10} sx={{ justifyContent: 'center', mb: 2 }}>
-                    {data.groupInfo.group.members.map(member => (
-                        <Avatar key={member.id} component={Link} to={`/profile/${member.id}`} alt={member.userName} src={member.profileImageUrl} sx={{ width: 64, height: 64, border: '2px solid white' }} title={member.userName} />
+                    {group.members.map(member => (
+                        <Avatar key={member.Id} component={Link} to={`/profile/${member.Id}`} alt={member.userName} src={member.profileImageUrl} sx={{ width: 64, height: 64, border: '2px solid white' }} title={member.userName} />
                     ))}
                 </AvatarGroup>
             </Paper>
 
             <Typography variant="h5" component="h2" sx={{ mb: 3 }}>Film Oylaması</Typography>
             <Grid container spacing={3} justifyContent="center">
-                {data.suggestedMovies.map(movie => (
+                {suggestedMovies.map(movie => (
                     <Grid item xs={12} sm={6} md={4} key={movie.id}>
                         <Card sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                             <CardMedia component="img" height="350" image={movie.posterPath ? `${IMAGE_BASE_URL}${movie.posterPath}` : '/vite.svg'} alt={movie.title} />
@@ -81,32 +82,27 @@ export const MyEventPage = () => {
     const [statusData, setStatusData] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const fetchEventStatus = async () => {
+    const fetchEventStatus = useCallback(async () => {
         if (!user || !user.isSubscribed) {
             setIsLoading(false);
             return;
         }
+        setIsLoading(true);
         try {
-            // --- DEĞİŞİKLİK 2: Artık 'api' objesini kullanıyoruz. Header'a veya tam URL'e gerek yok. ---
             const response = await api.get('/api/event/my-status');
             setStatusData(response.data);
         } catch (err) {
-            // 401 hatası interceptor tarafından yakalanacağı için buraya genellikle gelmez.
-            if (err.response && err.response.status === 404) {
-                setStatusData({ status: 'NONE' });
-            } else if (err.response?.status !== 401) {
+            if (err.response?.status !== 401) {
                 setStatusData({ status: 'ERROR' });
             }
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [user]);
 
     useEffect(() => {
-        if (user) {
-            fetchEventStatus();
-        }
-    }, [user]);
+        fetchEventStatus();
+    }, [fetchEventStatus]);
 
     const handleJoinEvent = async (eventId) => {
         try {
@@ -129,8 +125,13 @@ export const MyEventPage = () => {
         }
     };
 
-    if (isLoading || !user) {
-        return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}><CircularProgress /></Box>;
+    if (!user) {
+        // --- DÜZELTME 1 ---
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
+                <CircularProgress />
+            </Box>
+        );
     }
     
     if (!user.isSubscribed) {
@@ -138,7 +139,17 @@ export const MyEventPage = () => {
     }
 
     const renderContent = () => {
-        if (!statusData) return <CircularProgress />;
+        if (isLoading) {
+            // --- DÜZELTME 2 ---
+            return (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+                    <CircularProgress />
+                </Box>
+            );
+        }
+        if (!statusData) {
+            return <Alert severity="warning" sx={{ mt: 4 }}>Etkinlik durumu alınamadı. Lütfen sayfayı yenileyin.</Alert>;
+        }
 
         switch (statusData.status) {
             case 'AVAILABLE':

@@ -1,5 +1,4 @@
-﻿// Controllers/RatingsController.cs
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
@@ -16,8 +15,7 @@ namespace SineUyum.Api.Controllers
     {
         private readonly ApplicationDbContext _context = context;
 
-        // POST /api/ratings
-        [HttpPost]  // <-- ARTIK DOĞRU YERDE!
+        [HttpPost]
         public async Task<IActionResult> AddRating(CreateRatingDto createRatingDto)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -31,6 +29,8 @@ namespace SineUyum.Api.Controllers
 
             if (movie == null)
             {
+                // Normalde bu durumun yaşanmaması gerekir çünkü oylamadan hemen önce film ekleniyor.
+                // Yine de bir güvenlik kontrolü olarak kalabilir.
                 return NotFound("Bu film sistemde kayıtlı değil. Lütfen önce filmi ekleyin.");
             }
 
@@ -39,10 +39,12 @@ namespace SineUyum.Api.Controllers
 
             if (existingRating != null)
             {
+                // Kullanıcı bu filme daha önce oy verdiyse, sadece puanını güncelle
                 existingRating.Rating = createRatingDto.Rating;
             }
             else
             {
+                // Kullanıcı bu filme ilk defa oy veriyorsa, yeni bir kayıt oluştur
                 var newRating = new UserRating
                 {
                     MovieId = createRatingDto.MovieId,
@@ -53,30 +55,30 @@ namespace SineUyum.Api.Controllers
             }
 
             await _context.SaveChangesAsync();
-            return Ok("Puan başarıyla kaydedildi.");
+            return Ok(new { message = "Puan başarıyla kaydedildi." });
         }
-
-        // POST /api/ratings/addmovie
-        [HttpPost("addmovie")] // <-- SADECE KENDİNE AİT ATTRIBUTE KALDI!
+        
+        // --- DÜZELTİLMİŞ METOT ---
+        [HttpPost("addmovie")]
         public async Task<IActionResult> AddMovie(Movie movie)
         {
+            // Film veritabanında zaten var mı diye kontrol et
             var movieExists = await _context.Movies.AnyAsync(m => m.Id == movie.Id);
-            if (movieExists)
+            
+            // Eğer film mevcut değilse, ekle. Mevcutsa hiçbir şey yapma ve başarılı dön.
+            if (!movieExists)
             {
-                return BadRequest("Bu film zaten mevcut.");
+                _context.Movies.Add(movie);
+                await _context.SaveChangesAsync();
             }
-
-            _context.Movies.Add(movie);
-            await _context.SaveChangesAsync();
+            
+            // Her iki durumda da frontend'in devam edebilmesi için OK (200) dön.
             return Ok(movie);
         }
-        // Controllers/RatingsController.cs ... en alta
 
         [HttpGet("test")]
         public IActionResult TestAuth()
         {
-            // Eğer bu metoda erişebiliyorsak, token'ımız geçerli demektir.
-            // Token'ın içindeki kullanıcı adını okuyup geri döndürelim.
             var username = User.FindFirstValue(ClaimTypes.Name);
             return Ok($"Token geçerli! Giriş yapan kullanıcı: {username}");
         }

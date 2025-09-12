@@ -1,4 +1,3 @@
-// sine-uyum-web/src/components/Navbar.jsx
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -11,7 +10,8 @@ import { UserSearch } from './UserSearch';
 import { MovieSearchBar } from './MovieSearchBar';
 
 export const Navbar = () => {
-  const { token, user, logoutAction } = useAuth();
+  // DÜZELTME: 'token' kaldırıldı, sadece 'user' ve 'logoutAction' kullanılıyor.
+  const { user, logoutAction } = useAuth();
   const { mode, toggleTheme } = useThemeContext();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -19,14 +19,12 @@ export const Navbar = () => {
     setMobileOpen(!mobileOpen);
   };
 
-  // Mobil menüdeki linkleri içeren yapı
   const drawer = (
     <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center' }}>
       <Typography variant="h6" sx={{ my: 2 }}>
         SineUyum
       </Typography>
       <List>
-        {/* DÜZELTME 1: Mobil menüye "Etkinliğim" linki eklendi */}
         <ListItem disablePadding>
           <ListItemButton component={Link} to="/my-event">
             <ListItemText primary="Etkinliğim" />
@@ -79,11 +77,11 @@ export const Navbar = () => {
             SineUyum
           </Typography>
 
-          {token && user && (
+          {/* DÜZELTME: Kontrol 'token' yerine 'user' ile yapılıyor. */}
+          {user && (
             <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center' }}>
               <MovieSearchBar />
               <UserSearch />
-              {/* DÜZELTME 2: Geniş ekran menüsündeki link güncellendi */}
               <Link to="/my-event" style={{ color: '#fff', margin: '0 15px', textDecoration: 'none' }}>Etkinliğim</Link>
               <Link to="/messages" style={{ color: '#fff', margin: '0 15px', textDecoration: 'none' }}>Mesajlar</Link>
               <Link to="/watchlist" style={{ color: '#fff', margin: '0 15px', textDecoration: 'none' }}>İzleme Listem</Link>

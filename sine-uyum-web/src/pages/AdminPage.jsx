@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography, TextField, Button, CircularProgress, Paper, Grid, List, ListItem, ListItemText, Divider, IconButton, Modal } from '@mui/material';
-import GroupAddIcon from '@mui/icons-material/GroupAdd';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { AlertMessage } from '../components/AlertMessage';
 import api from '../api/axiosConfig';
+import { ConfirmationDialog } from '../components/ConfirmationDialog';
+import { useSnackbar } from '../context/SnackbarProvider'; // <-- SNACKBAR KANCASINI İÇE AKTAR
 
 const EventForm = ({ onFormSubmit, initialData, onCancel, isLoading }) => {
     const [eventData, setEventData] = useState({
@@ -50,20 +50,21 @@ export const AdminPage = () => {
     const [events, setEvents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [message, setMessage] = useState({ type: '', text: '' });
     const [editingEvent, setEditingEvent] = useState(null);
+    const [dialog, setDialog] = useState({ isOpen: false, title: '', description: '', onConfirm: null });
+    const { showSnackbar } = useSnackbar(); // <-- SNACKBAR FONKSİYONUNU AL
 
     const fetchEvents = useCallback(async () => {
         setIsLoading(true);
         try {
             const response = await api.get('/api/event');
-            setEvents(response.data);
+            setEvents(response.data.$values || response.data);
         } catch (error) {
-            setMessage({ type: 'error', text: 'Etkinlikler yüklenemedi.' });
+            showSnackbar('Etkinlikler yüklenemedi.', 'error');
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [showSnackbar]);
 
     useEffect(() => {
         fetchEvents();
@@ -71,13 +72,61 @@ export const AdminPage = () => {
 
     const handleCreateEvent = async (formData) => {
         setIsSubmitting(true);
-        setMessage({ type: '', text: '' });
         try {
             await api.post('/api/event', formData);
-            setMessage({ type: 'success', text: 'Etkinlik başarıyla oluşturuldu!' });
+            showSnackbar('Etkinlik başarıyla oluşturuldu!', 'success');
             fetchEvents();
         } catch (error) {
-            setMessage({ type: 'error', text: error.response?.data?.message || 'Etkinlik oluşturulurken bir hata oluştu.' });
+            showSnackbar(error.response?.data?.message || 'Etkinlik oluşturulurken bir hata oluştu.', 'error');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteEvent = (eventId) => {
+        setDialog({
+            isOpen: true,
+            title: 'Etkinliği Sil?',
+            description: 'Bu etkinliği ve tüm katılımcılarını kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
+            onConfirm: () => {
+                setDialog({ isOpen: false });
+                performDelete(eventId);
+            }
+        });
+    };
+
+    const performDelete = async (eventId) => {
+        showSnackbar('Etkinlik siliniyor...', 'info');
+        try {
+            await api.delete(`/api/event/${eventId}`);
+            showSnackbar('Etkinlik başarıyla silindi.', 'success');
+            fetchEvents();
+        } catch (error) {
+            showSnackbar(error.response?.data?.message || 'Etkinlik silinirken bir hata oluştu.', 'error');
+        }
+    };
+    
+    const handleTriggerMatch = (eventId) => {
+        setDialog({
+            isOpen: true,
+            title: 'Eşleştirmeyi Başlat?',
+            description: 'Bu etkinlik için katılımcıları eşleştirmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
+            onConfirm: () => {
+                setDialog({ isOpen: false });
+                performMatch(eventId);
+            }
+        });
+    };
+
+    const performMatch = async (eventId) => {
+        setIsSubmitting(true);
+        showSnackbar('Eşleştirme işlemi başlatılıyor...', 'info');
+        try {
+            const response = await api.post(`/api/admin/events/${eventId}/create-groups`);
+            showSnackbar(response.data.message, 'success');
+        } catch (error) {
+            const errorMessage = error.response?.data?.message || 'Eşleştirme sırasında bilinmeyen bir hata oluştu.';
+            showSnackbar(errorMessage, 'error');
         } finally {
             setIsSubmitting(false);
         }
@@ -86,57 +135,13 @@ export const AdminPage = () => {
     const handleUpdateEvent = async (formData) => {
         if (!editingEvent) return;
         setIsSubmitting(true);
-        setMessage({ type: '', text: '' });
         try {
             await api.put(`/api/event/${editingEvent.id}`, formData);
-            setMessage({ type: 'success', text: 'Etkinlik başarıyla güncellendi!' });
+            showSnackbar('Etkinlik başarıyla güncellendi!', 'success');
             setEditingEvent(null);
             fetchEvents();
         } catch (error) {
-            setMessage({ type: 'error', text: error.response?.data?.message || 'Etkinlik güncellenirken bir hata oluştu.' });
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const handleDeleteEvent = async (eventId) => {
-        if (!window.confirm("Bu etkinliği ve tüm katılımcılarını kalıcı olarak silmek istediğinizden emin misiniz?")) return;
-        
-        setMessage({ type: 'info', text: 'Etkinlik siliniyor...' });
-        try {
-            await api.delete(`/api/event/${eventId}`);
-            setMessage({ type: 'success', text: 'Etkinlik başarıyla silindi.' });
-            fetchEvents();
-        } catch (error) {
-            setMessage({ type: 'error', text: error.response?.data?.message || 'Etkinlik silinirken bir hata oluştu.' });
-        }
-    };
-    
-    // --- DÜZELTME BU FONKSİYONDA ---
-    const handleTriggerMatch = async (eventId) => {
-        console.log("1. Eşleştirme fonksiyonu tetiklendi. Etkinlik ID:", eventId); // DEBUG
-
-        const confirmation = window.confirm("Bu etkinlik için katılımcıları eşleştirmek istediğinizden emin misiniz? Bu işlem geri alınamaz.");
-        
-        console.log("2. Onay kutusu sonucu:", confirmation); // DEBUG
-
-        if (!confirmation) {
-            console.log("3. İşlem kullanıcı tarafından iptal edildi."); // DEBUG
-            return;
-        }
-        
-        setIsSubmitting(true); // isMatching yerine isSubmitting kullanabiliriz
-        setMessage({ type: 'info', text: 'Eşleştirme işlemi başlatılıyor...' });
-        console.log("4. API isteği gönderiliyor..."); // DEBUG
-
-        try {
-            const response = await api.post(`/api/admin/events/${eventId}/create-groups`);
-            console.log("5. API'den başarılı yanıt alındı:", response.data); // DEBUG
-            setMessage({ type: 'success', text: response.data.message });
-        } catch (error) {
-            console.error("5. API'den hata alındı:", error.response); // DEBUG
-            const errorMessage = error.response?.data?.message || 'Eşleştirme sırasında bilinmeyen bir hata oluştu.';
-            setMessage({ type: 'error', text: errorMessage });
+            showSnackbar(error.response?.data?.message || 'Etkinlik güncellenirken bir hata oluştu.', 'error');
         } finally {
             setIsSubmitting(false);
         }
@@ -148,13 +153,12 @@ export const AdminPage = () => {
                 <Typography variant="h4" component="h1" gutterBottom>
                     Yönetici Paneli
                 </Typography>
-                {message.text && <AlertMessage type={message.type} message={message.text} />}
                 
                 <Grid container spacing={4}>
-                    <Grid item xs={12} md={4}>
+                    <Grid xs={12} md={4}>
                         <EventForm onFormSubmit={handleCreateEvent} isLoading={isSubmitting} />
                     </Grid>
-                    <Grid item xs={12} md={8}>
+                    <Grid xs={12} md={8}>
                         <Paper sx={{ p: 2 }}>
                             <Typography variant="h5" component="h2" gutterBottom>Mevcut Etkinlikler</Typography>
                             {isLoading ? <CircularProgress /> : (
@@ -192,6 +196,13 @@ export const AdminPage = () => {
                     />
                 </Box>
             </Modal>
+            <ConfirmationDialog
+                open={dialog.isOpen}
+                onClose={() => setDialog({ ...dialog, isOpen: false })}
+                onConfirm={dialog.onConfirm}
+                title={dialog.title}
+                description={dialog.description}
+            />
         </>
     );
 };

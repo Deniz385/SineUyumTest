@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
-import { Button, Box, Typography, Avatar, Grid, Paper, Card, CardContent } from '@mui/material';
+import { Button, Box, Typography, Avatar, Grid, Paper } from '@mui/material';
 import MessageIcon from '@mui/icons-material/Message';
 import StarIcon from '@mui/icons-material/Star';
 import RateReviewIcon from '@mui/icons-material/RateReview';
@@ -13,7 +13,8 @@ import { FollowListModal } from '../components/FollowListModal';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
 
 const StatCard = ({ icon, value, label }) => (
-    <Grid item xs={6} sm={4}>
+    // --- DÜZELTME: "item" prop'u kaldırıldı ---
+    <Grid xs={6} sm={4}>
         <Paper elevation={2} sx={{ p: 2, textAlign: 'center' }}>
             {icon}
             <Typography variant="h5" component="p" sx={{ fontWeight: 'bold' }}>{value}</Typography>
@@ -52,8 +53,10 @@ export const ProfilePage = () => {
                 isMyProfile ? Promise.resolve(null) : api.get(`/api/compatibility/${userId}`),
                 api.get(`/api/follow/${userId}/status`)
             ]);
+            
             setProfileData(profileRes.data);
             setFollowStatus(followStatusRes.data);
+
             if (compatibilityRes) {
                 setCompatibility(compatibilityRes.data);
             }
@@ -91,7 +94,7 @@ export const ProfilePage = () => {
         setIsRecsLoading(true);
         try {
             const response = await api.get(`/api/compatibility/${userId}/recommendations`);
-            setRecommendations(response.data);
+            setRecommendations(response.data?.$values || response.data);
         } catch (err) {
             setRecommendations([]);
         } finally {
@@ -105,7 +108,7 @@ export const ProfilePage = () => {
         setIsListLoading(true);
         try {
             const response = await api.get(`/api/follow/${userId}/${type}`);
-            setListData(response.data);
+            setListData(response.data?.$values || response.data);
         } catch (err) {
             console.error(`${title} listesi alınamadı:`, err);
         } finally {
@@ -117,6 +120,9 @@ export const ProfilePage = () => {
     if (error) return <div className="page-container message error-message">{error}</div>;
 
     const stats = profileData?.statistics;
+    const topRatedMovies = stats?.topRatedMovies?.$values || stats?.topRatedMovies || [];
+    const ratings = profileData?.ratings?.$values || profileData?.ratings || [];
+
 
     return (
         <>
@@ -167,11 +173,11 @@ export const ProfilePage = () => {
                     </>
                 )}
                 
-                {stats?.topRatedMovies.length > 0 && (
+                {topRatedMovies.length > 0 && (
                     <Box sx={{ my: 4, textAlign: 'left' }}>
                         <Typography variant="h5" component="h3" gutterBottom sx={{fontWeight: 'bold'}}>✨ 10/10 Verdiği Filmler</Typography>
                          <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 2 }}>
-                            {stats.topRatedMovies.map(movie => (
+                            {topRatedMovies.map(movie => (
                                 <Link to={`/movie/${movie.movieId}`} key={movie.movieId}>
                                     <img src={movie.posterPath ? `${IMAGE_BASE_URL}${movie.posterPath}` : '/vite.svg'} alt={movie.title} style={{ height: '210px', borderRadius: '8px' }}/>
                                 </Link>
@@ -181,9 +187,9 @@ export const ProfilePage = () => {
                 )}
 
                 <hr />
-                <Typography variant="h5" component="h3" sx={{textAlign: 'left', mt: 3}}>Oylanan Tüm Filmler ({profileData?.ratings.length || 0})</Typography>
+                <Typography variant="h5" component="h3" sx={{textAlign: 'left', mt: 3}}>Oylanan Tüm Filmler ({ratings.length || 0})</Typography>
                 <div className="rated-movies-grid">
-                    {profileData?.ratings.map(rating => (
+                    {ratings.map(rating => (
                         <div key={rating.movieId} className="rated-movie-card">
                             <img src={rating.posterPath ? `${IMAGE_BASE_URL}${rating.posterPath}` : '/vite.svg'} alt={`${rating.title} afişi`}/>
                             <div className="rated-movie-info">
@@ -200,3 +206,4 @@ export const ProfilePage = () => {
         </>
     );
 };
+

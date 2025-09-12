@@ -3,34 +3,34 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, TextField, Button, Typography, CircularProgress } from '@mui/material';
-import { AlertMessage } from '../components/AlertMessage';
+import { useSnackbar } from '../context/SnackbarProvider'; // <-- SNACKBAR KANCASINI İÇE AKTAR
 
 export const EditProfilePage = () => {
-    const { user } = useAuth(); // token kaldırıldı, sadece user kullanılıyor
+    const { user } = useAuth();
     const navigate = useNavigate();
+    const { showSnackbar } = useSnackbar(); // <-- SNACKBAR FONKSİYONUNU AL
     const [formData, setFormData] = useState({
         bio: '',
         profileImageUrl: ''
     });
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
-    const [message, setMessage] = useState({ type: '', text: '' });
 
     const fetchProfileData = useCallback(async () => {
-        if (!user) return; // user kontrolü yapılıyor
+        if (!user) return;
         try {
-            // api kullanılıyor ve header kaldırıldı
             const response = await api.get(`/api/profile/${user.id}`);
+            const profile = response.data.$values ? response.data.$values[0] : response.data; // $values kontrolü
             setFormData({
-                bio: response.data.bio || '',
-                profileImageUrl: response.data.profileImageUrl || ''
+                bio: profile.bio || '',
+                profileImageUrl: profile.profileImageUrl || ''
             });
         } catch (error) {
-            setMessage({ type: 'error', text: 'Profil bilgileri yüklenemedi.' });
+            showSnackbar('Profil bilgileri yüklenemedi.', 'error');
         } finally {
             setIsLoading(false);
         }
-    }, [user]);
+    }, [user, showSnackbar]);
 
     useEffect(() => {
         fetchProfileData();
@@ -43,14 +43,12 @@ export const EditProfilePage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSaving(true);
-        setMessage({ type: '', text: '' });
         try {
-            // api kullanılıyor ve header kaldırıldı
             await api.put(`/api/profile`, formData);
-            setMessage({ type: 'success', text: 'Profil başarıyla güncellendi! Yönlendiriliyorsunuz...' });
-            setTimeout(() => navigate(`/profile/${user.id}`), 2000);
+            showSnackbar('Profil başarıyla güncellendi!', 'success');
+            setTimeout(() => navigate(`/profile/${user.id}`), 1500);
         } catch (error) {
-            setMessage({ type: 'error', text: 'Profil güncellenirken bir hata oluştu.' });
+            showSnackbar('Profil güncellenirken bir hata oluştu.', 'error');
             setIsSaving(false);
         }
     };
@@ -64,7 +62,6 @@ export const EditProfilePage = () => {
             <Typography variant="h4" component="h1" gutterBottom>
                 Profili Düzenle
             </Typography>
-            {message.text && <AlertMessage type={message.type} message={message.text} />}
             <TextField
                 label="Hakkında (Bio)"
                 name="bio"
@@ -95,3 +92,4 @@ export const EditProfilePage = () => {
         </Box>
     );
 };
+

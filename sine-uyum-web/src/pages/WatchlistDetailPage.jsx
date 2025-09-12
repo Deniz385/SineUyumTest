@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, Grid, IconButton, Button, Modal, TextField } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import { ConfirmationDialog } from '../components/ConfirmationDialog';
 
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
 
@@ -32,6 +33,8 @@ export const WatchlistDetailPage = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editedListName, setEditedListName] = useState('');
     const [editedListDesc, setEditedListDesc] = useState('');
+    
+    const [dialog, setDialog] = useState({ isOpen: false, title: '', description: '', onConfirm: null });
 
     const fetchWatchlistDetails = useCallback(async () => {
         if (!user) return;
@@ -58,8 +61,19 @@ export const WatchlistDetailPage = () => {
         fetchWatchlistDetails();
     }, [fetchWatchlistDetails]);
 
-    const handleRemoveMovie = async (movieId) => {
-        if (!window.confirm("Bu filmi listeden kaldırmak istediğinize emin misiniz?")) return;
+    const handleRemoveMovie = (movieId) => {
+        setDialog({
+            isOpen: true,
+            title: 'Filmi Kaldır?',
+            description: 'Bu filmi listeden kalıcı olarak kaldırmak istediğinize emin misiniz?',
+            onConfirm: () => {
+                setDialog({ isOpen: false });
+                performRemoveMovie(movieId);
+            }
+        });
+    };
+
+    const performRemoveMovie = async (movieId) => {
         try {
             await api.delete(`/api/watchlist/${listId}/movies/${movieId}`);
             fetchWatchlistDetails();
@@ -68,8 +82,19 @@ export const WatchlistDetailPage = () => {
         }
     };
 
-    const handleDeleteList = async () => {
-        if (!window.confirm(`"${watchlist.name}" listesini kalıcı olarak silmek istediğinize emin misiniz?`)) return;
+    const handleDeleteList = () => {
+        setDialog({
+            isOpen: true,
+            title: 'Listeyi Sil?',
+            description: `"${watchlist.name}" listesini kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`,
+            onConfirm: () => {
+                setDialog({ isOpen: false });
+                performDeleteList();
+            }
+        });
+    };
+
+    const performDeleteList = async () => {
         try {
             await api.delete(`/api/watchlist/${listId}`);
             navigate('/watchlist');
@@ -95,6 +120,8 @@ export const WatchlistDetailPage = () => {
     if (isLoading) return <CircularProgress />;
     if (error) return <Typography color="error">{error}</Typography>;
 
+    const items = watchlist?.items?.$values || watchlist?.items || [];
+
     return (
         <>
             <Box className="page-container" sx={{ maxWidth: '1000px' }}>
@@ -111,12 +138,13 @@ export const WatchlistDetailPage = () => {
                     )}
                 </Box>
 
-                {watchlist?.items.length === 0 ? (
+                {items.length === 0 ? (
                     <Typography>Bu listede henüz film yok.</Typography>
                 ) : (
                     <Grid container spacing={3}>
-                        {watchlist?.items.map(item => (
-                            <Grid item xs={6} sm={4} md={3} key={item.movieId}>
+                        {items.map(item => (
+                            // --- DÜZELTME: "item" prop'u kaldırıldı ---
+                            <Grid xs={6} sm={4} md={3} key={item.movieId}>
                                 <Box sx={{ position: 'relative' }}>
                                     <Link to={`/movie/${item.movieId}`}>
                                         <img src={item.posterPath ? `${IMAGE_BASE_URL}${item.posterPath}` : '/vite.svg'} alt={item.title} style={{ width: '100%', borderRadius: '8px', display: 'block' }}/>
@@ -142,6 +170,14 @@ export const WatchlistDetailPage = () => {
                     <Button type="submit" variant="contained" sx={{ mt: 2 }}>Kaydet</Button>
                 </Box>
             </Modal>
+            <ConfirmationDialog
+                open={dialog.isOpen}
+                onClose={() => setDialog({ ...dialog, isOpen: false })}
+                onConfirm={dialog.onConfirm}
+                title={dialog.title}
+                description={dialog.description}
+            />
         </>
     );
 };
+

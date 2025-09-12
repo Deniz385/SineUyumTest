@@ -1,8 +1,9 @@
-// SineUyum.Api/Controllers/FollowController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
+using SineUyum.Api.Hubs;
 using SineUyum.Api.Models;
 using System.Security.Claims;
 
@@ -14,13 +15,14 @@ namespace SineUyum.Api.Controllers
     public class FollowController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public FollowController(ApplicationDbContext context)
+        public FollowController(ApplicationDbContext context, IHubContext<NotificationHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
-        // POST: api/follow/{userIdToFollow}
         [HttpPost("{userIdToFollow}")]
         public async Task<IActionResult> Follow(string userIdToFollow)
         {
@@ -31,6 +33,8 @@ namespace SineUyum.Api.Controllers
             {
                 return BadRequest("Kullanıcı kendini takip edemez.");
             }
+             var currentUser = await _context.Users.FindAsync(currentUserId);
+            if (currentUser == null) return Unauthorized();
 
             var alreadyFollowing = await _context.UserFollows
                 .AnyAsync(f => f.FollowerId == currentUserId && f.FollowingId == userIdToFollow);
@@ -45,13 +49,26 @@ namespace SineUyum.Api.Controllers
                 FollowerId = currentUserId,
                 FollowingId = userIdToFollow
             };
-
             await _context.UserFollows.AddAsync(follow);
+
+            // --- BİLDİRİM OLUŞTURMA VE GÖNDERME ---
+            var notification = new Notification
+            {
+                UserId = userIdToFollow, // Bildirim, takip edilen kişiye gidecek
+                Message = $"{currentUser.UserName} sizi takip etmeye başladı.",
+                RelatedUrl = $"/profile/{currentUserId}" // Tıklayınca takip edenin profiline gitsin
+            };
+            await _context.Notifications.AddAsync(notification);
+
             await _context.SaveChangesAsync();
+            
+            // SignalR ile anlık bildirimi gönder
+            await _hubContext.Clients.User(userIdToFollow).SendAsync("ReceiveNotification", notification);
 
             return Ok(new { message = "Kullanıcı başarıyla takip edildi." });
         }
 
+        // ... Diğer metodlar (Unfollow, GetFollowStatus, GetFollowers, GetFollowing) aynı kalacak ...
         // DELETE: api/follow/{userIdToUnfollow}
         [HttpDelete("{userIdToUnfollow}")]
         public async Task<IActionResult> Unfollow(string userIdToUnfollow)
@@ -116,3 +133,4 @@ namespace SineUyum.Api.Controllers
         }
     }
 }
+

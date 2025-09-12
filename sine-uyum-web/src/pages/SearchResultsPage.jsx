@@ -12,7 +12,8 @@ const UserResultCard = ({ user }) => {
     };
 
     return (
-        <Grid item xs={12} sm={6} md={4}>
+        // --- DÜZELTME: "item" prop'u kaldırıldı ---
+        <Grid xs={12} sm={6} md={4}>
             <Card sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <CardContent sx={{ flexGrow: 1, textAlign: 'center' }}>
                     <Avatar
@@ -67,8 +68,8 @@ export const SearchResultsPage = () => {
                 const response = await api.get(`/api/account/search`, {
                     params: { query }
                 });
-                setUsers(response.data);
-                if (response.data.length === 0) {
+                setUsers(response.data.$values || response.data);
+                if ((response.data.$values || response.data).length === 0) {
                     setMessage(`'${query}' için sonuç bulunamadı.`);
                 }
             } catch (error) {

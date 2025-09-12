@@ -5,18 +5,18 @@ import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, List, ListItem, ListItemText, ListItemAvatar, Avatar, Divider } from '@mui/material';
 
 export const MessagesPage = () => {
-    const { user } = useAuth(); // token yerine user kullanılıyor
+    const { user } = useAuth();
     const [conversations, setConversations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
 
     useEffect(() => {
         const fetchConversations = async () => {
-            if (!user) return; // user objesinin varlığı kontrol ediliyor
+            if (!user) return;
             try {
-                // İstek 'api' üzerinden yapılıyor ve header kaldırılıyor
                 const response = await api.get(`/api/messages`);
-                setConversations(response.data);
+                // DÜZELTME: Gelen verinin içindeki $values dizisini alıyoruz.
+                setConversations(response.data.$values || response.data);
             } catch (err) {
                 setError('Konuşmalar yüklenirken bir hata oluştu.');
                 console.error(err);
@@ -26,7 +26,7 @@ export const MessagesPage = () => {
         };
 
         fetchConversations();
-    }, [user]); // useEffect bağımlılığı 'user' olarak güncellendi
+    }, [user]);
 
     if (isLoading) return <CircularProgress />;
     if (error) return <Typography color="error">{error}</Typography>;

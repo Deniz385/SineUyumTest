@@ -1,26 +1,23 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { TextField, Button, Box, Typography, CircularProgress } from '@mui/material';
-import { AlertMessage } from '../components/AlertMessage';
-
-const API_URL = 'https://super-duper-dollop-g959prvw5q539q6-5074.app.github.dev';
+import api from '../api/axiosConfig';
+import { useSnackbar } from '../context/SnackbarProvider'; // <-- SNACKBAR KANCASINI İÇE AKTAR
 
 export const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { loginAction } = useAuth();
+  const { showSnackbar } = useSnackbar(); // <-- SNACKBAR FONKSİYONUNU AL
 
   const handleLogin = async (event) => {
     event.preventDefault();
-    setError('');
     setIsLoading(true);
 
     try {
-      const response = await axios.post(`${API_URL}/api/account/login`, {
+      const response = await api.post(`/api/account/login`, {
         username: username,
         password: password,
       });
@@ -29,12 +26,9 @@ export const LoginPage = () => {
       loginAction(token);
 
     } catch (err) {
-      console.error('Giriş hatası:', err.response?.data || err.message);
-      if (err.response && err.response.status === 401) {
-        setError('Kullanıcı adı veya şifre hatalı.');
-      } else {
-        setError('Giriş yapılırken bir sorun oluştu. Lütfen tekrar deneyin.');
-      }
+      // --- DEĞİŞİKLİK: setError yerine showSnackbar ---
+      const errorMessage = err.response?.data?.message || 'Giriş yapılırken bir sorun oluştu. Lütfen tekrar deneyin.';
+      showSnackbar(errorMessage, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -49,7 +43,8 @@ export const LoginPage = () => {
         padding: 4,
         boxShadow: 3,
         borderRadius: 2,
-        backgroundColor: 'white',
+        // Temadan renk almak için bgcolor güncellendi
+        backgroundColor: 'background.paper',
         textAlign: 'center'
       }}
     >
@@ -57,8 +52,7 @@ export const LoginPage = () => {
         Giriş Yap
       </Typography>
       <Box component="form" onSubmit={handleLogin} sx={{ mt: 1 }}>
-        <AlertMessage type="error" message={error} />
-
+        {/* AlertMessage bileşeni tamamen kaldırıldı */}
         <TextField
           margin="normal"
           required
@@ -102,3 +96,4 @@ export const LoginPage = () => {
     </Box>
   );
 };
+

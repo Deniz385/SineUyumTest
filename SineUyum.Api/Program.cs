@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SineUyum.Api.Data;
+using SineUyum.Api.Hubs; // YENİ EKLENEN SATIR
 using SineUyum.Api.Models;
-using System.Text;
 using SineUyum.Api.Services;
+using System.Text;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,7 +23,8 @@ builder.Services.AddCors(options =>
                 "https://super-duper-dollop-g959prvw5q539q6-5074.app.github.dev"
             )
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials(); // SignalR için bu gerekli
     });
 });
 
@@ -33,6 +36,12 @@ builder.Services.AddIdentity<AppUser, IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
 // --- JWT AUTHENTICATION ---
+var jwtKey = builder.Configuration["JWT_KEY"] ?? builder.Configuration["Jwt:Key"];
+if (string.IsNullOrEmpty(jwtKey))
+{
+    throw new InvalidOperationException("JWT anahtarı yapılandırılmamış. Lütfen Codespaces secret'a 'JWT_KEY' ekleyin.");
+}
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -48,9 +57,21 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)
-        )
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+    };
+     // SignalR'ın kimlik doğrulamasını Hub'a iletmesi için:
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/notificationHub"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -59,7 +80,14 @@ builder.Services.AddAuthorization();
 builder.Services.AddHttpClient();
 // --- CONTROLLERS & SWAGGER ---
 builder.Services.AddScoped<MatchingService>();
-builder.Services.AddControllers();
+
+// YENİ EKLENEN SATIR: JSON döngülerini çözmek için
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
+});
+
+builder.Services.AddSignalR(); // YENİ EKLENEN SATIR
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -114,8 +142,10 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+app.MapHub<NotificationHub>("/notificationHub"); // YENİ EKLENEN SATIR
 app.MapControllers();
 
 app.Run();
 
 public partial class Program { }
+

@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { TextField, Button, Box, Typography, CircularProgress } from '@mui/material';
-import { AlertMessage } from '../components/AlertMessage';
-
-const API_URL = 'https://super-duper-dollop-g959prvw5q539q6-5074.app.github.dev';
+import { useSnackbar } from '../context/SnackbarProvider'; // <-- SNACKBAR KANCASINI İÇE AKTAR
+import api from '../api/axiosConfig';
 
 export const RegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -15,9 +13,8 @@ export const RegisterPage = () => {
   });
 
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const navigate = useNavigate();
+  const { showSnackbar } = useSnackbar(); // <-- SNACKBAR FONKSİYONUNU AL
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -25,39 +22,32 @@ export const RegisterPage = () => {
 
   const handleRegister = async (event) => {
     event.preventDefault();
-    setError('');
-    setSuccess('');
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Şifreler uyuşmuyor.');
+      showSnackbar('Şifreler uyuşmuyor.', 'error');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      await axios.post(`${API_URL}/api/account/register`, {
+      await api.post(`/api/account/register`, {
         username: formData.username,
         email: formData.email,
         password: formData.password,
       });
 
-      setSuccess('Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz...');
+      showSnackbar('Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz...', 'success');
       
       setTimeout(() => {
         navigate('/login');
       }, 2000);
 
     } catch (err) {
-      console.error('Kayıt hatası:', err.response?.data);
-      if (err.response?.data?.errors) {
-        const errorMessages = err.response.data.errors.map(e => e.description).join(' ');
-        setError(errorMessages || 'Bilinmeyen bir doğrulama hatası oluştu.');
-      } else if (err.response?.data?.message) {
-         setError(err.response.data.message);
-      } else {
-        setError('Kayıt sırasında bir sunucu hatası oluştu. Lütfen tekrar deneyin.');
-      }
+      const errorMessages = err.response?.data?.errors
+        ? err.response.data.errors.map(e => e.description).join(' ')
+        : err.response?.data?.message || 'Kayıt sırasında bir sunucu hatası oluştu.';
+      showSnackbar(errorMessages, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -72,7 +62,8 @@ export const RegisterPage = () => {
         padding: 4,
         boxShadow: 3,
         borderRadius: 2,
-        backgroundColor: 'white',
+        // Temadan renk almak için bgcolor güncellendi
+        backgroundColor: 'background.paper',
         textAlign: 'center'
       }}
     >
@@ -80,9 +71,7 @@ export const RegisterPage = () => {
         Kayıt Ol
       </Typography>
       <Box component="form" onSubmit={handleRegister} sx={{ mt: 1 }}>
-        <AlertMessage type="error" message={error} />
-        <AlertMessage type="success" message={success} />
-        
+        {/* AlertMessage bileşenleri tamamen kaldırıldı */}
         <TextField
           margin="normal" required fullWidth autoFocus
           label="Kullanıcı Adı" name="username"
@@ -119,3 +108,4 @@ export const RegisterPage = () => {
     </Box>
   );
 };
+

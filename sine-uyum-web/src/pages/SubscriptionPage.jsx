@@ -3,10 +3,12 @@ import { Box, Typography, Button, Paper, List, ListItem, ListItemIcon, ListItemT
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axiosConfig';
+import { useSnackbar } from '../context/SnackbarProvider'; // <-- SNACKBAR KANCASINI İÇE AKTAR
 
 export const SubscriptionPage = () => {
     const { loginAction } = useAuth(); 
     const [isLoading, setIsLoading] = useState(false);
+    const { showSnackbar } = useSnackbar(); // <-- SNACKBAR FONKSİYONUNU AL
 
     const handleSubscribeClick = async () => {
         setIsLoading(true);
@@ -14,9 +16,11 @@ export const SubscriptionPage = () => {
             const response = await api.post('/api/subscription/activate');
             const newToken = response.data.token;
             loginAction(newToken);
-            alert('Aboneliğiniz başarıyla aktifleştirildi!');
+            // --- DEĞİŞİKLİK: alert() yerine showSnackbar() ---
+            showSnackbar('Aboneliğiniz başarıyla aktifleştirildi!', 'success');
         } catch (error) {
-            alert('Abonelik sırasında bir hata oluştu.');
+            // --- DEĞİŞİKLİK: alert() yerine showSnackbar() ---
+            showSnackbar('Abonelik sırasında bir hata oluştu.', 'error');
             setIsLoading(false);
         }
     };
@@ -56,3 +60,4 @@ export const SubscriptionPage = () => {
         </Box>
     );
 };
+

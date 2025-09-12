@@ -50,7 +50,7 @@ const WatchlistShareCard = ({ watchlist }) => (
 
 export const ConversationPage = () => {
     const { otherUserId } = useParams();
-    const { user } = useAuth(); // token kaldırıldı, sadece user kullanılıyor
+    const { user } = useAuth();
     const [messages, setMessages] = useState([]);
     const [otherUser, setOtherUser] = useState(null);
     const [newMessage, setNewMessage] = useState('');
@@ -65,12 +65,15 @@ export const ConversationPage = () => {
     };
 
     const fetchThread = useCallback(async () => {
-        if (!user) return; // user kontrolü
+        if (!user) return;
         try {
             const response = await api.get(`/api/messages/thread/${otherUserId}`);
-            setMessages(response.data);
-            if (response.data.length > 0) {
-                const firstMessage = response.data[0];
+            // DÜZELTME: Gelen verinin içindeki $values dizisini alıyoruz.
+            const messageData = response.data.$values || response.data || [];
+            setMessages(messageData);
+
+            if (messageData.length > 0) {
+                const firstMessage = messageData[0];
                 setOtherUser(firstMessage.senderId === user.id ? 
                     { id: firstMessage.recipientId, userName: firstMessage.recipientUsername } :
                     { id: firstMessage.senderId, userName: firstMessage.senderUsername }
@@ -120,7 +123,8 @@ export const ConversationPage = () => {
         setIsWatchlistModalOpen(true);
         try {
             const response = await api.get(`/api/watchlist`);
-            setUserLists(response.data);
+            // DÜZELTME: Gelen verinin içindeki $values dizisini alıyoruz.
+            setUserLists(response.data.$values || response.data || []);
         } catch (err) {
             console.error("Listeler yüklenemedi:", err);
         }

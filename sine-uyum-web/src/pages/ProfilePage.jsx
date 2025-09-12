@@ -1,20 +1,17 @@
-// sine-uyum-web/src/pages/ProfilePage.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
-import { Button, Box, Typography, Avatar, Grid, Card, CardContent, Paper } from '@mui/material';
+import { Button, Box, Typography, Avatar, Grid, Paper, Card, CardContent } from '@mui/material';
 import MessageIcon from '@mui/icons-material/Message';
-import StarIcon from '@mui/icons-material/Star'; // İkonlar
+import StarIcon from '@mui/icons-material/Star';
 import RateReviewIcon from '@mui/icons-material/RateReview';
 import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
 import { RecommendationModal } from '../components/RecommendationModal';
 import { FollowListModal } from '../components/FollowListModal';
 
-const API_URL = 'https://super-duper-dollop-g959prvw5q539q6-5074.app.github.dev';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
 
-// Yeni İstatistik Kartı Bileşeni
 const StatCard = ({ icon, value, label }) => (
     <Grid item xs={6} sm={4}>
         <Paper elevation={2} sx={{ p: 2, textAlign: 'center' }}>
@@ -27,7 +24,7 @@ const StatCard = ({ icon, value, label }) => (
 
 export const ProfilePage = () => {
     const { userId } = useParams();
-    const { token, user } = useAuth();
+    const { user } = useAuth();
     const navigate = useNavigate();
     
     const [profileData, setProfileData] = useState(null);
@@ -45,40 +42,41 @@ export const ProfilePage = () => {
 
     const isMyProfile = user?.id === userId;
 
-    useEffect(() => {
-        const fetchProfileData = async () => {
-            if (!token) return;
-            setIsLoading(true);
-            setError('');
-            try {
-                const [profileRes, compatibilityRes, followStatusRes] = await Promise.all([
-                    axios.get(`${API_URL}/api/profile/${userId}`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                    isMyProfile ? Promise.resolve(null) : axios.get(`${API_URL}/api/compatibility/${userId}`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                    axios.get(`${API_URL}/api/follow/${userId}/status`, { headers: { 'Authorization': `Bearer ${token}` } })
-                ]);
-                setProfileData(profileRes.data);
-                setFollowStatus(followStatusRes.data);
-                if (compatibilityRes) {
-                    setCompatibility(compatibilityRes.data);
-                }
-            } catch (err) {
-                setError("Profil bilgileri yüklenirken bir hata oluştu.");
-            } finally {
-                setIsLoading(false);
+    const fetchProfileData = useCallback(async () => {
+        if (!user) return;
+        setIsLoading(true);
+        setError('');
+        try {
+            const [profileRes, compatibilityRes, followStatusRes] = await Promise.all([
+                api.get(`/api/profile/${userId}`),
+                isMyProfile ? Promise.resolve(null) : api.get(`/api/compatibility/${userId}`),
+                api.get(`/api/follow/${userId}/status`)
+            ]);
+            setProfileData(profileRes.data);
+            setFollowStatus(followStatusRes.data);
+            if (compatibilityRes) {
+                setCompatibility(compatibilityRes.data);
             }
-        };
+        } catch (err) {
+            setError("Profil bilgileri yüklenirken bir hata oluştu.");
+        } finally {
+            setIsLoading(false);
+        }
+    }, [userId, user, isMyProfile]);
+
+    useEffect(() => {
         fetchProfileData();
-    }, [userId, token, isMyProfile]);
+    }, [fetchProfileData]);
     
     const handleFollowToggle = async () => {
         setIsFollowLoading(true);
-        const url = `${API_URL}/api/follow/${userId}`;
+        const url = `/api/follow/${userId}`;
         try {
             if (followStatus.isFollowing) {
-                await axios.delete(url, { headers: { 'Authorization': `Bearer ${token}` } });
+                await api.delete(url);
                 setFollowStatus(prev => ({ ...prev, isFollowing: false, followerCount: prev.followerCount - 1 }));
             } else {
-                await axios.post(url, {}, { headers: { 'Authorization': `Bearer ${token}` } });
+                await api.post(url, {});
                 setFollowStatus(prev => ({ ...prev, isFollowing: true, followerCount: prev.followerCount + 1 }));
             }
         } catch (err) {
@@ -92,7 +90,7 @@ export const ProfilePage = () => {
         setIsRecsModalOpen(true);
         setIsRecsLoading(true);
         try {
-            const response = await axios.get(`${API_URL}/api/compatibility/${userId}/recommendations`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const response = await api.get(`/api/compatibility/${userId}/recommendations`);
             setRecommendations(response.data);
         } catch (err) {
             setRecommendations([]);
@@ -106,9 +104,7 @@ export const ProfilePage = () => {
         setModalState({ open: true, type, title });
         setIsListLoading(true);
         try {
-            const response = await axios.get(`${API_URL}/api/follow/${userId}/${type}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const response = await api.get(`/api/follow/${userId}/${type}`);
             setListData(response.data);
         } catch (err) {
             console.error(`${title} listesi alınamadı:`, err);
@@ -151,7 +147,6 @@ export const ProfilePage = () => {
                     </Box>
                 </Box>
                 
-                {/* --- YENİ İSTATİSTİK BÖLÜMÜ --- */}
                 {stats && (
                     <Grid container spacing={2} sx={{ my: 3, justifyContent: 'center' }}>
                         <StatCard icon={<RateReviewIcon color="primary" sx={{mb:1}}/>} value={stats.totalRatings} label="Film Oyladı" />
@@ -172,7 +167,6 @@ export const ProfilePage = () => {
                     </>
                 )}
                 
-                {/* --- YENİ "EN YÜKSEK PUANLILAR" BÖLÜMÜ --- */}
                 {stats?.topRatedMovies.length > 0 && (
                     <Box sx={{ my: 4, textAlign: 'left' }}>
                         <Typography variant="h5" component="h3" gutterBottom sx={{fontWeight: 'bold'}}>✨ 10/10 Verdiği Filmler</Typography>

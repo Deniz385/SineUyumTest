@@ -1,15 +1,12 @@
-// sine-uyum-web/src/pages/EditProfilePage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, TextField, Button, Typography, CircularProgress } from '@mui/material';
 import { AlertMessage } from '../components/AlertMessage';
 
-const API_URL = 'https://super-duper-dollop-g959prvw5q539q6-5074.app.github.dev';
-
 export const EditProfilePage = () => {
-    const { token, user } = useAuth();
+    const { user } = useAuth(); // token kaldırıldı, sadece user kullanılıyor
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
         bio: '',
@@ -19,25 +16,25 @@ export const EditProfilePage = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
 
+    const fetchProfileData = useCallback(async () => {
+        if (!user) return; // user kontrolü yapılıyor
+        try {
+            // api kullanılıyor ve header kaldırıldı
+            const response = await api.get(`/api/profile/${user.id}`);
+            setFormData({
+                bio: response.data.bio || '',
+                profileImageUrl: response.data.profileImageUrl || ''
+            });
+        } catch (error) {
+            setMessage({ type: 'error', text: 'Profil bilgileri yüklenemedi.' });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [user]);
+
     useEffect(() => {
-        const fetchProfileData = async () => {
-            if (!token || !user) return;
-            try {
-                const response = await axios.get(`${API_URL}/api/profile/${user.id}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                setFormData({
-                    bio: response.data.bio || '',
-                    profileImageUrl: response.data.profileImageUrl || ''
-                });
-            } catch (error) {
-                setMessage({ type: 'error', text: 'Profil bilgileri yüklenemedi.' });
-            } finally {
-                setIsLoading(false);
-            }
-        };
         fetchProfileData();
-    }, [token, user]);
+    }, [fetchProfileData]);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -48,9 +45,8 @@ export const EditProfilePage = () => {
         setIsSaving(true);
         setMessage({ type: '', text: '' });
         try {
-            await axios.put(`${API_URL}/api/profile`, formData, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            // api kullanılıyor ve header kaldırıldı
+            await api.put(`/api/profile`, formData);
             setMessage({ type: 'success', text: 'Profil başarıyla güncellendi! Yönlendiriliyorsunuz...' });
             setTimeout(() => navigate(`/profile/${user.id}`), 2000);
         } catch (error) {
@@ -64,7 +60,7 @@ export const EditProfilePage = () => {
     }
 
     return (
-        <Box className="page-container" component="form" onSubmit={handleSubmit}>
+        <Box className="page-container" component="form" onSubmit={handleSubmit} sx={{maxWidth: '700px'}}>
             <Typography variant="h4" component="h1" gutterBottom>
                 Profili Düzenle
             </Typography>

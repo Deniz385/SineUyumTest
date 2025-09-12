@@ -1,28 +1,20 @@
-// sine-uyum-web/src/pages/SubscriptionPage.jsx
 import React, { useState } from 'react';
 import { Box, Typography, Button, Paper, List, ListItem, ListItemIcon, ListItemText, CircularProgress } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import api from '../api/axiosConfig'; // Merkezi axios instance'ımızı kullanalım
+import api from '../api/axiosConfig';
 
 export const SubscriptionPage = () => {
-    const navigate = useNavigate();
-    const { logoutAction } = useAuth(); // logoutAction'ı alıyoruz
+    const { loginAction } = useAuth(); 
     const [isLoading, setIsLoading] = useState(false);
 
     const handleSubscribeClick = async () => {
         setIsLoading(true);
         try {
-            // Yeni oluşturduğumuz endpoint'e istek atıyoruz
-            await api.post('/api/subscription/activate');
-            
-            alert('Aboneliğiniz başarıyla aktifleştirildi! Güncel durumun yansıması için yeniden giriş yapmanız gerekiyor.');
-
-            // Kullanıcıyı sistemden çıkarıp login sayfasına yönlendiriyoruz
-            // Böylece yeniden girdiğinde token'ı güncellenmiş ve abone durumu 'true' olacak.
-            logoutAction();
-
+            const response = await api.post('/api/subscription/activate');
+            const newToken = response.data.token;
+            loginAction(newToken);
+            alert('Aboneliğiniz başarıyla aktifleştirildi!');
         } catch (error) {
             alert('Abonelik sırasında bir hata oluştu.');
             setIsLoading(false);

@@ -1,42 +1,37 @@
-// src/api/axiosConfig.js
 import axios from 'axios';
 
 export const API_URL = 'https://super-duper-dollop-g959prvw5q539q6-5074.app.github.dev';
 
-// Yeniden kullanılabilir bir axios instance oluşturuyoruz
 const api = axios.create({
     baseURL: API_URL
 });
 
-// Bu fonksiyon, interceptor'ı kuracak
-export const setupInterceptors = (authContext) => {
+// Bu fonksiyon, AuthContext'ten aldığı logoutAction ile interceptor'ları kurar.
+export const setupInterceptors = (logoutAction) => {
     
-    // İstek Interceptor'ı: Her istek gönderilmeden önce token'ı başlığa ekler
+    // İstek gönderilmeden önce çalışır
     api.interceptors.request.use(
         (config) => {
-            const token = authContext.token;
+            // Her istekte token'ı doğrudan localStorage'dan okur ve başlığa ekler.
+            // Bu, React state'inin gecikmelerinden etkilenmemesini sağlar.
+            const token = localStorage.getItem('token');
             if (token) {
                 config.headers['Authorization'] = `Bearer ${token}`;
             }
             return config;
         },
-        (error) => {
-            return Promise.reject(error);
-        }
+        (error) => Promise.reject(error)
     );
 
-    // Yanıt Interceptor'ı: Her yanıttan sonra çalışır
+    // API'den yanıt geldikten sonra çalışır
     api.interceptors.response.use(
-        (response) => {
-            // Başarılı bir yanıt gelirse, hiçbir şey yapma
-            return response;
-        },
+        (response) => response,
         (error) => {
-            // Eğer 401 (Unauthorized) hatası gelirse...
+            // Eğer 401 (Yetkisiz) hatası alınırsa, bu token'ın geçersiz olduğu anlamına gelir.
             if (error.response && error.response.status === 401) {
-                console.log("Token süresi doldu veya geçersiz. Çıkış yapılıyor...");
-                // AuthContext'ten gelen logout fonksiyonunu çağır
-                authContext.logoutAction();
+                console.error("Yetkisiz istek (401). Token geçersiz veya süresi dolmuş. Çıkış yapılıyor.");
+                // logoutAction'ı çağırarak kullanıcıyı temizle ve giriş sayfasına yönlendir.
+                if (logoutAction) logoutAction();
             }
             return Promise.reject(error);
         }

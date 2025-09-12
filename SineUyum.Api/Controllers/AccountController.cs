@@ -1,10 +1,9 @@
-﻿// SineUyum.Api/Controllers/AccountController.cs
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using SineUyum.Api.Data; // DbContext için eklendi
+using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
 using SineUyum.Api.Models;
 using System.IdentityModel.Tokens.Jwt;
@@ -19,16 +18,14 @@ namespace SineUyum.Api.Controllers
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly IConfiguration _configuration;
-        private readonly ApplicationDbContext _context; // Veritabanı context'ini ekledik
+        private readonly ApplicationDbContext _context;
 
         public AccountController(UserManager<AppUser> userManager, IConfiguration configuration, ApplicationDbContext context)
         {
             _userManager = userManager;
             _configuration = configuration;
-            _context = context; // Dependency Injection ile context'i alıyoruz
+            _context = context;
         }
-
-        // ... Register ve Login metodları aynı kalıyor ...
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
@@ -39,6 +36,9 @@ namespace SineUyum.Api.Controllers
             var result = await _userManager.CreateAsync(user, registerDto.Password);
             if (!result.Succeeded)
                 return BadRequest(result.Errors);
+
+            await _userManager.AddToRoleAsync(user, "User");
+
             return Ok(new { message = "Kullanıcı başarıyla oluşturuldu." });
         }
 
@@ -51,11 +51,11 @@ namespace SineUyum.Api.Controllers
             var user = await _userManager.FindByNameAsync(loginDto.Username);
             if (user == null || !await _userManager.CheckPasswordAsync(user, loginDto.Password))
                 return Unauthorized(new { message = "Kullanıcı adı veya şifre hatalı." });
-            var token = CreateToken(user);
+            
+            var token = await CreateToken(user);
             return Ok(new { token });
         }
         
-        // --- YENİ VE GELİŞMİŞ ARAMA METODU ---
         [HttpGet("search")]
         [Authorize]
         public async Task<IActionResult> SearchUsers([FromQuery] string query)
@@ -82,7 +82,6 @@ namespace SineUyum.Api.Controllers
 
             foreach (var user in users)
             {
-                // Her kullanıcı için uyum puanını hesapla
                 var commonRatings = await (from r1 in _context.UserRatings.Where(r => r.UserId == currentUserId)
                                            join r2 in _context.UserRatings.Where(r => r.UserId == user.Id) on r1.MovieId equals r2.MovieId
                                            select new { r1.Rating, TargetRating = r2.Rating })
@@ -116,33 +115,37 @@ namespace SineUyum.Api.Controllers
             return Ok(searchResults.OrderByDescending(r => ((dynamic)r).CompatibilityScore));
         }
 
-       private string CreateToken(AppUser user)
-{
-    var claims = new List<Claim>
-    {
-        new(ClaimTypes.NameIdentifier, user.Id),
-        new(ClaimTypes.Name, user.UserName ?? string.Empty),
-        // --- YENİ SATIRI EKLE ---
-        // Kullanıcının abonelik durumunu "claim" olarak token'a ekliyoruz.
-        new("IsSubscribed", user.IsSubscribed.ToString()) 
-    };
+       private async Task<string> CreateToken(AppUser user)
+       {
+           var claims = new List<Claim>
+           {
+               new(ClaimTypes.NameIdentifier, user.Id),
+               new(ClaimTypes.Name, user.UserName ?? string.Empty),
+               new("IsSubscribed", user.IsSubscribed.ToString())
+           };
 
-    var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
-    var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
+           var roles = await _userManager.GetRolesAsync(user);
+           foreach (var role in roles)
+           {
+               claims.Add(new Claim(ClaimTypes.Role, role));
+           }
 
-    var tokenDescriptor = new SecurityTokenDescriptor
-    {
-        Subject = new ClaimsIdentity(claims),
-        Expires = DateTime.UtcNow.AddDays(7),
-        SigningCredentials = creds,
-        Issuer = _configuration["Jwt:Issuer"]!,
-        Audience = _configuration["Jwt:Audience"]!
-    };
+           var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
+           var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
 
-    var tokenHandler = new JwtSecurityTokenHandler();
-    var token = tokenHandler.CreateToken(tokenDescriptor);
+           var tokenDescriptor = new SecurityTokenDescriptor
+           {
+               Subject = new ClaimsIdentity(claims),
+               Expires = DateTime.UtcNow.AddDays(7),
+               SigningCredentials = creds,
+               Issuer = _configuration["Jwt:Issuer"]!,
+               Audience = _configuration["Jwt:Audience"]!
+           };
 
-    return tokenHandler.WriteToken(token);
-}
+           var tokenHandler = new JwtSecurityTokenHandler();
+           var token = tokenHandler.CreateToken(tokenDescriptor);
+
+           return tokenHandler.WriteToken(token);
+       }
     }
 }

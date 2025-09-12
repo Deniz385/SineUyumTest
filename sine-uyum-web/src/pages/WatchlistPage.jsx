@@ -1,12 +1,9 @@
-// sine-uyum-web/src/pages/WatchlistPage.jsx
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState, useCallback } from 'react';
+import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, Grid, Card, CardContent, Button, Modal, TextField } from '@mui/material';
 import { Link } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
-
-const API_URL = 'https://super-duper-dollop-g959prvw5q539q6-5074.app.github.dev';
 
 const modalStyle = {
   position: 'absolute',
@@ -21,7 +18,7 @@ const modalStyle = {
 };
 
 export const WatchlistPage = () => {
-    const { token } = useAuth();
+    const { user } = useAuth(); // token yerine user kullanılıyor
     const [watchlists, setWatchlists] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -29,38 +26,35 @@ export const WatchlistPage = () => {
     const [newListName, setNewListName] = useState('');
     const [newListDesc, setNewListDesc] = useState('');
 
-    const fetchWatchlists = async () => {
-        if (!token) return;
+    const fetchWatchlists = useCallback(async () => {
+        if (!user) return; // user objesinin varlığı kontrol ediliyor
         setIsLoading(true);
         try {
-            const response = await axios.get(`${API_URL}/api/watchlist`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            // İstek 'api' üzerinden yapılıyor ve header kaldırılıyor
+            const response = await api.get(`/api/watchlist`);
             setWatchlists(response.data);
         } catch (err) {
             setError('Listeler yüklenirken bir hata oluştu.');
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [user]); // useCallback bağımlılığı 'user' olarak güncellendi
 
     useEffect(() => {
         fetchWatchlists();
-    }, [token]);
+    }, [fetchWatchlists]);
 
     const handleCreateList = async (e) => {
         e.preventDefault();
         if (!newListName.trim()) return;
 
         try {
-            await axios.post(`${API_URL}/api/watchlist`, 
-                { name: newListName, description: newListDesc },
-                { headers: { 'Authorization': `Bearer ${token}` } }
-            );
+            // İstek 'api' üzerinden yapılıyor ve header kaldırılıyor
+            await api.post(`/api/watchlist`, { name: newListName, description: newListDesc });
             setOpen(false);
             setNewListName('');
             setNewListDesc('');
-            fetchWatchlists();
+            fetchWatchlists(); // Listeyi yenile
         } catch (err) {
             setError("Yeni liste oluşturulurken bir hata oluştu.");
         }
@@ -80,7 +74,6 @@ export const WatchlistPage = () => {
                 {watchlists.length === 0 ? (
                     <Typography>Henüz hiç izleme listeniz yok. Hemen bir tane oluşturun!</Typography>
                 ) : (
-                    // --- DEĞİŞİKLİK BURADA: Yeni Grid (v2) kullanımı ---
                     <Grid container spacing={3}>
                         {watchlists.map(list => (
                             <Grid item xs={12} sm={6} md={4} key={list.id}>

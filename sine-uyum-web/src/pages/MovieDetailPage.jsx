@@ -1,14 +1,12 @@
-// sine-uyum-web/src/pages/MovieDetailPage.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
-import { Box, Typography, Chip, CircularProgress, Button, IconButton, Modal, List, ListItem, ListItemButton, ListItemText, Divider } from '@mui/material'; // ListItemButton eklendi
+import { Box, Typography, Chip, CircularProgress, Button, IconButton, Modal, List, ListItem, ListItemButton, ListItemText, Divider } from '@mui/material';
 import { RatingModal } from '../components/RatingModal';
 import { AlertMessage } from '../components/AlertMessage';
-import { BookmarkAdd } from '@mui/icons-material';
+import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd';
 
-const API_URL = 'https://super-duper-dollop-g959prvw5q539q6-5074.app.github.dev';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 
 const modalStyle = {
@@ -25,7 +23,7 @@ const modalStyle = {
 
 export const MovieDetailPage = () => {
     const { movieId } = useParams();
-    const { token } = useAuth();
+    const { user } = useAuth();
     const [movie, setMovie] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -34,32 +32,30 @@ export const MovieDetailPage = () => {
     const [isWatchlistModalOpen, setIsWatchlistModalOpen] = useState(false);
     const [userLists, setUserLists] = useState([]);
     const [watchlistMessage, setWatchlistMessage] = useState({ type: '', text: '' });
+    const [refetchTrigger, setRefetchTrigger] = useState(0);
+
+    const fetchMovieDetails = useCallback(async () => {
+        if (!user) return;
+        setIsLoading(true);
+        try {
+            const response = await api.get(`/api/movies/${movieId}`);
+            setMovie(response.data);
+        } catch (err) {
+            setError('Film detayları yüklenirken bir hata oluştu.');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [movieId, user]);
 
     useEffect(() => {
-        const fetchMovieDetails = async () => {
-            if (!token) return;
-            setIsLoading(true);
-            try {
-                const response = await axios.get(`${API_URL}/api/movies/${movieId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                setMovie(response.data);
-            } catch (err) {
-                setError('Film detayları yüklenirken bir hata oluştu.');
-            } finally {
-                setIsLoading(false);
-            }
-        };
         fetchMovieDetails();
-    }, [movieId, token]);
+    }, [fetchMovieDetails, refetchTrigger]);
     
     const handleOpenWatchlistModal = async () => {
         setIsWatchlistModalOpen(true);
         setWatchlistMessage({ type: '', text: '' });
         try {
-            const response = await axios.get(`${API_URL}/api/watchlist`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const response = await api.get(`/api/watchlist`);
             setUserLists(response.data);
         } catch (err) {
             setWatchlistMessage({ type: 'error', text: 'Listeleriniz yüklenemedi.' });
@@ -67,16 +63,9 @@ export const MovieDetailPage = () => {
     };
 
     const handleAddMovieToList = async (listId) => {
-        const movieData = {
-            movieId: movie.id,
-            title: movie.title,
-            posterPath: movie.poster_path
-        };
-
+        const movieData = { movieId: movie.id, title: movie.title, posterPath: movie.poster_path };
         try {
-            await axios.post(`${API_URL}/api/watchlist/${listId}/movies`, movieData, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            await api.post(`/api/watchlist/${listId}/movies`, movieData);
             setWatchlistMessage({ type: 'success', text: 'Film listeye başarıyla eklendi!' });
         } catch (err) {
             const errorMessage = err.response?.data?.message || 'Film listeye eklenemedi.';
@@ -86,25 +75,27 @@ export const MovieDetailPage = () => {
         }
     };
 
+    // --- DÜZELTİLMİŞ METOT ---
     const handleRateMovie = async (movieToRate, rating) => {
         setRatingMessage({ type: 'info', text: `'${movieToRate.title}' için puanınız kaydediliyor...` });
         try {
-            try {
-                await axios.post(`${API_URL}/api/ratings/addmovie`,
-                    { id: movieToRate.id, title: movieToRate.title, posterPath: movieToRate.poster_path },
-                    { headers: { 'Authorization': `Bearer ${token}` } }
-                );
-            } catch (addMovieError) {
-                if (addMovieError.response && addMovieError.response.status !== 400) {
-                    throw addMovieError;
-                }
-            }
-            await axios.post(`${API_URL}/api/ratings`,
-                { movieId: movieToRate.id, rating: rating },
-                { headers: { 'Authorization': `Bearer ${token}` } }
-            );
+            // Adım 1: Filmin veritabanında olduğundan emin ol. Backend hatayı görmezden gelecek.
+            await api.post(`/api/ratings/addmovie`, { 
+                id: movieToRate.id, 
+                title: movieToRate.title, 
+                posterPath: movieToRate.poster_path 
+            });
+
+            // Adım 2: Hata kontrolü olmadan doğrudan oylamayı gönder.
+            await api.post(`/api/ratings`, { 
+                movieId: movieToRate.id, 
+                rating: rating 
+            });
+
             setRatingMessage({ type: 'success', text: `'${movieToRate.title}' filmine ${rating} puan verdiniz. Başarıyla kaydedildi!` });
+            setRefetchTrigger(prev => prev + 1); // Sayfayı yenilemek için trigger'ı ateşle
         } catch (error) {
+            // Sadece gerçek (beklenmedik) hataları göster
             setRatingMessage({ type: 'error', text: 'Puan kaydedilirken bir hata oluştu.' });
         }
     };
@@ -127,7 +118,7 @@ export const MovieDetailPage = () => {
                             <Typography variant="h6" component="span">{tmdbScore}%</Typography>
                         </Box>
                         <Button variant="contained" size="large" onClick={() => setIsRatingModalOpen(true)}>Bu Filmi Puanla</Button>
-                        <IconButton onClick={handleOpenWatchlistModal} color="primary" title="Listeye Ekle"><BookmarkAdd fontSize="large" /></IconButton>
+                        <IconButton onClick={handleOpenWatchlistModal} color="primary" title="Listeye Ekle"><BookmarkAddIcon fontSize="large" /></IconButton>
                     </Box>
                     {watchlistMessage.text && <AlertMessage type={watchlistMessage.type} message={watchlistMessage.text} />}
                     {ratingMessage.text && <AlertMessage type={ratingMessage.type} message={ratingMessage.text} sx={{ mt: 2 }} />}
@@ -153,7 +144,6 @@ export const MovieDetailPage = () => {
                     <Typography variant="h6" component="h2">Hangi Listeye Ekleyeceksin?</Typography>
                     <List sx={{ mt: 2 }}>
                         {userLists.length > 0 ? userLists.map((list) => (
-                            // --- DEĞİŞİKLİK 1: ListItem + ListItemButton kullanımı ---
                             <ListItem key={list.id} disablePadding>
                                 <ListItemButton onClick={() => handleAddMovieToList(list.id)}>
                                     <ListItemText primary={list.name} />
@@ -161,7 +151,6 @@ export const MovieDetailPage = () => {
                             </ListItem>
                         )) : (<Typography>Henüz listeniz yok.</Typography>)}
                          <Divider sx={{ my: 1 }} />
-                         {/* --- DEĞİŞİKLİK 2: Link'i ListItemButton içine almak --- */}
                          <ListItem disablePadding>
                             <ListItemButton component={Link} to="/watchlist">
                                 <ListItemText primary="Listeleri Yönet veya Yeni Liste Oluştur..." />

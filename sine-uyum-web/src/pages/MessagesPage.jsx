@@ -1,25 +1,21 @@
-// sine-uyum-web/src/pages/MessagesPage.jsx
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, List, ListItem, ListItemText, ListItemAvatar, Avatar, Divider } from '@mui/material';
 
-const API_URL = 'https://super-duper-dollop-g959prvw5q539q6-5074.app.github.dev';
-
 export const MessagesPage = () => {
-    const { token } = useAuth();
+    const { user } = useAuth(); // token yerine user kullanılıyor
     const [conversations, setConversations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
 
     useEffect(() => {
         const fetchConversations = async () => {
-            if (!token) return;
+            if (!user) return; // user objesinin varlığı kontrol ediliyor
             try {
-                const response = await axios.get(`${API_URL}/api/messages`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                // İstek 'api' üzerinden yapılıyor ve header kaldırılıyor
+                const response = await api.get(`/api/messages`);
                 setConversations(response.data);
             } catch (err) {
                 setError('Konuşmalar yüklenirken bir hata oluştu.');
@@ -30,7 +26,7 @@ export const MessagesPage = () => {
         };
 
         fetchConversations();
-    }, [token]);
+    }, [user]); // useEffect bağımlılığı 'user' olarak güncellendi
 
     if (isLoading) return <CircularProgress />;
     if (error) return <Typography color="error">{error}</Typography>;

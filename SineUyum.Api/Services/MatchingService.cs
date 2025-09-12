@@ -20,7 +20,7 @@ namespace SineUyum.Api.Services
             if (cinemaEvent == null) throw new Exception("Etkinlik bulunamadı.");
             if (await _context.EventGroups.AnyAsync(g => g.CinemaEventId == eventId)) throw new Exception("Bu etkinlik için gruplar zaten oluşturulmuş.");
 
-            // --- DEĞİŞİKLİK BURADA: Artık tüm aboneler yerine, etkinliğe katılanları alıyoruz ---
+            // Sadece bu etkinliğe katılmış olan ve henüz bir gruba atanmamış kullanıcıları al
             var participants = await _context.EventParticipants
                 .Where(p => p.CinemaEventId == eventId && !_context.EventGroupMembers.Any(gm => gm.UserId == p.UserId && gm.EventGroup.CinemaEventId == eventId))
                 .Include(p => p.User)

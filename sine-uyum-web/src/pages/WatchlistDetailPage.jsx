@@ -1,13 +1,11 @@
-// sine-uyum-web/src/pages/WatchlistDetailPage.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, Grid, IconButton, Button, Modal, TextField } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 
-const API_URL = 'https://super-duper-dollop-g959prvw5q539q6-5074.app.github.dev';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
 
 const modalStyle = {
@@ -24,31 +22,27 @@ const modalStyle = {
 
 export const WatchlistDetailPage = () => {
     const { listId } = useParams();
-    const { user, token } = useAuth(); // Mevcut kullanıcıyı da alıyoruz
+    const { user } = useAuth();
     const navigate = useNavigate();
     const [watchlist, setWatchlist] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
-    const [isOwner, setIsOwner] = useState(false); // Listenin sahibi mi kontrolü
+    const [isOwner, setIsOwner] = useState(false);
 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editedListName, setEditedListName] = useState('');
     const [editedListDesc, setEditedListDesc] = useState('');
 
-    const fetchWatchlistDetails = async () => {
-        if (!token) return;
+    const fetchWatchlistDetails = useCallback(async () => {
+        if (!user) return;
         setIsLoading(true);
         try {
-            // Önce listenin public endpoint'ini deneriz. Bu herkes için çalışır.
-            const response = await axios.get(`${API_URL}/api/watchlist/public/${listId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const response = await api.get(`/api/watchlist/public/${listId}`);
             const listData = response.data;
             setWatchlist(listData);
             setEditedListName(listData.name);
             setEditedListDesc(listData.description || '');
 
-            // Gelen verideki listenin sahibinin kullanıcı adıyla mevcut kullanıcınınkini karşılaştır
             if (user?.username === listData.ownerUsername) {
                 setIsOwner(true);
             }
@@ -58,18 +52,16 @@ export const WatchlistDetailPage = () => {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [listId, user]);
 
     useEffect(() => {
         fetchWatchlistDetails();
-    }, [listId, token, user]); // user'ı bağımlılıklara ekledik
+    }, [fetchWatchlistDetails]);
 
     const handleRemoveMovie = async (movieId) => {
         if (!window.confirm("Bu filmi listeden kaldırmak istediğinize emin misiniz?")) return;
         try {
-            await axios.delete(`${API_URL}/api/watchlist/${listId}/movies/${movieId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            await api.delete(`/api/watchlist/${listId}/movies/${movieId}`);
             fetchWatchlistDetails();
         } catch (err) {
             alert("Film kaldırılırken bir hata oluştu.");
@@ -79,9 +71,7 @@ export const WatchlistDetailPage = () => {
     const handleDeleteList = async () => {
         if (!window.confirm(`"${watchlist.name}" listesini kalıcı olarak silmek istediğinize emin misiniz?`)) return;
         try {
-            await axios.delete(`${API_URL}/api/watchlist/${listId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            await api.delete(`/api/watchlist/${listId}`);
             navigate('/watchlist');
         } catch (err) {
             alert("Liste silinirken bir hata oluştu.");
@@ -92,9 +82,8 @@ export const WatchlistDetailPage = () => {
         e.preventDefault();
         if (!editedListName.trim()) return;
         try {
-            await axios.put(`${API_URL}/api/watchlist/${listId}`, 
-                { name: editedListName, description: editedListDesc },
-                { headers: { 'Authorization': `Bearer ${token}` } }
+            await api.put(`/api/watchlist/${listId}`, 
+                { name: editedListName, description: editedListDesc }
             );
             setIsEditModalOpen(false);
             fetchWatchlistDetails();
@@ -114,7 +103,6 @@ export const WatchlistDetailPage = () => {
                     <Typography variant="body1" color="text.secondary">{watchlist?.description}</Typography>
                     <Typography variant="caption" color="text.secondary">Oluşturan: @{watchlist?.ownerUsername}</Typography>
                     
-                    {/* Sadece listenin sahibi bu butonları görebilir */}
                     {isOwner && (
                         <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
                             <Button variant="outlined" startIcon={<EditIcon />} onClick={() => setIsEditModalOpen(true)}>Listeyi Düzenle</Button>
@@ -134,7 +122,6 @@ export const WatchlistDetailPage = () => {
                                         <img src={item.posterPath ? `${IMAGE_BASE_URL}${item.posterPath}` : '/vite.svg'} alt={item.title} style={{ width: '100%', borderRadius: '8px', display: 'block' }}/>
                                         <Typography variant="subtitle2" align="center" sx={{ mt: 1 }}>{item.title}</Typography>
                                     </Link>
-                                    {/* Sadece listenin sahibi film silebilmeli */}
                                     {isOwner && (
                                         <IconButton onClick={() => handleRemoveMovie(item.movieId)} sx={{ position: 'absolute', top: 0, right: 0, color: 'white', backgroundColor: 'rgba(0,0,0,0.6)' }} aria-label="delete">
                                             <DeleteIcon />

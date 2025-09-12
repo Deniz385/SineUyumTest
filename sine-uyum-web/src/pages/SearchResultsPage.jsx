@@ -1,15 +1,10 @@
-// sine-uyum-web/src/pages/SearchResultsPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, Grid, Card, CardContent, Avatar, Button, Chip } from '@mui/material';
 
-const API_URL = 'https://super-duper-dollop-g959prvw5q539q6-5074.app.github.dev';
-
-// Her bir kullanıcı sonucunu göstermek için yeni kart bileşeni
 const UserResultCard = ({ user }) => {
-    // Uyum puanına göre renk belirle
     const getChipColor = (score) => {
         if (score > 75) return "success";
         if (score > 50) return "warning";
@@ -54,7 +49,7 @@ const UserResultCard = ({ user }) => {
 export const SearchResultsPage = () => {
     const [searchParams] = useSearchParams();
     const query = searchParams.get('query');
-    const { token } = useAuth();
+    const { user } = useAuth();
 
     const [users, setUsers] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -62,15 +57,14 @@ export const SearchResultsPage = () => {
 
     useEffect(() => {
         const fetchUsers = async () => {
-            if (!query || !token) return;
+            if (!query || !user) return;
 
             setIsLoading(true);
             setMessage('');
             setUsers([]);
 
             try {
-                const response = await axios.get(`${API_URL}/api/account/search`, {
-                    headers: { 'Authorization': `Bearer ${token}` },
+                const response = await api.get(`/api/account/search`, {
                     params: { query }
                 });
                 setUsers(response.data);
@@ -85,7 +79,7 @@ export const SearchResultsPage = () => {
         };
 
         fetchUsers();
-    }, [query, token]);
+    }, [query, user]);
 
     return (
         <div className="page-container">

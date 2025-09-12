@@ -1,7 +1,6 @@
-// sine-uyum-web/src/pages/ConversationPage.jsx
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, TextField, IconButton, Modal, Card, CardMedia, List, ListItem, ListItemButton, ListItemText, Divider } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
@@ -9,10 +8,8 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import { MovieSearchBar } from '../components/MovieSearchBar';
 
-const API_URL = 'https://super-duper-dollop-g959prvw5q539q6-5074.app.github.dev';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
 
-// --- HATA DÜZELTMESİ: Eksik olan modalStyle sabiti eklendi ---
 const modalStyle = {
   position: 'absolute',
   top: '20%',
@@ -25,7 +22,6 @@ const modalStyle = {
   borderRadius: 2
 };
 
-// Film öneri kartı
 const MovieRecommendationCard = ({ movie }) => (
     <Card sx={{ display: 'flex', alignItems: 'center', p: 1, textDecoration: 'none', backgroundColor: 'rgba(255,255,255,0.1)' }} component={Link} to={`/movie/${movie.id}`}>
         <CardMedia
@@ -41,7 +37,6 @@ const MovieRecommendationCard = ({ movie }) => (
     </Card>
 );
 
-// Liste paylaşım kartı
 const WatchlistShareCard = ({ watchlist }) => (
     <Card sx={{ display: 'flex', alignItems: 'center', p: 1, textDecoration: 'none', backgroundColor: 'rgba(255,255,255,0.1)' }} component={Link} to={`/watchlist/${watchlist.id}`}>
         <PlaylistAddIcon sx={{ fontSize: 40, mx: 1.5 }} />
@@ -55,7 +50,7 @@ const WatchlistShareCard = ({ watchlist }) => (
 
 export const ConversationPage = () => {
     const { otherUserId } = useParams();
-    const { token, user } = useAuth();
+    const { user } = useAuth(); // token kaldırıldı, sadece user kullanılıyor
     const [messages, setMessages] = useState([]);
     const [otherUser, setOtherUser] = useState(null);
     const [newMessage, setNewMessage] = useState('');
@@ -69,12 +64,10 @@ export const ConversationPage = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
-    const fetchThread = async () => {
-        if (!token) return;
+    const fetchThread = useCallback(async () => {
+        if (!user) return; // user kontrolü
         try {
-            const response = await axios.get(`${API_URL}/api/messages/thread/${otherUserId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const response = await api.get(`/api/messages/thread/${otherUserId}`);
             setMessages(response.data);
             if (response.data.length > 0) {
                 const firstMessage = response.data[0];
@@ -83,7 +76,7 @@ export const ConversationPage = () => {
                     { id: firstMessage.senderId, userName: firstMessage.senderUsername }
                 );
             } else {
-                const profileResponse = await axios.get(`${API_URL}/api/profile/${otherUserId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const profileResponse = await api.get(`/api/profile/${otherUserId}`);
                 setOtherUser(profileResponse.data);
             }
         } catch (err) {
@@ -91,21 +84,18 @@ export const ConversationPage = () => {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [otherUserId, user]);
 
     useEffect(() => {
         fetchThread();
-    }, [otherUserId, token, user.id]);
+    }, [fetchThread]);
 
     useEffect(scrollToBottom, [messages]);
 
     const handleSendMessage = async ({ content, movieId, watchlistId }) => {
         if (!content && !movieId && !watchlistId) return;
         try {
-            await axios.post(`${API_URL}/api/messages`, 
-                { recipientId: otherUserId, content, movieId, watchlistId },
-                { headers: { 'Authorization': `Bearer ${token}` } }
-            );
+            await api.post(`/api/messages`, { recipientId: otherUserId, content, movieId, watchlistId });
             setNewMessage('');
             fetchThread(); 
         } catch (err) {
@@ -116,10 +106,7 @@ export const ConversationPage = () => {
     const handleMovieSelectAndSend = async (movie) => {
         setIsMovieModalOpen(false);
         try {
-            await axios.post(`${API_URL}/api/ratings/addmovie`,
-                { id: movie.id, title: movie.title, posterPath: movie.poster_path },
-                { headers: { 'Authorization': `Bearer ${token}` } }
-            );
+            await api.post(`/api/ratings/addmovie`, { id: movie.id, title: movie.title, posterPath: movie.poster_path });
         } catch (addMovieError) {
             if (addMovieError.response && addMovieError.response.status !== 400) {
                console.error("Film eklenirken bir hata oluştu:", addMovieError);
@@ -132,9 +119,7 @@ export const ConversationPage = () => {
     const handleOpenWatchlistModal = async () => {
         setIsWatchlistModalOpen(true);
         try {
-            const response = await axios.get(`${API_URL}/api/watchlist`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const response = await api.get(`/api/watchlist`);
             setUserLists(response.data);
         } catch (err) {
             console.error("Listeler yüklenemedi:", err);

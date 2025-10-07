@@ -31,7 +31,7 @@ export const WatchlistPage = () => {
         setIsLoading(true);
         try {
             const response = await api.get(`/api/watchlist`);
-            setWatchlists(response.data.$values || response.data);
+            setWatchlists(response.data); // $values kontrolü kaldırıldı
         } catch (err) {
             setError('Listeler yüklenirken bir hata oluştu.');
         } finally {
@@ -74,8 +74,7 @@ export const WatchlistPage = () => {
                 ) : (
                     <Grid container spacing={3}>
                         {watchlists.map(list => (
-                            // --- DÜZELTME: "item" prop'u kaldırıldı ---
-                            <Grid xs={12} sm={6} md={4} key={list.id}>
+                            <Grid item xs={12} sm={6} md={4} key={list.id}>
                                 <Card component={Link} to={`/watchlist/${list.id}`} sx={{ textDecoration: 'none', height: '100%' }}>
                                     <CardContent>
                                         <Typography variant="h6">{list.name}</Typography>
@@ -100,4 +99,3 @@ export const WatchlistPage = () => {
         </>
     );
 };
-

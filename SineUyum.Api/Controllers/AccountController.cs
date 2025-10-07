@@ -130,15 +130,14 @@ namespace SineUyum.Api.Controllers
                claims.Add(new Claim(ClaimTypes.Role, role));
            }
 
-            // --- DÜZELTME BAŞLANGICI ---
-            // Anahtarı, Program.cs'teki mantıkla aynı şekilde oku.
+           
             var jwtKey = _configuration["JWT_KEY"] ?? _configuration["Jwt:Key"];
             if (string.IsNullOrEmpty(jwtKey))
             {
                 throw new InvalidOperationException("JWT anahtarı token oluşturma sırasında bulunamadı.");
             }
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-            // --- DÜZELTME BİTİŞİ ---
+           
             
            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
 

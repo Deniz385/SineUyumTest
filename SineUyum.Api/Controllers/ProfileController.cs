@@ -23,8 +23,6 @@ namespace SineUyum.Api.Controllers
             _context = context;
             _userManager = userManager;
         }
-
-        // --- YENİ İSTATİSTİKLERLE GÜNCELLENMİŞ METOT ---
         [HttpGet("{userId}")]
         public async Task<IActionResult> GetUserProfile(string userId)
         {
@@ -35,11 +33,11 @@ namespace SineUyum.Api.Controllers
                 return NotFound("Kullanıcı bulunamadı.");
             }
 
-            // Kullanıcının tüm oylarını al
+
             var userRatings = await _context.UserRatings
                 .Where(r => r.UserId == userId)
                 .Include(r => r.Movie) 
-                .OrderByDescending(r => r.Rating) // En yüksek puanlıları üste al
+                .OrderByDescending(r => r.Rating) 
                 .Select(r => new 
                 {
                     r.MovieId,
@@ -49,13 +47,11 @@ namespace SineUyum.Api.Controllers
                 })
                 .ToListAsync();
 
-            // Kullanıcının listelerindeki toplam film sayısını al
             var totalMoviesInWatchlists = await _context.Watchlists
                 .Where(w => w.UserId == userId)
                 .SelectMany(w => w.Items)
                 .CountAsync();
 
-            // Yeni İstatistikleri Hesapla
             var stats = new {
                 totalRatings = userRatings.Count,
                 averageRating = userRatings.Any() ? Math.Round(userRatings.Average(r => r.Rating), 1) : 0,
@@ -70,14 +66,13 @@ namespace SineUyum.Api.Controllers
                 user.UserName,
                 user.Bio,
                 user.ProfileImageUrl,
-                Ratings = userRatings, // Tüm oylanan filmleri de göndermeye devam ediyoruz
-                Statistics = stats // Yeni istatistikleri ekliyoruz
+                Ratings = userRatings, 
+                Statistics = stats 
             };
 
             return Ok(profileData);
         }
 
-        // Profili güncelleme metodu (Aynı kalıyor)
         [HttpPut]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto updateDto)
         {

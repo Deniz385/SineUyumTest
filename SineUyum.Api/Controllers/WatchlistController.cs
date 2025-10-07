@@ -1,9 +1,8 @@
-// SineUyum.Api/Controllers/WatchlistController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
-using SineUyum.Api.Dtos;
+using SineUyum.Api.Dtos; // <-- HATA GİDERİLDİ: EKSİK OLAN SATIR BUYDU
 using SineUyum.Api.Models;
 using System.Security.Claims;
 using System.ComponentModel.DataAnnotations;
@@ -21,8 +20,6 @@ namespace SineUyum.Api.Controllers
         {
             _context = context;
         }
-
-        // ... GetUserWatchlists, GetWatchlistDetails, CreateWatchlist ve UpdateWatchlist metodları aynı ...
 
         [HttpGet]
         public async Task<IActionResult> GetUserWatchlists()
@@ -42,9 +39,6 @@ namespace SineUyum.Api.Controllers
         [HttpGet("public/{listId}")]
         public async Task<IActionResult> GetPublicWatchlistDetails(int listId)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userId == null) return Unauthorized();
-
             var watchlist = await _context.Watchlists
                 .Include(w => w.User)
                 .Where(w => w.Id == listId)
@@ -144,7 +138,6 @@ namespace SineUyum.Api.Controllers
             return Ok(new { message = "Liste başarıyla güncellendi." });
         }
 
-        // --- HATA DÜZELTMESİ BURADA ---
         [HttpDelete("{listId}")]
         public async Task<IActionResult> DeleteWatchlist(int listId)
         {
@@ -158,24 +151,11 @@ namespace SineUyum.Api.Controllers
                 return NotFound("Liste bulunamadı veya bu listeye erişim yetkiniz yok.");
             }
 
-            // 1. Bu listeye bağlı tüm WatchlistItem'ları bul ve sil
-            var itemsToDelete = _context.WatchlistItems.Where(i => i.WatchlistId == listId);
-            _context.WatchlistItems.RemoveRange(itemsToDelete);
-
-            // 2. Bu listenin paylaşıldığı tüm mesajları bul ve WatchlistId'lerini null yap
-            var messagesToUpdate = _context.Messages.Where(m => m.WatchlistId == listId);
-            await messagesToUpdate.ForEachAsync(m => m.WatchlistId = null);
-
-            // 3. Listenin kendisini sil
             _context.Watchlists.Remove(watchlist);
-            
-            // 4. Tüm değişiklikleri veritabanına kaydet
             await _context.SaveChangesAsync();
             
             return Ok(new { message = "Liste başarıyla silindi." });
         }
-
-        // ... Diğer metodlar (AddMovieToWatchlist, RemoveMovieFromWatchlist) aynı kalıyor ...
 
         [HttpPost("{listId}/movies")]
         public async Task<IActionResult> AddMovieToWatchlist(int listId, [FromBody] AddWatchlistItemDto dto)
@@ -196,7 +176,7 @@ namespace SineUyum.Api.Controllers
             var alreadyInList = await _context.WatchlistItems.AnyAsync(i => i.WatchlistId == listId && i.MovieId == dto.MovieId);
             if (alreadyInList)
             {
-                return BadRequest("Bu film zaten bu listede mevcut.");
+                return BadRequest(new { message = "Bu film zaten bu listede mevcut." });
             }
             var watchlistItem = new WatchlistItem
             {
@@ -223,15 +203,6 @@ namespace SineUyum.Api.Controllers
             _context.WatchlistItems.Remove(watchlistItem);
             await _context.SaveChangesAsync();
             return Ok(new { message = "Film listeden kaldırıldı." });
-        }
-        
-        public class CreateWatchlistDto
-        {
-            [Required]
-            [MaxLength(100)]
-            public string Name { get; set; } = string.Empty;
-            [MaxLength(500)]
-            public string? Description { get; set; }
         }
     }
 }

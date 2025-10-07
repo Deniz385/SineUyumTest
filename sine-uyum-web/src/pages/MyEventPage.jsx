@@ -36,9 +36,9 @@ const MatchedEvent = ({ data, onVote }) => {
     
     const group = data.group;
     const event = data.event;
-    const votes = data.votes?.$values || data.votes || [];
-    const suggestedMovies = data.suggestedMovies?.$values || data.suggestedMovies || [];
-    const groupMembers = group.members?.$values || group.members || [];
+    const votes = data.votes || [];
+    const suggestedMovies = data.suggestedMovies || [];
+    const groupMembers = group.members || [];
 
     const getVoteCount = (movieId) => votes.filter(v => v.movieId === movieId).length;
     const currentUserVoteId = votes.find(v => v.userId === user.id)?.movieId;
@@ -62,8 +62,7 @@ const MatchedEvent = ({ data, onVote }) => {
             <Typography variant="h5" component="h2" sx={{ mb: 3 }}>Film Oylaması</Typography>
             <Grid container spacing={3} justifyContent="center">
                 {suggestedMovies.map(movie => (
-                    // --- DÜZELTME: "item" prop'u kaldırıldı ---
-                    <Grid xs={12} sm={6} md={4} key={movie.id}>
+                    <Grid item xs={12} sm={6} md={4} key={movie.id}>
                         <Card sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                             <CardMedia component="img" height="350" image={movie.posterPath ? `${IMAGE_BASE_URL}${movie.posterPath}` : '/vite.svg'} alt={movie.title} />
                             <CardContent sx={{ flexGrow: 1 }}><Typography gutterBottom variant="h6" component="div">{movie.title}</Typography></CardContent>
@@ -80,6 +79,7 @@ const MatchedEvent = ({ data, onVote }) => {
         </>
     );
 };
+
 
 export const MyEventPage = () => {
     const { user } = useAuth();

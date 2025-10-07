@@ -348,6 +348,20 @@ namespace SineUyum.Api.Migrations
                     b.ToTable("EventVotes");
                 });
 
+            modelBuilder.Entity("SineUyum.Api.Models.Genre", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Genres");
+                });
+
             modelBuilder.Entity("SineUyum.Api.Models.Message", b =>
                 {
                     b.Property<int>("Id")
@@ -405,6 +419,21 @@ namespace SineUyum.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Movies");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.MovieGenre", b =>
+                {
+                    b.Property<int>("MovieId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("GenreId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("MovieId", "GenreId");
+
+                    b.HasIndex("GenreId");
+
+                    b.ToTable("MovieGenres");
                 });
 
             modelBuilder.Entity("SineUyum.Api.Models.Notification", b =>
@@ -691,7 +720,8 @@ namespace SineUyum.Api.Migrations
 
                     b.HasOne("SineUyum.Api.Models.Watchlist", "Watchlist")
                         .WithMany()
-                        .HasForeignKey("WatchlistId");
+                        .HasForeignKey("WatchlistId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Movie");
 
@@ -700,6 +730,25 @@ namespace SineUyum.Api.Migrations
                     b.Navigation("Sender");
 
                     b.Navigation("Watchlist");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.MovieGenre", b =>
+                {
+                    b.HasOne("SineUyum.Api.Models.Genre", "Genre")
+                        .WithMany("MovieGenres")
+                        .HasForeignKey("GenreId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SineUyum.Api.Models.Movie", "Movie")
+                        .WithMany()
+                        .HasForeignKey("MovieId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Genre");
+
+                    b.Navigation("Movie");
                 });
 
             modelBuilder.Entity("SineUyum.Api.Models.Notification", b =>
@@ -789,6 +838,11 @@ namespace SineUyum.Api.Migrations
             modelBuilder.Entity("SineUyum.Api.Models.EventGroup", b =>
                 {
                     b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.Genre", b =>
+                {
+                    b.Navigation("MovieGenres");
                 });
 
             modelBuilder.Entity("SineUyum.Api.Models.Watchlist", b =>

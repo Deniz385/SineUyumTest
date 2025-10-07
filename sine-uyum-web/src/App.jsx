@@ -33,16 +33,13 @@ function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/" element={<LoginPage />} />
-
-                {/* Sadece GİRİŞ YAPMIŞ kullanıcıların erişebileceği ana rota grubu */}
                 <Route
                   element={
                     <ProtectedRoute>
                       <Layout />
                     </ProtectedRoute>
                   }
-                >
-                  {/* Hem normal kullanıcıların hem de adminlerin görebileceği rotalar */}
+                >                
                   <Route path="/home" element={<HomePage />} />
                   <Route path="/profile/:userId" element={<ProfilePage />} />
                   <Route path="/search" element={<SearchResultsPage />} />
@@ -53,14 +50,11 @@ function App() {
                   <Route path="/messages" element={<MessagesPage />} />
                   <Route path="/messages/:otherUserId" element={<ConversationPage />} />
                   <Route path="/my-event" element={<MyEventPage />} />
-                  <Route path="/subscription" element={<SubscriptionPage />} />
-                  
-                  {/* Sadece ADMIN rolüne sahip kullanıcıların görebileceği rotalar */}
-                  <Route element={<AdminRoute />}>
+                  <Route path="/subscription" element={<SubscriptionPage />} />                
+                           <Route element={<AdminRoute />}>
                     <Route path="/admin" element={<AdminPage />} />
                   </Route>
                 </Route>
-
               </Routes>
             </NotificationProvider>
           </SnackbarProvider>

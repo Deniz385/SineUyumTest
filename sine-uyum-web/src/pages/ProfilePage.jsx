@@ -13,8 +13,7 @@ import { FollowListModal } from '../components/FollowListModal';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
 
 const StatCard = ({ icon, value, label }) => (
-    // --- DÜZELTME: "item" prop'u kaldırıldı ---
-    <Grid xs={6} sm={4}>
+    <Grid item xs={6} sm={4}>
         <Paper elevation={2} sx={{ p: 2, textAlign: 'center' }}>
             {icon}
             <Typography variant="h5" component="p" sx={{ fontWeight: 'bold' }}>{value}</Typography>
@@ -65,7 +64,7 @@ export const ProfilePage = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [userId, user, isMyProfile]);
+    }, [userId, user, isMyProfile]); // <-- DÜZELTME BURADA
 
     useEffect(() => {
         fetchProfileData();
@@ -94,7 +93,7 @@ export const ProfilePage = () => {
         setIsRecsLoading(true);
         try {
             const response = await api.get(`/api/compatibility/${userId}/recommendations`);
-            setRecommendations(response.data?.$values || response.data);
+            setRecommendations(response.data);
         } catch (err) {
             setRecommendations([]);
         } finally {
@@ -108,7 +107,7 @@ export const ProfilePage = () => {
         setIsListLoading(true);
         try {
             const response = await api.get(`/api/follow/${userId}/${type}`);
-            setListData(response.data?.$values || response.data);
+            setListData(response.data);
         } catch (err) {
             console.error(`${title} listesi alınamadı:`, err);
         } finally {
@@ -120,9 +119,8 @@ export const ProfilePage = () => {
     if (error) return <div className="page-container message error-message">{error}</div>;
 
     const stats = profileData?.statistics;
-    const topRatedMovies = stats?.topRatedMovies?.$values || stats?.topRatedMovies || [];
-    const ratings = profileData?.ratings?.$values || profileData?.ratings || [];
-
+    const topRatedMovies = stats?.topRatedMovies || [];
+    const ratings = profileData?.ratings || [];
 
     return (
         <>
@@ -206,4 +204,3 @@ export const ProfilePage = () => {
         </>
     );
 };
-

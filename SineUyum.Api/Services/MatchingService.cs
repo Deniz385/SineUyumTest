@@ -1,6 +1,9 @@
 // SineUyum.Api/Services/MatchingService.cs
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
+using SineUyum.Api.Hubs;
 using SineUyum.Api.Models;
 using System.Text.Json;
 
@@ -12,16 +15,16 @@ namespace SineUyum.Api.Services
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly string? _tmdbApiKey;
         private const string TmdbApiBaseUrl = "https://api.themoviedb.org/3/";
+        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly UserManager<AppUser> _userManager;
 
-        public MatchingService(ApplicationDbContext context, IHttpClientFactory httpClientFactory, IConfiguration configuration)
+        public MatchingService(ApplicationDbContext context, IHttpClientFactory httpClientFactory, IConfiguration configuration, IHubContext<NotificationHub> hubContext, UserManager<AppUser> userManager)
         {
             _context = context;
             _httpClientFactory = httpClientFactory;
-            var apiKey = configuration["TMDb:ApiKey"];
-            if (string.IsNullOrEmpty(apiKey))
-            {
-                apiKey = configuration["TMDB_API_KEY"];
-            }
+            _hubContext = hubContext;
+            _userManager = userManager;
+            var apiKey = configuration["TMDb:ApiKey"] ?? configuration["TMDB_API_KEY"];
             _tmdbApiKey = apiKey;
         }
 
@@ -53,7 +56,7 @@ namespace SineUyum.Api.Services
 
                 var compatibilities = userPool.Select(otherUserId => new {
                     UserId = otherUserId,
-                    Score = CalculateCompatibility(userRatingsDict[starterUserId], userRatingsDict[otherUserId])
+                    Score = CalculateCompatibility(userRatingsDict[starterUserId], userRatingsDict.ContainsKey(otherUserId) ? userRatingsDict[otherUserId] : new Dictionary<int, int>())
                 }).ToList();
 
                 var groupMemberIds = compatibilities.OrderByDescending(x => x.Score)
@@ -74,11 +77,29 @@ namespace SineUyum.Api.Services
                     newGroup.Members.Add(new EventGroupMember { UserId = memberId });
                     userPool.Remove(memberId);
                 }
+                
+                // SaveChangesAsync'i burada çağırarak grubun ve üyelerin ID'lerinin oluşmasını sağlıyoruz.
+                await _context.SaveChangesAsync();
+
+                // BİLDİRİM GÖNDERME KISMI
+                var notificationMessage = $"'{cinemaEvent.LocationName}' etkinliği için bir gruba atandın!";
+                foreach (var memberId in groupMemberIds)
+                {
+                    var notification = new Notification
+                    {
+                        UserId = memberId,
+                        Message = notificationMessage,
+                        RelatedUrl = "/my-event"
+                    };
+                    await _context.Notifications.AddAsync(notification);
+                    await _hubContext.Clients.User(memberId).SendAsync("ReceiveNotification", notification);
+                }
             }
 
             await _context.SaveChangesAsync();
         }
-
+        
+        // ... (diğer metodlar aynı kalacak) ...
         private async Task<List<int>> GetGroupMovieSuggestions(List<string> groupMemberIds, Dictionary<string, Dictionary<int, int>> allRatings)
         {
             var allSeenMovies = groupMemberIds.SelectMany(id => allRatings.ContainsKey(id) ? allRatings[id].Keys : Enumerable.Empty<int>()).ToHashSet();
@@ -137,8 +158,6 @@ namespace SineUyum.Api.Services
                     .Select(movie => movie.GetProperty("id").GetInt32())
                     .ToList();
                 
-                // --- GARANTİ KODU ---
-                // Eğer filtreleme sonrası hiç film kalmazsa, filtreyi boş verip en popüler ilk 3 filmi al.
                 if (!fallbackSuggestions.Any() && popularMovies.Any())
                 {
                     fallbackSuggestions = popularMovies.Take(3).Select(movie => movie.GetProperty("id").GetInt32()).ToList();

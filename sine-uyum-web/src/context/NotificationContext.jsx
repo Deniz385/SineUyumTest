@@ -13,7 +13,6 @@ export const useNotifications = () => {
 export const NotificationProvider = ({ children }) => {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
-    const [connection, setConnection] = useState(null);
     const { user } = useAuth();
     const { showSnackbar } = useSnackbar();
 
@@ -21,7 +20,7 @@ export const NotificationProvider = ({ children }) => {
         if (!user) return;
         try {
             const response = await api.get('/api/notification');
-            const data = response.data.$values || response.data;
+            const data = response.data;
             setNotifications(data);
             setUnreadCount(data.filter(n => !n.isRead).length);
         } catch (error) {
@@ -29,42 +28,45 @@ export const NotificationProvider = ({ children }) => {
         }
     }, [user]);
 
+    // --- DÜZELTME BAŞLANGICI ---
+    // SignalR bağlantı mantığını daha sağlam hale getiriyoruz.
     useEffect(() => {
-        if (user && !connection) {
-            const newConnection = new signalR.HubConnectionBuilder()
+        // Sadece kullanıcı giriş yapmışsa bir bağlantı oluştur.
+        if (user) {
+            const connection = new signalR.HubConnectionBuilder()
                 .withUrl(`${API_URL}/notificationHub`, {
                     accessTokenFactory: () => localStorage.getItem('token')
                 })
                 .withAutomaticReconnect()
                 .build();
 
-            setConnection(newConnection);
-        } else if (!user && connection) {
-            connection.stop();
-            setConnection(null);
-        }
-    }, [user, connection]);
+            // Sadece bağlantı durumu "Disconnected" ise başlat.
+            // Bu, React Strict Mode'un neden olduğu çift render sorununu çözer.
+            if (connection.state === signalR.HubConnectionState.Disconnected) {
+                connection.start()
+                    .then(() => {
+                        console.log('SignalR bağlantısı kuruldu.');
+                        fetchNotifications(); 
 
-    useEffect(() => {
-        if (connection) {
-            connection.start()
-                .then(() => {
-                    console.log('SignalR bağlantısı kuruldu.');
-                    fetchNotifications();
-
-                    connection.on('ReceiveNotification', (notification) => {
-                        showSnackbar(notification.message, 'info');
-                        setNotifications(prev => [notification, ...prev]);
-                        setUnreadCount(prev => prev + 1);
-                    });
-                })
-                .catch(e => console.error('SignalR bağlantı hatası: ', e));
-
+                        connection.on('ReceiveNotification', (notification) => {
+                            showSnackbar(notification.message, 'info');
+                            setNotifications(prev => [notification, ...prev]);
+                            setUnreadCount(prev => prev + 1);
+                        });
+                    })
+                    .catch(e => console.error('SignalR bağlantı hatası: ', e));
+            }
+            
+            // Temizleme fonksiyonu: Bileşen kaldırıldığında çalışır.
             return () => {
-                connection.off('ReceiveNotification');
+                // Sadece bağlantı "Connected" durumundaysa durdur.
+                if (connection.state === signalR.HubConnectionState.Connected) {
+                    connection.stop();
+                }
             };
         }
-    }, [connection, fetchNotifications, showSnackbar]);
+    }, [user, fetchNotifications, showSnackbar]);
+    // --- DÜZELTME BİTİŞİ ---
 
     const markAsRead = async (notificationId) => {
         try {
@@ -101,4 +103,3 @@ export const NotificationProvider = ({ children }) => {
         </NotificationContext.Provider>
     );
 };
-

@@ -1,4 +1,3 @@
-// SineUyum.Api/Controllers/CompatibilityController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -22,19 +21,13 @@ namespace SineUyum.Api.Controllers
         {
             _context = context;
             _httpClientFactory = httpClientFactory;
-            var apiKey = configuration["TMDb:ApiKey"];
-            if (string.IsNullOrEmpty(apiKey))
-            {
-                apiKey = configuration["TMDB_API_KEY"];
-            }
+            var apiKey = configuration["TMDb:ApiKey"] ?? configuration["TMDB_API_KEY"];
             _tmdbApiKey = apiKey;
         }
 
-        // Bu metodda bir değişiklik yok, aynı kalabilir.
         [HttpGet("{targetUserId}")]
         public async Task<IActionResult> GetCompatibility(string targetUserId)
         {
-            // ... (önceki adımdaki güncel algoritma burada olmalı)
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (currentUserId == null) return Unauthorized();
 
@@ -102,11 +95,9 @@ namespace SineUyum.Api.Controllers
             {
                 return StatusCode(503, "TMDb API anahtarı sunucuda yapılandırılmamış.");
             }
-
-            var client = _httpClientFactory.CreateClient("TMDb");
-            // ... (bu metodun üst kısmı aynı kalıyor)
-            var currentUserFavoriteGenres = await GetFavoriteGenreIds(currentUserId, 3, client);
-            var targetUserFavoriteGenres = await GetFavoriteGenreIds(targetUserId, 3, client);
+            
+            var currentUserFavoriteGenres = await GetFavoriteGenreIds(currentUserId, 3);
+            var targetUserFavoriteGenres = await GetFavoriteGenreIds(targetUserId, 3);
 
             var jointFavoriteGenres = currentUserFavoriteGenres.Intersect(targetUserFavoriteGenres).ToList();
             if (jointFavoriteGenres.Count == 0)
@@ -114,6 +105,7 @@ namespace SineUyum.Api.Controllers
                 jointFavoriteGenres = currentUserFavoriteGenres.Union(targetUserFavoriteGenres).Distinct().Take(3).ToList();
             }
             
+            var client = _httpClientFactory.CreateClient("TMDb");
             if (jointFavoriteGenres.Count == 0)
             {
                 var popularMoviesResponse = await client.GetAsync($"{TmdbApiBaseUrl}movie/popular?api_key={_tmdbApiKey}&language=tr-TR&page=1");
@@ -123,12 +115,10 @@ namespace SineUyum.Api.Controllers
                      var popularMovies = JsonDocument.Parse(json).RootElement.GetProperty("results");
                      var ratedMovieIds = await _context.UserRatings.Where(r => r.UserId == currentUserId || r.UserId == targetUserId).Select(r => r.MovieId).ToListAsync();
                      
-                     // --- DEĞİŞİKLİK BURADA BAŞLIYOR ---
                      var watchlistMovieIds = await _context.Watchlists
                         .Where(w => w.UserId == currentUserId || w.UserId == targetUserId)
                         .SelectMany(w => w.Items.Select(i => i.MovieId))
                         .ToListAsync();
-                     // --- DEĞİŞİKLİK BURADA BİTİYOR ---
 
                      var seenMovieIds = ratedMovieIds.Union(watchlistMovieIds).ToHashSet();
                      
@@ -155,12 +145,10 @@ namespace SineUyum.Api.Controllers
 
             var allRatedMovieIds = await _context.UserRatings.Where(r => r.UserId == currentUserId || r.UserId == targetUserId).Select(r => r.MovieId).ToListAsync();
             
-            // --- DEĞİŞİKLİK BURADA BAŞLIYOR ---
             var allWatchlistMovieIds = await _context.Watchlists
                 .Where(w => w.UserId == currentUserId || w.UserId == targetUserId)
                 .SelectMany(w => w.Items.Select(i => i.MovieId))
                 .ToListAsync();
-            // --- DEĞİŞİKLİK BURADA BİTİYOR ---
 
             var allSeenMovieIds = allRatedMovieIds.Union(allWatchlistMovieIds).ToHashSet();
 
@@ -172,38 +160,32 @@ namespace SineUyum.Api.Controllers
             return Ok(finalRecommendations);
         }
         
-        // Bu yardımcı metodda bir değişiklik yok.
-        private async Task<List<int>> GetFavoriteGenreIds(string userId, int count, HttpClient client)
+        private async Task<List<int>> GetFavoriteGenreIds(string userId, int count)
         {
-            // ... (içeriği aynı kalacak)
             var favoriteMovieIds = await _context.UserRatings
                 .Where(r => r.UserId == userId && r.Rating >= 6)
                 .Select(r => r.MovieId)
                 .ToListAsync();
 
-            if (!favoriteMovieIds.Any()) return new List<int>();
-
-            var genreCounts = new Dictionary<int, int>();
-
-            foreach (var movieId in favoriteMovieIds.Take(15))
+            if (!favoriteMovieIds.Any())
             {
-                var movieUrl = $"{TmdbApiBaseUrl}movie/{movieId}?api_key={_tmdbApiKey}&language=tr-TR";
-                var response = await client.GetAsync(movieUrl);
-                if (response.IsSuccessStatusCode)
-                {
-                    var jsonResponse = await response.Content.ReadAsStringAsync();
-                    var movieDoc = JsonDocument.Parse(jsonResponse).RootElement;
-                    if (movieDoc.TryGetProperty("genres", out var genres))
-                    {
-                        foreach (var genre in genres.EnumerateArray())
-                        {
-                            var genreId = genre.GetProperty("id").GetInt32();
-                            genreCounts[genreId] = genreCounts.GetValueOrDefault(genreId, 0) + 1;
-                        }
-                    }
-                }
+                return new List<int>();
             }
-            return genreCounts.OrderByDescending(kvp => kvp.Value).Select(kvp => kvp.Key).Take(count).ToList();
+
+            var favoriteGenreIds = await _context.MovieGenres
+                .Where(mg => favoriteMovieIds.Contains(mg.MovieId))
+                .GroupBy(mg => mg.GenreId)
+                .Select(g => new
+                {
+                    GenreId = g.Key,
+                    Count = g.Count()
+                })
+                .OrderByDescending(g => g.Count)
+                .Take(count)
+                .Select(g => g.GenreId)
+                .ToListAsync();
+
+            return favoriteGenreIds;
         }
     }
 }

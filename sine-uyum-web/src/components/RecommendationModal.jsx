@@ -1,4 +1,3 @@
-// sine-uyum-web/src/components/RecommendationModal.jsx
 import React from 'react';
 import { Modal, Box, Typography, Grid, CircularProgress } from '@mui/material';
 import { Link } from 'react-router-dom';
@@ -38,9 +37,7 @@ export const RecommendationModal = ({ open, onClose, recommendations, isLoading,
         ) : (
           <Grid container spacing={2} sx={{ mt: 2 }}>
             {recommendations.map(movie => (
-              // --- DEĞİŞİKLİK BURADA ---
-              // "item" prop'unu kaldırdık.
-              <Grid xs={4} sm={3} md={2} key={movie.id}>
+              <Grid item xs={4} sm={3} md={2} key={movie.id}>
                 <Link to={`/movie/${movie.id}`} onClick={onClose}>
                   <img
                     src={movie.poster_path ? `${IMAGE_BASE_URL}${movie.poster_path}` : '/vite.svg'}

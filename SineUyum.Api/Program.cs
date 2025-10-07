@@ -3,11 +3,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SineUyum.Api.Data;
-using SineUyum.Api.Hubs; // YENİ EKLENEN SATIR
+using SineUyum.Api.Hubs;
 using SineUyum.Api.Models;
 using SineUyum.Api.Services;
 using System.Text;
-using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -78,16 +77,11 @@ builder.Services.AddAuthentication(options =>
 // --- AUTHORIZATION SERVİSİ ---
 builder.Services.AddAuthorization();
 builder.Services.AddHttpClient();
-// --- CONTROLLERS & SWAGGER ---
 builder.Services.AddScoped<MatchingService>();
 
-// YENİ EKLENEN SATIR: JSON döngülerini çözmek için
-builder.Services.AddControllers().AddJsonOptions(options =>
-{
-    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
-});
-
-builder.Services.AddSignalR(); // YENİ EKLENEN SATIR
+// --- CONTROLLERS & SWAGGER ---
+builder.Services.AddControllers(); // <-- HATA GİDERİLDİ: EKSİK OLAN SATIR BUYDU.
+builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -102,9 +96,7 @@ if (app.Environment.IsDevelopment())
 
 // --- MIDDLEWARE SIRASI ÖNEMLİ ---
 app.UseRouting();
-
 app.UseCors(corsPolicyName);
-
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -142,10 +134,9 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-app.MapHub<NotificationHub>("/notificationHub"); // YENİ EKLENEN SATIR
-app.MapControllers();
+app.MapHub<NotificationHub>("/notificationHub");
+app.MapControllers(); // Bu satırın çalışabilmesi için AddControllers() servisi gerekliydi.
 
 app.Run();
 
 public partial class Program { }
-

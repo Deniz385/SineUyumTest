@@ -6,6 +6,7 @@ import { Box, Typography, CircularProgress, Grid, IconButton, Button, Modal, Tex
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
+import { useSnackbar } from '../context/SnackbarProvider'; // <-- YENİ EKLEME
 
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
 
@@ -25,6 +26,7 @@ export const WatchlistDetailPage = () => {
     const { listId } = useParams();
     const { user } = useAuth();
     const navigate = useNavigate();
+    const { showSnackbar } = useSnackbar(); // <-- YENİ EKLEME
     const [watchlist, setWatchlist] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -76,9 +78,10 @@ export const WatchlistDetailPage = () => {
     const performRemoveMovie = async (movieId) => {
         try {
             await api.delete(`/api/watchlist/${listId}/movies/${movieId}`);
+            showSnackbar('Film listeden başarıyla kaldırıldı!', 'success');
             fetchWatchlistDetails();
         } catch (err) {
-            alert("Film kaldırılırken bir hata oluştu.");
+            showSnackbar("Film kaldırılırken bir hata oluştu.", 'error');
         }
     };
 
@@ -94,14 +97,18 @@ export const WatchlistDetailPage = () => {
         });
     };
 
+    // --- ANA DÜZELTME BURADA ---
     const performDeleteList = async () => {
         try {
             await api.delete(`/api/watchlist/${listId}`);
-            navigate('/watchlist');
+            showSnackbar('Liste başarıyla silindi. Yönlendiriliyorsunuz...', 'success');
+            // Yönlendirmeyi küçük bir gecikmeyle yaparak "aria-hidden" uyarısını önlüyoruz.
+            setTimeout(() => navigate('/watchlist'), 1500);
         } catch (err) {
-            alert("Liste silinirken bir hata oluştu.");
+            showSnackbar("Liste silinirken bir hata oluştu.", 'error');
         }
     };
+    // --- DÜZELTME BİTİŞİ ---
 
     const handleUpdateList = async (e) => {
         e.preventDefault();
@@ -110,17 +117,18 @@ export const WatchlistDetailPage = () => {
             await api.put(`/api/watchlist/${listId}`, 
                 { name: editedListName, description: editedListDesc }
             );
+            showSnackbar('Liste başarıyla güncellendi!', 'success');
             setIsEditModalOpen(false);
             fetchWatchlistDetails();
         } catch (err) {
-            alert("Liste güncellenirken bir hata oluştu.");
+            showSnackbar("Liste güncellenirken bir hata oluştu.", 'error');
         }
     };
 
     if (isLoading) return <CircularProgress />;
     if (error) return <Typography color="error">{error}</Typography>;
 
-    const items = watchlist?.items?.$values || watchlist?.items || [];
+    const items = watchlist?.items || [];
 
     return (
         <>
@@ -143,8 +151,7 @@ export const WatchlistDetailPage = () => {
                 ) : (
                     <Grid container spacing={3}>
                         {items.map(item => (
-                            // --- DÜZELTME: "item" prop'u kaldırıldı ---
-                            <Grid xs={6} sm={4} md={3} key={item.movieId}>
+                            <Grid item xs={6} sm={4} md={3} key={item.movieId}>
                                 <Box sx={{ position: 'relative' }}>
                                     <Link to={`/movie/${item.movieId}`}>
                                         <img src={item.posterPath ? `${IMAGE_BASE_URL}${item.posterPath}` : '/vite.svg'} alt={item.title} style={{ width: '100%', borderRadius: '8px', display: 'block' }}/>
@@ -165,8 +172,8 @@ export const WatchlistDetailPage = () => {
             <Modal open={isEditModalOpen} onClose={() => setIsEditModalOpen(false)}>
                 <Box sx={modalStyle} component="form" onSubmit={handleUpdateList}>
                     <Typography variant="h6" component="h2" sx={{ mb: 2 }}>Listeyi Düzenle</Typography>
-                    <TextField autoFocus required margin="dense" label="Liste Adı" fullWidth variant="outlined" value={editedListName} onChange={(e) => setEditedListName(e.target.value)} />
-                    <TextField margin="dense" label="Açıklama (Opsiyonel)" fullWidth multiline rows={3} variant="outlined" value={editedListDesc} onChange={(e) => setEditedListDesc(e.target.value)} />
+                    <TextField autoFocus required margin="dense" label="Liste Adı" fullWidth variant="outlined" value={editedListName} onChange={(e) => setNewListName(e.target.value)} />
+                    <TextField margin="dense" label="Açıklama (Opsiyonel)" fullWidth multiline rows={3} variant="outlined" value={editedListDesc} onChange={(e) => setNewListDesc(e.target.value)} />
                     <Button type="submit" variant="contained" sx={{ mt: 2 }}>Kaydet</Button>
                 </Box>
             </Modal>
@@ -180,4 +187,3 @@ export const WatchlistDetailPage = () => {
         </>
     );
 };
-

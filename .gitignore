@@ -8,6 +8,10 @@ SQLite veritabanı dosyalarını yoksay
 Frontend ortam değişkeni dosyalarını yoksay (GÜVENLİK)
 .env
 .env*.local
+# YENİ EKLENEN SATIR
+# ASP.NET Core ayar dosyaları (hassas veriler içerebilir)
+appsettings.json
+appsettings.Development.json
 
 ===================================================================
 Node.js / Frontend (Vite)

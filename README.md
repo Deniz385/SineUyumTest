@@ -101,6 +101,25 @@ Ayrıntılar: [`sine_uyum_mobile/README.md`](sine_uyum_mobile/README.md)
 
 Web ve mobil istemcilerin ikisi de bu akışı uygular.
 
+### Parola değiştirme
+
+```bash
+# 1) Giriş yap, token'ı al
+TOKEN=$(curl -s -X POST "$API/api/account/login" \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"<kullanici>","password":"<mevcut-parola>"}' | jq -r .token)
+
+# 2) Parolayı değiştir
+curl -s -X POST "$API/api/account/change-password" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"currentPassword":"<mevcut-parola>","newPassword":"<yeni-parola>"}'
+```
+
+Parola değişince kullanıcının **diğer tüm oturumları kapatılır** (çalınmış bir
+refresh token geçerli kalmasın diye); isteği yapan cihaz için yeni bir token
+çifti döner, yani o cihaz oturumdan düşmez.
+
 ---
 
 ## Testler ve CI

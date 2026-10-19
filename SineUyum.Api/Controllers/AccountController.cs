@@ -109,6 +109,38 @@ namespace SineUyum.Api.Controllers
             });
         }
 
+        // Uygulamada parola değiştirmenin hiçbir yolu yoktu; bir kullanıcı
+        // parolasını değiştirmek istediğinde yapabileceği bir şey olmuyordu.
+        //
+        // Parola değişince kullanıcının diğer tüm oturumları kapatılır (çalınmış
+        // bir refresh token'ın geçerli kalmaması için), isteği yapan cihaz için
+        // yeni bir token çifti döner ki kullanıcı kendi oturumundan düşmesin.
+        [HttpPost("change-password")]
+        [Authorize]
+        [EnableRateLimiting("auth")]
+        public async Task<ActionResult<AuthResponseDto>> ChangePassword(
+            [FromBody] ChangePasswordDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return Unauthorized();
+
+            var result = await _userManager.ChangePasswordAsync(
+                user, dto.CurrentPassword, dto.NewPassword);
+
+            if (!result.Succeeded)
+                return BadRequest(result.Errors);
+
+            await _tokenService.RevokeAllForUserAsync(userId);
+
+            return Ok(await _tokenService.CreateAuthResponseAsync(user, DeviceInfo()));
+        }
+
         private string? DeviceInfo() => Request.Headers.UserAgent.ToString();
 
         [HttpGet("search")]

@@ -72,6 +72,10 @@ ortam ayrımı yok, yani production'da da oluşur. Repoyu gören herkes admin ol
 **Yapılacak:** kullanıcı adı/parola konfigürasyondan okunmalı, parola yoksa
 hesap oluşturulmamalı (bu çalışmada düzeltildi).
 
+Daha önce `Password123!` ile oluşmuş hesapların parolası hâlâ değiştirilmeli.
+Bunun için uygulamada hiçbir yol yoktu; `POST /api/account/change-password`
+eklendi (kullanım: kök README → "Parola değiştirme").
+
 ### G4 — Ödeme doğrulaması olmayan abonelik
 `SubscriptionController.ActivateSubscription` hiçbir ödeme kanıtı istemeden
 `IsSubscribed = true` yapıyor. `Iyzipay` ve `Stripe.net` paketleri `.csproj`'a
@@ -260,6 +264,11 @@ Mobil için zorunlu olmayan ama yol üstünde olduğu için düzeltilen maddeler
   `(dynamic)` sıralaması tipli DTO ile değiştirildi, sonuç sayısı sınırlandı.
 - **M10** `POST /api/messages/thread/{userId}/mark-as-read` eklendi;
   `DateRead` artık gerçekten yazılıyor.
+- **Parola değiştirme** uygulamada hiç yoktu (ne kullanıcı ne admin için).
+  `POST /api/account/change-password` eklendi; parola değişince kullanıcının
+  diğer tüm oturumları iptal ediliyor.
+  **Not:** parola *sıfırlama* (e-posta ile "şifremi unuttum") hâlâ yok;
+  e-posta gönderimi altyapısı gerektiriyor.
 - **M12** Migration'lar açılışta otomatik uygulanıyor, `/health` eklendi,
   kök README ve `sine-uyum-web/.env.example` yazıldı, GitHub Actions CI
   kuruldu (`.github/workflows/ci.yml`).
@@ -318,7 +327,8 @@ sonra oturumdan düşerdi.
 1. ✅ JWT anahtarı git geçmişinden silindi (G1)
 2. ✅ `sineuyum.db` ve yan dosyaları git geçmişinden silindi (G2)
 3. ⬜ **Kalan iş:** daha önce oluşmuş `admin` / `Password123!` hesabının
-   parolasını değiştir (G3) — yeni kurulumlarda artık oluşmuyor
+   parolasını değiştir (G3) — yeni kurulumlarda artık oluşmuyor, değiştirmek
+   için `POST /api/account/change-password` eklendi
 4. ⬜ **Kalan iş:** eski commit objelerinin GitHub'dan kalıcı silinmesi için
    GitHub Support'a başvur (force-push objeleri hemen yok etmez)
 

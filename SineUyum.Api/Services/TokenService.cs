@@ -80,6 +80,24 @@ namespace SineUyum.Api.Services
             return await CreateAuthResponseAsync(stored.User, deviceInfo ?? stored.DeviceInfo);
         }
 
+        // Parola değişikliği gibi durumlarda çağrılır: kullanıcının tüm aktif
+        // oturumları iptal edilir, böylece çalınmış bir refresh token geçersiz olur.
+        public async Task RevokeAllForUserAsync(string userId)
+        {
+            var active = await _context.RefreshTokens
+                .Where(t => t.UserId == userId && t.RevokedAt == null)
+                .ToListAsync();
+
+            if (active.Count == 0) return;
+
+            var now = DateTime.UtcNow;
+            foreach (var token in active)
+            {
+                token.RevokedAt = now;
+            }
+            await _context.SaveChangesAsync();
+        }
+
         // Çıkışta çağrılır: verilen refresh token iptal edilir.
         public async Task RevokeAsync(string refreshToken)
         {

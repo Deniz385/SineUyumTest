@@ -20,10 +20,22 @@
         public DbSet<EventGroupMember> EventGroupMembers { get; set; }
         public DbSet<EventVote> EventVotes { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            // Refresh token'lar hash'leriyle aranır; kullanıcı silinince düşer.
+            builder.Entity<RefreshToken>()
+                .HasIndex(t => t.TokenHash)
+                .IsUnique();
+
+            builder.Entity<RefreshToken>()
+                .HasOne(t => t.User)
+                .WithMany()
+                .HasForeignKey(t => t.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // MovieGenre için birleşik birincil anahtar (composite key) tanımlaması
             builder.Entity<MovieGenre>()

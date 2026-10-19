@@ -52,7 +52,7 @@ export const WatchlistDetailPage = () => {
                 setIsOwner(true);
             }
 
-        } catch (err) {
+        } catch {
             setError('Liste bulunamadı veya bir hata oluştu.');
         } finally {
             setIsLoading(false);
@@ -80,7 +80,7 @@ export const WatchlistDetailPage = () => {
             await api.delete(`/api/watchlist/${listId}/movies/${movieId}`);
             showSnackbar('Film listeden başarıyla kaldırıldı!', 'success');
             fetchWatchlistDetails();
-        } catch (err) {
+        } catch {
             showSnackbar("Film kaldırılırken bir hata oluştu.", 'error');
         }
     };
@@ -104,7 +104,7 @@ export const WatchlistDetailPage = () => {
             showSnackbar('Liste başarıyla silindi. Yönlendiriliyorsunuz...', 'success');
             // Yönlendirmeyi küçük bir gecikmeyle yaparak "aria-hidden" uyarısını önlüyoruz.
             setTimeout(() => navigate('/watchlist'), 1500);
-        } catch (err) {
+        } catch {
             showSnackbar("Liste silinirken bir hata oluştu.", 'error');
         }
     };
@@ -120,7 +120,7 @@ export const WatchlistDetailPage = () => {
             showSnackbar('Liste başarıyla güncellendi!', 'success');
             setIsEditModalOpen(false);
             fetchWatchlistDetails();
-        } catch (err) {
+        } catch {
             showSnackbar("Liste güncellenirken bir hata oluştu.", 'error');
         }
     };
@@ -172,8 +172,8 @@ export const WatchlistDetailPage = () => {
             <Modal open={isEditModalOpen} onClose={() => setIsEditModalOpen(false)}>
                 <Box sx={modalStyle} component="form" onSubmit={handleUpdateList}>
                     <Typography variant="h6" component="h2" sx={{ mb: 2 }}>Listeyi Düzenle</Typography>
-                    <TextField autoFocus required margin="dense" label="Liste Adı" fullWidth variant="outlined" value={editedListName} onChange={(e) => setNewListName(e.target.value)} />
-                    <TextField margin="dense" label="Açıklama (Opsiyonel)" fullWidth multiline rows={3} variant="outlined" value={editedListDesc} onChange={(e) => setNewListDesc(e.target.value)} />
+                    <TextField autoFocus required margin="dense" label="Liste Adı" fullWidth variant="outlined" value={editedListName} onChange={(e) => setEditedListName(e.target.value)} />
+                    <TextField margin="dense" label="Açıklama (Opsiyonel)" fullWidth multiline rows={3} variant="outlined" value={editedListDesc} onChange={(e) => setEditedListDesc(e.target.value)} />
                     <Button type="submit" variant="contained" sx={{ mt: 2 }}>Kaydet</Button>
                 </Box>
             </Modal>

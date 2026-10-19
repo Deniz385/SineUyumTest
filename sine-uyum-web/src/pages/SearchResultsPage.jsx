@@ -71,7 +71,7 @@ export const SearchResultsPage = () => {
                 if ((response.data.$values || response.data).length === 0) {
                     setMessage(`'${query}' için sonuç bulunamadı.`);
                 }
-            } catch (error) {
+            } catch {
                 setMessage('Kullanıcılar aranırken bir hata oluştu.');
             } finally {
                 setIsLoading(false);

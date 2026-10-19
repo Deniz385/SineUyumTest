@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+# Aynı dal için yeni push geldiğinde eski çalışmayı iptal et.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API (.NET 8)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore SineUyum.Api.sln
+
+      - name: Build
+        run: dotnet build SineUyum.Api.sln --configuration Release --no-restore
+
+      # Henüz test projesi yok (bkz. docs/ANALIZ-VE-YOL-HARITASI.md → M1).
+      # Eklendiğinde burada `dotnet test` çalıştırılacak.
+
+      - name: Bekleyen model değişikliği için migration var mı
+        # Entity'ler değiştirilip migration eklenmediğinde uygulama açılışta
+        # şemayla uyuşmayan bir veritabanına düşer. Bu kontrol onu yakalar.
+        env:
+          # Yalnızca design-time için; gerçek anahtar değil.
+          JWT_KEY: ci-only-placeholder-key-not-a-secret-must-be-64-bytes-long-xxxxxx
+        run: |
+          dotnet tool install --global dotnet-ef --version 8.*
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet ef migrations has-pending-model-changes \
+            --project SineUyum.Api/SineUyum.Api.csproj \
+            --no-build --configuration Release
+
+  web:
+    name: Web (React + Vite)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sine-uyum-web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: sine-uyum-web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+  mobile:
+    name: Mobil (Flutter)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sine_uyum_mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          # Sürüm sabitlendi: yeni bir Flutter stable'ının getirdiği analiz
+          # kuralları CI'ı beklenmedik şekilde kırmasın. Yükseltme bilinçli
+          # yapılmalı (pubspec'teki sdk kısıtıyla birlikte).
+          flutter-version: 3.47.7
+          channel: stable
+          cache: true
+
+      - name: Bağımlılıkları çek
+        run: flutter pub get
+
+      - name: Biçim kontrolü
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Statik analiz
+        run: flutter analyze
+
+      - name: Testler
+        run: flutter test

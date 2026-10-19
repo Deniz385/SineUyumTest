@@ -1,12 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using SineUyum.Api.Data;
+using SineUyum.Api.Dtos;
 using SineUyum.Api.Models;
-using System.IdentityModel.Tokens.Jwt;
+using SineUyum.Api.Services;
 using System.Security.Claims;
-using System.Text;
 
 namespace SineUyum.Api.Controllers
 {
@@ -16,16 +14,20 @@ namespace SineUyum.Api.Controllers
     public class SubscriptionController : ControllerBase
     {
         private readonly UserManager<AppUser> _userManager;
-        private readonly IConfiguration _configuration;
+        private readonly TokenService _tokenService;
 
-        public SubscriptionController(UserManager<AppUser> userManager, IConfiguration configuration)
+        public SubscriptionController(UserManager<AppUser> userManager, TokenService tokenService)
         {
             _userManager = userManager;
-            _configuration = configuration;
+            _tokenService = tokenService;
         }
 
+        // UYARI: Bu endpoint hiçbir ödeme doğrulaması yapmıyor — herhangi bir
+        // kullanıcı tek istekle abone olabilir. Üretime çıkmadan önce ödeme
+        // sağlayıcı (Iyzipay/Stripe) webhook doğrulaması eklenmeli.
+        // Bkz. docs/ANALIZ-VE-YOL-HARITASI.md → G4
         [HttpPost("activate")]
-        public async Task<IActionResult> ActivateSubscription()
+        public async Task<ActionResult<AuthResponseDto>> ActivateSubscription()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
@@ -37,47 +39,15 @@ namespace SineUyum.Api.Controllers
             user.SubscriptionExpires = DateTime.UtcNow.AddMonths(1);
 
             var result = await _userManager.UpdateAsync(user);
-
-            if (result.Succeeded)
+            if (!result.Succeeded)
             {
-                var token = await CreateToken(user);
-                return Ok(new { message = "Abonelik başarıyla aktifleştirildi.", token });
+                return BadRequest("Abonelik aktifleştirilirken bir hata oluştu.");
             }
 
-            return BadRequest("Abonelik aktifleştirilirken bir hata oluştu.");
-        }
-
-        private async Task<string> CreateToken(AppUser user)
-        {
-           var claims = new List<Claim>
-           {
-               new(ClaimTypes.NameIdentifier, user.Id),
-               new(ClaimTypes.Name, user.UserName ?? string.Empty),
-               new("IsSubscribed", user.IsSubscribed.ToString())
-           };
-
-           var roles = await _userManager.GetRolesAsync(user);
-           foreach (var role in roles)
-           {
-               claims.Add(new Claim(ClaimTypes.Role, role));
-           }
-
-           var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
-           var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
-
-           var tokenDescriptor = new SecurityTokenDescriptor
-           {
-               Subject = new ClaimsIdentity(claims),
-               Expires = DateTime.UtcNow.AddDays(7),
-               SigningCredentials = creds,
-               Issuer = _configuration["Jwt:Issuer"]!,
-               Audience = _configuration["Jwt:Audience"]!
-           };
-
-           var tokenHandler = new JwtSecurityTokenHandler();
-           var token = tokenHandler.CreateToken(tokenDescriptor);
-
-           return tokenHandler.WriteToken(token);
+            // Abonelik durumu token claim'inde taşındığı için yeni token üretilir.
+            // Önceki sürüm burada yalnızca "Jwt:Key" okuyordu; JWT_KEY ortam
+            // değişkeniyle çalışan kurulumlarda NullReferenceException atıyordu.
+            return Ok(await _tokenService.CreateAuthResponseAsync(user, Request.Headers.UserAgent.ToString()));
         }
     }
 }

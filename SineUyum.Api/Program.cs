@@ -116,7 +116,10 @@ builder.Services.AddScoped<MatchingService>();
 builder.Services.AddScoped<TokenService>();
 
 // --- RATE LIMITING ---
-// Giriş/kayıt/yenileme uçlarına brute force koruması.
+// Giriş/kayıt/yenileme uçlarına brute force koruması. Dakikadaki istek sınırı
+// konfigürasyondan okunur (varsayılan 10); integration testleri tek IP'den çok
+// sayıda istek attığı için orada yüksek bir değere çekilir.
+var authPermitLimit = builder.Configuration.GetValue("RateLimit:AuthPermitLimit", 10);
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -124,7 +127,7 @@ builder.Services.AddRateLimiter(options =>
         partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         factory: _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = 10,
+            PermitLimit = authPermitLimit,
             Window = TimeSpan.FromMinutes(1)
         }));
 });

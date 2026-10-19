@@ -28,8 +28,8 @@ jobs:
       - name: Build
         run: dotnet build SineUyum.Api.sln --configuration Release --no-restore
 
-      # Henüz test projesi yok (bkz. docs/ANALIZ-VE-YOL-HARITASI.md → M1).
-      # Eklendiğinde burada `dotnet test` çalıştırılacak.
+      - name: Test
+        run: dotnet test SineUyum.Api.sln --configuration Release --no-build --verbosity normal
 
       - name: Bekleyen model değişikliği için migration var mı
         # Entity'ler değiştirilip migration eklenmediğinde uygulama açılışta

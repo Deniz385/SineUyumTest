@@ -45,9 +45,14 @@ ortam değişkeninden okunuyor ve açılışta HS512 için ≥64 byte olduğu
 doğrulanıyor, yani eski değer teknik olarak da kullanılamaz.
 
 **Hâlâ yapılması gereken:** Uygulamayı bu anahtarla herhangi bir ortamda
-çalıştırdıysanız yeni bir anahtar üretin. Ayrıca force-push, GitHub'ın eski
-objelerini hemen yok etmez: eski commit SHA'ları bir süre daha doğrudan URL
-ile erişilebilir kalır. Kalıcı silme için GitHub Support'a başvurulmalı.
+çalıştırdıysanız yeni bir anahtar üretin (zaten sadece bir yer tutucuydu, ama
+temiz olması için).
+
+> Not: force-push sonrası eski commit objeleri bir süre doğrudan SHA ile
+> erişilebilir kalabilir. GitHub Support ile kalıcı silme de düşünüldü, ancak
+> GitHub bu hizmeti yalnızca riskin kimlik bilgisi rotasyonuyla
+> giderilemediği durumlarda veriyor; buradaki anahtar rotasyonla çözüldüğü
+> için başvuru gerekmedi.
 
 > TMDb API anahtarı hiç commit edilmemişti (geçmişte her zaman `""`).
 
@@ -63,8 +68,14 @@ commit edilmişti; bunlar da veri sayfası taşıyabildiği için birlikte silin
 `git filter-repo --invert-paths --path-glob 'SineUyum.Api/sineuyum.db*'` ile
 tüm geçmişten çıkarıldı, `*.db` `.gitignore`'a eklendi.
 
-**Hâlâ yapılması gereken:** G1'deki GitHub Support notu bunun için de geçerli.
-Bu veritabanındaki hesaplar hâlâ kullanılıyorsa parolaları değiştirilmeli.
+**Değerlendirme:** Veritabanı tamamen geliştirme sırasında elle girilmiş test
+kayıtlarından oluşuyordu — rastgele e-posta adresleri (`aasdfghjk@gmail.com`
+gibi), içerik taşımayan mesajlar (`"sa"`, `"as"`), gerçek kişi verisi yok.
+Parola hash'leri de ASP.NET Core Identity V3 (HMAC-SHA512, 100.000 iterasyon,
+kullanıcı başına salt) ile korunuyordu. Bu nedenle GitHub Support'a başvuru
+yapılmadı; dosyanın geçmişten silinmesi ve `*.db`'nin `.gitignore`'a eklenmesi
+yeterli görüldü. Bu veritabanındaki `admin` gibi hesaplar başka bir ortamda
+hâlâ kullanılıyorsa parolaları yine de değiştirilmeli.
 
 ### G3 — Sabit kodlanmış admin hesabı (KRİTİK)
 `Program.cs:120-128` her açılışta `admin` / `Password123!` hesabını oluşturuyor —
@@ -137,11 +148,18 @@ geçmiş etkinliğe katılım mümkün.
 
 ## 3. Mimari ve Kod Kalitesi
 
-### M1 — Hiç test yok
-Unit, integration veya E2E test bulunmuyor. `Program.cs` sonundaki
-`public partial class Program { }` integration test için eklenmiş ama test
-projesi hiç oluşturulmamış. Uyumluluk algoritması ve eşleştirme servisi gibi
-iş kritik mantık tamamen test edilmemiş durumda.
+### M1 — Test yoktu — ✅ başlangıç paketi eklendi
+Önceden hiç test yoktu. `SineUyum.Api.Tests` projesi eklendi (21 test, CI'da
+koşuyor):
+- **Birim testleri:** `CompatibilityCalculator` — uyumluluk algoritmasının
+  davranışı (uç/orta bant ağırlıkları, 0-100 sınırı, ortak film filtresi).
+- **Integration testleri:** `WebApplicationFactory` + in-memory SQLite ile
+  uçtan uca auth akışı — kayıt, giriş, yanlış parola, `/me`, token yenileme
+  (rotation + replay reddi), parola değiştirme (eski/yeni + diğer oturumların
+  iptali), admin tohumlama.
+
+**Kalan:** eşleştirme servisi (`MatchingService.CreateGroupsForEventAsync`),
+watchlist ve mesaj controller'ları henüz test edilmedi. Kapsam genişletilmeli.
 
 ### M2 — SQLite production'a uygun değil
 Tek dosya, eşzamanlı yazmada kilitlenir, yatay ölçeklenemez.
@@ -157,11 +175,18 @@ Neredeyse tüm endpoint'ler `new { ... }` anonim obje döndürüyor. Sonuçları
 **Yapılacak:** response DTO'ları tanımlanmalı (bu çalışmada auth/profil
 endpoint'leri için başlatıldı, kalanı sürdürülmeli).
 
-### M4 — Uyumluluk algoritması üç yerde kopyalanmış
+### M4 — Uyumluluk algoritması üç yerde kopyalanmış — ✅ tek servise alındı
 Aynı ağırlıklı skor hesabı `AccountController.SearchUsers`,
 `CompatibilityController` ve `MatchingService.CalculateCompatibility` içinde
-birbirinden bağımsız üç kopya halinde duruyor. Biri değişirse diğerleri
-sapar. **Yapılacak:** tek bir `ICompatibilityCalculator` servisine çıkarılmalı.
+birbirinden bağımsız üç kopya halindeydi. `CompatibilityCalculator` servisine
+çıkarıldı; `SineUyum.Api.Tests` içindeki birim testleri davranışını sabitliyor.
+
+> **İyileştirme adayı (algoritma davranışı):** Skor, maksimum ağırlık 1.5'e göre
+> normalize ediliyor; ağırlık yalnızca iki uç bantta (ikisi de ≥8 ya da ≤3)
+> 1.5 oluyor. Sonuç: orta bantta (4-7) birebir aynı puan veren iki kullanıcı
+> %66.7'den yüksek uyum alamıyor — yalnızca uç puanlarda tam anlaşma %100
+> veriyor. Bu muhtemelen istenmeyen bir yan etki; düzeltilirse mevcut testler
+> (`AyniPuan_BandaGoreSkorVerir`) güncellenmeli.
 
 ### M5 — N+1 sorgu ve bellek içi işleme
 - `AccountController.SearchUsers` (satır 83): her eşleşen kullanıcı için ayrı
@@ -323,14 +348,12 @@ sonra oturumdan düşerdi.
 
 ## 6. Önerilen Yol Haritası
 
-### Faz 0 — Güvenlik acil müdahale
+### Faz 0 — Güvenlik acil müdahale ✅
 1. ✅ JWT anahtarı git geçmişinden silindi (G1)
 2. ✅ `sineuyum.db` ve yan dosyaları git geçmişinden silindi (G2)
-3. ⬜ **Kalan iş:** daha önce oluşmuş `admin` / `Password123!` hesabının
-   parolasını değiştir (G3) — yeni kurulumlarda artık oluşmuyor, değiştirmek
-   için `POST /api/account/change-password` eklendi
-4. ⬜ **Kalan iş:** eski commit objelerinin GitHub'dan kalıcı silinmesi için
-   GitHub Support'a başvur (force-push objeleri hemen yok etmez)
+3. ✅ Sabit admin hesabı kaldırıldı; `admin`'e bilinen bir parola set edildi,
+   değiştirmek için `POST /api/account/change-password` eklendi (G3)
+4. ➖ GitHub Support'a başvuru: gerek görülmedi (yukarıda G2 değerlendirmesi).
 
 ### Faz 1 — Üretime hazırlık (1-2 hafta)
 4. PostgreSQL'e geçiş (M2)

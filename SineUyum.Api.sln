@@ -5,6 +5,8 @@ VisualStudioVersion = 17.14.36414.22 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SineUyum.Api", "SineUyum.Api\SineUyum.Api.csproj", "{99EA15D8-486D-4FF1-863D-736191368939}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SineUyum.Api.Tests", "SineUyum.Api.Tests\SineUyum.Api.Tests.csproj", "{31E063E2-BC07-423E-9EF7-40B5510B1847}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{99EA15D8-486D-4FF1-863D-736191368939}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{99EA15D8-486D-4FF1-863D-736191368939}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{99EA15D8-486D-4FF1-863D-736191368939}.Release|Any CPU.Build.0 = Release|Any CPU
+		{31E063E2-BC07-423E-9EF7-40B5510B1847}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{31E063E2-BC07-423E-9EF7-40B5510B1847}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{31E063E2-BC07-423E-9EF7-40B5510B1847}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{31E063E2-BC07-423E-9EF7-40B5510B1847}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

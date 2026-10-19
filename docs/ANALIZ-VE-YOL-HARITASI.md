@@ -123,10 +123,25 @@ uydurabilir, var olan TMDb id'lerini sahte başlıklarla doldurabilir.
 `UseHttpsRedirection`, HSTS, güvenlik başlıkları (`X-Content-Type-Options`,
 `Referrer-Policy` vb.) yok.
 
-### G10 — Hata detayları dışa sızıyor
-`AdminController.TriggerMatching` `ex.Message`'ı doğrudan istemciye döndürüyor;
-global exception handler yok, bu yüzden beklenmeyen hatalarda stack trace
-sızabilir. **Yapılacak:** `ProblemDetails` tabanlı merkezi hata yönetimi.
+### G10 — Hata detayları dışa sızıyordu — ✅ merkezi hata yönetimi eklendi
+`AdminController.TriggerMatching` `ex.Message`'ı doğrudan istemciye döndürüyor,
+global exception handler yoktu. Çözüldü:
+- `GlobalExceptionHandler` (IExceptionHandler) tüm yakalanmayan istisnaları
+  `ProblemDetails`'e çevirir. Beklenen iş kuralı hataları (`DomainException`)
+  kendi durum koduyla (400/404) ve güvenli mesajla döner; diğer her şey 500 +
+  genel mesaj, ayrıntı yalnızca log'a yazılır. Stack trace artık sızmıyor.
+- `DomainException` tipi eklendi; `MatchingService`'teki ham `Exception`
+  fırlatmaları buna geçirildi, `AdminController`'daki try/catch kaldırıldı.
+- Her yanıtta `traceId` var; aynı id log'da da görünüyor (korelasyon).
+- Testler: `ErrorHandlingTests` — 404 ProblemDetails biçimini ve stack
+  trace'in sızmadığını doğruluyor.
+
+### G10b — Yapılandırılmış loglama (Serilog) — ✅ eklendi
+Önceden yapılandırılmış log ve istek logu yoktu. Serilog eklendi:
+konsola yapılandırılmış çıktı, `UseSerilogRequestLogging` ile istek başına özet
+(yöntem, yol, durum kodu, süre), seviye `appsettings`'teki `Serilog` bölümünden.
+Request logging exception handler'ın dışında, böylece 404/400'e çevrilen
+hatalar log'da gerçek durum koduyla görünüyor.
 
 ### G11 — Parola politikası ve e-posta tekilliği tanımsız
 `AddIdentity` varsayılanları kullanılıyor; `RegisterDto` "en az 6 karakter"
@@ -356,10 +371,10 @@ sonra oturumdan düşerdi.
 4. ➖ GitHub Support'a başvuru: gerek görülmedi (yukarıda G2 değerlendirmesi).
 
 ### Faz 1 — Üretime hazırlık (1-2 hafta)
-4. PostgreSQL'e geçiş (M2)
-5. Global hata yönetimi + Serilog (G10)
-6. Dockerfile (M12) — *CI kuruldu, Docker kalan iş*
-7. API için test projesi — önce `CompatibilityCalculator` ve auth akışı (M1)
+4. ⬜ PostgreSQL'e geçiş (M2)
+5. ✅ Global hata yönetimi + Serilog (G10)
+6. ⬜ Dockerfile (M12) — *CI kuruldu, Docker kalan iş*
+7. ✅ API için test projesi — `CompatibilityCalculator` + auth + hata yönetimi (M1)
 
 ### Faz 2 — API olgunlaştırma (2-3 hafta)
 9. Tüm endpoint'ler için response DTO'ları (M3)

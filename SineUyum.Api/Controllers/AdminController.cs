@@ -12,15 +12,12 @@ namespace SineUyum.Api.Controllers
         [HttpPost("events/{eventId}/create-groups")]
         public async Task<IActionResult> TriggerMatching(int eventId, [FromServices] MatchingService matchingService)
         {
-            try
-            {
-                await matchingService.CreateGroupsForEventAsync(eventId);
-                return Ok(new { message = "Eşleştirme başarıyla tamamlandı ve gruplar oluşturuldu." });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = $"Eşleştirme sırasında bir hata oluştu: {ex.Message}" });
-            }
+            // Hata yönetimi global handler'a bırakıldı: iş kuralı hataları
+            // (DomainException) doğru durum koduyla, beklenmeyen hatalar ise
+            // detay sızdırmadan 500 ile döner. Önceden ex.Message doğrudan
+            // istemciye yazılıyordu.
+            await matchingService.CreateGroupsForEventAsync(eventId);
+            return Ok(new { message = "Eşleştirme başarıyla tamamlandı ve gruplar oluşturuldu." });
         }
     }
 }

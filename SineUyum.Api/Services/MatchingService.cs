@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
+using SineUyum.Api.Exceptions;
 using SineUyum.Api.Hubs;
 using SineUyum.Api.Models;
 using System.Text.Json;
@@ -37,8 +38,8 @@ namespace SineUyum.Api.Services
         public async Task CreateGroupsForEventAsync(int eventId)
         {
             var cinemaEvent = await _context.CinemaEvents.FindAsync(eventId);
-            if (cinemaEvent == null) throw new Exception("Etkinlik bulunamadı.");
-            if (await _context.EventGroups.AnyAsync(g => g.CinemaEventId == eventId)) throw new Exception("Bu etkinlik için gruplar zaten oluşturulmuş.");
+            if (cinemaEvent == null) throw DomainException.NotFound("Etkinlik bulunamadı.");
+            if (await _context.EventGroups.AnyAsync(g => g.CinemaEventId == eventId)) throw new DomainException("Bu etkinlik için gruplar zaten oluşturulmuş.");
 
             var participants = await _context.EventParticipants
                 .Where(p => p.CinemaEventId == eventId && !_context.EventGroupMembers.Any(gm => gm.UserId == p.UserId && gm.EventGroup.CinemaEventId == eventId))
@@ -48,7 +49,7 @@ namespace SineUyum.Api.Services
 
             if (participants.Count < cinemaEvent.GroupSize)
             {
-                throw new Exception($"Yeterli katılımcı olmadığı için gruplar oluşturulamadı. Gerekli: {cinemaEvent.GroupSize}, Mevcut: {participants.Count}");
+                throw new DomainException($"Yeterli katılımcı olmadığı için gruplar oluşturulamadı. Gerekli: {cinemaEvent.GroupSize}, Mevcut: {participants.Count}");
             }
             
             var userRatingsDict = participants.ToDictionary(p => p.UserId, p => p.User.Ratings.ToDictionary(r => r.MovieId, r => r.Rating));

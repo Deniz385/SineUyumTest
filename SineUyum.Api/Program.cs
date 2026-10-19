@@ -3,14 +3,25 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
 using SineUyum.Api.Data;
 using SineUyum.Api.Hubs;
+using SineUyum.Api.Middleware;
 using SineUyum.Api.Models;
 using SineUyum.Api.Services;
 using System.Text;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// --- LOGLAMA (Serilog) ---
+// Yapılandırma appsettings "Serilog" bölümünden okunur; yoksa makul bir
+// varsayılana düşülür. İstek logları aşağıda UseSerilogRequestLogging ile.
+builder.Host.UseSerilog((context, services, configuration) => configuration
+    .ReadFrom.Configuration(context.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext()
+    .WriteTo.Console());
 
 // --- CORS POLİTİKASI ---
 // Origin listesi artık koda gömülü değil, konfigürasyondan okunuyor:
@@ -132,6 +143,12 @@ builder.Services.AddRateLimiter(options =>
         }));
 });
 
+// --- GLOBAL HATA YÖNETİMI ---
+// Yakalanmayan istisnalar tek yerde ProblemDetails'e çevrilir; stack trace
+// istemciye sızmaz, ayrıntı yalnızca log'a yazılır.
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 // --- CONTROLLERS & SWAGGER ---
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
@@ -140,6 +157,15 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+// İstek başına özet log (yöntem, yol, durum kodu, süre). En dışta olmalı ki
+// exception handler hatayı 404/400/500'e çevirdikten SONRA gerçek dönen durum
+// kodunu loglasın (aksi halde her hata "500" görünür).
+app.UseSerilogRequestLogging();
+
+// Hata yöneticisi erken olmalı ki sonraki tüm katmanlardaki istisnaları
+// yakalayabilsin; request logging'in hemen içinde.
+app.UseExceptionHandler();
 
 // --- SWAGGER ---
 if (app.Environment.IsDevelopment())

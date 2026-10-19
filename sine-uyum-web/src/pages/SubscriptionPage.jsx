@@ -18,7 +18,7 @@ export const SubscriptionPage = () => {
             loginAction(response.data);
             // --- DEĞİŞİKLİK: alert() yerine showSnackbar() ---
             showSnackbar('Aboneliğiniz başarıyla aktifleştirildi!', 'success');
-        } catch (error) {
+        } catch {
             // --- DEĞİŞİKLİK: alert() yerine showSnackbar() ---
             showSnackbar('Abonelik sırasında bir hata oluştu.', 'error');
             setIsLoading(false);

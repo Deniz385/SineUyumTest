@@ -33,7 +33,8 @@ class AppUser {
       subscriptionExpires: json['subscriptionExpires'] == null
           ? null
           : DateTime.tryParse(json['subscriptionExpires'] as String),
-      roles: (json['roles'] as List?)?.map((e) => e.toString()).toList() ??
+      roles:
+          (json['roles'] as List?)?.map((e) => e.toString()).toList() ??
           const [],
     );
   }
@@ -91,8 +92,7 @@ class UserSearchResult {
       userName: json['userName'] as String? ?? '',
       profileImageUrl: json['profileImageUrl'] as String?,
       bio: json['bio'] as String?,
-      compatibilityScore:
-          (json['compatibilityScore'] as num?)?.toDouble() ?? 0,
+      compatibilityScore: (json['compatibilityScore'] as num?)?.toDouble() ?? 0,
       commonMovieCount: (json['commonMovieCount'] as num?)?.toInt() ?? 0,
     );
   }

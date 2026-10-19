@@ -37,11 +37,13 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   return client;
 });
 
-final authRepositoryProvider =
-    Provider<AuthRepository>((ref) => AuthRepository(ref.watch(apiClientProvider)));
+final authRepositoryProvider = Provider<AuthRepository>(
+  (ref) => AuthRepository(ref.watch(apiClientProvider)),
+);
 
-final sessionProvider =
-    NotifierProvider<SessionNotifier, SessionState>(SessionNotifier.new);
+final sessionProvider = NotifierProvider<SessionNotifier, SessionState>(
+  SessionNotifier.new,
+);
 
 class SessionNotifier extends Notifier<SessionState> {
   @override
@@ -94,11 +96,7 @@ class SessionNotifier extends Notifier<SessionState> {
     required String email,
     required String password,
   }) async {
-    await _auth.register(
-      username: username,
-      email: email,
-      password: password,
-    );
+    await _auth.register(username: username, email: email, password: password);
     await login(username: username, password: password);
   }
 

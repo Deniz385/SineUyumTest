@@ -235,10 +235,7 @@ class _MatchedViewState extends ConsumerState<_MatchedView> {
             ],
           ),
         const SizedBox(height: 24),
-        Text(
-          'Film oylaması',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Film oylaması', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 4),
         Text(
           'Seçtiğin filme tekrar dokunursan oyunu geri çekersin.',
@@ -299,8 +296,10 @@ class _EventCard extends StatelessWidget {
                   const Icon(Icons.calendar_today_outlined, size: 16),
                   const SizedBox(width: 6),
                   Text(
-                    DateFormat('d MMMM y, HH:mm', 'tr')
-                        .format(event.eventDate!.toLocal()),
+                    DateFormat(
+                      'd MMMM y, HH:mm',
+                      'tr',
+                    ).format(event.eventDate!.toLocal()),
                   ),
                 ],
               ),

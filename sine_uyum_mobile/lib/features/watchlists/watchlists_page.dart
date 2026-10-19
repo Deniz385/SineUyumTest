@@ -82,8 +82,9 @@ class WatchlistsPage extends ConsumerWidget {
     WatchlistSummary? existing,
   }) async {
     final nameController = TextEditingController(text: existing?.name ?? '');
-    final descriptionController =
-        TextEditingController(text: existing?.description ?? '');
+    final descriptionController = TextEditingController(
+      text: existing?.description ?? '',
+    );
     final formKey = GlobalKey<FormState>();
 
     final saved = await showDialog<bool>(

@@ -32,7 +32,7 @@ export const WatchlistPage = () => {
         try {
             const response = await api.get(`/api/watchlist`);
             setWatchlists(response.data); // $values kontrolü kaldırıldı
-        } catch (err) {
+        } catch {
             setError('Listeler yüklenirken bir hata oluştu.');
         } finally {
             setIsLoading(false);
@@ -53,7 +53,7 @@ export const WatchlistPage = () => {
             setNewListName('');
             setNewListDesc('');
             fetchWatchlists();
-        } catch (err) {
+        } catch {
             setError("Yeni liste oluşturulurken bir hata oluştu.");
         }
     };

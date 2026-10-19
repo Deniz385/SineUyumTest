@@ -10,20 +10,24 @@ class WatchlistRepository {
   Future<List<WatchlistSummary>> myLists() async {
     final data = await _client.get<List<dynamic>>('/api/watchlist');
     return data
-        .map((item) =>
-            WatchlistSummary.fromJson((item as Map).cast<String, dynamic>()))
+        .map(
+          (item) =>
+              WatchlistSummary.fromJson((item as Map).cast<String, dynamic>()),
+        )
         .toList();
   }
 
   Future<WatchlistDetail> detail(int listId) async {
-    final data =
-        await _client.get<Map<String, dynamic>>('/api/watchlist/$listId');
+    final data = await _client.get<Map<String, dynamic>>(
+      '/api/watchlist/$listId',
+    );
     return WatchlistDetail.fromJson(data);
   }
 
   Future<WatchlistDetail> publicDetail(int listId) async {
-    final data = await _client
-        .get<Map<String, dynamic>>('/api/watchlist/public/$listId');
+    final data = await _client.get<Map<String, dynamic>>(
+      '/api/watchlist/public/$listId',
+    );
     return WatchlistDetail.fromJson(data);
   }
 
@@ -61,7 +65,8 @@ class WatchlistRepository {
   }
 
   Future<void> removeMovie(int listId, int movieId) async {
-    await _client
-        .delete<Map<String, dynamic>>('/api/watchlist/$listId/movies/$movieId');
+    await _client.delete<Map<String, dynamic>>(
+      '/api/watchlist/$listId/movies/$movieId',
+    );
   }
 }

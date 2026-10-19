@@ -9,8 +9,10 @@ class MessageRepository {
   Future<List<Conversation>> conversations() async {
     final data = await _client.get<List<dynamic>>('/api/messages');
     return data
-        .map((item) =>
-            Conversation.fromJson((item as Map).cast<String, dynamic>()))
+        .map(
+          (item) =>
+              Conversation.fromJson((item as Map).cast<String, dynamic>()),
+        )
         .toList();
   }
 
@@ -24,8 +26,9 @@ class MessageRepository {
       query: {'page': page, 'pageSize': pageSize},
     );
     return data
-        .map((item) =>
-            ChatMessage.fromJson((item as Map).cast<String, dynamic>()))
+        .map(
+          (item) => ChatMessage.fromJson((item as Map).cast<String, dynamic>()),
+        )
         .toList();
   }
 

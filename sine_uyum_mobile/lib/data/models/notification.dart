@@ -16,12 +16,12 @@ class AppNotification {
   final DateTime? createdAt;
 
   AppNotification copyWith({bool? isRead}) => AppNotification(
-        id: id,
-        message: message,
-        relatedUrl: relatedUrl,
-        isRead: isRead ?? this.isRead,
-        createdAt: createdAt,
-      );
+    id: id,
+    message: message,
+    relatedUrl: relatedUrl,
+    isRead: isRead ?? this.isRead,
+    createdAt: createdAt,
+  );
 
   factory AppNotification.fromJson(Map<String, dynamic> json) {
     return AppNotification(

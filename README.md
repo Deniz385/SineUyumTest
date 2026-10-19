@@ -103,12 +103,25 @@ Web ve mobil istemcilerin ikisi de bu akışı uygular.
 
 ---
 
-## Testler
+## Testler ve CI
+
+Her PR'da `.github/workflows/ci.yml` üç işi paralel çalıştırır:
+
+| İş | Adımlar |
+|---|---|
+| **API** | `dotnet restore` · `dotnet build --configuration Release` · bekleyen model değişikliği için migration kontrolü |
+| **Web** | `npm ci` · `npm run lint` · `npm run build` |
+| **Mobil** | `flutter pub get` · `dart format --set-exit-if-changed` · `flutter analyze` · `flutter test` |
+
+Aynısını yerelde çalıştırmak için:
 
 ```bash
-cd sine_uyum_mobile && flutter analyze && flutter test
-cd sine-uyum-web && npm run lint
-dotnet build SineUyum.Api/SineUyum.Api.csproj
+dotnet build SineUyum.Api.sln --configuration Release
+cd sine-uyum-web   && npm ci && npm run lint && npm run build
+cd sine_uyum_mobile && flutter pub get && dart format --output=none --set-exit-if-changed . \
+                    && flutter analyze && flutter test
 ```
 
-> API tarafında henüz otomatik test yok. Bkz. yol haritası → M1.
+> API tarafında henüz otomatik test yok, bu yüzden CI yalnızca derliyor.
+> Test projesi eklendiğinde workflow'daki `api` işine `dotnet test` girecek.
+> Bkz. yol haritası → M1.

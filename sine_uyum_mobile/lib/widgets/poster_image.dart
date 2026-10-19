@@ -79,8 +79,9 @@ class UserAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial =
-        userName.isEmpty ? '?' : userName.characters.first.toUpperCase();
+    final initial = userName.isEmpty
+        ? '?'
+        : userName.characters.first.toUpperCase();
 
     if (imageUrl == null || imageUrl!.isEmpty) {
       return CircleAvatar(

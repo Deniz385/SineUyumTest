@@ -106,7 +106,10 @@ class _Header extends StatelessWidget {
               ),
               if (profile.bio != null && profile.bio!.isNotEmpty) ...[
                 const SizedBox(height: 4),
-                Text(profile.bio!, style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  profile.bio!,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ],
             ],
           ),
@@ -128,10 +131,7 @@ class _Stats extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 16),
         child: Row(
           children: [
-            _StatTile(
-              label: 'Puanlama',
-              value: '${statistics.totalRatings}',
-            ),
+            _StatTile(label: 'Puanlama', value: '${statistics.totalRatings}'),
             _StatTile(
               label: 'Ortalama',
               value: statistics.averageRating.toStringAsFixed(1),

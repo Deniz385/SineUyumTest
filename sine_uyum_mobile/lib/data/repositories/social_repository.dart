@@ -9,7 +9,9 @@ class SocialRepository {
   final ApiClient _client;
 
   Future<UserProfile> profile(String userId) async {
-    final data = await _client.get<Map<String, dynamic>>('/api/profile/$userId');
+    final data = await _client.get<Map<String, dynamic>>(
+      '/api/profile/$userId',
+    );
     return UserProfile.fromJson(data);
   }
 
@@ -19,8 +21,9 @@ class SocialRepository {
       body: {
         'bio': bio,
         // Boş string `[Url]` doğrulamasını bozduğu için null gönderilir.
-        'profileImageUrl':
-            (profileImageUrl?.trim().isEmpty ?? true) ? null : profileImageUrl,
+        'profileImageUrl': (profileImageUrl?.trim().isEmpty ?? true)
+            ? null
+            : profileImageUrl,
       },
     );
   }
@@ -32,20 +35,24 @@ class SocialRepository {
       query: {'query': query},
     );
     return data
-        .map((item) =>
-            UserSearchResult.fromJson((item as Map).cast<String, dynamic>()))
+        .map(
+          (item) =>
+              UserSearchResult.fromJson((item as Map).cast<String, dynamic>()),
+        )
         .toList();
   }
 
   Future<CompatibilityResult> compatibility(String userId) async {
-    final data =
-        await _client.get<Map<String, dynamic>>('/api/compatibility/$userId');
+    final data = await _client.get<Map<String, dynamic>>(
+      '/api/compatibility/$userId',
+    );
     return CompatibilityResult.fromJson(data);
   }
 
   Future<FollowStatus> followStatus(String userId) async {
-    final data =
-        await _client.get<Map<String, dynamic>>('/api/follow/$userId/status');
+    final data = await _client.get<Map<String, dynamic>>(
+      '/api/follow/$userId/status',
+    );
     return FollowStatus.fromJson(data);
   }
 

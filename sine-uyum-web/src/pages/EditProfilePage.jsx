@@ -25,7 +25,7 @@ export const EditProfilePage = () => {
                 bio: profile.bio || '',
                 profileImageUrl: profile.profileImageUrl || ''
             });
-        } catch (error) {
+        } catch {
             showSnackbar('Profil bilgileri yüklenemedi.', 'error');
         } finally {
             setIsLoading(false);
@@ -47,7 +47,7 @@ export const EditProfilePage = () => {
             await api.put(`/api/profile`, formData);
             showSnackbar('Profil başarıyla güncellendi!', 'success');
             setTimeout(() => navigate(`/profile/${user.id}`), 1500);
-        } catch (error) {
+        } catch {
             showSnackbar('Profil güncellenirken bir hata oluştu.', 'error');
             setIsSaving(false);
         }

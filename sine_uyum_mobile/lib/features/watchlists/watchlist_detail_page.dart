@@ -15,9 +15,7 @@ class WatchlistDetailPage extends ConsumerWidget {
     final detail = ref.watch(watchlistDetailProvider(listId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(detail.value?.name ?? 'Liste'),
-      ),
+      appBar: AppBar(title: Text(detail.value?.name ?? 'Liste')),
       body: detail.when(
         loading: () => const LoadingView(),
         error: (error, _) => ErrorView(
@@ -28,8 +26,7 @@ class WatchlistDetailPage extends ConsumerWidget {
           if (list.items.isEmpty) {
             return const EmptyView(
               icon: Icons.movie_outlined,
-              message:
-                  'Bu listede henüz film yok. Film detay ekranından ekleyebilirsin.',
+              message: 'Bu listede henüz film yok. Film detay ekranından ekleyebilirsin.',
             );
           }
 

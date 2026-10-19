@@ -18,7 +18,7 @@
 | Web | React 19, Vite 5, MUI 7, axios, SignalR client | 14 sayfa, 10 bileşen, 4 context |
 | Mobil | — | **Yok** (bu çalışmada Flutter ile eklendi) |
 | Test | — | **Yok** (mobil tarafa 21 birim test eklendi; API hâlâ testsiz) |
-| CI/CD | — | **Yok** |
+| CI/CD | — | GitHub Actions eklendi (API derleme + migration kontrolü, web lint/build, mobil format/analiz/test) |
 | Docker | — | **Yok** |
 | README | Sadece Vite şablonu (`sine-uyum-web/README.md`) | Kök README ve `.env.example` bu çalışmada eklendi |
 
@@ -204,7 +204,10 @@ iletilmiyor. Sohbet ekranı yeni mesajı görmek için sayfa yenilemeye muhtaç.
   yeniden kurulabiliyor; cleanup yalnızca `Connected` durumunu kapatıyor,
   `Connecting` durumunda bağlantı sızıyor
 - Yükleniyor / boş durum / hata gösterimleri sayfalar arasında tutarsız
-- Kod bölme (lazy route) yok
+- Kod bölme (lazy route) yok; tek bundle 711 kB
+- `react-refresh/only-export-components` kuralı uyarıya çekildi: context
+  dosyaları hem provider'ı hem kendi hook'unu export ediyor (yaygın kalıp,
+  yalnızca hot reload'u etkiliyor)
 
 ---
 
@@ -245,7 +248,13 @@ Mobil için zorunlu olmayan ama yol üstünde olduğu için düzeltilen maddeler
 - **M10** `POST /api/messages/thread/{userId}/mark-as-read` eklendi;
   `DateRead` artık gerçekten yazılıyor.
 - **M12** Migration'lar açılışta otomatik uygulanıyor, `/health` eklendi,
-  kök README ve `sine-uyum-web/.env.example` yazıldı.
+  kök README ve `sine-uyum-web/.env.example` yazıldı, GitHub Actions CI
+  kuruldu (`.github/workflows/ci.yml`).
+- **M13 kısmi** Web lint'i sıfır hataya indirildi: 17 kullanılmayan `catch`
+  bağlantısı temizlendi ve **gerçek bir hata** düzeltildi —
+  `WatchlistDetailPage` düzenleme modalı var olmayan `setNewListName` /
+  `setNewListDesc` fonksiyonlarını çağırıyordu, yani liste adı/açıklaması
+  düzenlenemiyordu.
 - **G1 kısmi** HS512 için anahtar uzunluğu (≥64 byte) açılışta doğrulanıyor.
   *(Anahtar rotasyonu ve geçmiş temizliği hâlâ yapılmalı.)*
 
@@ -302,7 +311,7 @@ sonra oturumdan düşerdi.
 ### Faz 1 — Üretime hazırlık (1-2 hafta)
 4. PostgreSQL'e geçiş (M2)
 5. Global hata yönetimi + Serilog (G10)
-6. Dockerfile + GitHub Actions CI (derleme, test, lint) (M12)
+6. Dockerfile (M12) — *CI kuruldu, Docker kalan iş*
 7. API için test projesi — önce `CompatibilityCalculator` ve auth akışı (M1)
 
 ### Faz 2 — API olgunlaştırma (2-3 hafta)

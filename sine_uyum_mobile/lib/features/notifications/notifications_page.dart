@@ -65,8 +65,10 @@ class NotificationsPage extends ConsumerWidget {
                   subtitle: notification.createdAt == null
                       ? null
                       : Text(
-                          DateFormat('d MMM y, HH:mm', 'tr')
-                              .format(notification.createdAt!.toLocal()),
+                          DateFormat(
+                            'd MMM y, HH:mm',
+                            'tr',
+                          ).format(notification.createdAt!.toLocal()),
                         ),
                   onTap: () {
                     if (!notification.isRead) {

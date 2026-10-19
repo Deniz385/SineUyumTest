@@ -6,11 +6,7 @@ import 'poster_image.dart';
 
 /// Ana sayfadaki yatay film şeridi.
 class MovieCarousel extends StatelessWidget {
-  const MovieCarousel({
-    super.key,
-    required this.title,
-    required this.movies,
-  });
+  const MovieCarousel({super.key, required this.title, required this.movies});
 
   final String title;
   final List<Movie> movies;
@@ -33,10 +29,8 @@ class MovieCarousel extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: movies.length,
             separatorBuilder: (_, _) => const SizedBox(width: 12),
-            itemBuilder: (context, index) => MoviePosterCard(
-              movie: movies[index],
-              width: 120,
-            ),
+            itemBuilder: (context, index) =>
+                MoviePosterCard(movie: movies[index], width: 120),
           ),
         ),
       ],
@@ -46,11 +40,7 @@ class MovieCarousel extends StatelessWidget {
 
 /// Poster + başlık; dokununca film detayına gider.
 class MoviePosterCard extends StatelessWidget {
-  const MoviePosterCard({
-    super.key,
-    required this.movie,
-    this.width = 120,
-  });
+  const MoviePosterCard({super.key, required this.movie, this.width = 120});
 
   final Movie movie;
   final double width;
@@ -131,10 +121,8 @@ class RatingSheet extends StatefulWidget {
     return showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => RatingSheet(
-        movieTitle: movieTitle,
-        initialRating: initialRating,
-      ),
+      builder: (_) =>
+          RatingSheet(movieTitle: movieTitle, initialRating: initialRating),
     );
   }
 

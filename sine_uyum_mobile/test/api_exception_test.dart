@@ -18,7 +18,9 @@ DioException _responseError(Object? data, {int statusCode = 400}) {
 void main() {
   group('ApiException.fromDio', () {
     test('{"message": ...} gövdesindeki sunucu mesajını korur', () {
-      final exception = _responseError({'message': 'Kendinize mesaj gönderemezsiniz.'});
+      final exception = _responseError({
+        'message': 'Kendinize mesaj gönderemezsiniz.',
+      });
       expect(
         ApiException.fromDio(exception).message,
         'Kendinize mesaj gönderemezsiniz.',
@@ -30,7 +32,7 @@ void main() {
         'errors': {
           'Username': ['Kullanıcı adı zorunludur.'],
           'Password': ['Şifre zorunludur.'],
-        }
+        },
       });
 
       final message = ApiException.fromDio(exception).message;
@@ -40,7 +42,10 @@ void main() {
 
     test('Identity hata dizisindeki description alanlarını okur', () {
       final exception = _responseError([
-        {'code': 'DuplicateUserName', 'description': 'Bu kullanıcı adı alınmış.'}
+        {
+          'code': 'DuplicateUserName',
+          'description': 'Bu kullanıcı adı alınmış.',
+        },
       ]);
       expect(
         ApiException.fromDio(exception).message,
@@ -68,7 +73,9 @@ void main() {
     });
 
     test('401 isUnauthorized olarak işaretlenir', () {
-      final exception = ApiException.fromDio(_responseError(null, statusCode: 401));
+      final exception = ApiException.fromDio(
+        _responseError(null, statusCode: 401),
+      );
       expect(exception.isUnauthorized, isTrue);
     });
 

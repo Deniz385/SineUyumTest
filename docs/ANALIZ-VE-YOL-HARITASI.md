@@ -34,24 +34,37 @@ abonelik bayrağı.
 
 Bunlar üretime çıkmadan önce kapatılmalı. Numaralandırma öncelik sırasına göredir.
 
-### G1 — JWT imzalama anahtarı git geçmişinde (KRİTİK)
-`appsettings.json` içindeki `Jwt:Key` alanı güncel sürümde boşaltılmış, ancak
-anahtarın kendisi git geçmişinde açıkta duruyor:
+### G1 — JWT imzalama anahtarı git geçmişindeydi — ✅ temizlendi
+`appsettings.json` içinde commit edilmiş bir `Jwt:Key` değeri vardı. Değer
+üretilmiş bir gizli anahtar değil, "bunu değiştir" anlamına gelen bir **yer
+tutucuydu** — ama uygulama token'ları onunla imzaladığı için onu bilen biri
+istediği kullanıcı adına (admin dahil) geçerli token üretebilirdi.
 
-```
-"Key": "<yer tutucu bir anahtar commit edilmisti; gecmisten temizlendi>"
-```
+`git filter-repo` ile tüm geçmişten silindi. Anahtar artık yalnızca `JWT_KEY`
+ortam değişkeninden okunuyor ve açılışta HS512 için ≥64 byte olduğu
+doğrulanıyor, yani eski değer teknik olarak da kullanılamaz.
 
-Bu anahtarı bilen biri istediği kullanıcı için (admin dahil) geçerli token
-üretebilir. **Yapılacak:** anahtar rotasyonu (yeni rastgele 64+ byte anahtar,
-yalnızca secret store/env değişkeninde), geçmişin temizlenmesi
-(`git filter-repo`) veya repo gizliyse en azından anahtarın derhal
-değiştirilmesi. HS512 kullanıldığı için anahtar en az 64 byte olmalı.
+**Hâlâ yapılması gereken:** Uygulamayı bu anahtarla herhangi bir ortamda
+çalıştırdıysanız yeni bir anahtar üretin. Ayrıca force-push, GitHub'ın eski
+objelerini hemen yok etmez: eski commit SHA'ları bir süre daha doğrudan URL
+ile erişilebilir kalır. Kalıcı silme için GitHub Support'a başvurulmalı.
 
-### G2 — Üretim veritabanı repoya commit edilmiş (KRİTİK)
-`SineUyum.Api/sineuyum.db` git'te izleniyor ve `.gitignore`'da yok. İçinde
-kullanıcı e-postaları, parola hash'leri, özel mesajlar var. **Yapılacak:**
-`.gitignore`'a eklendi (bu çalışmada), geçmişten de silinmeli.
+> TMDb API anahtarı hiç commit edilmemişti (geçmişte her zaman `""`).
+
+### G2 — Veritabanı repoya commit edilmişti — ✅ temizlendi
+`SineUyum.Api/sineuyum.db` (266 KB) git'te izleniyordu ve repo **public**'ti.
+İçinde 11 kullanıcı kaydı (e-posta adresleri ve parola hash'leri), 20 mesaj,
+bildirimler ve puanlamalar vardı. Veriler geliştirme amaçlı test kayıtlarıydı
+(`test@gmail.com` gibi tek kullanımlık adresler), yine de herkese açıktı.
+
+SQLite'ın yan dosyaları `sineuyum.db-shm` (32 KB) ve `sineuyum.db-wal` de
+commit edilmişti; bunlar da veri sayfası taşıyabildiği için birlikte silindi.
+
+`git filter-repo --invert-paths --path-glob 'SineUyum.Api/sineuyum.db*'` ile
+tüm geçmişten çıkarıldı, `*.db` `.gitignore`'a eklendi.
+
+**Hâlâ yapılması gereken:** G1'deki GitHub Support notu bunun için de geçerli.
+Bu veritabanındaki hesaplar hâlâ kullanılıyorsa parolaları değiştirilmeli.
 
 ### G3 — Sabit kodlanmış admin hesabı (KRİTİK)
 `Program.cs:120-128` her açılışta `admin` / `Password123!` hesabını oluşturuyor —
@@ -301,12 +314,13 @@ sonra oturumdan düşerdi.
 
 ## 6. Önerilen Yol Haritası
 
-### Faz 0 — Güvenlik acil müdahale (1-2 gün) · **hemen yapılmalı**
-1. JWT anahtarını rotasyona al ve git geçmişinden sil (G1) — *kod tarafı hazır,
-   anahtarın kendisi hâlâ geçmişte*
-2. `sineuyum.db`'yi git geçmişinden sil (G2) — *takipten çıkarıldı, geçmiş duruyor*
-3. Daha önce oluşmuş `admin` / `Password123!` hesabının parolasını değiştir (G3)
-   — *yeni kurulumlarda artık oluşmuyor*
+### Faz 0 — Güvenlik acil müdahale
+1. ✅ JWT anahtarı git geçmişinden silindi (G1)
+2. ✅ `sineuyum.db` ve yan dosyaları git geçmişinden silindi (G2)
+3. ⬜ **Kalan iş:** daha önce oluşmuş `admin` / `Password123!` hesabının
+   parolasını değiştir (G3) — yeni kurulumlarda artık oluşmuyor
+4. ⬜ **Kalan iş:** eski commit objelerinin GitHub'dan kalıcı silinmesi için
+   GitHub Support'a başvur (force-push objeleri hemen yok etmez)
 
 ### Faz 1 — Üretime hazırlık (1-2 hafta)
 4. PostgreSQL'e geçiş (M2)

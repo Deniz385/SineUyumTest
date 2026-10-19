@@ -24,7 +24,13 @@ namespace SineUyum.Api.Services
             _httpClientFactory = httpClientFactory;
             _hubContext = hubContext;
             _userManager = userManager;
-            var apiKey = configuration["TMDb:ApiKey"] ?? configuration["TMDB_API_KEY"];
+            // Boş string de tanımsız sayılmalı; appsettings.json'daki yer tutucu
+            // aksi halde TMDB_API_KEY ortam değişkenini gölgeliyordu.
+            var apiKey = configuration["TMDb:ApiKey"];
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                apiKey = configuration["TMDB_API_KEY"];
+            }
             _tmdbApiKey = apiKey;
         }
 
@@ -191,23 +197,7 @@ namespace SineUyum.Api.Services
             return suggestions;
         }
 
-        private double CalculateCompatibility(Dictionary<int, int> ratings1, Dictionary<int, int> ratings2)
-        {
-            var commonMovieIds = ratings1.Keys.Intersect(ratings2.Keys).ToList();
-            if (!commonMovieIds.Any()) return 0;
-            double totalWeightedScore = 0;
-            foreach (var movieId in commonMovieIds)
-            {
-                int rating1 = ratings1[movieId];
-                int rating2 = ratings2[movieId];
-                double difference = Math.Abs(rating1 - rating2);
-                double weight = 1.0;
-                if ((rating1 <= 3 && rating2 <= 3) || (rating1 >= 8 && rating2 >= 8)) weight = 1.5;
-                else if ((rating1 <= 3 && rating2 >= 8) || (rating1 >= 8 && rating2 <= 3)) weight = 2.0;
-                totalWeightedScore += (10 - difference) * weight;
-            }
-            double maxPossibleScore = commonMovieIds.Count * 10 * 1.5;
-            return maxPossibleScore > 0 ? (totalWeightedScore / maxPossibleScore) * 100 : 0;
-        }
+        private static double CalculateCompatibility(Dictionary<int, int> ratings1, Dictionary<int, int> ratings2)
+            => CompatibilityCalculator.Score(ratings1, ratings2);
     }
 }

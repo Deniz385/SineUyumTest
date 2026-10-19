@@ -357,3 +357,13 @@ Ionide (cross platform F# VS Code tools) working folder
 
 Fody - auto-generated XML schema
 FodyWeavers.xsd
+# Yerel SQLite veritabani dosyalari (hassas veri icerir, repoya girmemeli)
+*.db
+*.db-shm
+*.db-wal
+
+# Flutter / Dart
+sine_uyum_mobile/.dart_tool/
+sine_uyum_mobile/build/
+sine_uyum_mobile/.flutter-plugins
+sine_uyum_mobile/.flutter-plugins-dependencies

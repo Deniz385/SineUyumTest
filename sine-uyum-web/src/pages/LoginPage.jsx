@@ -22,8 +22,8 @@ export const LoginPage = () => {
         password: password,
       });
 
-      const token = response.data.token;
-      loginAction(token);
+      // Yanıt { token, refreshToken, expiresAt, user } içeriyor.
+      loginAction(response.data);
 
     } catch (err) {
       // --- DEĞİŞİKLİK: setError yerine showSnackbar ---

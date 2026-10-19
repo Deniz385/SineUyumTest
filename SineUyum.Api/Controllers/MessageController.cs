@@ -79,12 +79,19 @@ namespace SineUyum.Api.Controllers
             return Ok(new { message = "Mesaj başarıyla gönderildi." });
         }
 
-        // ... GetMessageThread ve GetConversations metodları aynı kalacak ...
-         [HttpGet("thread/{otherUserId}")]
-        public async Task<IActionResult> GetMessageThread(string otherUserId)
+        // Mobil istemcinin sınırsız veri indirmemesi için sayfalama eklendi.
+        // page/pageSize verilmezse en güncel sayfa döner (varsayılan 100 mesaj).
+        [HttpGet("thread/{otherUserId}")]
+        public async Task<IActionResult> GetMessageThread(
+            string otherUserId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 100)
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (currentUserId == null) return Unauthorized();
+
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 200);
 
             var messages = await _context.Messages
                 .Include(m => m.Sender)
@@ -94,8 +101,10 @@ namespace SineUyum.Api.Controllers
                     .ThenInclude(w => w!.User)
                 .Where(m => (m.RecipientId == currentUserId && m.SenderId == otherUserId) ||
                             (m.RecipientId == otherUserId && m.SenderId == currentUserId))
-                .OrderBy(m => m.MessageSent)
-                .Select(m => new 
+                .OrderByDescending(m => m.MessageSent)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(m => new
                 {
                     m.Id,
                     m.SenderId,
@@ -117,7 +126,36 @@ namespace SineUyum.Api.Controllers
                 })
                 .ToListAsync();
 
+            // Sorgu en yeniden eskiye çekiliyor; istemci eskiden yeniye bekliyor.
+            messages.Reverse();
+
             return Ok(messages);
+        }
+
+        // Sohbeti okundu olarak işaretler. Message.DateRead alanı tanımlıydı ama
+        // hiçbir yerde set edilmiyordu, bu yüzden "okundu" göstergesi her zaman
+        // yanlış çalışıyordu.
+        [HttpPost("thread/{otherUserId}/mark-as-read")]
+        public async Task<IActionResult> MarkThreadAsRead(string otherUserId)
+        {
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (currentUserId == null) return Unauthorized();
+
+            var unread = await _context.Messages
+                .Where(m => m.RecipientId == currentUserId && m.SenderId == otherUserId && m.DateRead == null)
+                .ToListAsync();
+
+            if (unread.Count > 0)
+            {
+                var now = DateTime.UtcNow;
+                foreach (var message in unread)
+                {
+                    message.DateRead = now;
+                }
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new { markedAsRead = unread.Count });
         }
 
         [HttpGet]
@@ -126,6 +164,10 @@ namespace SineUyum.Api.Controllers
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (currentUserId == null) return Unauthorized();
 
+            // Not: Bu sorgu kullanıcının tüm mesajlarını belleğe çekiyor.
+            // Ölçeklenmesi için sohbet başına son mesajı veritabanı tarafında
+            // hesaplayan bir sorguya dönüştürülmeli.
+            // Bkz. docs/ANALIZ-VE-YOL-HARITASI.md → M5
             var messages = await _context.Messages
                 .Include(m => m.Sender)
                 .Include(m => m.Recipient)

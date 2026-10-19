@@ -246,13 +246,16 @@ SignalR yalnızca bildirim gönderiyor; mesajın kendisi hub üzerinden
 iletilmiyor. Sohbet ekranı yeni mesajı görmek için sayfa yenilemeye muhtaç.
 `NotificationHub` tamamen boş, grup/oda yönetimi yok.
 
-### M12 — Altyapı eksikleri
-- Migration'lar otomatik uygulanmıyor (`Database.Migrate()` yok) → her deploy'da elle
-- Health check endpoint'i yok (`/health`)
-- Yapılandırılmış loglama yok (Serilog + correlation id)
-- Dockerfile / docker-compose yok
-- CI yok (`.github/workflows` dizini yok) → derleme ve lint kontrolü yapılmıyor
-- Kök dizinde README yok; kurulum adımları hiçbir yerde yazılı değil
+### M12 — Altyapı eksikleri — ✅ büyük ölçüde kapatıldı
+- ✅ Migration'lar açılışta otomatik uygulanıyor (`Database.MigrateAsync()`)
+- ✅ Health check ucu eklendi (`/health`)
+- ✅ Yapılandırılmış loglama (Serilog + istek logu + traceId) — G10
+- ✅ Dockerfile + docker-compose eklendi (çok aşamalı, root olmayan kullanıcı,
+  SQLite kalıcı volume'da). İmaj yerelde build edilip çalıştırılarak doğrulandı:
+  `/health` → Healthy, admin login → 200. `.dockerignore` ve
+  `.env.docker.example` da eklendi.
+- ✅ CI (GitHub Actions): derleme + test + lint
+- ✅ Kök README (kurulum/çalıştırma, Docker dahil)
 
 ### M13 — Frontend eksikleri
 - `.env.example` yok; `axiosConfig.js` `localhost:5074`'e sessizce düşüyor
@@ -373,7 +376,7 @@ sonra oturumdan düşerdi.
 ### Faz 1 — Üretime hazırlık (1-2 hafta)
 4. ⬜ PostgreSQL'e geçiş (M2)
 5. ✅ Global hata yönetimi + Serilog (G10)
-6. ⬜ Dockerfile (M12) — *CI kuruldu, Docker kalan iş*
+6. ✅ Dockerfile + docker-compose (M12)
 7. ✅ API için test projesi — `CompatibilityCalculator` + auth + hata yönetimi (M1)
 
 ### Faz 2 — API olgunlaştırma (2-3 hafta)

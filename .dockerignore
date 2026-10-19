@@ -1,0 +1,19 @@
+# Build bağlamını küçük ve temiz tutar: bunlar imaja girmemeli.
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+
+# Yerel veritabanı dosyaları — asla imaja girmesin (hassas veri, G2).
+**/*.db
+**/*.db-shm
+**/*.db-wal
+
+# Dockerfile yalnızca API'yi publish ediyor; bunlar bağlama gerekmez.
+sine-uyum-web/
+sine_uyum_mobile/
+SineUyum.Api.Tests/
+docs/
+.git/
+.github/
+**/*.md

@@ -1,0 +1,33 @@
+# SineUyum API'yi tek komutla ayağa kaldırmak için.
+#
+#   1) .env dosyası oluştur (bkz. .env.docker.example)
+#   2) docker compose up --build
+#
+# Veritabanı şu an SQLite; dosya bir named volume'da kalıcı tutulur. PostgreSQL'e
+# geçince (yol haritası M2) buraya bir "db" servisi eklenecek.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: SineUyum.Api/Dockerfile
+    ports:
+      - "5074:8080"
+    environment:
+      # Zorunlu: değerler .env dosyasından okunur (repoya girmez).
+      JWT_KEY: ${JWT_KEY:?JWT_KEY tanimlanmali (en az 64 karakter)}
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+      # İsteğe bağlı admin tohumlama.
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      # Web istemcisinin adresi (CORS). Virgülle değil, dizini numaralandırarak:
+      Cors__AllowedOrigins__0: ${WEB_ORIGIN:-http://localhost:5173}
+      # SQLite dosyası kalıcı volume'da.
+      ConnectionStrings__DefaultConnection: "Data Source=/data/sineuyum.db"
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+    volumes:
+      - sineuyum-data:/data
+    restart: unless-stopped
+
+volumes:
+  sineuyum-data:

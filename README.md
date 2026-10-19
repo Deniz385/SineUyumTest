@@ -57,6 +57,25 @@ dotnet ef migrations add <MigrationAdı> --project SineUyum.Api/SineUyum.Api.csp
 
 > `dotnet ef` komutları uygulamayı ayağa kaldırdığı için `JWT_KEY` tanımlı olmalıdır.
 
+### Docker ile çalıştırma
+
+```bash
+cp .env.docker.example .env     # JWT_KEY, TMDB_API_KEY, admin bilgilerini doldur
+docker compose up --build       # API → http://localhost:5074
+```
+
+- İmaj çok aşamalı (SDK ile derlenir, `aspnet` runtime ile çalışır), **root
+  olmayan** kullanıcıyla çalışır.
+- SQLite dosyası `sineuyum-data` adlı kalıcı volume'da (`/data/sineuyum.db`)
+  tutulur; container silinse de veri kalır.
+- `/health` ucu sağlık kontrolü sunar. İmaja curl/wget gömülmedi (küçük
+  kalsın diye); orchestrator HTTP ile problamalı:
+  - **Kubernetes:** `httpGet: { path: /health, port: 8080 }` (container içi
+    araç gerektirmez).
+  - **docker-compose healthcheck** istenirse imaja `curl` eklenmeli.
+
+> Yalnızca imajı build etmek: `docker build -f SineUyum.Api/Dockerfile -t sineuyum-api .`
+
 ---
 
 ## 2. Web istemcisini çalıştırma

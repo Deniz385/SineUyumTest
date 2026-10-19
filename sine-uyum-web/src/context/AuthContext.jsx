@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
-import { setupInterceptors } from '../api/axiosConfig';
+import { setupInterceptors, saveTokens, clearTokens, TOKEN_KEY } from '../api/axiosConfig';
 
 const AuthContext = createContext(null);
 
@@ -9,9 +9,9 @@ const getUserFromToken = (token) => {
   if (!token) return null;
   try {
     const decodedToken = jwtDecode(token);
-    // Token'ın süresi dolmuşsa, token'ı temizle ve null dön
+    // Token'ın süresi dolmuşsa null dön. Token'ı SİLMİYORUZ: interceptor
+    // refresh token ile yenilemeyi deneyecek.
     if (decodedToken.exp * 1000 < Date.now()) {
-      localStorage.removeItem('token');
       return null;
     }
     const userId = decodedToken["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] || decodedToken.nameid;
@@ -30,26 +30,38 @@ const getUserFromToken = (token) => {
 
 export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
-  const [user, setUser] = useState(() => getUserFromToken(localStorage.getItem('token')));
+  const [user, setUser] = useState(() => getUserFromToken(localStorage.getItem(TOKEN_KEY)));
 
   const logoutAction = useCallback(() => {
     setUser(null);
-    localStorage.removeItem('token');
+    clearTokens();
     navigate('/login');
   }, [navigate]);
+
+  // Interceptor token'ı sessizce yenilediğinde kullanıcı state'i de tazelenir
+  // (örneğin abonelik claim'i değişmiş olabilir).
+  const handleTokenRefreshed = useCallback((newToken) => {
+    const userData = getUserFromToken(newToken);
+    if (userData) setUser(userData);
+  }, []);
 
   // Interceptor'ı SADECE BİR KERE, uygulama ilk yüklendiğinde kur.
   // Bu, gereksiz yeniden kurulumları önler ve kararlı çalışmasını sağlar.
   useEffect(() => {
-    setupInterceptors(logoutAction);
-  }, [logoutAction]);
+    setupInterceptors(logoutAction, handleTokenRefreshed);
+  }, [logoutAction, handleTokenRefreshed]);
 
-  const loginAction = (newToken) => {
-    const userData = getUserFromToken(newToken);
+  // API artık { token, refreshToken, expiresAt, user } döndürüyor.
+  // Geriye dönük uyumluluk için düz token string'i de kabul ediliyor.
+  const loginAction = (authResponse) => {
+    const token = typeof authResponse === 'string' ? authResponse : authResponse?.token;
+    const refreshToken = typeof authResponse === 'string' ? null : authResponse?.refreshToken;
+
+    const userData = getUserFromToken(token);
     if (userData) {
-      localStorage.setItem('token', newToken);
+      saveTokens({ token, refreshToken });
       setUser(userData);
-      
+
       if (userData.roles.includes('Admin')) {
         navigate('/admin');
       } else {
@@ -60,7 +72,7 @@ export const AuthProvider = ({ children }) => {
       logoutAction();
     }
   };
-  
+
   const authContextValue = {
     user,
     loginAction,

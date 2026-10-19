@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
+using SineUyum.Api.Services;
 using System.Security.Claims;
 using System.Text.Json;
 
@@ -21,7 +22,13 @@ namespace SineUyum.Api.Controllers
         {
             _context = context;
             _httpClientFactory = httpClientFactory;
-            var apiKey = configuration["TMDb:ApiKey"] ?? configuration["TMDB_API_KEY"];
+            // Boş string de tanımsız sayılmalı; appsettings.json'daki yer tutucu
+            // aksi halde TMDB_API_KEY ortam değişkenini gölgeliyordu.
+            var apiKey = configuration["TMDb:ApiKey"];
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                apiKey = configuration["TMDB_API_KEY"];
+            }
             _tmdbApiKey = apiKey;
         }
 
@@ -54,30 +61,13 @@ namespace SineUyum.Api.Controllers
                 });
             }
             
-            double totalWeightedScore = 0;
-            
-            foreach (var movie in commonMovies)
-            {
-                double difference = Math.Abs(movie.CurrentUserRating - movie.TargetUserRating);
-                double weight = 1.0;
-                if ((movie.CurrentUserRating <= 3 && movie.TargetUserRating <= 3) || (movie.CurrentUserRating >= 8 && movie.TargetUserRating >= 8))
-                {
-                    weight = 1.5;
-                }
-                else if ((movie.CurrentUserRating <= 3 && movie.TargetUserRating >= 8) || (movie.CurrentUserRating >= 8 && movie.TargetUserRating <= 3))
-                {
-                    weight = 2.0;
-                }
-                double movieScore = 10 - difference;
-                totalWeightedScore += movieScore * weight;
-            }
+            var ratingPairs = commonMovies
+                .Select(m => (m.CurrentUserRating, m.TargetUserRating))
+                .ToList();
 
-            double maxPossibleScore = commonMovies.Count * 10 * 1.5; 
-            double compatibilityScore = (totalWeightedScore / maxPossibleScore) * 100;
-            
             var result = new
             {
-                compatibilityScore = Math.Round(Math.Max(0, Math.Min(100, compatibilityScore)), 2),
+                compatibilityScore = Math.Round(CompatibilityCalculator.Score(ratingPairs), 2),
                 commonMovieCount = commonMovies.Count,
                 commonMovies
             };

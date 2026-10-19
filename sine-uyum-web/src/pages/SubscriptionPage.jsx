@@ -14,8 +14,8 @@ export const SubscriptionPage = () => {
         setIsLoading(true);
         try {
             const response = await api.post('/api/subscription/activate');
-            const newToken = response.data.token;
-            loginAction(newToken);
+            // Abonelik aktifleştirilince yeni token + refresh token döner.
+            loginAction(response.data);
             // --- DEĞİŞİKLİK: alert() yerine showSnackbar() ---
             showSnackbar('Aboneliğiniz başarıyla aktifleştirildi!', 'success');
         } catch (error) {

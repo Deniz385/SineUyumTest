@@ -55,10 +55,9 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
 
     setState(() => _isSending = true);
     try {
-      await ref.read(messageRepositoryProvider).send(
-            recipientId: widget.otherUserId,
-            content: text,
-          );
+      await ref
+          .read(messageRepositoryProvider)
+          .send(recipientId: widget.otherUserId, content: text);
       _controller.clear();
       ref.invalidate(messageThreadProvider(widget.otherUserId));
       ref.invalidate(conversationsProvider);
@@ -159,8 +158,7 @@ class _MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final background = isMine ? scheme.primaryContainer : scheme.surface;
-    final foreground =
-        isMine ? scheme.onPrimaryContainer : scheme.onSurface;
+    final foreground = isMine ? scheme.onPrimaryContainer : scheme.onSurface;
 
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
@@ -202,9 +200,8 @@ class _MessageBubble extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   DateFormat.Hm('tr').format(message.messageSent!.toLocal()),
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: foreground.withValues(alpha: 0.7),
-                      ),
+                  style: Theme.of(context).textTheme.labelSmall
+                      ?.copyWith(color: foreground.withValues(alpha: 0.7)),
                 ),
               ),
           ],
@@ -234,9 +231,8 @@ class _SharedMovieCard extends StatelessWidget {
               children: [
                 Text(
                   'Film önerisi',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: foreground.withValues(alpha: 0.7),
-                      ),
+                  style: Theme.of(context).textTheme.labelSmall
+                      ?.copyWith(color: foreground.withValues(alpha: 0.7)),
                 ),
                 Text(
                   movie.title,
@@ -277,9 +273,8 @@ class _SharedWatchlistCard extends StatelessWidget {
             children: [
               Text(
                 'Paylaşılan liste',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: foreground.withValues(alpha: 0.7),
-                    ),
+                style: Theme.of(context).textTheme.labelSmall
+                    ?.copyWith(color: foreground.withValues(alpha: 0.7)),
               ),
               Text(
                 watchlist.name,

@@ -59,7 +59,7 @@ export const AdminPage = () => {
         try {
             const response = await api.get('/api/event');
             setEvents(response.data.$values || response.data);
-        } catch (error) {
+        } catch {
             showSnackbar('Etkinlikler yüklenemedi.', 'error');
         } finally {
             setIsLoading(false);

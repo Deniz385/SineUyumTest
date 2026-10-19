@@ -66,11 +66,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             AppShell(navigationShell: navigationShell),
         branches: [
           StatefulShellBranch(
-            routes: [GoRoute(path: '/home', builder: (_, _) => const HomePage())],
+            routes: [
+              GoRoute(path: '/home', builder: (_, _) => const HomePage()),
+            ],
           ),
           StatefulShellBranch(
             routes: [
-              GoRoute(path: '/people', builder: (_, _) => const UserSearchPage())
+              GoRoute(
+                path: '/people',
+                builder: (_, _) => const UserSearchPage(),
+              ),
             ],
           ),
           StatefulShellBranch(
@@ -78,16 +83,21 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/watchlists',
                 builder: (_, _) => const WatchlistsPage(),
-              )
+              ),
             ],
           ),
           StatefulShellBranch(
             routes: [
-              GoRoute(path: '/messages', builder: (_, _) => const MessagesPage())
+              GoRoute(
+                path: '/messages',
+                builder: (_, _) => const MessagesPage(),
+              ),
             ],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: '/event', builder: (_, _) => const EventPage())],
+            routes: [
+              GoRoute(path: '/event', builder: (_, _) => const EventPage()),
+            ],
           ),
         ],
       ),

@@ -44,9 +44,12 @@ class WatchlistDetail {
       name: json['name'] as String? ?? 'İsimsiz liste',
       description: json['description'] as String?,
       ownerUsername: json['ownerUsername'] as String?,
-      items: (json['items'] as List?)
-              ?.map((e) =>
-                  WatchlistItem.fromJson((e as Map).cast<String, dynamic>()))
+      items:
+          (json['items'] as List?)
+              ?.map(
+                (e) =>
+                    WatchlistItem.fromJson((e as Map).cast<String, dynamic>()),
+              )
               .toList() ??
           const [],
     );

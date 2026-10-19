@@ -33,17 +33,21 @@ class Movie {
     return Movie(
       id: (json['id'] as num?)?.toInt() ?? 0,
       title: json['title'] as String? ?? json['name'] as String? ?? 'Başlıksız',
-      posterPath: json['posterPath'] as String? ?? json['poster_path'] as String?,
+      posterPath:
+          json['posterPath'] as String? ?? json['poster_path'] as String?,
       backdropPath:
           json['backdropPath'] as String? ?? json['backdrop_path'] as String?,
       overview: json['overview'] as String?,
       releaseDate:
           json['releaseDate'] as String? ?? json['release_date'] as String?,
-      voteAverage: (json['voteAverage'] as num?)?.toDouble() ??
+      voteAverage:
+          (json['voteAverage'] as num?)?.toDouble() ??
           (json['vote_average'] as num?)?.toDouble(),
-      genres: (json['genres'] as List?)
-              ?.map((g) =>
-                  g is Map ? (g['name']?.toString() ?? '') : g.toString())
+      genres:
+          (json['genres'] as List?)
+              ?.map(
+                (g) => g is Map ? (g['name']?.toString() ?? '') : g.toString(),
+              )
               .where((name) => name.isNotEmpty)
               .toList() ??
           const [],
@@ -52,10 +56,10 @@ class Movie {
   }
 
   Map<String, dynamic> toRatingPayload() => {
-        'id': id,
-        'title': title,
-        'posterPath': posterPath,
-      };
+    'id': id,
+    'title': title,
+    'posterPath': posterPath,
+  };
 }
 
 /// Kullanıcının bir filme verdiği puan (profil ekranında listelenir).

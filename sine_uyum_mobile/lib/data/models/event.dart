@@ -54,12 +54,15 @@ class EventState {
       message: json['message'] as String?,
       event: eventJson == null ? null : CinemaEvent.fromJson(eventJson),
       group: groupJson == null ? null : EventGroup.fromJson(groupJson),
-      votes: (json['votes'] as List?)
+      votes:
+          (json['votes'] as List?)
               ?.map(
-                  (e) => EventVote.fromJson((e as Map).cast<String, dynamic>()))
+                (e) => EventVote.fromJson((e as Map).cast<String, dynamic>()),
+              )
               .toList() ??
           const [],
-      suggestedMovies: (json['suggestedMovies'] as List?)
+      suggestedMovies:
+          (json['suggestedMovies'] as List?)
               ?.map((e) => Movie.fromJson((e as Map).cast<String, dynamic>()))
               .toList() ??
           const [],
@@ -96,10 +99,7 @@ class CinemaEvent {
 }
 
 class EventGroup {
-  const EventGroup({
-    required this.id,
-    this.members = const [],
-  });
+  const EventGroup({required this.id, this.members = const []});
 
   final int id;
   final List<EventGroupMember> members;
@@ -107,9 +107,13 @@ class EventGroup {
   factory EventGroup.fromJson(Map<String, dynamic> json) {
     return EventGroup(
       id: (json['id'] as num?)?.toInt() ?? 0,
-      members: (json['members'] as List?)
-              ?.map((e) =>
-                  EventGroupMember.fromJson((e as Map).cast<String, dynamic>()))
+      members:
+          (json['members'] as List?)
+              ?.map(
+                (e) => EventGroupMember.fromJson(
+                  (e as Map).cast<String, dynamic>(),
+                ),
+              )
               .toList() ??
           const [],
     );

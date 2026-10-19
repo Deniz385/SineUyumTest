@@ -5,15 +5,16 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// `SharedPreferences` kullanılmaz: root'lu cihazda düz metin okunabilir.
 class TokenStorage {
   TokenStorage({FlutterSecureStorage? storage})
-      // Android'de şifreli depolama bu sürümde varsayılan; iOS'ta anahtarın
-      // cihaz ilk açıldıktan sonra okunabilmesi için first_unlock seçiliyor
-      // (arka plandaki token yenilemesi için gerekli).
-      : _storage = storage ??
-            const FlutterSecureStorage(
-              iOptions: IOSOptions(
-                accessibility: KeychainAccessibility.first_unlock,
-              ),
-            );
+    // Android'de şifreli depolama bu sürümde varsayılan; iOS'ta anahtarın
+    // cihaz ilk açıldıktan sonra okunabilmesi için first_unlock seçiliyor
+    // (arka plandaki token yenilemesi için gerekli).
+    : _storage =
+          storage ??
+          const FlutterSecureStorage(
+            iOptions: IOSOptions(
+              accessibility: KeychainAccessibility.first_unlock,
+            ),
+          );
 
   final FlutterSecureStorage _storage;
 

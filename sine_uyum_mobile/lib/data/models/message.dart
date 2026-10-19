@@ -68,8 +68,9 @@ class ChatMessage {
           ? null
           : DateTime.tryParse(json['messageSent'] as String),
       movie: movieJson == null ? null : SharedMovie.fromJson(movieJson),
-      watchlist:
-          watchlistJson == null ? null : SharedWatchlist.fromJson(watchlistJson),
+      watchlist: watchlistJson == null
+          ? null
+          : SharedWatchlist.fromJson(watchlistJson),
     );
   }
 }

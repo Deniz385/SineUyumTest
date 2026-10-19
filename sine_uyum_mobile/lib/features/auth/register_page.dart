@@ -37,7 +37,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
     try {
       // Kayıt başarılıysa aynı bilgilerle otomatik giriş yapılır.
-      await ref.read(sessionProvider.notifier).register(
+      await ref
+          .read(sessionProvider.notifier)
+          .register(
             username: _usernameController.text.trim(),
             email: _emailController.text.trim(),
             password: _passwordController.text,

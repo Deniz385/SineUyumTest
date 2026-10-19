@@ -35,7 +35,8 @@ class NotificationState {
 
 final notificationsProvider =
     NotifierProvider<NotificationNotifier, NotificationState>(
-        NotificationNotifier.new);
+      NotificationNotifier.new,
+    );
 
 /// Bildirimleri REST ile çeker, SignalR ile canlı dinler.
 ///
@@ -79,8 +80,10 @@ class NotificationNotifier extends Notifier<NotificationState> {
     // İyimser güncelleme: kullanıcı beklemesin.
     state = state.copyWith(
       items: state.items
-          .map((item) =>
-              item.id == notificationId ? item.copyWith(isRead: true) : item)
+          .map(
+            (item) =>
+                item.id == notificationId ? item.copyWith(isRead: true) : item,
+          )
           .toList(),
     );
     try {
@@ -120,8 +123,9 @@ class NotificationNotifier extends Notifier<NotificationState> {
     connection.on('ReceiveNotification', (arguments) {
       final payload = arguments?.firstOrNull;
       if (payload is Map) {
-        final notification =
-            AppNotification.fromJson(payload.cast<String, dynamic>());
+        final notification = AppNotification.fromJson(
+          payload.cast<String, dynamic>(),
+        );
         state = state.copyWith(items: [notification, ...state.items]);
       } else {
         // Biçim beklenmedikse listeyi yeniden çekmek güvenli olanı.

@@ -64,29 +64,31 @@ class _MovieSearchPageState extends ConsumerState<MovieSearchPage> {
               icon: Icons.search,
               message: 'Aramak istediğin filmin adını yaz.',
             )
-          : ref.watch(movieSearchProvider(_query)).when(
-                loading: () => const LoadingView(),
-                error: (error, _) => ErrorView(
-                  message: error.toString(),
-                  onRetry: () => ref.invalidate(movieSearchProvider(_query)),
+          : ref
+                .watch(movieSearchProvider(_query))
+                .when(
+                  loading: () => const LoadingView(),
+                  error: (error, _) => ErrorView(
+                    message: error.toString(),
+                    onRetry: () => ref.invalidate(movieSearchProvider(_query)),
+                  ),
+                  data: (movies) => movies.isEmpty
+                      ? const EmptyView(
+                          message: 'Bu aramaya uygun film bulunamadı.',
+                        )
+                      : ListView.builder(
+                          itemCount: movies.length,
+                          itemBuilder: (context, index) {
+                            final movie = movies[index];
+                            return MovieListTile(
+                              movieId: movie.id,
+                              title: movie.title,
+                              posterPath: movie.posterPath,
+                              subtitle: movie.year,
+                            );
+                          },
+                        ),
                 ),
-                data: (movies) => movies.isEmpty
-                    ? const EmptyView(
-                        message: 'Bu aramaya uygun film bulunamadı.',
-                      )
-                    : ListView.builder(
-                        itemCount: movies.length,
-                        itemBuilder: (context, index) {
-                          final movie = movies[index];
-                          return MovieListTile(
-                            movieId: movie.id,
-                            title: movie.title,
-                            posterPath: movie.posterPath,
-                            subtitle: movie.year,
-                          );
-                        },
-                      ),
-              ),
     );
   }
 }

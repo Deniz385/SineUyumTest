@@ -55,45 +55,47 @@ class _UserSearchPageState extends ConsumerState<UserSearchPage> {
           child: _query.isEmpty
               ? const EmptyView(
                   icon: Icons.people_outline,
-                  message:
-                      'Film zevkine uyan kişileri bulmak için kullanıcı adı ara.',
+                  message: 'Film zevkine uyan kişileri bulmak için kullanıcı adı ara.',
                 )
-              : ref.watch(userSearchProvider(_query)).when(
-                    loading: () => const LoadingView(),
-                    error: (error, _) => ErrorView(
-                      message: error.toString(),
-                      onRetry: () =>
-                          ref.invalidate(userSearchProvider(_query)),
+              : ref
+                    .watch(userSearchProvider(_query))
+                    .when(
+                      loading: () => const LoadingView(),
+                      error: (error, _) => ErrorView(
+                        message: error.toString(),
+                        onRetry: () =>
+                            ref.invalidate(userSearchProvider(_query)),
+                      ),
+                      data: (users) => users.isEmpty
+                          ? const EmptyView(message: 'Kullanıcı bulunamadı.')
+                          : ListView.builder(
+                              itemCount: users.length,
+                              itemBuilder: (context, index) {
+                                final user = users[index];
+                                return ListTile(
+                                  leading: UserAvatar(
+                                    userName: user.userName,
+                                    imageUrl: user.profileImageUrl,
+                                  ),
+                                  title: Text(user.userName),
+                                  subtitle:
+                                      user.bio == null || user.bio!.isEmpty
+                                      ? null
+                                      : Text(
+                                          user.bio!,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                  trailing: CompatibilityBadge(
+                                    score: user.compatibilityScore,
+                                    commonMovieCount: user.commonMovieCount,
+                                  ),
+                                  onTap: () =>
+                                      context.push('/profile/${user.id}'),
+                                );
+                              },
+                            ),
                     ),
-                    data: (users) => users.isEmpty
-                        ? const EmptyView(message: 'Kullanıcı bulunamadı.')
-                        : ListView.builder(
-                            itemCount: users.length,
-                            itemBuilder: (context, index) {
-                              final user = users[index];
-                              return ListTile(
-                                leading: UserAvatar(
-                                  userName: user.userName,
-                                  imageUrl: user.profileImageUrl,
-                                ),
-                                title: Text(user.userName),
-                                subtitle: user.bio == null || user.bio!.isEmpty
-                                    ? null
-                                    : Text(
-                                        user.bio!,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                trailing: CompatibilityBadge(
-                                  score: user.compatibilityScore,
-                                  commonMovieCount: user.commonMovieCount,
-                                ),
-                                onTap: () =>
-                                    context.push('/profile/${user.id}'),
-                              );
-                            },
-                          ),
-                  ),
         ),
       ],
     );

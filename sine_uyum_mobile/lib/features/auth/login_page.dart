@@ -36,7 +36,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     });
 
     try {
-      await ref.read(sessionProvider.notifier).login(
+      await ref
+          .read(sessionProvider.notifier)
+          .login(
             username: _usernameController.text.trim(),
             password: _passwordController.text,
           );
@@ -90,8 +92,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       ),
                       validator: (value) =>
                           (value == null || value.trim().isEmpty)
-                              ? 'Kullanıcı adı zorunludur.'
-                              : null,
+                          ? 'Kullanıcı adı zorunludur.'
+                          : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -104,9 +106,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         labelText: 'Şifre',
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
-                          icon: Icon(_obscurePassword
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined),
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
                           onPressed: () => setState(
                             () => _obscurePassword = !_obscurePassword,
                           ),

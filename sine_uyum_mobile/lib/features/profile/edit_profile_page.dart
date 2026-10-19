@@ -23,8 +23,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     super.initState();
     final user = ref.read(sessionProvider).user;
     _bioController = TextEditingController(text: user?.bio ?? '');
-    _imageUrlController =
-        TextEditingController(text: user?.profileImageUrl ?? '');
+    _imageUrlController = TextEditingController(
+      text: user?.profileImageUrl ?? '',
+    );
   }
 
   @override
@@ -39,7 +40,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
     setState(() => _isSubmitting = true);
     try {
-      await ref.read(socialRepositoryProvider).updateProfile(
+      await ref
+          .read(socialRepositoryProvider)
+          .updateProfile(
             bio: _bioController.text.trim(),
             profileImageUrl: _imageUrlController.text.trim(),
           );
@@ -50,9 +53,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       if (userId != null) ref.invalidate(userProfileProvider(userId));
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profil güncellendi.')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Profil güncellendi.')));
       Navigator.of(context).pop();
     } catch (error) {
       if (!mounted) return;

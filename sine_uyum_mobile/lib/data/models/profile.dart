@@ -24,9 +24,11 @@ class UserProfile {
       userName: json['userName'] as String? ?? '',
       bio: json['bio'] as String?,
       profileImageUrl: json['profileImageUrl'] as String?,
-      ratings: (json['ratings'] as List?)
-              ?.map((e) =>
-                  RatedMovie.fromJson((e as Map).cast<String, dynamic>()))
+      ratings:
+          (json['ratings'] as List?)
+              ?.map(
+                (e) => RatedMovie.fromJson((e as Map).cast<String, dynamic>()),
+              )
               .toList() ??
           const [],
       statistics: ProfileStatistics.fromJson(
@@ -55,9 +57,11 @@ class ProfileStatistics {
       averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0,
       totalMoviesInWatchlists:
           (json['totalMoviesInWatchlists'] as num?)?.toInt() ?? 0,
-      topRatedMovies: (json['topRatedMovies'] as List?)
-              ?.map((e) =>
-                  RatedMovie.fromJson((e as Map).cast<String, dynamic>()))
+      topRatedMovies:
+          (json['topRatedMovies'] as List?)
+              ?.map(
+                (e) => RatedMovie.fromJson((e as Map).cast<String, dynamic>()),
+              )
               .toList() ??
           const [],
     );
@@ -78,12 +82,13 @@ class CompatibilityResult {
 
   factory CompatibilityResult.fromJson(Map<String, dynamic> json) {
     return CompatibilityResult(
-      compatibilityScore:
-          (json['compatibilityScore'] as num?)?.toDouble() ?? 0,
+      compatibilityScore: (json['compatibilityScore'] as num?)?.toDouble() ?? 0,
       commonMovieCount: (json['commonMovieCount'] as num?)?.toInt() ?? 0,
-      commonMovies: (json['commonMovies'] as List?)
-              ?.map((e) =>
-                  CommonMovie.fromJson((e as Map).cast<String, dynamic>()))
+      commonMovies:
+          (json['commonMovies'] as List?)
+              ?.map(
+                (e) => CommonMovie.fromJson((e as Map).cast<String, dynamic>()),
+              )
               .toList() ??
           const [],
     );

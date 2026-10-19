@@ -110,9 +110,7 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
 
     setState(() => _isBusy = true);
     try {
-      await ref
-          .read(watchlistRepositoryProvider)
-          .addMovie(selected.id, _movie);
+      await ref.read(watchlistRepositoryProvider).addMovie(selected.id, _movie);
       ref.invalidate(myWatchlistsProvider);
       ref.invalidate(watchlistDetailProvider(selected.id));
       _showMessage('"${selected.name}" listesine eklendi.');
@@ -133,11 +131,7 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            PosterImage(
-              posterPath: _movie.posterPath,
-              width: 120,
-              height: 180,
-            ),
+            PosterImage(posterPath: _movie.posterPath, width: 120, height: 180),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -148,8 +142,10 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
                   if (_movie.year != null)
                     Text(_movie.year!, style: theme.textTheme.bodySmall),
                   if (_movie.runtime != null)
-                    Text('${_movie.runtime} dakika',
-                        style: theme.textTheme.bodySmall),
+                    Text(
+                      '${_movie.runtime} dakika',
+                      style: theme.textTheme.bodySmall,
+                    ),
                   if (_movie.voteAverage != null) ...[
                     const SizedBox(height: 8),
                     Row(
@@ -157,10 +153,7 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
                         const Icon(Icons.star, size: 16, color: Colors.amber),
                         const SizedBox(width: 4),
                         Text(_movie.voteAverage!.toStringAsFixed(1)),
-                        Text(
-                          ' / 10 (TMDb)',
-                          style: theme.textTheme.bodySmall,
-                        ),
+                        Text(' / 10 (TMDb)', style: theme.textTheme.bodySmall),
                       ],
                     ),
                   ],

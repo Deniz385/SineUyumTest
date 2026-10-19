@@ -16,7 +16,9 @@ class MovieRepository {
   }
 
   Future<Movie> detail(int movieId) async {
-    final data = await _client.get<Map<String, dynamic>>('/api/movies/$movieId');
+    final data = await _client.get<Map<String, dynamic>>(
+      '/api/movies/$movieId',
+    );
     return Movie.fromJson(data);
   }
 

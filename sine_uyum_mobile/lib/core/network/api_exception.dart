@@ -74,8 +74,10 @@ class ApiException implements Exception {
 
     if (data is List) {
       final messages = data
-          .map((item) =>
-              item is Map ? (item['description'] ?? item['message']) : item)
+          .map(
+            (item) =>
+                item is Map ? (item['description'] ?? item['message']) : item,
+          )
           .whereType<String>()
           .where((value) => value.isNotEmpty);
       if (messages.isNotEmpty) return messages.join('\n');

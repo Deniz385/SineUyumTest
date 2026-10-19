@@ -15,22 +15,20 @@ import 'api_exception.dart';
 ///  * Yenileme de başarısızsa oturumu kapatmak
 class ApiClient {
   ApiClient(this._tokenStorage, {Dio? dio})
-      : _dio = dio ??
-            Dio(
-              BaseOptions(
-                baseUrl: AppConfig.apiUrl,
-                connectTimeout: const Duration(seconds: 15),
-                receiveTimeout: const Duration(seconds: 20),
-                headers: {'Accept': 'application/json'},
-                // Hata kodlarını da yanıt olarak alıp kendimiz yorumluyoruz.
-                validateStatus: (status) => status != null && status < 400,
-              ),
-            ) {
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              baseUrl: AppConfig.apiUrl,
+              connectTimeout: const Duration(seconds: 15),
+              receiveTimeout: const Duration(seconds: 20),
+              headers: {'Accept': 'application/json'},
+              // Hata kodlarını da yanıt olarak alıp kendimiz yorumluyoruz.
+              validateStatus: (status) => status != null && status < 400,
+            ),
+          ) {
     _dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: _onRequest,
-        onError: _onError,
-      ),
+      InterceptorsWrapper(onRequest: _onRequest, onError: _onError),
     );
   }
 

@@ -59,7 +59,7 @@ export const ProfilePage = () => {
             if (compatibilityRes) {
                 setCompatibility(compatibilityRes.data);
             }
-        } catch (err) {
+        } catch {
             setError("Profil bilgileri yüklenirken bir hata oluştu.");
         } finally {
             setIsLoading(false);
@@ -94,7 +94,7 @@ export const ProfilePage = () => {
         try {
             const response = await api.get(`/api/compatibility/${userId}/recommendations`);
             setRecommendations(response.data);
-        } catch (err) {
+        } catch {
             setRecommendations([]);
         } finally {
             setIsRecsLoading(false);

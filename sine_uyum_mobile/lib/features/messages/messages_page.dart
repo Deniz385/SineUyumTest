@@ -90,7 +90,9 @@ String _formatTimestamp(DateTime timestamp) {
   final local = timestamp.toLocal();
   final now = DateTime.now();
 
-  if (local.year == now.year && local.month == now.month && local.day == now.day) {
+  if (local.year == now.year &&
+      local.month == now.month &&
+      local.day == now.day) {
     return DateFormat.Hm('tr').format(local);
   }
   if (local.year == now.year) {

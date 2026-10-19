@@ -24,6 +24,11 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Context dosyaları hem provider bileşenini hem de kendi hook'unu
+      // (useAuth, useSnackbar vb.) export ediyor. Bu yaygın bir React
+      // kalıbı; yalnızca hot reload'ın o dosyada tam yenileme yapmasına
+      // yol açar, bir hata değil. CI'ı bloke etmemesi için uyarı seviyesinde.
+      'react-refresh/only-export-components': 'warn',
     },
   },
 ])

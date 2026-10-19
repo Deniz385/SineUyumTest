@@ -7,7 +7,9 @@ class EventRepository {
   final ApiClient _client;
 
   Future<EventState> myStatus() async {
-    final data = await _client.get<Map<String, dynamic>>('/api/event/my-status');
+    final data = await _client.get<Map<String, dynamic>>(
+      '/api/event/my-status',
+    );
     return EventState.fromJson(data);
   }
 

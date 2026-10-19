@@ -124,7 +124,7 @@ export const MyEventPage = () => {
                 movieId: movieId 
             });
             fetchEventStatus();
-        } catch (err) {
+        } catch {
             alert("Oyunuz kaydedilirken bir sorun oluştu.");
         }
     };

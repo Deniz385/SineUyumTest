@@ -39,7 +39,7 @@ export const MovieDetailPage = () => {
         try {
             const response = await api.get(`/api/movies/${movieId}`);
             setMovie(response.data);
-        } catch (err) {
+        } catch {
             setError('Film detayları yüklenirken bir hata oluştu.');
         } finally {
             setIsLoading(false);
@@ -56,7 +56,7 @@ export const MovieDetailPage = () => {
             const response = await api.get(`/api/watchlist`);
             // $values kontrolü eklendi
             setUserLists(response.data.$values || response.data);
-        } catch (err) {
+        } catch {
             showSnackbar('Listeleriniz yüklenemedi.', 'error');
         }
     };
@@ -86,7 +86,7 @@ export const MovieDetailPage = () => {
             });
             showSnackbar(`'${movieToRate.title}' filmine ${rating} puan verdiniz!`, 'success');
             setRefetchTrigger(prev => prev + 1);
-        } catch (error) {
+        } catch {
             showSnackbar('Puan kaydedilirken bir hata oluştu.', 'error');
         }
     };

@@ -8,7 +8,10 @@ void main() {
     });
 
     test('mesaj rotasını sohbet ekranına çevirir', () {
-      expect(notificationRouteFor('/messages/user-42'), '/conversation/user-42');
+      expect(
+        notificationRouteFor('/messages/user-42'),
+        '/conversation/user-42',
+      );
     });
 
     test('kullanıcı id taşımayan mesaj rotası listeye gider', () {

@@ -9,13 +9,15 @@ using SineUyum.Api.Data;
 
 namespace SineUyum.Api.Tests;
 
-// API'yi bellekte ayağa kaldırır; gerçek SQLite dosyası yerine açık tutulan
-// bir in-memory bağlantı kullanır, böylece her test sınıfı izole ve hızlı çalışır.
+// API'yi bellekte ayağa kaldırır; her fabrika kendi geçici SQLite dosyasını
+// kullanır, böylece her test sınıfı izole çalışır.
 public class TestWebAppFactory : WebApplicationFactory<Program>
 {
-    // :memory: veritabanı yalnızca bağlantı açık kaldığı sürece yaşar; bu yüzden
-    // bağlantıyı fabrika ömrü boyunca elimizde tutuyoruz.
-    private readonly SqliteConnection _connection = new("DataSource=:memory:");
+    // Tek bir paylaşılan :memory: bağlantısı yerine dosya: arka plan servisleri
+    // (ör. PushDispatchService) istekle eşzamanlı kendi DbContext'ini açtığında
+    // her context kendi bağlantısını alır ve SQLite'ın normal kilit/bekleme
+    // davranışı geçerli olur — üretimdeki gibi.
+    private readonly string _dbPath = Path.Combine(Path.GetTempPath(), "sineuyum-test-" + Guid.NewGuid().ToString("N") + ".db");
 
     // Her fabrika kendi medya klasörünü kullanır (yüklenen fotoğraflar).
     public string MediaRoot { get; } = Path.Combine(Path.GetTempPath(), "sineuyum-media-" + Guid.NewGuid().ToString("N"));
@@ -46,7 +48,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
         // İsteğe bağlı: tüm paketi gerçek PostgreSQL'e karşı (migration'larla)
         // koşmak için TEST_POSTGRES_CONNECTION verin, ör.
         //   TEST_POSTGRES_CONNECTION="Host=localhost;Username=postgres;Password=..." dotnet test
-        // Her fabrika kendi veritabanını oluşturur. Verilmezse in-memory SQLite.
+        // Her fabrika kendi veritabanını oluşturur. Verilmezse geçici SQLite dosyası.
         var postgres = Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNECTION");
         if (!string.IsNullOrWhiteSpace(postgres))
         {
@@ -67,9 +69,8 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
                 return;
             }
 
-            _connection.Open();
             services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlite(_connection));
+                options.UseSqlite($"Data Source={_dbPath}"));
         });
     }
 
@@ -78,7 +79,11 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
         base.Dispose(disposing);
         if (disposing)
         {
-            _connection.Dispose();
+            SqliteConnection.ClearAllPools();
+            foreach (var suffix in new[] { "", "-journal", "-wal", "-shm" })
+            {
+                try { File.Delete(_dbPath + suffix); } catch (IOException) { }
+            }
             try { Directory.Delete(MediaRoot, recursive: true); } catch (IOException) { }
         }
     }

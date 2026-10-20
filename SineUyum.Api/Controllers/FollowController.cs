@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SineUyum.Api.Dtos;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
@@ -24,7 +25,7 @@ namespace SineUyum.Api.Controllers
         }
 
         [HttpPost("{userIdToFollow}")]
-        public async Task<IActionResult> Follow(string userIdToFollow)
+        public async Task<ActionResult<StatusMessageDto>> Follow(string userIdToFollow)
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (currentUserId == null) return Unauthorized();
@@ -62,16 +63,16 @@ namespace SineUyum.Api.Controllers
 
             await _context.SaveChangesAsync();
             
-            // SignalR ile anlık bildirimi gönder
-            await _hubContext.Clients.User(userIdToFollow).SendAsync("ReceiveNotification", notification);
+            // SignalR ile anlık bildirimi gönder (varlık değil, REST ile aynı DTO).
+            await _hubContext.Clients.User(userIdToFollow).SendAsync("ReceiveNotification", NotificationDto.From(notification));
 
-            return Ok(new { message = "Kullanıcı başarıyla takip edildi." });
+            return Ok(new StatusMessageDto("Kullanıcı başarıyla takip edildi."));
         }
 
         // ... Diğer metodlar (Unfollow, GetFollowStatus, GetFollowers, GetFollowing) aynı kalacak ...
         // DELETE: api/follow/{userIdToUnfollow}
         [HttpDelete("{userIdToUnfollow}")]
-        public async Task<IActionResult> Unfollow(string userIdToUnfollow)
+        public async Task<ActionResult<StatusMessageDto>> Unfollow(string userIdToUnfollow)
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (currentUserId == null) return Unauthorized();
@@ -87,12 +88,12 @@ namespace SineUyum.Api.Controllers
             _context.UserFollows.Remove(follow);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Kullanıcı takipten çıkarıldı." });
+            return Ok(new StatusMessageDto("Kullanıcı takipten çıkarıldı."));
         }
 
         // GET: api/follow/{userId}/status
         [HttpGet("{userId}/status")]
-        public async Task<IActionResult> GetFollowStatus(string userId)
+        public async Task<ActionResult<FollowStatusDto>> GetFollowStatus(string userId)
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (currentUserId == null) return Unauthorized();
@@ -103,17 +104,16 @@ namespace SineUyum.Api.Controllers
             var followerCount = await _context.UserFollows.CountAsync(f => f.FollowingId == userId);
             var followingCount = await _context.UserFollows.CountAsync(f => f.FollowerId == userId);
 
-            return Ok(new { isFollowing, followerCount, followingCount });
+            return Ok(new FollowStatusDto { IsFollowing = isFollowing, FollowerCount = followerCount, FollowingCount = followingCount });
         }
 
         // --- YENİ EKLENEN METOT: Takipçileri Getir ---
         [HttpGet("{userId}/followers")]
-        public async Task<IActionResult> GetFollowers(string userId)
+        public async Task<ActionResult<List<UserBriefDto>>> GetFollowers(string userId)
         {
             var followers = await _context.UserFollows
                 .Where(f => f.FollowingId == userId)
-                .Include(f => f.Follower) // Takip eden kullanıcının bilgilerini de al
-                .Select(f => new { f.Follower.Id, f.Follower.UserName })
+                .Select(f => new UserBriefDto { Id = f.Follower.Id, UserName = f.Follower.UserName })
                 .ToListAsync();
             
             return Ok(followers);
@@ -121,12 +121,11 @@ namespace SineUyum.Api.Controllers
 
         // --- YENİ EKLENEN METOT: Takip Edilenleri Getir ---
         [HttpGet("{userId}/following")]
-        public async Task<IActionResult> GetFollowing(string userId)
+        public async Task<ActionResult<List<UserBriefDto>>> GetFollowing(string userId)
         {
             var following = await _context.UserFollows
                 .Where(f => f.FollowerId == userId)
-                .Include(f => f.Following) // Takip edilen kullanıcının bilgilerini de al
-                .Select(f => new { f.Following.Id, f.Following.UserName })
+                .Select(f => new UserBriefDto { Id = f.Following.Id, UserName = f.Following.UserName })
                 .ToListAsync();
 
             return Ok(following);

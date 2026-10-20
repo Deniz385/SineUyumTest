@@ -2,10 +2,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
-using SineUyum.Api.Dtos; // <-- HATA GİDERİLDİ: EKSİK OLAN SATIR BUYDU
+using SineUyum.Api.Dtos;
 using SineUyum.Api.Models;
+using SineUyum.Api.Services;
 using System.Security.Claims;
-using System.ComponentModel.DataAnnotations;
 
 namespace SineUyum.Api.Controllers
 {
@@ -15,21 +15,29 @@ namespace SineUyum.Api.Controllers
     public class WatchlistController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly MovieCatalogService _movieCatalog;
 
-        public WatchlistController(ApplicationDbContext context)
+        public WatchlistController(ApplicationDbContext context, MovieCatalogService movieCatalog)
         {
             _context = context;
+            _movieCatalog = movieCatalog;
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetUserWatchlists()
+        public async Task<ActionResult<List<WatchlistSummaryDto>>> GetUserWatchlists()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
 
             var watchlists = await _context.Watchlists
                 .Where(w => w.UserId == userId)
-                .Select(w => new { w.Id, w.Name, w.Description, ItemCount = w.Items.Count() })
+                .Select(w => new WatchlistSummaryDto
+                {
+                    Id = w.Id,
+                    Name = w.Name,
+                    Description = w.Description,
+                    ItemCount = w.Items.Count()
+                })
                 .OrderBy(w => w.Name)
                 .ToListAsync();
 
@@ -37,24 +45,25 @@ namespace SineUyum.Api.Controllers
         }
 
         [HttpGet("public/{listId}")]
-        public async Task<IActionResult> GetPublicWatchlistDetails(int listId)
+        public async Task<ActionResult<PublicWatchlistDto>> GetPublicWatchlistDetails(int listId)
         {
             var watchlist = await _context.Watchlists
-                .Include(w => w.User)
                 .Where(w => w.Id == listId)
-                .Select(w => new
+                .Select(w => new PublicWatchlistDto
                 {
-                    w.Id,
-                    w.Name,
-                    w.Description,
+                    Id = w.Id,
+                    Name = w.Name,
+                    Description = w.Description,
                     OwnerUsername = w.User.UserName,
-                    Items = w.Items.Select(i => new
-                    {
-                        i.MovieId,
-                        i.Movie.Title,
-                        i.Movie.PosterPath,
-                        i.AddedAt
-                    }).OrderByDescending(i => i.AddedAt).ToList()
+                    Items = w.Items
+                        .OrderByDescending(i => i.AddedAt)
+                        .Select(i => new WatchlistItemDto
+                        {
+                            MovieId = i.MovieId,
+                            Title = i.Movie.Title,
+                            PosterPath = i.Movie.PosterPath,
+                            AddedAt = i.AddedAt
+                        }).ToList()
                 })
                 .FirstOrDefaultAsync();
 
@@ -67,25 +76,27 @@ namespace SineUyum.Api.Controllers
         }
         
         [HttpGet("{listId}")]
-        public async Task<IActionResult> GetWatchlistDetails(int listId)
+        public async Task<ActionResult<WatchlistDetailDto>> GetWatchlistDetails(int listId)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
 
             var watchlist = await _context.Watchlists
                 .Where(w => w.Id == listId && w.UserId == userId)
-                .Select(w => new
+                .Select(w => new WatchlistDetailDto
                 {
-                    w.Id,
-                    w.Name,
-                    w.Description,
-                    Items = w.Items.Select(i => new
-                    {
-                        i.MovieId,
-                        i.Movie.Title,
-                        i.Movie.PosterPath,
-                        i.AddedAt
-                    }).OrderByDescending(i => i.AddedAt).ToList()
+                    Id = w.Id,
+                    Name = w.Name,
+                    Description = w.Description,
+                    Items = w.Items
+                        .OrderByDescending(i => i.AddedAt)
+                        .Select(i => new WatchlistItemDto
+                        {
+                            MovieId = i.MovieId,
+                            Title = i.Movie.Title,
+                            PosterPath = i.Movie.PosterPath,
+                            AddedAt = i.AddedAt
+                        }).ToList()
                 })
                 .FirstOrDefaultAsync();
 
@@ -98,7 +109,7 @@ namespace SineUyum.Api.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateWatchlist([FromBody] CreateWatchlistDto dto)
+        public async Task<ActionResult<WatchlistDetailDto>> CreateWatchlist([FromBody] CreateWatchlistDto dto)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
@@ -113,11 +124,17 @@ namespace SineUyum.Api.Controllers
             _context.Watchlists.Add(watchlist);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetWatchlistDetails), new { listId = watchlist.Id }, watchlist);
+            // Varlık doğrudan dönülmez (UserId ve boş User navigasyonu sızıyordu).
+            return CreatedAtAction(nameof(GetWatchlistDetails), new { listId = watchlist.Id }, new WatchlistDetailDto
+            {
+                Id = watchlist.Id,
+                Name = watchlist.Name,
+                Description = watchlist.Description
+            });
         }
         
         [HttpPut("{listId}")]
-        public async Task<IActionResult> UpdateWatchlist(int listId, [FromBody] CreateWatchlistDto dto)
+        public async Task<ActionResult<StatusMessageDto>> UpdateWatchlist(int listId, [FromBody] CreateWatchlistDto dto)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
@@ -135,11 +152,11 @@ namespace SineUyum.Api.Controllers
             _context.Watchlists.Update(watchlist);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Liste başarıyla güncellendi." });
+            return Ok(new StatusMessageDto("Liste başarıyla güncellendi."));
         }
 
         [HttpDelete("{listId}")]
-        public async Task<IActionResult> DeleteWatchlist(int listId)
+        public async Task<ActionResult<StatusMessageDto>> DeleteWatchlist(int listId)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
@@ -154,11 +171,11 @@ namespace SineUyum.Api.Controllers
             _context.Watchlists.Remove(watchlist);
             await _context.SaveChangesAsync();
             
-            return Ok(new { message = "Liste başarıyla silindi." });
+            return Ok(new StatusMessageDto("Liste başarıyla silindi."));
         }
 
         [HttpPost("{listId}/movies")]
-        public async Task<IActionResult> AddMovieToWatchlist(int listId, [FromBody] AddWatchlistItemDto dto)
+        public async Task<ActionResult<StatusMessageDto>> AddMovieToWatchlist(int listId, [FromBody] AddWatchlistItemDto dto)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
@@ -167,17 +184,15 @@ namespace SineUyum.Api.Controllers
             {
                 return NotFound("Liste bulunamadı veya bu listeye erişim yetkiniz yok.");
             }
-            var movie = await _context.Movies.FindAsync(dto.MovieId);
-            if (movie == null)
-            {
-                movie = new Movie { Id = dto.MovieId, Title = dto.Title, PosterPath = dto.PosterPath };
-                _context.Movies.Add(movie);
-            }
             var alreadyInList = await _context.WatchlistItems.AnyAsync(i => i.WatchlistId == listId && i.MovieId == dto.MovieId);
             if (alreadyInList)
             {
-                return BadRequest(new { message = "Bu film zaten bu listede mevcut." });
+                return BadRequest(new StatusMessageDto("Bu film zaten bu listede mevcut."));
             }
+            // Film yerelde yoksa başlık/poster TMDb'den çekilir; istemcinin
+            // gönderdiği Title/PosterPath paylaşılan Movies tablosuna yazılmaz
+            // (G7'deki over-posting açığının izleme listesi tarafı).
+            await _movieCatalog.EnsureMovieAsync(dto.MovieId);
             var watchlistItem = new WatchlistItem
             {
                 WatchlistId = listId,
@@ -185,11 +200,11 @@ namespace SineUyum.Api.Controllers
             };
             _context.WatchlistItems.Add(watchlistItem);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Film listeye eklendi." });
+            return Ok(new StatusMessageDto("Film listeye eklendi."));
         }
 
         [HttpDelete("{listId}/movies/{movieId}")]
-        public async Task<IActionResult> RemoveMovieFromWatchlist(int listId, int movieId)
+        public async Task<ActionResult<StatusMessageDto>> RemoveMovieFromWatchlist(int listId, int movieId)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
@@ -202,7 +217,7 @@ namespace SineUyum.Api.Controllers
             }
             _context.WatchlistItems.Remove(watchlistItem);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Film listeden kaldırıldı." });
+            return Ok(new StatusMessageDto("Film listeden kaldırıldı."));
         }
     }
 }

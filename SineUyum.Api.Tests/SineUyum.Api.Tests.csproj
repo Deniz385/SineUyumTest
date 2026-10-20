@@ -29,4 +29,9 @@
     <ProjectReference Include="../SineUyum.Api/SineUyum.Api.csproj" />
   </ItemGroup>
 
+  <!-- API sözleşme testinin altın dosyası (ResponseContractTests) çıktıya kopyalanır. -->
+  <ItemGroup>
+    <None Include="Contracts\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

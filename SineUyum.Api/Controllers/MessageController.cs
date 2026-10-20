@@ -26,7 +26,7 @@ namespace SineUyum.Api.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateMessage(CreateMessageDto createMessageDto)
+        public async Task<ActionResult<StatusMessageDto>> CreateMessage(CreateMessageDto createMessageDto)
         {
             var senderId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (senderId == null) return Unauthorized();
@@ -73,16 +73,20 @@ namespace SineUyum.Api.Controllers
 
             await _context.SaveChangesAsync();
             
-            // SignalR ile anlık bildirimi gönder
-            await _hubContext.Clients.User(createMessageDto.RecipientId).SendAsync("ReceiveNotification", notification);
+            // SignalR ile anlık bildirimi gönder. Varlık değil DTO itilir: alıcı
+            // yukarıda izlenen (tracked) olarak yüklendiği için EF,
+            // notification.User'ı doldurur ve varlık serileştirilince alıcının
+            // PasswordHash/SecurityStamp/e-postası istemciye gidiyordu.
+            await _hubContext.Clients.User(createMessageDto.RecipientId)
+                .SendAsync("ReceiveNotification", NotificationDto.From(notification));
 
-            return Ok(new { message = "Mesaj başarıyla gönderildi." });
+            return Ok(new StatusMessageDto("Mesaj başarıyla gönderildi."));
         }
 
         // Mobil istemcinin sınırsız veri indirmemesi için sayfalama eklendi.
         // page/pageSize verilmezse en güncel sayfa döner (varsayılan 100 mesaj).
         [HttpGet("thread/{otherUserId}")]
-        public async Task<IActionResult> GetMessageThread(
+        public async Task<ActionResult<List<MessageThreadItemDto>>> GetMessageThread(
             string otherUserId,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 100)
@@ -104,21 +108,23 @@ namespace SineUyum.Api.Controllers
                 .OrderByDescending(m => m.MessageSent)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(m => new
+                .Select(m => new MessageThreadItemDto
                 {
-                    m.Id,
-                    m.SenderId,
+                    Id = m.Id,
+                    SenderId = m.SenderId,
                     SenderUsername = m.Sender.UserName,
-                    m.RecipientId,
+                    RecipientId = m.RecipientId,
                     RecipientUsername = m.Recipient.UserName,
-                    m.Content,
-                    m.MessageSent,
-                    Movie = m.Movie == null ? null : new {
+                    Content = m.Content,
+                    MessageSent = m.MessageSent,
+                    Movie = m.Movie == null ? null : new MovieSummaryDto
+                    {
                         Id = m.Movie.Id,
                         Title = m.Movie.Title,
                         PosterPath = m.Movie.PosterPath
                     },
-                    Watchlist = m.Watchlist == null ? null : new {
+                    Watchlist = m.Watchlist == null ? null : new SharedWatchlistDto
+                    {
                         Id = m.Watchlist.Id,
                         Name = m.Watchlist.Name,
                         OwnerUsername = m.Watchlist.User == null ? null : m.Watchlist.User.UserName
@@ -136,7 +142,7 @@ namespace SineUyum.Api.Controllers
         // hiçbir yerde set edilmiyordu, bu yüzden "okundu" göstergesi her zaman
         // yanlış çalışıyordu.
         [HttpPost("thread/{otherUserId}/mark-as-read")]
-        public async Task<IActionResult> MarkThreadAsRead(string otherUserId)
+        public async Task<ActionResult<MarkedAsReadDto>> MarkThreadAsRead(string otherUserId)
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (currentUserId == null) return Unauthorized();
@@ -155,11 +161,11 @@ namespace SineUyum.Api.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            return Ok(new { markedAsRead = unread.Count });
+            return Ok(new MarkedAsReadDto { MarkedAsRead = unread.Count });
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetConversations(
+        public async Task<ActionResult<List<ConversationDto>>> GetConversations(
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 30)
         {
@@ -184,7 +190,7 @@ namespace SineUyum.Api.Controllers
 
             if (pagedPartners.Count == 0)
             {
-                return Ok(Array.Empty<object>());
+                return Ok(new List<ConversationDto>());
             }
 
             // Yalnızca bu sayfadaki sohbetlerin son mesajlarını çek (ilişkileriyle).
@@ -200,7 +206,7 @@ namespace SineUyum.Api.Controllers
                     (partnerIds.Contains(m.SenderId) || partnerIds.Contains(m.RecipientId)))
                 .ToListAsync();
 
-            var conversations = new List<object>(pagedPartners.Count);
+            var conversations = new List<ConversationDto>(pagedPartners.Count);
             foreach (var partner in pagedPartners)
             {
                 // Bu partnerle, son gönderim zamanına denk gelen mesaj.
@@ -223,7 +229,7 @@ namespace SineUyum.Api.Controllers
                     lastMessageContent = lastMessage.Content;
                 }
 
-                conversations.Add(new
+                conversations.Add(new ConversationDto
                 {
                     OtherUserId = otherUser.Id,
                     OtherUserUsername = otherUser.UserName,

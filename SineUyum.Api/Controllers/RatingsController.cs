@@ -18,7 +18,7 @@ namespace SineUyum.Api.Controllers
         private readonly MovieCatalogService _movieCatalog = movieCatalog;
 
         [HttpPost]
-        public async Task<IActionResult> AddRating(CreateRatingDto createRatingDto)
+        public async Task<ActionResult<StatusMessageDto>> AddRating(CreateRatingDto createRatingDto)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -52,7 +52,7 @@ namespace SineUyum.Api.Controllers
             }
 
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Puan başarıyla kaydedildi." });
+            return Ok(new StatusMessageDto("Puan başarıyla kaydedildi."));
         }
         
         // Geriye dönük uyumluluk: istemciler puanlamadan önce bu ucu çağırıyor.
@@ -60,10 +60,10 @@ namespace SineUyum.Api.Controllers
         // film TMDb'den çekilip eklenir (over-posting kapatıldı). AddRating zaten
         // aynı işi yaptığı için bu çağrı opsiyoneldir.
         [HttpPost("addmovie")]
-        public async Task<IActionResult> AddMovie([FromBody] AddMovieDto dto)
+        public async Task<ActionResult<MovieSummaryDto>> AddMovie([FromBody] AddMovieDto dto)
         {
             var movie = await _movieCatalog.EnsureMovieAsync(dto.MovieId);
-            return Ok(new { movie.Id, movie.Title, movie.PosterPath });
+            return Ok(new MovieSummaryDto { Id = movie.Id, Title = movie.Title, PosterPath = movie.PosterPath });
         }
     }
 }

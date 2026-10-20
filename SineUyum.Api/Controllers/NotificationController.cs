@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
+using SineUyum.Api.Dtos;
 using System.Security.Claims;
 
 namespace SineUyum.Api.Controllers
@@ -20,7 +21,7 @@ namespace SineUyum.Api.Controllers
 
         // DÜZELTME 1: Bu metot artık sadece okunmamışları değil, tüm bildirimleri getirir.
         [HttpGet]
-        public async Task<IActionResult> GetNotifications()
+        public async Task<ActionResult<List<NotificationDto>>> GetNotifications()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
@@ -29,6 +30,14 @@ namespace SineUyum.Api.Controllers
                 .Where(n => n.UserId == userId) // "&& !n.IsRead" kaldırıldı
                 .OrderByDescending(n => n.CreatedAt)
                 .Take(50) // Çok fazla bildirim olmasını önlemek için bir limit eklemek iyi bir pratik.
+                .Select(n => new NotificationDto
+                {
+                    Id = n.Id,
+                    Message = n.Message,
+                    RelatedUrl = n.RelatedUrl,
+                    IsRead = n.IsRead,
+                    CreatedAt = n.CreatedAt
+                })
                 .ToListAsync();
 
             return Ok(notifications);
@@ -36,7 +45,7 @@ namespace SineUyum.Api.Controllers
 
         // DÜZELTME 2: Frontend'in beklediği doğru rota ("mark-all-as-read") eklendi.
         [HttpPost("mark-all-as-read")]
-        public async Task<IActionResult> MarkAllAsRead()
+        public async Task<ActionResult<StatusMessageDto>> MarkAllAsRead()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
@@ -54,12 +63,12 @@ namespace SineUyum.Api.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            return Ok(new { message = "Tüm bildirimler okundu olarak işaretlendi." });
+            return Ok(new StatusMessageDto("Tüm bildirimler okundu olarak işaretlendi."));
         }
 
         // YENİ EKLENEN METOT: Tek bir bildirimi okundu olarak işaretlemek için.
         [HttpPost("{notificationId}/mark-as-read")]
-        public async Task<IActionResult> MarkAsRead(int notificationId)
+        public async Task<ActionResult<StatusMessageDto>> MarkAsRead(int notificationId)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
@@ -78,7 +87,7 @@ namespace SineUyum.Api.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            return Ok(new { message = "Bildirim okundu olarak işaretlendi." });
+            return Ok(new StatusMessageDto("Bildirim okundu olarak işaretlendi."));
         }
     }
 }

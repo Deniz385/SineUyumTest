@@ -1,0 +1,466 @@
+## app.config  GET /api/v1/app/config -> 200
+  $: object
+  latestVersion: string
+  maintenanceMessage: null
+  maintenanceMode: bool
+  minimumSupportedVersion: string
+  tmdbImageBaseUrl: string
+
+## account.register  POST /api/v1/account/register -> 200
+  $: object
+  message: string
+
+## account.register(b)  POST /api/v1/account/register -> 200
+  $: object
+  message: string
+
+## account.login  POST /api/v1/account/login -> 200
+  $: object
+  expiresAt: string
+  refreshToken: string
+  token: string
+  user.bio: null
+  user.email: string
+  user.id: string
+  user.isSubscribed: bool
+  user.profileImageUrl: null
+  user.roles: array
+  user.roles[]: string
+  user.subscriptionExpires: null
+  user.userName: string
+  user: object
+
+## account.login(b)  POST /api/v1/account/login -> 200
+  $: object
+  expiresAt: string
+  refreshToken: string
+  token: string
+  user.bio: null
+  user.email: string
+  user.id: string
+  user.isSubscribed: bool
+  user.profileImageUrl: null
+  user.roles: array
+  user.roles[]: string
+  user.subscriptionExpires: null
+  user.userName: string
+  user: object
+
+## account.refresh  POST /api/v1/account/refresh -> 200
+  $: object
+  expiresAt: string
+  refreshToken: string
+  token: string
+  user.bio: null
+  user.email: string
+  user.id: string
+  user.isSubscribed: bool
+  user.profileImageUrl: null
+  user.roles: array
+  user.roles[]: string
+  user.subscriptionExpires: null
+  user.userName: string
+  user: object
+
+## account.me  GET /api/v1/account/me -> 200
+  $: object
+  bio: null
+  email: string
+  id: string
+  isSubscribed: bool
+  profileImageUrl: null
+  roles: array
+  roles[]: string
+  subscriptionExpires: null
+  userName: string
+
+## ratings.add  POST /api/v1/ratings -> 200
+  $: object
+  message: string
+
+## ratings.add(b)  POST /api/v1/ratings -> 200
+  $: object
+  message: string
+
+## ratings.addmovie  POST /api/v1/ratings/addmovie -> 200
+  $: object
+  id: number
+  posterPath: string
+  title: string
+
+## account.search  GET /api/v1/account/search -> 200
+  $: array
+  [].bio: null
+  [].commonMovieCount: number
+  [].compatibilityScore: number
+  [].id: string
+  [].profileImageUrl: null
+  [].userName: string
+  []: object
+
+## compatibility.get  GET /api/v1/compatibility/{id} -> 200
+  $: object
+  commonMovieCount: number
+  commonMovies: array
+  commonMovies[].currentUserRating: number
+  commonMovies[].movieId: number
+  commonMovies[].posterPath: string
+  commonMovies[].targetUserRating: number
+  commonMovies[].title: string
+  commonMovies[]: object
+  compatibilityScore: number
+
+## follow.follow  POST /api/v1/follow/{id} -> 200
+  $: object
+  message: string
+
+## follow.status  GET /api/v1/follow/{id}/status -> 200
+  $: object
+  followerCount: number
+  followingCount: number
+  isFollowing: bool
+
+## follow.followers  GET /api/v1/follow/{id}/followers -> 200
+  $: array
+  [].id: string
+  [].userName: string
+  []: object
+
+## follow.following  GET /api/v1/follow/{id}/following -> 200
+  $: array
+  [].id: string
+  [].userName: string
+  []: object
+
+## watchlist.create  POST /api/v1/watchlist -> 201
+  $: object
+  description: string
+  id: number
+  items: array
+  name: string
+
+## watchlist.list  GET /api/v1/watchlist -> 200
+  $: array
+  [].description: string
+  [].id: number
+  [].itemCount: number
+  [].name: string
+  []: object
+
+## watchlist.addMovie  POST /api/v1/watchlist/{id}/movies -> 200
+  $: object
+  message: string
+
+## watchlist.details  GET /api/v1/watchlist/{id} -> 200
+  $: object
+  description: string
+  id: number
+  items: array
+  items[].addedAt: string
+  items[].movieId: number
+  items[].posterPath: string
+  items[].title: string
+  items[]: object
+  name: string
+
+## watchlist.public  GET /api/v1/watchlist/public/{id} -> 200
+  $: object
+  description: string
+  id: number
+  items: array
+  items[].addedAt: string
+  items[].movieId: number
+  items[].posterPath: string
+  items[].title: string
+  items[]: object
+  name: string
+  ownerUsername: string
+
+## watchlist.update  PUT /api/v1/watchlist/{id} -> 200
+  $: object
+  message: string
+
+## messages.create  POST /api/v1/messages -> 200
+  $: object
+  message: string
+
+## messages.create(movie)  POST /api/v1/messages -> 200
+  $: object
+  message: string
+
+## messages.create(list)  POST /api/v1/messages -> 200
+  $: object
+  message: string
+
+## messages.thread  GET /api/v1/messages/thread/{id} -> 200
+  $: array
+  [].content: null
+  [].content: string
+  [].id: number
+  [].messageSent: string
+  [].movie.id: number
+  [].movie.posterPath: string
+  [].movie.title: string
+  [].movie: null
+  [].movie: object
+  [].recipientId: string
+  [].recipientUsername: string
+  [].senderId: string
+  [].senderUsername: string
+  [].watchlist.id: number
+  [].watchlist.name: string
+  [].watchlist.ownerUsername: string
+  [].watchlist: null
+  [].watchlist: object
+  []: object
+
+## messages.conversations  GET /api/v1/messages -> 200
+  $: array
+  [].isRead: bool
+  [].lastMessageContent: string
+  [].lastMessageSent: string
+  [].otherUserId: string
+  [].otherUserProfileImageUrl: null
+  [].otherUserUsername: string
+  []: object
+
+## messages.markThreadRead  POST /api/v1/messages/thread/{id}/mark-as-read -> 200
+  $: object
+  markedAsRead: number
+
+## notification.list  GET /api/v1/notification -> 200
+  $: array
+  [].createdAt: string
+  [].id: number
+  [].isRead: bool
+  [].message: string
+  [].relatedUrl: string
+  []: object
+
+## notification.markOne  POST /api/v1/notification/{id}/mark-as-read -> 200
+  $: object
+  message: string
+
+## notification.markAll  POST /api/v1/notification/mark-all-as-read -> 200
+  $: object
+  message: string
+
+## profile.get  GET /api/v1/profile/{id} -> 200
+  $: object
+  bio: null
+  id: string
+  profileImageUrl: null
+  ratings: array
+  ratings[].movieId: number
+  ratings[].posterPath: string
+  ratings[].rating: number
+  ratings[].title: string
+  ratings[]: object
+  statistics.averageRating: number
+  statistics.topRatedMovies: array
+  statistics.totalMoviesInWatchlists: number
+  statistics.totalRatings: number
+  statistics: object
+  userName: string
+
+## profile.update  PUT /api/v1/profile -> 200
+  $: object
+  message: string
+
+## account.login(admin)  POST /api/v1/account/login -> 200
+  $: object
+  expiresAt: string
+  refreshToken: string
+  token: string
+  user.bio: null
+  user.email: string
+  user.id: string
+  user.isSubscribed: bool
+  user.profileImageUrl: null
+  user.roles: array
+  user.roles[]: string
+  user.subscriptionExpires: null
+  user.userName: string
+  user: object
+
+## event.myStatus(NONE)  GET /api/v1/event/my-status -> 200
+  $: object
+  message: string
+  status: string
+
+## event.create  POST /api/v1/event -> 201
+  $: object
+  address: string
+  eventDate: string
+  groupSize: number
+  id: number
+  locationName: string
+  selectedMovieId: null
+
+## event.list  GET /api/v1/event -> 200
+  $: array
+  [].eventDate: string
+  [].groupSize: number
+  [].id: number
+  [].locationName: string
+  [].participantCount: number
+  []: object
+
+## event.myStatus(AVAILABLE)  GET /api/v1/event/my-status -> 200
+  $: object
+  event.address: string
+  event.eventDate: string
+  event.groupSize: number
+  event.id: number
+  event.locationName: string
+  event.selectedMovieId: null
+  event: object
+  status: string
+
+## event.join  POST /api/v1/event/{id}/join -> 200
+  $: object
+  message: string
+
+## event.join(b)  POST /api/v1/event/{id}/join -> 200
+  $: object
+  message: string
+
+## event.myStatus(PENDING)  GET /api/v1/event/my-status -> 200
+  $: object
+  event.address: string
+  event.eventDate: string
+  event.groupSize: number
+  event.id: number
+  event.locationName: string
+  event.selectedMovieId: null
+  event: object
+  status: string
+
+## admin.createGroups  POST /api/v1/admin/events/{id}/create-groups -> 200
+  $: object
+  message: string
+
+## event.myStatus(MATCHED)  GET /api/v1/event/my-status -> 200
+  $: object
+  event.address: string
+  event.eventDate: string
+  event.groupSize: number
+  event.id: number
+  event.locationName: string
+  event.selectedMovieId: null
+  event: object
+  group.id: number
+  group.members: array
+  group.members[].id: string
+  group.members[].profileImageUrl: null
+  group.members[].profileImageUrl: string
+  group.members[].userName: string
+  group.members[]: object
+  group.suggestedMovieIds: string
+  group: object
+  status: string
+  suggestedMovies: array
+  suggestedMovies[].id: number
+  suggestedMovies[].posterPath: string
+  suggestedMovies[].title: string
+  suggestedMovies[]: object
+  votes: array
+
+## event.vote  POST /api/v1/event/vote -> 200
+  $: object
+  message: string
+
+## event.myStatus(MATCHED,voted)  GET /api/v1/event/my-status -> 200
+  $: object
+  event.address: string
+  event.eventDate: string
+  event.groupSize: number
+  event.id: number
+  event.locationName: string
+  event.selectedMovieId: null
+  event: object
+  group.id: number
+  group.members: array
+  group.members[].id: string
+  group.members[].profileImageUrl: null
+  group.members[].profileImageUrl: string
+  group.members[].userName: string
+  group.members[]: object
+  group.suggestedMovieIds: string
+  group: object
+  status: string
+  suggestedMovies: array
+  suggestedMovies[].id: number
+  suggestedMovies[].posterPath: string
+  suggestedMovies[].title: string
+  suggestedMovies[]: object
+  votes: array
+  votes[].movieId: number
+  votes[].userId: string
+  votes[]: object
+
+## event.update  PUT /api/v1/event/{id} -> 200
+  $: object
+  message: string
+
+## event.create(2)  POST /api/v1/event -> 201
+  $: object
+  address: null
+  eventDate: string
+  groupSize: number
+  id: number
+  locationName: string
+  selectedMovieId: null
+
+## event.delete  DELETE /api/v1/event/{id} -> 200
+  $: object
+  message: string
+
+## watchlist.removeMovie  DELETE /api/v1/watchlist/{id}/movies/{id} -> 200
+  $: object
+  message: string
+
+## watchlist.delete  DELETE /api/v1/watchlist/{id} -> 200
+  $: object
+  message: string
+
+## follow.unfollow  DELETE /api/v1/follow/{id} -> 200
+  $: object
+  message: string
+
+## subscription.activate  POST /api/v1/subscription/activate -> 200
+  $: object
+  expiresAt: string
+  refreshToken: string
+  token: string
+  user.bio: string
+  user.email: string
+  user.id: string
+  user.isSubscribed: bool
+  user.profileImageUrl: string
+  user.roles: array
+  user.roles[]: string
+  user.subscriptionExpires: string
+  user.userName: string
+  user: object
+
+## account.changePassword  POST /api/v1/account/change-password -> 200
+  $: object
+  expiresAt: string
+  refreshToken: string
+  token: string
+  user.bio: string
+  user.email: string
+  user.id: string
+  user.isSubscribed: bool
+  user.profileImageUrl: string
+  user.roles: array
+  user.roles[]: string
+  user.subscriptionExpires: string
+  user.userName: string
+  user: object
+
+## account.logout  POST /api/v1/account/logout -> 200
+  $: object
+  message: string
+

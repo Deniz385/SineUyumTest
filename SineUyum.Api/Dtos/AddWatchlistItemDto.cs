@@ -8,8 +8,10 @@ namespace SineUyum.Api.Dtos
         [Required]
         public int MovieId { get; set; }
 
-        [Required]
-        public string Title { get; set; } = string.Empty; // Başlangıç değeri atandı
+        // Geriye dönük uyumluluk için kabul edilir ama YOK SAYILIR: film meta
+        // verisi sunucuda TMDb'den çekilir (MovieCatalogService). Eski
+        // istemciler göndermeye devam edebilir.
+        public string? Title { get; set; }
 
         public string? PosterPath { get; set; }
     }

@@ -24,7 +24,7 @@ namespace SineUyum.Api.Controllers
             _userManager = userManager;
         }
         [HttpGet("{userId}")]
-        public async Task<IActionResult> GetUserProfile(string userId)
+        public async Task<ActionResult<UserProfileDto>> GetUserProfile(string userId)
         {
             var user = await _userManager.FindByIdAsync(userId);
 
@@ -47,16 +47,15 @@ namespace SineUyum.Api.Controllers
             // binlerce puanı olsa bile yanıt ve bellek sınırlı kalır.
             const int maxRatingsReturned = 100;
             var userRatings = await ratingsQuery
-                .Include(r => r.Movie)
                 .OrderByDescending(r => r.Rating)
                 .ThenByDescending(r => r.MovieId)
                 .Take(maxRatingsReturned)
-                .Select(r => new
+                .Select(r => new ProfileRatingDto
                 {
-                    r.MovieId,
-                    r.Rating,
-                    r.Movie.Title,
-                    r.Movie.PosterPath
+                    MovieId = r.MovieId,
+                    Rating = r.Rating,
+                    Title = r.Movie.Title,
+                    PosterPath = r.Movie.PosterPath
                 })
                 .ToListAsync();
 
@@ -65,29 +64,30 @@ namespace SineUyum.Api.Controllers
                 .SelectMany(w => w.Items)
                 .CountAsync();
 
-            var stats = new {
-                totalRatings,
-                averageRating,
-                totalMoviesInWatchlists,
+            var stats = new ProfileStatisticsDto
+            {
+                TotalRatings = totalRatings,
+                AverageRating = averageRating,
+                TotalMoviesInWatchlists = totalMoviesInWatchlists,
                 // En yüksek puanlı (10) filmlerden ilk 5'i (liste zaten puana göre sıralı).
-                topRatedMovies = userRatings.Where(r => r.Rating == 10).Take(5).ToList()
+                TopRatedMovies = userRatings.Where(r => r.Rating == 10).Take(5).ToList()
             };
 
-            var profileData = new 
+            var profileData = new UserProfileDto
             {
-                user.Id,
-                user.UserName,
-                user.Bio,
-                user.ProfileImageUrl,
-                Ratings = userRatings, 
-                Statistics = stats 
+                Id = user.Id,
+                UserName = user.UserName,
+                Bio = user.Bio,
+                ProfileImageUrl = user.ProfileImageUrl,
+                Ratings = userRatings,
+                Statistics = stats
             };
 
             return Ok(profileData);
         }
 
         [HttpPut]
-        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto updateDto)
+        public async Task<ActionResult<StatusMessageDto>> UpdateProfile([FromBody] UpdateProfileDto updateDto)
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (currentUserId == null)
@@ -111,7 +111,7 @@ namespace SineUyum.Api.Controllers
                 return BadRequest(result.Errors);
             }
 
-            return Ok(new { message = "Profil başarıyla güncellendi." });
+            return Ok(new StatusMessageDto("Profil başarıyla güncellendi."));
         }
     }
 }

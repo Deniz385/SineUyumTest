@@ -29,7 +29,7 @@ namespace SineUyum.Api.Controllers
         [HttpPost("register")]
         [AllowAnonymous]
         [EnableRateLimiting("auth")]
-        public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
+        public async Task<ActionResult<StatusMessageDto>> Register([FromBody] RegisterDto registerDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -40,7 +40,7 @@ namespace SineUyum.Api.Controllers
 
             await _userManager.AddToRoleAsync(user, "User");
 
-            return Ok(new { message = "Kullanıcı başarıyla oluşturuldu." });
+            return Ok(new StatusMessageDto("Kullanıcı başarıyla oluşturuldu."));
         }
 
         [HttpPost("login")]
@@ -52,7 +52,7 @@ namespace SineUyum.Api.Controllers
                 return BadRequest(ModelState);
             var user = await _userManager.FindByNameAsync(loginDto.Username);
             if (user == null || !await _userManager.CheckPasswordAsync(user, loginDto.Password))
-                return Unauthorized(new { message = "Kullanıcı adı veya şifre hatalı." });
+                return Unauthorized(new StatusMessageDto("Kullanıcı adı veya şifre hatalı."));
 
             return Ok(await _tokenService.CreateAuthResponseAsync(user, DeviceInfo()));
         }
@@ -69,7 +69,7 @@ namespace SineUyum.Api.Controllers
 
             var response = await _tokenService.RefreshAsync(dto.RefreshToken, DeviceInfo());
             if (response == null)
-                return Unauthorized(new { message = "Yenileme anahtarı geçersiz veya süresi dolmuş." });
+                return Unauthorized(new StatusMessageDto("Yenileme anahtarı geçersiz veya süresi dolmuş."));
 
             return Ok(response);
         }
@@ -77,10 +77,10 @@ namespace SineUyum.Api.Controllers
         // Çıkış: refresh token sunucu tarafında iptal edilir.
         [HttpPost("logout")]
         [Authorize]
-        public async Task<IActionResult> Logout([FromBody] RefreshRequestDto dto)
+        public async Task<ActionResult<StatusMessageDto>> Logout([FromBody] RefreshRequestDto dto)
         {
             await _tokenService.RevokeAsync(dto.RefreshToken);
-            return Ok(new { message = "Çıkış yapıldı." });
+            return Ok(new StatusMessageDto("Çıkış yapıldı."));
         }
 
         // Mobil uygulama açılışında token'ın hâlâ geçerli olduğunu doğrulamak ve

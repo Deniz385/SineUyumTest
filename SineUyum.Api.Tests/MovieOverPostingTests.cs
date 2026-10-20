@@ -111,4 +111,64 @@ public class MovieOverPostingTests : IClassFixture<MovieOverPostingTests.TmdbStu
         var response = await client.SendAsync(request);
         response.EnsureSuccessStatusCode();
     }
+
+    // M3 sırasında bulundu: izleme listesine film eklemek de aynı açığı
+    // taşıyordu — film yerelde yoksa istemcinin başlığıyla Movies'e yazılıyordu.
+    [Fact]
+    public async Task IzlemeListesineEkle_IstemciBasligiYokSayilir()
+    {
+        var client = _factory.CreateClient();
+        var token = await UserTokenAsync(client);
+
+        HttpRequestMessage Authed(HttpMethod m, string url, object? body = null)
+        {
+            var r = new HttpRequestMessage(m, url);
+            r.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            if (body != null) r.Content = JsonContent.Create(body);
+            return r;
+        }
+
+        var create = await client.SendAsync(Authed(HttpMethod.Post, "/api/v1/watchlist", new { name = "Liste" }));
+        create.EnsureSuccessStatusCode();
+        using var created = JsonDocument.Parse(await create.Content.ReadAsStringAsync());
+        var listId = created.RootElement.GetProperty("id").GetInt32();
+
+        // Yerelde olmayan bir film, kasten sahte başlıkla.
+        var add = await client.SendAsync(Authed(HttpMethod.Post, $"/api/v1/watchlist/{listId}/movies",
+            new { movieId = 777, title = "SAHTE ZEHIRLI BAŞLIK", posterPath = "/sahte.jpg" }));
+        add.EnsureSuccessStatusCode();
+
+        var details = await client.SendAsync(Authed(HttpMethod.Get, $"/api/v1/watchlist/{listId}"));
+        details.EnsureSuccessStatusCode();
+        using var doc = JsonDocument.Parse(await details.Content.ReadAsStringAsync());
+        var item = Assert.Single(doc.RootElement.GetProperty("items").EnumerateArray());
+        Assert.Equal("TMDb Gerçek Başlık", item.GetProperty("title").GetString());
+        Assert.Equal("/gercek.jpg", item.GetProperty("posterPath").GetString());
+    }
+
+    // Eski istemciler başlık göndermeyebilir; artık zorunlu değil.
+    [Fact]
+    public async Task IzlemeListesineEkle_BasliksizIstekKabulEdilir()
+    {
+        var client = _factory.CreateClient();
+        var token = await UserTokenAsync(client);
+
+        var create = new HttpRequestMessage(HttpMethod.Post, "/api/v1/watchlist")
+        {
+            Content = JsonContent.Create(new { name = "Liste" }),
+        };
+        create.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var created = await client.SendAsync(create);
+        using var createdDoc = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        var listId = createdDoc.RootElement.GetProperty("id").GetInt32();
+
+        var add = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/watchlist/{listId}/movies")
+        {
+            Content = JsonContent.Create(new { movieId = 778 }),
+        };
+        add.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await client.SendAsync(add);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
 }

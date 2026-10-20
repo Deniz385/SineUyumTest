@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
+using SineUyum.Api.Dtos;
 using SineUyum.Api.Exceptions;
 using SineUyum.Api.Hubs;
 using SineUyum.Api.Models;
@@ -89,17 +90,23 @@ namespace SineUyum.Api.Services
                 await _context.SaveChangesAsync();
 
                 // BİLDİRİM GÖNDERME KISMI
+                // Önce kaydedilir, sonra itilir: önceden kayıttan önce itildiği
+                // için istemciler id=0 alıyor ve bildirimi okundu işaretleyemiyordu.
+                // Varlık değil DTO itilir (kullanıcı varlığı sızmasın).
                 var notificationMessage = $"'{cinemaEvent.LocationName}' etkinliği için bir gruba atandın!";
-                foreach (var memberId in groupMemberIds)
+                var notifications = groupMemberIds.Select(memberId => new Notification
                 {
-                    var notification = new Notification
-                    {
-                        UserId = memberId,
-                        Message = notificationMessage,
-                        RelatedUrl = "/my-event"
-                    };
-                    await _context.Notifications.AddAsync(notification);
-                    await _hubContext.Clients.User(memberId).SendAsync("ReceiveNotification", notification);
+                    UserId = memberId,
+                    Message = notificationMessage,
+                    RelatedUrl = "/my-event"
+                }).ToList();
+                _context.Notifications.AddRange(notifications);
+                await _context.SaveChangesAsync();
+
+                foreach (var notification in notifications)
+                {
+                    await _hubContext.Clients.User(notification.UserId)
+                        .SendAsync("ReceiveNotification", NotificationDto.From(notification));
                 }
             }
 

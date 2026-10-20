@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
-using SineUyum.Api.Dtos; // <-- EKSİK OLAN SATIR BUYDU
+using SineUyum.Api.Dtos;
 using SineUyum.Api.Models;
 using System.Security.Claims;
 
@@ -21,7 +21,7 @@ namespace SineUyum.Api.Controllers
         }
 
         [HttpGet("my-status")]
-        public async Task<IActionResult> GetMyEventStatus()
+        public async Task<ActionResult<EventStatusDto>> GetMyEventStatus()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
@@ -29,15 +29,26 @@ namespace SineUyum.Api.Controllers
             var groupMember = await _context.EventGroupMembers
                 .Where(gm => gm.UserId == userId && gm.EventGroup.CinemaEvent.EventDate >= DateTime.UtcNow)
                 .OrderBy(gm => gm.EventGroup.CinemaEvent.EventDate)
-                .Select(gm => new {
-                    Event = gm.EventGroup.CinemaEvent,
-                    Group = new {
-                        gm.EventGroup.Id,
-                        gm.EventGroup.SuggestedMovieIds,
-                        Members = gm.EventGroup.Members.Select(m => new {
+                .Select(gm => new
+                {
+                    Event = new CinemaEventDto
+                    {
+                        Id = gm.EventGroup.CinemaEvent.Id,
+                        EventDate = gm.EventGroup.CinemaEvent.EventDate,
+                        LocationName = gm.EventGroup.CinemaEvent.LocationName,
+                        Address = gm.EventGroup.CinemaEvent.Address,
+                        GroupSize = gm.EventGroup.CinemaEvent.GroupSize,
+                        SelectedMovieId = gm.EventGroup.CinemaEvent.SelectedMovieId
+                    },
+                    Group = new EventGroupDto
+                    {
+                        Id = gm.EventGroup.Id,
+                        SuggestedMovieIds = gm.EventGroup.SuggestedMovieIds,
+                        Members = gm.EventGroup.Members.Select(m => new EventGroupMemberDto
+                        {
                             Id = m.UserId,
-                            m.User.UserName,
-                            m.User.ProfileImageUrl
+                            UserName = m.User.UserName,
+                            ProfileImageUrl = m.User.ProfileImageUrl
                         }).ToList()
                     }
                 })
@@ -47,7 +58,7 @@ namespace SineUyum.Api.Controllers
             {
                 var votes = await _context.EventVotes
                     .Where(v => v.EventGroupId == groupMember.Group.Id)
-                    .Select(v => new { v.UserId, v.MovieId }) 
+                    .Select(v => new EventGroupVoteDto { UserId = v.UserId, MovieId = v.MovieId })
                     .ToListAsync();
                 
                 var suggestedMovieIds = new List<int>();
@@ -58,10 +69,11 @@ namespace SineUyum.Api.Controllers
                 
                 var suggestedMovies = await _context.Movies
                     .Where(m => suggestedMovieIds.Contains(m.Id))
-                    .Select(m => new { m.Id, m.Title, m.PosterPath })
+                    .Select(m => new MovieSummaryDto { Id = m.Id, Title = m.Title, PosterPath = m.PosterPath })
                     .ToListAsync();
                 
-                return Ok(new {
+                return Ok(new EventStatusDto
+                {
                     Status = "MATCHED",
                     Event = groupMember.Event,
                     Group = groupMember.Group,
@@ -78,9 +90,10 @@ namespace SineUyum.Api.Controllers
             
             if (participant != null)
             {
-                return Ok(new {
+                return Ok(new EventStatusDto
+                {
                     Status = "PENDING",
-                    Event = participant.CinemaEvent
+                    Event = CinemaEventDto.From(participant.CinemaEvent)
                 });
             }
 
@@ -91,17 +104,18 @@ namespace SineUyum.Api.Controllers
 
             if (nextEvent != null)
             {
-                return Ok(new {
+                return Ok(new EventStatusDto
+                {
                     Status = "AVAILABLE",
-                    Event = nextEvent
+                    Event = CinemaEventDto.From(nextEvent)
                 });
             }
             
-            return Ok(new { Status = "NONE", Message = "Katılabileceğin yeni bir etkinlik bulunmuyor." });
+            return Ok(new EventStatusDto { Status = "NONE", Message = "Katılabileceğin yeni bir etkinlik bulunmuyor." });
         }
         
         [HttpPost("vote")]
-        public async Task<IActionResult> VoteForMovie([FromBody] EventVoteDto voteDto)
+        public async Task<ActionResult<StatusMessageDto>> VoteForMovie([FromBody] EventVoteDto voteDto)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
@@ -137,12 +151,12 @@ namespace SineUyum.Api.Controllers
             }
 
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Oyunuz başarıyla kaydedildi." });
+            return Ok(new StatusMessageDto("Oyunuz başarıyla kaydedildi."));
         }
         
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> CreateEvent([FromBody] CreateEventDto createEventDto)
+        public async Task<ActionResult<CinemaEventDto>> CreateEvent([FromBody] CreateEventDto createEventDto)
         {
             if (!ModelState.IsValid)
             {
@@ -160,20 +174,21 @@ namespace SineUyum.Api.Controllers
             await _context.CinemaEvents.AddAsync(newEvent);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetMyEventStatus), new { id = newEvent.Id }, newEvent);
+            return CreatedAtAction(nameof(GetMyEventStatus), new { id = newEvent.Id }, CinemaEventDto.From(newEvent));
         }
 
         [HttpGet]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetAllEvents()
+        public async Task<ActionResult<List<EventListItemDto>>> GetAllEvents()
         {
             var events = await _context.CinemaEvents
                 .OrderByDescending(e => e.EventDate)
-                .Select(e => new {
-                    e.Id,
-                    e.LocationName,
-                    e.EventDate,
-                    e.GroupSize,
+                .Select(e => new EventListItemDto
+                {
+                    Id = e.Id,
+                    LocationName = e.LocationName,
+                    EventDate = e.EventDate,
+                    GroupSize = e.GroupSize,
                     ParticipantCount = _context.EventParticipants.Count(p => p.CinemaEventId == e.Id)
                 })
                 .ToListAsync();
@@ -182,7 +197,7 @@ namespace SineUyum.Api.Controllers
         }
         
         [HttpPost("{eventId}/join")]
-        public async Task<IActionResult> JoinEvent(int eventId)
+        public async Task<ActionResult<StatusMessageDto>> JoinEvent(int eventId)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
@@ -190,7 +205,7 @@ namespace SineUyum.Api.Controllers
             var alreadyJoined = await _context.EventParticipants.AnyAsync(p => p.UserId == userId && p.CinemaEvent.EventDate >= DateTime.UtcNow);
             if(alreadyJoined)
             {
-                return BadRequest(new { message = "Zaten yaklaşan bir etkinlik için bekleme listesindesiniz."});
+                return BadRequest(new StatusMessageDto("Zaten yaklaşan bir etkinlik için bekleme listesindesiniz."));
             }
 
             var participant = new EventParticipant
@@ -201,12 +216,12 @@ namespace SineUyum.Api.Controllers
             await _context.EventParticipants.AddAsync(participant);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Etkinliğe başarıyla katıldınız! Eşleştirme için beklemede kalın."});
+            return Ok(new StatusMessageDto("Etkinliğe başarıyla katıldınız! Eşleştirme için beklemede kalın."));
         }
         
         [HttpPut("{eventId}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> UpdateEvent(int eventId, [FromBody] CreateEventDto updateDto)
+        public async Task<ActionResult<StatusMessageDto>> UpdateEvent(int eventId, [FromBody] CreateEventDto updateDto)
         {
             var cinemaEvent = await _context.CinemaEvents.FindAsync(eventId);
             if (cinemaEvent == null) return NotFound("Güncellenecek etkinlik bulunamadı.");
@@ -216,26 +231,20 @@ namespace SineUyum.Api.Controllers
             cinemaEvent.EventDate = updateDto.EventDate;
             cinemaEvent.GroupSize = updateDto.GroupSize;
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Etkinlik başarıyla güncellendi." });
+            return Ok(new StatusMessageDto("Etkinlik başarıyla güncellendi."));
         }
 
         [HttpDelete("{eventId}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> DeleteEvent(int eventId)
+        public async Task<ActionResult<StatusMessageDto>> DeleteEvent(int eventId)
         {
             var cinemaEvent = await _context.CinemaEvents.FindAsync(eventId);
             if (cinemaEvent == null) return NotFound("Silinecek etkinlik bulunamadı.");
             
             _context.CinemaEvents.Remove(cinemaEvent);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Etkinlik başarıyla silindi." });
+            return Ok(new StatusMessageDto("Etkinlik başarıyla silindi."));
         }
-    }
-
-    public class EventVoteDto
-    {
-        public int GroupId { get; set; }
-        public int MovieId { get; set; }
     }
 }
 

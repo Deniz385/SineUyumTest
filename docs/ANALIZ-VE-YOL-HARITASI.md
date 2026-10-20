@@ -205,14 +205,41 @@ sağlayıcısına ayarlandı.
 > İleride: SQLite'ı da migration'a almak istenirse veri katmanı ayrı projeye
 > çıkarılıp sağlayıcı başına migration projesi kurulmalı (daha ağır, ertelendi).
 
-### M3 — Anonim obje döndürülen API sözleşmesi
-Neredeyse tüm endpoint'ler `new { ... }` anonim obje döndürüyor. Sonuçları:
-- Swagger/OpenAPI şeması üretilemiyor → **mobil için otomatik istemci üretimi imkânsız**
-- Alan adı değişiklikleri derleme zamanında yakalanmıyor
-- `AccountController.cs:115` sıralama için `(dynamic)` kullanmak zorunda kalmış
+### M3 — Anonim obje döndürülen API sözleşmesi — ✅ response DTO'larına geçildi
+Neredeyse tüm endpoint'ler `new { ... }` anonim obje ya da doğrudan EF varlığı
+döndürüyordu: Swagger şeması üretilemiyor, alan adı değişiklikleri derleme
+zamanında yakalanmıyordu.
 
-**Yapılacak:** response DTO'ları tanımlanmalı (bu çalışmada auth/profil
-endpoint'leri için başlatıldı, kalanı sürdürülmeli).
+**Yapılan:**
+- Tüm JSON uçları açık response DTO'ları ve `ActionResult<T>` döndürüyor
+  (`Dtos/*ResponseDtos.cs`, `NotificationDto`). Swagger'da 47 işlemin 42'si
+  tipli yanıt şemasına sahip; kalan 5'i TMDb yanıtını olduğu gibi aktaran
+  uçlar (şema TMDb'nin, bizim değil).
+- **Sözleşme testi:** `ResponseContractTests` gerçekçi bir senaryoyla 54 çağrı
+  yapıp her yanıtın şeklini (durum kodu + alan adları + değer türleri)
+  `SineUyum.Api.Tests/Contracts/response-shapes.txt` altın dosyasıyla
+  karşılaştırır. İstemcinin okuduğu bir alan kazara silinir/yeniden
+  adlandırılırsa CI kırılır. Bilinçli değişiklikte
+  `UPDATE_CONTRACTS=1 dotnet test --filter ResponseContractTests`.
+- Refaktör öncesi ve sonrası şekiller karşılaştırıldı; tek fark aşağıdaki
+  bilinçli olarak kaldırılan sızıntı alanları. İstemciler etkilenmedi.
+
+**Yol üstünde bulunan ve düzeltilen hatalar:**
+- **Güvenlik — SignalR ile parola hash'i sızıyordu:** mesaj bildirimi
+  `Notification` varlığı olarak itiliyordu; alıcı izlenen (tracked) olarak
+  yüklendiğinden EF `notification.User`'ı dolduruyor, alıcının `passwordHash`,
+  `securityStamp`, `email`, `normalizedEmail` alanları istemciye gidiyordu
+  (testle doğrulandı). Artık REST ile aynı `NotificationDto` itiliyor
+  (`NotificationPushTests`).
+- **Güvenlik — izleme listesine film eklerken over-posting (G7'nin ikizi):**
+  film yerelde yoksa istemcinin gönderdiği başlık/poster paylaşılan `Movies`
+  tablosuna yazılıyordu. Artık `MovieCatalogService` ile TMDb'den çekiliyor;
+  `title`/`posterPath` geriye dönük uyumluluk için kabul edilip yok sayılıyor.
+- Eşleştirme bildirimleri kayıttan **önce** itildiği için istemciler `id: 0`
+  alıyor, bildirimi okundu işaretleyemiyordu; artık önce kaydediliyor.
+- Kaldırılan sızıntı alanları: bildirimlerde `userId`/`user`, liste
+  oluşturma yanıtında `userId`/`user`, etkinliklerde hiç yüklenmeyen
+  `selectedMovie` navigasyonu (`selectedMovieId` korunuyor).
 
 ### M4 — Uyumluluk algoritması üç yerde kopyalanmış — ✅ tek servise alındı
 Aynı ağırlıklı skor hesabı `AccountController.SearchUsers`,
@@ -420,7 +447,7 @@ sonra oturumdan düşerdi.
 7. ✅ API için test projesi — `CompatibilityCalculator` + auth + hata yönetimi (M1)
 
 ### Faz 2 — API olgunlaştırma (2-3 hafta)
-9. Tüm endpoint'ler için response DTO'ları (M3) — ⬜ kalan tek madde
+9. Tüm endpoint'ler için response DTO'ları (M3) — ✅ (Faz 2 tamamlandı)
 10. Uyumluluk hesabını tek servise çıkar + unit testler (M4, M1) — ✅
 11. Sayfalama (M6) ve N+1 sorguların düzeltilmesi (M5) — ✅
 12. TMDb cache (M9) — ✅

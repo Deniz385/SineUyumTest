@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SineUyum.Api.Dtos;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
 using SineUyum.Api.Services;
@@ -33,7 +34,7 @@ namespace SineUyum.Api.Controllers
         }
 
         [HttpGet("{targetUserId}")]
-        public async Task<IActionResult> GetCompatibility(string targetUserId)
+        public async Task<ActionResult<CompatibilityDto>> GetCompatibility(string targetUserId)
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (currentUserId == null) return Unauthorized();
@@ -41,7 +42,7 @@ namespace SineUyum.Api.Controllers
             var commonRatingsQuery = from r1 in _context.UserRatings.Where(r => r.UserId == currentUserId)
                                      join r2 in _context.UserRatings.Where(r => r.UserId == targetUserId) on r1.MovieId equals r2.MovieId
                                      join movie in _context.Movies on r1.MovieId equals movie.Id
-                                     select new
+                                     select new CommonMovieDto
                                      {
                                          MovieId = r1.MovieId,
                                          Title = movie.Title,
@@ -53,23 +54,18 @@ namespace SineUyum.Api.Controllers
 
             if (!commonMovies.Any())
             {
-                return Ok(new
-                {
-                    compatibilityScore = 0,
-                    commonMovieCount = 0,
-                    commonMovies = new List<object>()
-                });
+                return Ok(new CompatibilityDto());
             }
             
             var ratingPairs = commonMovies
                 .Select(m => (m.CurrentUserRating, m.TargetUserRating))
                 .ToList();
 
-            var result = new
+            var result = new CompatibilityDto
             {
-                compatibilityScore = Math.Round(CompatibilityCalculator.Score(ratingPairs), 2),
-                commonMovieCount = commonMovies.Count,
-                commonMovies
+                CompatibilityScore = Math.Round(CompatibilityCalculator.Score(ratingPairs), 2),
+                CommonMovieCount = commonMovies.Count,
+                CommonMovies = commonMovies
             };
 
             return Ok(result);

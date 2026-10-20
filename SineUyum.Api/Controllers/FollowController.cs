@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SineUyum.Api.Dtos;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
+using SineUyum.Api.Exceptions;
 using SineUyum.Api.Models;
 using SineUyum.Api.Services;
 using System.Security.Claims;
@@ -16,11 +17,13 @@ namespace SineUyum.Api.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly NotificationService _notifications;
+        private readonly PrivacyService _privacy;
 
-        public FollowController(ApplicationDbContext context, NotificationService notifications)
+        public FollowController(ApplicationDbContext context, NotificationService notifications, PrivacyService privacy)
         {
             _context = context;
             _notifications = notifications;
+            _privacy = privacy;
         }
 
         [HttpPost("{userIdToFollow}")]
@@ -33,8 +36,18 @@ namespace SineUyum.Api.Controllers
             {
                 return BadRequest("Kullanıcı kendini takip edemez.");
             }
-             var currentUser = await _context.Users.FindAsync(currentUserId);
+            var currentUser = await _context.Users.FindAsync(currentUserId);
             if (currentUser == null) return Unauthorized();
+
+            // Olmayan kullanıcı önceden FK hatasıyla 500 veriyordu.
+            if (!await _context.Users.AnyAsync(u => u.Id == userIdToFollow))
+            {
+                return NotFound("Kullanıcı bulunamadı.");
+            }
+            if (await _privacy.IsBlockedEitherWayAsync(currentUserId, userIdToFollow))
+            {
+                throw new DomainException("Bu kullanıcıyı takip edemezsiniz.", StatusCodes.Status403Forbidden);
+            }
 
             var alreadyFollowing = await _context.UserFollows
                 .AnyAsync(f => f.FollowerId == currentUserId && f.FollowingId == userIdToFollow);
@@ -90,6 +103,11 @@ namespace SineUyum.Api.Controllers
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (currentUserId == null) return Unauthorized();
 
+            if (await _privacy.HasBlockedAsync(userId, currentUserId))
+            {
+                return NotFound("Kullanıcı bulunamadı.");
+            }
+
             var isFollowing = await _context.UserFollows
                 .AnyAsync(f => f.FollowerId == currentUserId && f.FollowingId == userId);
 
@@ -103,6 +121,10 @@ namespace SineUyum.Api.Controllers
         [HttpGet("{userId}/followers")]
         public async Task<ActionResult<List<UserBriefDto>>> GetFollowers(string userId)
         {
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (currentUserId == null) return Unauthorized();
+            await _privacy.EnsureCanViewDetailsAsync(currentUserId, userId, User.IsInRole("Admin"));
+
             var followers = await _context.UserFollows
                 .Where(f => f.FollowingId == userId)
                 .Select(f => new UserBriefDto { Id = f.Follower.Id, UserName = f.Follower.UserName })
@@ -115,6 +137,10 @@ namespace SineUyum.Api.Controllers
         [HttpGet("{userId}/following")]
         public async Task<ActionResult<List<UserBriefDto>>> GetFollowing(string userId)
         {
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (currentUserId == null) return Unauthorized();
+            await _privacy.EnsureCanViewDetailsAsync(currentUserId, userId, User.IsInRole("Admin"));
+
             var following = await _context.UserFollows
                 .Where(f => f.FollowerId == userId)
                 .Select(f => new UserBriefDto { Id = f.Following.Id, UserName = f.Following.UserName })

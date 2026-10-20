@@ -23,6 +23,7 @@
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<DeviceToken> DeviceTokens { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
+        public DbSet<UserBlock> UserBlocks { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -55,6 +56,35 @@
                 .Property(s => s.Status)
                 .HasConversion<string>()
                 .HasMaxLength(16);
+
+            builder.Entity<AppUser>()
+                .Property(u => u.ProfileVisibility)
+                .HasConversion<string>()
+                .HasMaxLength(16);
+
+            builder.Entity<AppUser>()
+                .Property(u => u.MessagePermission)
+                .HasConversion<string>()
+                .HasMaxLength(16);
+
+            // Bir çift için tek kayıt; "beni kim engelledi" sorgusu için ters indeks.
+            builder.Entity<UserBlock>()
+                .HasKey(b => new { b.BlockerId, b.BlockedId });
+
+            builder.Entity<UserBlock>()
+                .HasIndex(b => b.BlockedId);
+
+            builder.Entity<UserBlock>()
+                .HasOne(b => b.Blocker)
+                .WithMany()
+                .HasForeignKey(b => b.BlockerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<UserBlock>()
+                .HasOne(b => b.Blocked)
+                .WithMany()
+                .HasForeignKey(b => b.BlockedId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<DeviceToken>()
                 .HasOne(d => d.User)

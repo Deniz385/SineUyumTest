@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import { useSnackbar } from '../context/SnackbarProvider';
 import { Box, Typography, CircularProgress, TextField, IconButton, Modal, Card, CardMedia, List, ListItem, ListItemButton, ListItemText, Divider } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
@@ -52,6 +53,7 @@ const WatchlistShareCard = ({ watchlist }) => (
 export const ConversationPage = () => {
     const { otherUserId } = useParams();
     const { user } = useAuth();
+    const { showSnackbar } = useSnackbar();
     const { subscribeToMessages, subscribeToReconnect, setActiveConversation } = useNotifications();
     const [messages, setMessages] = useState([]);
     const [otherUser, setOtherUser] = useState(null);
@@ -141,7 +143,8 @@ export const ConversationPage = () => {
             // Yanıt, oluşturulan mesajın kendisi; thread'i yeniden çekmeye gerek yok.
             appendMessage(response.data);
         } catch (err) {
-            console.error("Mesaj gönderilemedi:", err);
+            // Gizlilik/engel reddinde (403) sunucunun gerekçesi gösterilir.
+            showSnackbar(err.response?.data?.title || 'Mesaj gönderilemedi.', 'error');
         }
     };
     

@@ -9,6 +9,10 @@
         public string? Bio { get; set; } 
         // Abonelik durumu burada TUTULMAZ: Subscriptions tablosundan bitiş
         // tarihine bakılarak hesaplanır (SubscriptionService).
+        // Gizlilik ayarları (G12); varsayılanlar mevcut davranışla aynı.
+        public ProfileVisibility ProfileVisibility { get; set; } = ProfileVisibility.Public;
+        public MessagePermission MessagePermission { get; set; } = MessagePermission.Everyone;
+        public bool HiddenFromSearch { get; set; }
         public ICollection<UserRating> Ratings { get; set; } = new List<UserRating>();
         // IdentityUser sınıfı zaten Id, UserName, Email, PasswordHash gibi
         // birçok özelliği kendisi içeriyor.

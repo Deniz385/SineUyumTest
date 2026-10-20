@@ -16,10 +16,12 @@ namespace SineUyum.Api.Services
         private const string TmdbApiBaseUrl = "https://api.themoviedb.org/3/";
         private readonly NotificationService _notifications;
         private readonly UserManager<AppUser> _userManager;
+        private readonly PrivacyService _privacy;
 
-        public MatchingService(ApplicationDbContext context, IHttpClientFactory httpClientFactory, IConfiguration configuration, NotificationService notifications, UserManager<AppUser> userManager)
+        public MatchingService(ApplicationDbContext context, IHttpClientFactory httpClientFactory, IConfiguration configuration, NotificationService notifications, UserManager<AppUser> userManager, PrivacyService privacy)
         {
             _context = context;
+            _privacy = privacy;
             _httpClientFactory = httpClientFactory;
             _notifications = notifications;
             _userManager = userManager;
@@ -52,11 +54,13 @@ namespace SineUyum.Api.Services
             
             var userRatingsDict = participants.ToDictionary(p => p.UserId, p => p.User.Ratings.ToDictionary(r => r.MovieId, r => r.Rating));
             var userPool = participants.Select(p => p.UserId).ToList();
+            // Birbirini engelleyen (herhangi yönde) iki kişi aynı gruba düşmez.
+            var blockedPairs = await _privacy.BlockedPairsAmongAsync(userPool);
             var random = new Random();
 
             while (userPool.Count >= cinemaEvent.GroupSize)
             {
-                var starterUserId = userPool[random.Next(userPool.Count)];
+                var starterUserId = PickStarter(userPool, blockedPairs, random);
                 userPool.Remove(starterUserId);
 
                 var compatibilities = userPool.Select(otherUserId => new {
@@ -64,11 +68,18 @@ namespace SineUyum.Api.Services
                     Score = CalculateCompatibility(userRatingsDict[starterUserId], userRatingsDict.ContainsKey(otherUserId) ? userRatingsDict[otherUserId] : new Dictionary<int, int>())
                 }).ToList();
 
-                var groupMemberIds = compatibilities.OrderByDescending(x => x.Score)
-                                                    .Take(cinemaEvent.GroupSize - 1)
-                                                    .Select(x => x.UserId)
-                                                    .ToList();
-                groupMemberIds.Add(starterUserId);
+                // En uyumludan başlayarak, gruptaki hiç kimseyle engeli olmayanlar alınır.
+                var groupMemberIds = new List<string> { starterUserId };
+                foreach (var candidate in compatibilities.OrderByDescending(x => x.Score))
+                {
+                    if (groupMemberIds.Count == cinemaEvent.GroupSize) break;
+                    if (groupMemberIds.Any(m => blockedPairs.Contains((m, candidate.UserId)))) continue;
+                    groupMemberIds.Add(candidate.UserId);
+                }
+
+                // Engeller yüzünden bu kişiyle tam grup kurulamıyor; o gruba
+                // alınmadan kalır (havuzdan çıktı), diğerleriyle devam edilir.
+                if (groupMemberIds.Count < cinemaEvent.GroupSize) continue;
 
                 var newGroup = new EventGroup { CinemaEventId = eventId };
                 
@@ -186,6 +197,21 @@ namespace SineUyum.Api.Services
             }
 
             return suggestions;
+        }
+
+        // Engel yoksa eskisi gibi rastgele. Varsa en çok çakışması olan önce
+        // yerleştirilir (en kısıtlı önce): aksi halde birbirini engelleyenler
+        // havuzda sona kalıp, geçerli bir dağılım varken gruptan dışarıda kalıyordu.
+        private static string PickStarter(List<string> pool, HashSet<(string, string)> blockedPairs, Random random)
+        {
+            if (blockedPairs.Count == 0) return pool[random.Next(pool.Count)];
+
+            var conflicts = pool
+                .Select(u => (UserId: u, Count: pool.Count(o => blockedPairs.Contains((u, o)))))
+                .ToList();
+            var max = conflicts.Max(x => x.Count);
+            var mostConstrained = conflicts.Where(x => x.Count == max).Select(x => x.UserId).ToList();
+            return mostConstrained[random.Next(mostConstrained.Count)];
         }
 
         private static double CalculateCompatibility(Dictionary<int, int> ratings1, Dictionary<int, int> ratings2)

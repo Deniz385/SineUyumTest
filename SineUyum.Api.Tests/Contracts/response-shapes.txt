@@ -281,6 +281,8 @@
   $: object
   bio: null
   id: string
+  isBlockedByMe: bool
+  isRestricted: bool
   profileImageUrl: null
   ratings: array
   ratings[].movieId: number
@@ -493,6 +495,49 @@
   message: string
 
 ## follow.unfollow  DELETE /api/v1/follow/{id} -> 200
+  $: object
+  message: string
+
+## account.privacy.get  GET /api/v1/account/privacy -> 200
+  $: object
+  hiddenFromSearch: bool
+  messagePermission: string
+  profileVisibility: string
+
+## account.privacy.update  PUT /api/v1/account/privacy -> 200
+  $: object
+  hiddenFromSearch: bool
+  messagePermission: string
+  profileVisibility: string
+
+## profile.get(restricted)  GET /api/v1/profile/{id} -> 200
+  $: object
+  bio: null
+  id: string
+  isBlockedByMe: bool
+  isRestricted: bool
+  profileImageUrl: null
+  ratings: array
+  statistics.averageRating: number
+  statistics.topRatedMovies: array
+  statistics.totalMoviesInWatchlists: number
+  statistics.totalRatings: number
+  statistics: object
+  userName: string
+
+## blocks.block  POST /api/v1/blocks/{id} -> 200
+  $: object
+  message: string
+
+## blocks.list  GET /api/v1/blocks -> 200
+  $: array
+  [].blockedAt: string
+  [].id: string
+  [].profileImageUrl: null
+  [].userName: string
+  []: object
+
+## blocks.unblock  DELETE /api/v1/blocks/{id} -> 200
   $: object
   message: string
 

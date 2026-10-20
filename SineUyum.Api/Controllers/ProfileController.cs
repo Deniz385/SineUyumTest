@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using SineUyum.Api.Dtos;
 using SineUyum.Api.Exceptions;
 using SineUyum.Api.Models;
+using SineUyum.Api.Services;
 using SineUyum.Api.Services.Media;
 using System.Security.Claims;
 
@@ -26,25 +27,46 @@ namespace SineUyum.Api.Controllers
         private readonly ApplicationDbContext _context;
         private readonly UserManager<AppUser> _userManager;
         private readonly IMediaStorage _media;
+        private readonly PrivacyService _privacy;
 
-        public ProfileController(ApplicationDbContext context, UserManager<AppUser> userManager, IMediaStorage media)
+        public ProfileController(ApplicationDbContext context, UserManager<AppUser> userManager, IMediaStorage media, PrivacyService privacy)
         {
             _context = context;
             _userManager = userManager;
             _media = media;
+            _privacy = privacy;
         }
 
         private static string AvatarDirectory(string userId) => $"avatars/{userId}";
         [HttpGet("{userId}")]
         public async Task<ActionResult<UserProfileDto>> GetUserProfile(string userId)
         {
+            var viewerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (viewerId == null) return Unauthorized();
+
             var user = await _userManager.FindByIdAsync(userId);
 
-            if (user == null)
+            // Engelleyen kişi görüntüleyene hiç yokmuş gibi görünür.
+            if (user == null || (viewerId != userId && await _privacy.HasBlockedAsync(userId, viewerId)))
             {
                 return NotFound("Kullanıcı bulunamadı.");
             }
 
+            // Engellediği birinin profilini açan kişi yalnızca kimliği görür
+            // (engeli kaldırabilsin diye); gizli profilde de ayrıntı dönmez.
+            var isBlockedByMe = viewerId != userId && await _privacy.HasBlockedAsync(viewerId, userId);
+            if (isBlockedByMe || !await _privacy.CanViewDetailsAsync(viewerId, user, User.IsInRole("Admin")))
+            {
+                return Ok(new UserProfileDto
+                {
+                    Id = user.Id,
+                    UserName = user.UserName,
+                    Bio = user.Bio,
+                    ProfileImageUrl = user.ProfileImageUrl,
+                    IsRestricted = true,
+                    IsBlockedByMe = isBlockedByMe
+                });
+            }
 
             var ratingsQuery = _context.UserRatings.Where(r => r.UserId == userId);
 

@@ -263,6 +263,15 @@ public class ResponseContractTests : IClassFixture<ResponseContractTests.Factory
         await Call("watchlist.removeMovie", HttpMethod.Delete, $"/api/v1/watchlist/{listId}/movies/552", a);
         await Call("watchlist.delete", HttpMethod.Delete, $"/api/v1/watchlist/{listId}", a);
         await Call("follow.unfollow", HttpMethod.Delete, $"/api/v1/follow/{bId}", a);
+
+        // Gizlilik (G12): ayarlar, gizli profilin kısıtlı şekli, engelleme.
+        await Get("account.privacy.get", "/api/v1/account/privacy", b);
+        await Call("account.privacy.update", HttpMethod.Put, "/api/v1/account/privacy", b,
+            new { profileVisibility = "Private", messagePermission = "Following", hiddenFromSearch = true });
+        await Get("profile.get(restricted)", $"/api/v1/profile/{bId}", a);
+        await Post("blocks.block", $"/api/v1/blocks/{bId}", a);
+        await Get("blocks.list", "/api/v1/blocks", a);
+        await Call("blocks.unblock", HttpMethod.Delete, $"/api/v1/blocks/{bId}", a);
         var changed = await Post("account.changePassword", "/api/v1/account/change-password", a,
             new { currentPassword = "Sifre123", newPassword = "YeniSifre123" });
         await Post("devices.unregister", "/api/v1/devices/unregister", null, new { token = "fcm-sozlesme-" + suffix });

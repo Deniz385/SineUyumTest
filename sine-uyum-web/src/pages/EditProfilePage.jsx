@@ -4,6 +4,7 @@ import api, { mediaUrl } from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Avatar, Box, TextField, Button, Typography, CircularProgress, Stack } from '@mui/material';
 import { useSnackbar } from '../context/SnackbarProvider';
+import { PrivacySettings } from '../components/PrivacySettings';
 
 // Büyük fotoğrafları yüklemeden önce tarayıcıda küçültür (sunucu sınırı 10 MB;
 // sunucu zaten 512 px'e indiriyor, fazlasını göndermek boşa bant genişliği).
@@ -124,55 +125,59 @@ export const EditProfilePage = () => {
     }
 
     return (
-        <Box className="page-container" component="form" onSubmit={handleSubmit} sx={{maxWidth: '700px'}}>
-            <Typography variant="h4" component="h1" gutterBottom>
-                Profili Düzenle
-            </Typography>
+        <Box className="page-container" sx={{maxWidth: '700px'}}>
+            <Box component="form" onSubmit={handleSubmit}>
+                <Typography variant="h4" component="h1" gutterBottom>
+                    Profili Düzenle
+                </Typography>
 
-            <Stack direction="row" spacing={3} alignItems="center" sx={{ my: 2 }}>
-                <Avatar src={mediaUrl(formData.profileImageUrl)} sx={{ width: 96, height: 96, fontSize: '2.5rem' }}>
-                    {user?.userName?.charAt(0).toUpperCase()}
-                </Avatar>
-                <Stack spacing={1}>
-                    <input
-                        ref={fileInput}
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        hidden
-                        onChange={handleFileSelected}
-                    />
-                    <Button variant="outlined" onClick={() => fileInput.current?.click()} disabled={isUploading}>
-                        {isUploading ? <CircularProgress size={20} /> : 'Fotoğraf yükle'}
-                    </Button>
-                    {formData.profileImageUrl && (
-                        <Button color="error" onClick={handleRemovePhoto} disabled={isUploading}>
-                            Fotoğrafı kaldır
+                <Stack direction="row" spacing={3} alignItems="center" sx={{ my: 2 }}>
+                    <Avatar src={mediaUrl(formData.profileImageUrl)} sx={{ width: 96, height: 96, fontSize: '2.5rem' }}>
+                        {user?.userName?.charAt(0).toUpperCase()}
+                    </Avatar>
+                    <Stack spacing={1}>
+                        <input
+                            ref={fileInput}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            hidden
+                            onChange={handleFileSelected}
+                        />
+                        <Button variant="outlined" onClick={() => fileInput.current?.click()} disabled={isUploading}>
+                            {isUploading ? <CircularProgress size={20} /> : 'Fotoğraf yükle'}
                         </Button>
-                    )}
-                    <Typography variant="caption" color="text.secondary">
-                        JPEG, PNG ya da WebP · en fazla 10 MB · kare kırpılır
-                    </Typography>
+                        {formData.profileImageUrl && (
+                            <Button color="error" onClick={handleRemovePhoto} disabled={isUploading}>
+                                Fotoğrafı kaldır
+                            </Button>
+                        )}
+                        <Typography variant="caption" color="text.secondary">
+                            JPEG, PNG ya da WebP · en fazla 10 MB · kare kırpılır
+                        </Typography>
+                    </Stack>
                 </Stack>
-            </Stack>
 
-            <TextField
-                label="Hakkında (Bio)"
-                name="bio"
-                multiline
-                rows={4}
-                value={formData.bio}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
-            />
-            <Button
-                type="submit"
-                variant="contained"
-                sx={{ mt: 3 }}
-                disabled={isSaving || isUploading}
-            >
-                {isSaving ? <CircularProgress size={24} /> : 'Kaydet'}
-            </Button>
+                <TextField
+                    label="Hakkında (Bio)"
+                    name="bio"
+                    multiline
+                    rows={4}
+                    value={formData.bio}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                />
+                <Button
+                    type="submit"
+                    variant="contained"
+                    sx={{ mt: 3 }}
+                    disabled={isSaving || isUploading}
+                >
+                    {isSaving ? <CircularProgress size={24} /> : 'Kaydet'}
+                </Button>
+            </Box>
+            {/* Gizlilik ayarları kendi başına kaydedilir; formun parçası değil. */}
+            <PrivacySettings />
         </Box>
     );
 };

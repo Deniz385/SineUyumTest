@@ -7,6 +7,11 @@ namespace SineUyum.Api.Dtos
         public string? UserName { get; set; }
         public string? Bio { get; set; }
         public string? ProfileImageUrl { get; set; }
+        // true: görüntüleyen ayrıntıları göremez (gizlilik ayarı ya da kendisi
+        // engellemiş); puanlar ve istatistikler boş döner.
+        public bool IsRestricted { get; set; }
+        // Görüntüleyen bu kullanıcıyı engellemiş (engeli kaldırma düğmesi için).
+        public bool IsBlockedByMe { get; set; }
         public List<ProfileRatingDto> Ratings { get; set; } = new();
         public ProfileStatisticsDto Statistics { get; set; } = new();
     }

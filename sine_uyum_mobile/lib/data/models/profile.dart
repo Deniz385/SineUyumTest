@@ -9,12 +9,21 @@ class UserProfile {
     this.profileImageUrl,
     this.ratings = const [],
     required this.statistics,
+    this.isRestricted = false,
+    this.isBlockedByMe = false,
   });
 
   final String id;
   final String userName;
   final String? bio;
   final String? profileImageUrl;
+
+  /// Görüntüleyen ayrıntıları göremez (gizlilik ayarı ya da kendisi
+  /// engellemiş); puanlar ve istatistikler boş gelir.
+  final bool isRestricted;
+
+  /// Görüntüleyen bu kullanıcıyı engellemiş.
+  final bool isBlockedByMe;
   final List<RatedMovie> ratings;
   final ProfileStatistics statistics;
 
@@ -24,6 +33,8 @@ class UserProfile {
       userName: json['userName'] as String? ?? '',
       bio: json['bio'] as String?,
       profileImageUrl: json['profileImageUrl'] as String?,
+      isRestricted: json['isRestricted'] as bool? ?? false,
+      isBlockedByMe: json['isBlockedByMe'] as bool? ?? false,
       ratings:
           (json['ratings'] as List?)
               ?.map(
@@ -140,4 +151,91 @@ class FollowStatus {
       followingCount: (json['followingCount'] as num?)?.toInt() ?? 0,
     );
   }
+}
+
+/// Profil ayrıntılarını (puanlar, listeler, uyum) kim görebilir.
+enum ProfileVisibility {
+  public('Public', 'Herkes'),
+  following('Following', 'Yalnızca takip ettiklerim'),
+  private('Private', 'Yalnızca ben');
+
+  const ProfileVisibility(this.apiValue, this.label);
+  final String apiValue;
+  final String label;
+
+  static ProfileVisibility fromApi(Object? value) => values.firstWhere(
+    (v) => v.apiValue == value,
+    orElse: () => ProfileVisibility.public,
+  );
+}
+
+/// Kim yeni mesaj gönderebilir.
+enum MessagePermission {
+  everyone('Everyone', 'Herkes'),
+  following('Following', 'Yalnızca takip ettiklerim'),
+  nobody('Nobody', 'Hiç kimse');
+
+  const MessagePermission(this.apiValue, this.label);
+  final String apiValue;
+  final String label;
+
+  static MessagePermission fromApi(Object? value) => values.firstWhere(
+    (v) => v.apiValue == value,
+    orElse: () => MessagePermission.everyone,
+  );
+}
+
+/// `/api/v1/account/privacy` (GET/PUT).
+class PrivacySettings {
+  const PrivacySettings({
+    this.profileVisibility = ProfileVisibility.public,
+    this.messagePermission = MessagePermission.everyone,
+    this.hiddenFromSearch = false,
+  });
+
+  final ProfileVisibility profileVisibility;
+  final MessagePermission messagePermission;
+  final bool hiddenFromSearch;
+
+  PrivacySettings copyWith({
+    ProfileVisibility? profileVisibility,
+    MessagePermission? messagePermission,
+    bool? hiddenFromSearch,
+  }) => PrivacySettings(
+    profileVisibility: profileVisibility ?? this.profileVisibility,
+    messagePermission: messagePermission ?? this.messagePermission,
+    hiddenFromSearch: hiddenFromSearch ?? this.hiddenFromSearch,
+  );
+
+  factory PrivacySettings.fromJson(Map<String, dynamic> json) =>
+      PrivacySettings(
+        profileVisibility: ProfileVisibility.fromApi(json['profileVisibility']),
+        messagePermission: MessagePermission.fromApi(json['messagePermission']),
+        hiddenFromSearch: json['hiddenFromSearch'] as bool? ?? false,
+      );
+
+  Map<String, dynamic> toJson() => {
+    'profileVisibility': profileVisibility.apiValue,
+    'messagePermission': messagePermission.apiValue,
+    'hiddenFromSearch': hiddenFromSearch,
+  };
+}
+
+/// `/api/v1/blocks` öğesi.
+class BlockedUser {
+  const BlockedUser({
+    required this.id,
+    required this.userName,
+    this.profileImageUrl,
+  });
+
+  final String id;
+  final String userName;
+  final String? profileImageUrl;
+
+  factory BlockedUser.fromJson(Map<String, dynamic> json) => BlockedUser(
+    id: json['id'] as String? ?? '',
+    userName: json['userName'] as String? ?? '',
+    profileImageUrl: json['profileImageUrl'] as String?,
+  );
 }

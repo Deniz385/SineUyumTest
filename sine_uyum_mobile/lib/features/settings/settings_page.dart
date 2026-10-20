@@ -26,6 +26,14 @@ class SettingsPage extends ConsumerWidget {
               subtitle: Text(user.email ?? ''),
               onTap: () => context.push('/profile/${user.id}'),
             ),
+          ListTile(
+            leading: const Icon(Icons.lock_outline),
+            title: const Text('Gizlilik'),
+            subtitle: const Text(
+              'Profil görünürlüğü, mesaj izni, engellenenler',
+            ),
+            onTap: () => context.push('/settings/privacy'),
+          ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.brightness_6_outlined),

@@ -18,6 +18,7 @@ class ProfilePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(userProfileProvider(userId));
     final isOwnProfile = ref.watch(sessionProvider).user?.id == userId;
+    final loaded = profile.asData?.value;
 
     return Scaffold(
       appBar: AppBar(
@@ -28,6 +29,14 @@ class ProfilePage extends ConsumerWidget {
               tooltip: 'Profili düzenle',
               icon: const Icon(Icons.edit_outlined),
               onPressed: () => context.push('/profile/edit'),
+            ),
+          if (!isOwnProfile && loaded != null && !loaded.isBlockedByMe)
+            PopupMenuButton<String>(
+              tooltip: 'Diğer',
+              onSelected: (_) => _confirmBlock(context, ref, loaded),
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'block', child: Text('Engelle')),
+              ],
             ),
         ],
       ),
@@ -49,32 +58,148 @@ class ProfilePage extends ConsumerWidget {
             children: [
               _Header(profile: profile),
               const SizedBox(height: 20),
-              _Stats(statistics: profile.statistics),
-              if (!isOwnProfile) ...[
-                const SizedBox(height: 20),
-                _SocialActions(userId: userId, userName: profile.userName),
-              ],
-              const SizedBox(height: 24),
-              Text(
-                'Puanladığı filmler (${profile.ratings.length})',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              if (profile.ratings.isEmpty)
-                const EmptyView(
-                  icon: Icons.star_outline,
-                  message: 'Henüz puanlanmış film yok.',
-                )
-              else
-                for (final rated in profile.ratings)
-                  MovieListTile(
-                    movieId: rated.movieId,
-                    title: rated.title,
-                    posterPath: rated.posterPath,
-                    trailing: _RatingChip(rating: rated.rating),
+              if (profile.isBlockedByMe)
+                _BlockedNotice(userId: userId)
+              else if (profile.isRestricted) ...[
+                const _RestrictedNotice(),
+                if (!isOwnProfile) ...[
+                  const SizedBox(height: 20),
+                  _SocialActions(
+                    userId: userId,
+                    userName: profile.userName,
+                    showCompatibility: false,
                   ),
+                ],
+              ] else ...[
+                _Stats(statistics: profile.statistics),
+                if (!isOwnProfile) ...[
+                  const SizedBox(height: 20),
+                  _SocialActions(userId: userId, userName: profile.userName),
+                ],
+                const SizedBox(height: 24),
+                ..._ratings(context, profile),
+              ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _ratings(BuildContext context, UserProfile profile) => [
+    Text(
+      'Puanladığı filmler (${profile.ratings.length})',
+      style: Theme.of(context).textTheme.titleMedium,
+    ),
+    const SizedBox(height: 8),
+    if (profile.ratings.isEmpty)
+      const EmptyView(
+        icon: Icons.star_outline,
+        message: 'Henüz puanlanmış film yok.',
+      )
+    else
+      for (final rated in profile.ratings)
+        MovieListTile(
+          movieId: rated.movieId,
+          title: rated.title,
+          posterPath: rated.posterPath,
+          trailing: _RatingChip(rating: rated.rating),
+        ),
+  ];
+
+  Future<void> _confirmBlock(
+    BuildContext context,
+    WidgetRef ref,
+    UserProfile profile,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${profile.userName} engellensin mi?'),
+        content: const Text(
+          'Birbirinizin profilini göremez, mesajlaşamaz ve aynı etkinlik '
+          'grubuna düşmezsiniz. Karşılıklı takip kaldırılır. Engeli '
+          'Ayarlar > Gizlilik\'ten kaldırabilirsin.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Engelle'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await ref.read(socialRepositoryProvider).block(userId);
+      ref.invalidate(userProfileProvider(userId));
+      ref.invalidate(followStatusProvider(userId));
+      ref.invalidate(blockedUsersProvider);
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    }
+  }
+}
+
+class _RestrictedNotice extends StatelessWidget {
+  const _RestrictedNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Card(
+      child: ListTile(
+        leading: Icon(Icons.lock_outline),
+        title: Text('Bu kullanıcı puanlarını ve listelerini gizli tutuyor.'),
+      ),
+    );
+  }
+}
+
+class _BlockedNotice extends ConsumerWidget {
+  const _BlockedNotice({required this.userId});
+
+  final String userId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Bu kullanıcıyı engelledin. Birbirinizin profilini göremez, '
+              'mesajlaşamaz ve aynı etkinlik grubuna düşmezsiniz.',
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: () async {
+                try {
+                  await ref.read(socialRepositoryProvider).unblock(userId);
+                  ref.invalidate(userProfileProvider(userId));
+                  ref.invalidate(followStatusProvider(userId));
+                  ref.invalidate(compatibilityProvider(userId));
+                  ref.invalidate(blockedUsersProvider);
+                } catch (error) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(error.toString())));
+                  }
+                }
+              },
+              child: const Text('Engeli kaldır'),
+            ),
+          ],
         ),
       ),
     );
@@ -169,15 +294,21 @@ class _StatTile extends StatelessWidget {
 
 /// Takip et / takibi bırak ve uyumluluk bilgisi.
 class _SocialActions extends ConsumerWidget {
-  const _SocialActions({required this.userId, required this.userName});
+  const _SocialActions({
+    required this.userId,
+    required this.userName,
+    this.showCompatibility = true,
+  });
 
   final String userId;
   final String userName;
 
+  /// Gizli profilde uyum da kapalıdır (puanlardan türer); hiç istenmez.
+  final bool showCompatibility;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final followStatus = ref.watch(followStatusProvider(userId));
-    final compatibility = ref.watch(compatibilityProvider(userId));
 
     Future<void> toggleFollow(bool isFollowing) async {
       final repository = ref.read(socialRepositoryProvider);
@@ -199,15 +330,19 @@ class _SocialActions extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        compatibility.when(
-          loading: () => const SizedBox(height: 28),
-          error: (_, _) => const SizedBox.shrink(),
-          data: (result) => CompatibilityBadge(
-            score: result.compatibilityScore,
-            commonMovieCount: result.commonMovieCount,
-          ),
-        ),
-        const SizedBox(height: 12),
+        if (showCompatibility) ...[
+          ref
+              .watch(compatibilityProvider(userId))
+              .when(
+                loading: () => const SizedBox(height: 28),
+                error: (_, _) => const SizedBox.shrink(),
+                data: (result) => CompatibilityBadge(
+                  score: result.compatibilityScore,
+                  commonMovieCount: result.commonMovieCount,
+                ),
+              ),
+          const SizedBox(height: 12),
+        ],
         followStatus.when(
           loading: () => const SizedBox(height: 48),
           error: (error, _) => ErrorView(

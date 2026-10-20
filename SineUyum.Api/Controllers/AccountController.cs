@@ -19,13 +19,15 @@ namespace SineUyum.Api.Controllers
         private readonly ApplicationDbContext _context;
         private readonly TokenService _tokenService;
         private readonly SubscriptionService _subscriptions;
+        private readonly PrivacyService _privacy;
 
-        public AccountController(UserManager<AppUser> userManager, ApplicationDbContext context, TokenService tokenService, SubscriptionService subscriptions)
+        public AccountController(UserManager<AppUser> userManager, ApplicationDbContext context, TokenService tokenService, SubscriptionService subscriptions, PrivacyService privacy)
         {
             _userManager = userManager;
             _context = context;
             _tokenService = tokenService;
             _subscriptions = subscriptions;
+            _privacy = privacy;
         }
 
         [HttpPost("register")]
@@ -144,6 +146,46 @@ namespace SineUyum.Api.Controllers
             return Ok(await _tokenService.CreateAuthResponseAsync(user, DeviceInfo()));
         }
 
+        // Gizlilik ayarları (G12). Her biri bağımsız açılıp kapatılır.
+        [HttpGet("privacy")]
+        [Authorize]
+        public async Task<ActionResult<PrivacySettingsDto>> GetPrivacy()
+        {
+            var user = await CurrentUserAsync();
+            if (user == null) return Unauthorized();
+            return Ok(ToPrivacyDto(user));
+        }
+
+        [HttpPut("privacy")]
+        [Authorize]
+        public async Task<ActionResult<PrivacySettingsDto>> UpdatePrivacy([FromBody] PrivacySettingsDto dto)
+        {
+            var user = await CurrentUserAsync();
+            if (user == null) return Unauthorized();
+
+            user.ProfileVisibility = dto.ProfileVisibility!.Value;
+            user.MessagePermission = dto.MessagePermission!.Value;
+            user.HiddenFromSearch = dto.HiddenFromSearch;
+
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded) return BadRequest(result.Errors);
+
+            return Ok(ToPrivacyDto(user));
+        }
+
+        private static PrivacySettingsDto ToPrivacyDto(AppUser user) => new()
+        {
+            ProfileVisibility = user.ProfileVisibility,
+            MessagePermission = user.MessagePermission,
+            HiddenFromSearch = user.HiddenFromSearch
+        };
+
+        private async Task<AppUser?> CurrentUserAsync()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return userId == null ? null : await _userManager.FindByIdAsync(userId);
+        }
+
         private string? DeviceInfo() => Request.Headers.UserAgent.ToString();
 
         [HttpGet("search")]
@@ -163,8 +205,11 @@ namespace SineUyum.Api.Controllers
             limit = Math.Clamp(limit, 1, 100);
             var loweredQuery = query.ToLower();
 
+            // Aramada görünmemeyi seçenler ve engel olan kişiler (iki yönde) çıkmaz.
+            var blockedIds = _privacy.BlockedPartnerIds(currentUserId);
             var users = await _userManager.Users
                 .Where(u => u.UserName != null && u.Id != currentUserId && u.UserName.ToLower().Contains(loweredQuery))
+                .Where(u => !u.HiddenFromSearch && !blockedIds.Contains(u.Id))
                 .OrderBy(u => u.UserName)
                 .Take(limit)
                 .Select(u => new UserSearchResultDto

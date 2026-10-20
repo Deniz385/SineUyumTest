@@ -187,10 +187,36 @@ diyor ama Identity varsayılanı rakam + büyük/küçük harf + özel karakter 
 istiyor → kullanıcıya yanlış mesaj gösteriliyor. `RequireUniqueEmail`
 ayarlanmadığı için aynı e-posta ile birden fazla hesap açılabilir.
 
-### G12 — Gizlilik ayarı yok
+### G12 — Gizlilik ayarı yok — ✅ kapatıldı
 `ProfileController.GetUserProfile` herhangi bir giriş yapmış kullanıcıya
 hedef kullanıcının tüm puanlamalarını ve istatistiklerini açıyor. Gizli hesap
 / görünürlük tercihi kavramı yok.
+
+**Yapılan:** Dört ayar, her biri bağımsız açılıp kapatılır (varsayılanlar
+eski davranışla aynı; mevcut hesaplar migration ile böyle başlar). Kurallar
+tek yerde, `PrivacyService`'te; istemciler yalnızca gösterir.
+- **Profil görünürlüğü** (`Public` / `Following` / `Private`): puanlar,
+  istatistikler, takip listeleri ve uyum (puanlardan türediği için) kapanır;
+  ad, fotoğraf ve biyografi görünür kalır. "Following" = sahibin takip
+  ettikleri: takip onaysız olduğu için "takipçilerim" koruma sağlamazdı.
+  Yönetici her şeyi görür.
+- **Mesaj izni** (`Everyone` / `Following` / `Nobody`): yalnızca yeni mesajı
+  engeller (403, gerekçeli); geçmiş sohbet okunur.
+- **Aramada görünmeme:** kullanıcı aramasından çıkar; profil bağlantısı çalışır.
+- **Engelleme** (`/api/v1/blocks`): iki yönlü etki. Engellenen, engelleyeni
+  hiç göremez (404); taraflar mesajlaşamaz, takip edemez, aramada birbirini
+  bulamaz, etkinlik eşleştirmesinde aynı gruba düşmez. Karşılıklı takip
+  silinir, engel kalkınca geri gelmez.
+- Eşleştirme: engel varsa en çok çakışması olan önce yerleştirilir; aksi
+  halde birbirini engelleyenler sona kalıp geçerli bir dağılım varken
+  gruptan dışarıda kalıyordu (testte yakalandı).
+- Yol üstünde: olmayan kullanıcıyı takip etmek FK hatasıyla 500 veriyordu
+  (artık 404).
+- Web: Profili Düzenle > Gizlilik; profilde Engelle / Engeli Kaldır. Mobil:
+  Ayarlar > Gizlilik; profil menüsünde Engelle.
+
+**Kalan:** Paylaşılan izleme listesi bağlantısı (`watchlist/public/{id}`)
+gizlilik ayarından bağımsız; liste bilinçli olarak mesajla paylaşılır.
 
 ### G13 — Etkinlik katılımında doğrulama eksik — ✅ kapatıldı (G4 ile)
 `EventController.JoinEvent` `eventId`'nin var olup olmadığını ve etkinlik
@@ -661,4 +687,4 @@ destek yok (PWA ayrı bir iş).
 22. Eşleştirmeyi arka plan işine taşı (M7)
 23. `SuggestedMovieIds` tablosuna normalizasyon (M8)
 24. Rate limiting'i tüm API'ye yay (G5)
-25. Gizlilik ayarları (G12)
+25. Gizlilik ayarları (G12) — ✅

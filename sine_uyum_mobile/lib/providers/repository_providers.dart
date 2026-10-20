@@ -90,3 +90,11 @@ final conversationsProvider = FutureProvider<List<Conversation>>(
 final myEventProvider = FutureProvider<EventState>(
   (ref) => ref.watch(eventRepositoryProvider).myStatus(),
 );
+
+final privacySettingsProvider = FutureProvider<PrivacySettings>(
+  (ref) => ref.watch(socialRepositoryProvider).privacy(),
+);
+
+final blockedUsersProvider = FutureProvider<List<BlockedUser>>(
+  (ref) => ref.watch(socialRepositoryProvider).blockedUsers(),
+);

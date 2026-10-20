@@ -79,4 +79,36 @@ class SocialRepository {
   Future<void> unfollow(String userId) async {
     await _client.delete<Map<String, dynamic>>('/api/v1/follow/$userId');
   }
+
+  Future<PrivacySettings> privacy() async {
+    final data = await _client.get<Map<String, dynamic>>(
+      '/api/v1/account/privacy',
+    );
+    return PrivacySettings.fromJson(data);
+  }
+
+  Future<PrivacySettings> updatePrivacy(PrivacySettings settings) async {
+    final data = await _client.put<Map<String, dynamic>>(
+      '/api/v1/account/privacy',
+      body: settings.toJson(),
+    );
+    return PrivacySettings.fromJson(data);
+  }
+
+  Future<List<BlockedUser>> blockedUsers() async {
+    final data = await _client.get<List<dynamic>>('/api/v1/blocks');
+    return data
+        .map(
+          (item) => BlockedUser.fromJson((item as Map).cast<String, dynamic>()),
+        )
+        .toList();
+  }
+
+  Future<void> block(String userId) async {
+    await _client.post<Map<String, dynamic>>('/api/v1/blocks/$userId');
+  }
+
+  Future<void> unblock(String userId) async {
+    await _client.delete<Map<String, dynamic>>('/api/v1/blocks/$userId');
+  }
 }

@@ -13,6 +13,7 @@ import '../../features/movies/movie_search_page.dart';
 import '../../features/notifications/notifications_page.dart';
 import '../../features/profile/edit_profile_page.dart';
 import '../../features/profile/profile_page.dart';
+import '../../features/settings/privacy_settings_page.dart';
 import '../../features/settings/settings_page.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/shell/splash_page.dart';
@@ -140,6 +141,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const NotificationsPage(),
       ),
       GoRoute(path: '/settings', builder: (_, _) => const SettingsPage()),
+      GoRoute(
+        path: '/settings/privacy',
+        builder: (_, _) => const PrivacySettingsPage(),
+      ),
       GoRoute(
         path: '/subscription',
         builder: (_, _) => const SubscriptionPage(),

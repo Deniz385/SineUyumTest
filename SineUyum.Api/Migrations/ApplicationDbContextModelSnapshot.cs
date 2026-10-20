@@ -176,11 +176,19 @@ namespace SineUyum.Api.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("HiddenFromSearch")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MessagePermission")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
@@ -201,6 +209,11 @@ namespace SineUyum.Api.Migrations
 
                     b.Property<string>("ProfileImageUrl")
                         .HasColumnType("text");
+
+                    b.Property<string>("ProfileVisibility")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
@@ -613,6 +626,24 @@ namespace SineUyum.Api.Migrations
                     b.ToTable("Subscriptions");
                 });
 
+            modelBuilder.Entity("SineUyum.Api.Models.UserBlock", b =>
+                {
+                    b.Property<string>("BlockerId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BlockedId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("BlockerId", "BlockedId");
+
+                    b.HasIndex("BlockedId");
+
+                    b.ToTable("UserBlocks");
+                });
+
             modelBuilder.Entity("SineUyum.Api.Models.UserFollow", b =>
                 {
                     b.Property<int>("Id")
@@ -948,6 +979,25 @@ namespace SineUyum.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.UserBlock", b =>
+                {
+                    b.HasOne("SineUyum.Api.Models.AppUser", "Blocked")
+                        .WithMany()
+                        .HasForeignKey("BlockedId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SineUyum.Api.Models.AppUser", "Blocker")
+                        .WithMany()
+                        .HasForeignKey("BlockerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Blocked");
+
+                    b.Navigation("Blocker");
                 });
 
             modelBuilder.Entity("SineUyum.Api.Models.UserFollow", b =>

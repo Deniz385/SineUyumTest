@@ -19,15 +19,18 @@ namespace SineUyum.Api.Controllers
         private readonly ApplicationDbContext _context;
         private readonly NotificationService _notifications;
         private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly PrivacyService _privacy;
 
         public MessageController(
             ApplicationDbContext context,
             NotificationService notifications,
-            IHubContext<NotificationHub> hubContext)
+            IHubContext<NotificationHub> hubContext,
+            PrivacyService privacy)
         {
             _context = context;
             _notifications = notifications;
             _hubContext = hubContext;
+            _privacy = privacy;
         }
 
         // SignalR "ReceiveMessage" olayının adı; istemciler bunu dinler.
@@ -85,6 +88,9 @@ namespace SineUyum.Api.Controllers
 
             var recipient = await _context.Users.FindAsync(createMessageDto.RecipientId);
             if (recipient == null) return NotFound("Alıcı kullanıcı bulunamadı.");
+
+            // Engel ve alıcının mesaj izni (G12); ihlalde 403.
+            await _privacy.EnsureCanMessageAsync(senderId, recipient);
 
             var message = new Message
             {

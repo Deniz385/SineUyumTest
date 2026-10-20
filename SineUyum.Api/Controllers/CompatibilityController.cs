@@ -18,11 +18,13 @@ namespace SineUyum.Api.Controllers
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly string? _tmdbApiKey;
         private const string TmdbApiBaseUrl = "https://api.themoviedb.org/3/";
+        private readonly PrivacyService _privacy;
 
-        public CompatibilityController(ApplicationDbContext context, IHttpClientFactory httpClientFactory, IConfiguration configuration)
+        public CompatibilityController(ApplicationDbContext context, IHttpClientFactory httpClientFactory, IConfiguration configuration, PrivacyService privacy)
         {
             _context = context;
             _httpClientFactory = httpClientFactory;
+            _privacy = privacy;
             // Boş string de tanımsız sayılmalı; appsettings.json'daki yer tutucu
             // aksi halde TMDB_API_KEY ortam değişkenini gölgeliyordu.
             var apiKey = configuration["TMDb:ApiKey"];
@@ -38,6 +40,9 @@ namespace SineUyum.Api.Controllers
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (currentUserId == null) return Unauthorized();
+
+            // Uyum, hedefin puanlarından türetilir; profil ayrıntısıyla aynı kural.
+            await _privacy.EnsureCanViewDetailsAsync(currentUserId, targetUserId, User.IsInRole("Admin"));
 
             var commonRatingsQuery = from r1 in _context.UserRatings.Where(r => r.UserId == currentUserId)
                                      join r2 in _context.UserRatings.Where(r => r.UserId == targetUserId) on r1.MovieId equals r2.MovieId
@@ -76,6 +81,9 @@ namespace SineUyum.Api.Controllers
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (currentUserId == null) return Unauthorized();
+
+            // Uyum, hedefin puanlarından türetilir; profil ayrıntısıyla aynı kural.
+            await _privacy.EnsureCanViewDetailsAsync(currentUserId, targetUserId, User.IsInRole("Admin"));
 
             if (string.IsNullOrEmpty(_tmdbApiKey))
             {

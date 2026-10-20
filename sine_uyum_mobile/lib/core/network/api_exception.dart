@@ -2,10 +2,14 @@ import 'package:dio/dio.dart';
 
 /// API hatalarını kullanıcıya gösterilebilir tek bir tipe indirger.
 class ApiException implements Exception {
-  ApiException(this.message, {this.statusCode});
+  ApiException(this.message, {this.statusCode, this.isNetworkError = false});
 
   final String message;
   final int? statusCode;
+
+  /// Sunucuya hiç ulaşılamadı (bağlantı yok / zaman aşımı). Sunucunun
+  /// verdiği bir ret (4xx/5xx) değildir; oturum ya da veri silinmemeli.
+  final bool isNetworkError;
 
   bool get isUnauthorized => statusCode == 401;
   bool get isNotFound => statusCode == 404;
@@ -21,11 +25,13 @@ class ApiException implements Exception {
         return ApiException(
           'Sunucuya ulaşılamadı, bağlantınızı kontrol edin.',
           statusCode: statusCode,
+          isNetworkError: true,
         );
       case DioExceptionType.connectionError:
         return ApiException(
           'İnternet bağlantısı kurulamadı.',
           statusCode: statusCode,
+          isNetworkError: true,
         );
       case DioExceptionType.cancel:
         return ApiException('İstek iptal edildi.', statusCode: statusCode);

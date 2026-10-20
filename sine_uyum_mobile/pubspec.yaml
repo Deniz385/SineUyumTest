@@ -44,6 +44,8 @@ dependencies:
   firebase_core: ^5.0.0
   firebase_messaging: ^17.0.0
   image_picker: ^1.2.4
+  connectivity_plus: ^7.3.2
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:

@@ -6,6 +6,7 @@ import 'core/theme/app_theme.dart';
 import 'providers/notification_provider.dart';
 import 'providers/push_provider.dart';
 import 'providers/theme_provider.dart';
+import 'widgets/offline_banner.dart';
 
 class SineUyumApp extends ConsumerWidget {
   const SineUyumApp({super.key});
@@ -25,6 +26,8 @@ class SineUyumApp extends ConsumerWidget {
       darkTheme: AppTheme.dark,
       themeMode: ref.watch(themeModeProvider),
       routerConfig: ref.watch(routerProvider),
+      builder: (context, child) =>
+          OfflineBanner(child: child ?? const SizedBox.shrink()),
     );
   }
 }

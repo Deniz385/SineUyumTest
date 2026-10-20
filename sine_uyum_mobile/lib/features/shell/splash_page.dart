@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Saklı token okunurken gösterilen açılış ekranı.
-class SplashPage extends StatelessWidget {
+import '../../core/offline/network_status.dart';
+
+/// Saklı token okunurken gösterilen açılış ekranı. İlk açılışta ağ yoksa
+/// oturum doğrulanamaz; token'lar korunur ve ağ dönünce devam edilir.
+class SplashPage extends ConsumerWidget {
   const SplashPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final offline = ref.watch(networkStatusProvider).isOffline;
     return Scaffold(
       body: Center(
         child: Column(
@@ -20,6 +25,10 @@ class SplashPage extends StatelessWidget {
             Text('SineUyum', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 24),
             const CircularProgressIndicator(),
+            if (offline) ...[
+              const SizedBox(height: 16),
+              const Text('Bağlantı bekleniyor…'),
+            ],
           ],
         ),
       ),

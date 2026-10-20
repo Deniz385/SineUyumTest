@@ -131,10 +131,18 @@ Firebase yapılandırılmadan da uygulama derlenir ve çalışır; push yalnızc
 5. Doğrulama: uygulamada giriş yapın, *Ayarlar → Anlık bildirimler* "Açık"
    olmalı. Uygulamayı kapatıp başka bir hesaptan mesaj gönderin.
 
+### Çevrimdışı kullanım
+
+İnternet yokken profil, sohbetler ve mesajlar, izleme listeleri, bildirimler
+ve film listeleri son kaydedilen haliyle açılır; ekranın altında
+"kayıtlı veriler gösteriliyor" şeridi çıkar. Bağlantı dönünce canlı bağlantı
+kendiliğinden kurulur ve veriler tazelenir. İnternetsiz açılış oturumu
+kapatmaz. Önbellek tek kullanıcılıktır; çıkışta ve hesap değişince silinir.
+
 ## Bilinen eksikler
 
 Mobil tarafta tamamlanması gereken işler `docs/ANALIZ-VE-YOL-HARITASI.md`
 dosyasının "Faz 3 — Mobil tamamlama" bölümünde listelenmiştir. Öne çıkanlar:
 
-- Çevrimdışı cache
+- Çevrimdışı mesaj gönderme (gönderme kuyruğu) — okuma çevrimdışı çalışıyor
 - Uygulama ikonu ve açılış ekranı görselleri (şu an Flutter varsayılanları)

@@ -2,11 +2,14 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sine_uyum_mobile/core/offline/network_status.dart';
 import 'package:sine_uyum_mobile/core/push/push_messaging.dart';
 import 'package:sine_uyum_mobile/data/models/app_user.dart';
 import 'package:sine_uyum_mobile/data/repositories/device_repository.dart';
 import 'package:sine_uyum_mobile/providers/push_provider.dart';
 import 'package:sine_uyum_mobile/providers/session_provider.dart';
+
+import 'support/fake_network.dart';
 
 class FakeMessaging implements PushMessaging {
   bool configured = true;
@@ -78,8 +81,10 @@ void main() {
   late FakeDevices devices;
   late List<PushOpened> handled;
   late ProviderContainer container;
+  late FakeConnectivity connectivity;
 
   setUp(() {
+    connectivity = FakeConnectivity();
     messaging = FakeMessaging();
     devices = FakeDevices();
     handled = [];
@@ -89,6 +94,7 @@ void main() {
         pushMessagingProvider.overrideWithValue(messaging),
         deviceRepositoryProvider.overrideWithValue(devices),
         pushOpenedHandlerProvider.overrideWithValue(handled.add),
+        connectivitySourceProvider.overrideWithValue(connectivity),
       ],
     );
     // Sağlayıcı uygulamada kök widget'ta izlenir; testte de canlı tutulur.
@@ -218,6 +224,23 @@ void main() {
     messaging.refresh.add('token-2');
     await settle();
     expect(devices.registered.map((r) => r.$1), ['token-2']);
+  });
+
+  test('çevrimdışıyken düşen kayıt ağ dönünce yeniden denenir', () async {
+    container.listen(networkStatusProvider, (_, _) {});
+    devices.failRegister = true;
+    session().signIn('u1');
+    await settle();
+    expect(status(), PushStatus.idle);
+
+    devices.failRegister = false;
+    connectivity.set(false);
+    await settle();
+    connectivity.set(true);
+    await settle();
+
+    expect(devices.registered.map((r) => r.$1), ['token-1']);
+    expect(status(), PushStatus.registered);
   });
 
   group('PushOpened.fromData', () {

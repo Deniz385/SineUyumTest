@@ -40,6 +40,20 @@ class AppUser {
   }
 }
 
+/// [AppUser.fromJson] ile geri okunabilen biçim (çevrimdışı önbellek için).
+extension AppUserJson on AppUser {
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'userName': userName,
+    'email': email,
+    'bio': bio,
+    'profileImageUrl': profileImageUrl,
+    'isSubscribed': isSubscribed,
+    'subscriptionExpires': subscriptionExpires?.toIso8601String(),
+    'roles': roles,
+  };
+}
+
 /// `/api/v1/account/login`, `/refresh` ve `/api/v1/subscription/activate` yanıtı.
 class AuthResult {
   const AuthResult({

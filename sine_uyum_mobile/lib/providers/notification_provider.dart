@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:signalr_netcore/signalr_client.dart';
 
 import '../core/config/app_config.dart';
+import '../core/offline/network_status.dart';
 import '../data/models/message.dart';
 import '../data/models/notification.dart';
 import 'chat_provider.dart';
@@ -47,6 +50,11 @@ final notificationsProvider =
 /// sohbet mesajlarını da taşır ("ReceiveMessage" → [ChatEvents]).
 class NotificationNotifier extends Notifier<NotificationState> {
   HubConnection? _connection;
+  Timer? _retryTimer;
+  int _failures = 0;
+
+  // Bağlantı kurulamazsa yeniden deneme aralıkları (son değer tekrarlanır).
+  static const _retryDelays = [5, 15, 30, 60];
 
   @override
   NotificationState build() {
@@ -54,6 +62,15 @@ class NotificationNotifier extends Notifier<NotificationState> {
     final session = ref.watch(sessionProvider);
 
     ref.onDispose(_disconnect);
+
+    // Ağ geri gelince beklemeden bağlan ve kaçanları tazele.
+    ref.listen<NetworkStatus>(networkStatusProvider, (previous, next) {
+      if (previous?.isOffline == true && !next.isOffline) {
+        _retryTimer?.cancel();
+        _connect();
+        _resync();
+      }
+    });
 
     if (session.isAuthenticated) {
       Future.microtask(() async {
@@ -175,24 +192,54 @@ class NotificationNotifier extends Notifier<NotificationState> {
 
     // Bağlantı koptuğu sürede gelenler kaçmış olabilir: bildirimler ve açık
     // sohbet sunucudan tazelenir.
-    connection.onreconnected(({connectionId}) {
-      load();
-      ref.read(chatEventsProvider).markReconnected();
-      ref.invalidate(conversationsProvider);
+    connection.onreconnected(({connectionId}) => _resync());
+
+    // Otomatik yeniden bağlanma ~40 sn sonra (4 deneme) vazgeçer ve bağlantı
+    // kalıcı olarak kapanır. Önceden _connection dolu kaldığı için bir daha
+    // hiç bağlanılmıyor, canlı bildirim/sohbet uygulama yeniden başlatılana
+    // dek ölüyordu. Artık bırakılıp yeniden denenir.
+    connection.onclose(({error}) {
+      if (!identical(_connection, connection)) return; // bilerek kapatıldı
+      _connection = null;
+      _scheduleRetry();
     });
 
     _connection = connection;
 
     try {
       await connection.start();
+      if (_failures > 0) _resync(); // aradaki kopuklukta kaçanlar
+      _failures = 0;
     } catch (error) {
       // Bildirimler olmadan da uygulama çalışmaya devam etmeli.
       debugPrint('SignalR bağlantısı kurulamadı: $error');
-      _connection = null;
+      if (identical(_connection, connection)) _connection = null;
+      _scheduleRetry();
     }
   }
 
+  void _scheduleRetry() {
+    if (!ref.mounted || !ref.read(sessionProvider).isAuthenticated) return;
+    final seconds = _retryDelays[_failures.clamp(0, _retryDelays.length - 1)];
+    _failures++;
+    _retryTimer?.cancel();
+    _retryTimer = Timer(Duration(seconds: seconds), () {
+      if (ref.mounted) _connect();
+    });
+  }
+
+  /// Kopukluktan sonra: bildirimler, açık sohbet ve sohbet listesi tazelenir.
+  void _resync() {
+    if (!ref.mounted || !ref.read(sessionProvider).isAuthenticated) return;
+    load();
+    ref.read(chatEventsProvider).markReconnected();
+    ref.invalidate(conversationsProvider);
+  }
+
   void _disconnect() {
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    _failures = 0;
     final connection = _connection;
     _connection = null;
     connection?.stop();

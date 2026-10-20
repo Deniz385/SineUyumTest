@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sine_uyum_mobile/core/offline/network_status.dart';
 import 'package:sine_uyum_mobile/data/models/app_user.dart';
 import 'package:sine_uyum_mobile/data/models/message.dart';
 import 'package:sine_uyum_mobile/data/models/notification.dart';
@@ -11,6 +12,8 @@ import 'package:sine_uyum_mobile/providers/chat_provider.dart';
 import 'package:sine_uyum_mobile/providers/notification_provider.dart';
 import 'package:sine_uyum_mobile/providers/repository_providers.dart';
 import 'package:sine_uyum_mobile/providers/session_provider.dart';
+
+import 'support/fake_network.dart';
 
 ChatMessage msg(int id, String from, String to, [String? content]) =>
     ChatMessage(
@@ -88,6 +91,7 @@ void main() {
         sessionProvider.overrideWith(
           () => SignedInAs(me, authenticated: authenticated),
         ),
+        connectivitySourceProvider.overrideWithValue(FakeConnectivity()),
       ],
     );
     addTearDown(c.dispose);

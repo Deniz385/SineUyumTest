@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 
 import '../config/app_config.dart';
+import '../offline/response_cache.dart';
 import '../storage/token_storage.dart';
 import 'api_exception.dart';
 
@@ -14,7 +15,7 @@ import 'api_exception.dart';
 ///    tekrarlamak (kullanıcı tekrar giriş yapmak zorunda kalmaz)
 ///  * Yenileme de başarısızsa oturumu kapatmak
 class ApiClient {
-  ApiClient(this._tokenStorage, {Dio? dio})
+  ApiClient(this._tokenStorage, {Dio? dio, HttpClientAdapter? adapter})
     : _dio =
           dio ??
           Dio(
@@ -27,6 +28,9 @@ class ApiClient {
               validateStatus: (status) => status != null && status < 400,
             ),
           ) {
+    // Testlerde ağ katmanı taklit edilir; BaseOptions ve interceptor'lar
+    // gerçek kalır.
+    if (adapter != null) _dio.httpClientAdapter = adapter;
     _dio.interceptors.add(
       InterceptorsWrapper(onRequest: _onRequest, onError: _onError),
     );
@@ -38,6 +42,16 @@ class ApiClient {
   /// Oturum geri kazanılamadığında (refresh de başarısız) tetiklenir.
   /// Uygulama katmanı bunu dinleyip kullanıcıyı giriş ekranına yönlendirir.
   void Function()? onSessionExpired;
+
+  /// Çevrimdışı kullanım için okuma yanıtlarının yerel kopyası (opsiyonel).
+  ResponseCache? cache;
+
+  /// Cihazın ağ bağlantısı yoksa true; o zaman önbellekli istekler ağı hiç
+  /// beklemeden (zaman aşımı 15 sn) doğrudan önbellekten okunur.
+  bool Function()? isDeviceOffline;
+
+  /// Her yanıtta (sunucuya ulaşıldı: true) ve ağ hatasında (false) çağrılır.
+  void Function(bool reachable)? onServerReachability;
 
   /// Eşzamanlı 401'lerde tek bir yenileme isteği atılması için paylaşılan future.
   Future<String?>? _refreshFuture;
@@ -75,7 +89,23 @@ class ApiClient {
       return handler.next(error);
     }
 
-    final newToken = await _refreshAccessToken();
+    final String? newToken;
+    try {
+      newToken = await _refreshAccessToken();
+    } on DioException catch (refreshError) {
+      // Yenileme isteği sunucuya ULAŞAMADI (ağ yok). Bu bir ret değil:
+      // token'lar korunur, oturum kapanmaz. Önceden bu da "oturum bitti"
+      // sayılıp token'lar siliniyordu. Çağırana 401 değil ağ hatası iletilir;
+      // aksi halde 401'i gören çağıran (ör. açılış) oturumu yine kapatırdı.
+      return handler.next(
+        DioException(
+          requestOptions: error.requestOptions,
+          type: refreshError.type,
+          error: refreshError.error,
+          message: refreshError.message,
+        ),
+      );
+    }
     if (newToken == null) {
       await _tokenStorage.clear();
       onSessionExpired?.call();
@@ -98,6 +128,8 @@ class ApiClient {
   /// Refresh token ile yeni access token alır. Eşzamanlı çağrılar aynı
   /// future'ı paylaşır, böylece tek yenileme isteği atılır (token rotation
   /// nedeniyle ikinci istek zaten geçersiz olurdu).
+  ///
+  /// Sunucu reddederse null; sunucuya ulaşılamazsa [DioException] fırlatır.
   Future<String?> _refreshAccessToken() {
     return _refreshFuture ??= _performRefresh().whenComplete(() {
       _refreshFuture = null;
@@ -125,13 +157,44 @@ class ApiClient {
         refreshToken: newRefreshToken,
       );
       return accessToken;
-    } on DioException {
-      return null;
+    } on DioException catch (error) {
+      // Yanıt varsa sunucu reddetti (geçersiz/süresi dolmuş refresh token).
+      if (error.response != null) return null;
+      rethrow;
     }
   }
 
   Future<T> get<T>(String path, {Map<String, dynamic>? query}) async {
-    return _unwrap(() => _dio.get<T>(path, queryParameters: query));
+    final cacheKey = cache?.keyFor(path, query);
+    if (cacheKey == null) {
+      return _unwrap(() => _dio.get<T>(path, queryParameters: query));
+    }
+
+    // Cihaz çevrimdışıysa ağı hiç deneme: kayıt varsa anında göster.
+    if (isDeviceOffline?.call() ?? false) {
+      final cached = await cache!.read(cacheKey);
+      if (cached != null) return cached as T;
+      throw ApiException(
+        'İnternet bağlantısı yok ve bu içerik daha önce kaydedilmemiş.',
+        isNetworkError: true,
+      );
+    }
+
+    try {
+      final result = await _unwrap(
+        () => _dio.get<T>(path, queryParameters: query),
+      );
+      // Kaydetme hatası (disk dolu vb.) isteği bozmasın.
+      unawaited(cache!.write(cacheKey, result).catchError((_) {}));
+      return result;
+    } on ApiException catch (error) {
+      // Yalnızca ağ hatasında önbelleğe düşülür; sunucunun verdiği yanıtlar
+      // (403, 404...) olduğu gibi iletilir.
+      if (!error.isNetworkError) rethrow;
+      final cached = await cache!.read(cacheKey);
+      if (cached == null) rethrow;
+      return cached as T;
+    }
   }
 
   Future<T> post<T>(String path, {Object? body}) async {
@@ -149,9 +212,12 @@ class ApiClient {
   Future<T> _unwrap<T>(Future<Response<T>> Function() request) async {
     try {
       final response = await request();
+      onServerReachability?.call(true);
       return response.data as T;
     } on DioException catch (error) {
-      throw ApiException.fromDio(error);
+      final exception = ApiException.fromDio(error);
+      onServerReachability?.call(!exception.isNetworkError);
+      throw exception;
     }
   }
 }

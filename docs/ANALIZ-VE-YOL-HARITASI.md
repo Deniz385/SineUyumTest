@@ -576,7 +576,52 @@ tüm çağrı noktaları açıkça `/api/v1/...`'e taşındı. SignalR hub'ı
   Mobil: 7 yeni test (widget + birim).
 - **İleride:** dosyalar yerel diskte (`IMediaStorage` arayüzü); birden çok
   sunucuya ölçeklenince S3/Blob + CDN'e taşınmalı.
-17. Çevrimdışı cache (film listeleri, sohbetler)
+17. Çevrimdışı cache (film listeleri, sohbetler) — ✅ (Faz 3 tamamlandı)
+
+**Çevrimdışı kullanım (mobil):**
+- **Okuma önbelleği** `ApiClient` katmanında: izinli GET uçları (profil,
+  sohbet listesi ve mesajlar, izleme listeleri, bildirimler, etkinlik,
+  popüler/vizyondaki filmler, film detayı) her başarılı yanıtta saklanır;
+  ağ hatasında son kopya döner. Cihaz çevrimdışıysa ağ hiç beklenmez (15 sn
+  zaman aşımı yok). Sunucunun verdiği yanıtlar (403/404) önbellekle
+  örtülmez; arama/öneri saklanmaz. Film afişleri zaten
+  `cached_network_image` ile diskte.
+- **Gizlilik:** önbellekte aynı anda tek kullanıcı; başka hesapla girişte,
+  çıkışta ve oturum düşünce silinir. İşletim sisteminin önbellek dizininde
+  (yedeklemeye girmez), en fazla 300 kayıt. Önbellek hatası (disk dolu)
+  hiçbir isteği/girişi bozmaz.
+- **Ekranda:** tüm ekranların altında "Çevrimdışısın / Sunucuya
+  ulaşılamıyor — kayıtlı veriler gösteriliyor" şeridi; ağ var ama internet
+  yoksa (giriş yapılmamış otel Wi-Fi'ı) da gösterilir.
+
+**Yol üstünde bulunan, çevrimdışını bozan hatalar (testle yeniden üretildi):**
+- **İnternetsiz açılış oturumu kapatıyordu:** açılıştaki `/me` her hatada
+  token'ları siliyordu; metroda uygulamayı açan kullanıcı yeniden giriş
+  yapmak zorundaydı. Artık yalnızca sunucunun kesin reddi oturumu kapatır;
+  ağ yoksa kayıtlı profille açılır ya da açılış ekranında bekleyip ağ
+  dönünce devam eder.
+- **Token yenilerken ağ kopması "oturum bitti" sayılıyordu:** refresh
+  isteği sunucuya ulaşamayınca da token'lar siliniyordu. Artık yalnızca
+  sunucu reddederse; aksi halde çağırana 401 değil ağ hatası gider.
+- **SignalR kalıcı ölüyordu:** açılışta bağlanamazsa bir daha denenmiyordu;
+  otomatik yeniden bağlanma ~40 sn sonra vazgeçince de bağlantı kapalı
+  kalıyordu — canlı bildirim/sohbet uygulama yeniden açılana dek gelmiyordu.
+  Artık kapanınca 5/15/30/60 sn aralıklarla yeniden denenir, ağ dönünce
+  hemen bağlanır ve kaçanlar tazelenir. Push cihaz kaydı da ağ dönünce
+  yeniden denenir.
+- `/me` önbelleğe ancak üçüncü açılışta giriyordu (kullanıcı kimliği
+  `/me`'nin yanıtından öğreniliyor); artık giriş/açılışta açıkça saklanır.
+
+**Doğrulama:** 19 yeni mobil test (oturum + önbellek + dosya deposu +
+şerit; iki ana düzeltme mutasyonla sınandı), toplam 68. Gerçek mobil yığın
+Docker'daki API'ye karşı: sunucu 50 sn kapatıldı → veriler önbellekten,
+şerit açık; sunucu dönünce istemci kendiliğinden bağlandı, kesintide
+gönderilen mesaj geldi, sonraki canlı mesaj 124 ms'de düştü. Aynı senaryo
+eski SignalR koduyla zaman aşımına düştü (mesaj hiç gelmedi).
+
+**İleride:** çevrimdışı yazma (mesaj gönderme kuyruğu / outbox). Şimdilik
+çevrimdışı gönderim anlaşılır bir hata verir. Web istemcisinde çevrimdışı
+destek yok (PWA ayrı bir iş).
 18. Gerçek zamanlı sohbet (SignalR üzerinden mesaj iletimi) (M11) — ✅
 19. Mesaj "okundu" bilgisi (M10)
 20. Store yayın hazırlığı: ikonlar, splash, gizlilik politikası, zorunlu güncelleme

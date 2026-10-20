@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/offline/network_status.dart';
 import '../core/push/push_messaging.dart';
 import '../core/router/app_router.dart';
 import '../data/repositories/device_repository.dart';
@@ -84,6 +85,17 @@ class PushNotifier extends Notifier<PushStatus> {
         _enqueue(_onSignedOut);
       }
     }, fireImmediately: true);
+
+    // Kayıt çevrimdışıyken başarısız olduysa ağ dönünce yeniden dene
+    // (yoksa ancak bir sonraki token yenilemesinde denenirdi).
+    ref.listen<NetworkStatus>(networkStatusProvider, (previous, next) {
+      final cameBack = previous?.isOffline == true && !next.isOffline;
+      if (cameBack &&
+          state == PushStatus.idle &&
+          ref.read(sessionProvider).isAuthenticated) {
+        _enqueue(_onSignedIn);
+      }
+    });
 
     ref.onDispose(() {
       _tokenRefresh?.cancel();

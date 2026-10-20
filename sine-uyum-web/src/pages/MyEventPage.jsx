@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, Paper, Avatar, AvatarGroup, Alert, Grid, Card, CardContent, CardMedia, CardActions, Button, Chip } from '@mui/material';
 import EventIcon from '@mui/icons-material/Event';
@@ -83,6 +83,7 @@ const MatchedEvent = ({ data, onVote }) => {
 
 export const MyEventPage = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [statusData, setStatusData] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -108,12 +109,23 @@ export const MyEventPage = () => {
         fetchEventStatus();
     }, [fetchEventStatus]);
 
+    // Sunucu ücretli özelliği kendisi denetler (402). Abonelik bittiyse
+    // kullanıcı abonelik sayfasına yönlendirilir.
+    const handleActionError = (error, fallback) => {
+        if (error.response?.status === 402) {
+            navigate('/subscription');
+            return;
+        }
+        const data = error.response?.data;
+        alert(data?.message || data?.title || fallback);
+    };
+
     const handleJoinEvent = async (eventId) => {
         try {
             await api.post(`/api/v1/event/${eventId}/join`);
             fetchEventStatus();
         } catch (error) {
-            alert(error.response?.data?.message || "Etkinliğe katılırken bir hata oluştu.");
+            handleActionError(error, "Etkinliğe katılırken bir hata oluştu.");
         }
     };
     
@@ -124,8 +136,8 @@ export const MyEventPage = () => {
                 movieId: movieId 
             });
             fetchEventStatus();
-        } catch {
-            alert("Oyunuz kaydedilirken bir sorun oluştu.");
+        } catch (error) {
+            handleActionError(error, "Oyunuz kaydedilirken bir sorun oluştu.");
         }
     };
     

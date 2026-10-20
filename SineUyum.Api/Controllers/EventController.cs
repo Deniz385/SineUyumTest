@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
+using SineUyum.Api.Filters;
 using SineUyum.Api.Models;
 using System.Security.Claims;
 
@@ -115,6 +116,7 @@ namespace SineUyum.Api.Controllers
         }
         
         [HttpPost("vote")]
+        [RequiresSubscription]
         public async Task<ActionResult<StatusMessageDto>> VoteForMovie([FromBody] EventVoteDto voteDto)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -197,10 +199,21 @@ namespace SineUyum.Api.Controllers
         }
         
         [HttpPost("{eventId}/join")]
+        [RequiresSubscription]
         public async Task<ActionResult<StatusMessageDto>> JoinEvent(int eventId)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
+
+            // G13: önceden etkinliğin varlığı ve tarihi kontrol edilmiyordu;
+            // olmayan id yabancı anahtar hatasıyla 500, geçmiş etkinliğe
+            // katılım ise başarılı oluyordu.
+            var cinemaEvent = await _context.CinemaEvents.FindAsync(eventId);
+            if (cinemaEvent == null) return NotFound(new StatusMessageDto("Etkinlik bulunamadı."));
+            if (cinemaEvent.EventDate < DateTime.UtcNow)
+            {
+                return BadRequest(new StatusMessageDto("Bu etkinliğin tarihi geçmiş."));
+            }
 
             var alreadyJoined = await _context.EventParticipants.AnyAsync(p => p.UserId == userId && p.CinemaEvent.EventDate >= DateTime.UtcNow);
             if(alreadyJoined)

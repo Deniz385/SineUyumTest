@@ -19,10 +19,16 @@ namespace SineUyum.Api.Services
         private readonly ApplicationDbContext _context;
         private readonly UserManager<AppUser> _userManager;
         private readonly IConfiguration _configuration;
+        private readonly SubscriptionService _subscriptions;
 
-        public TokenService(ApplicationDbContext context, UserManager<AppUser> userManager, IConfiguration configuration)
+        public TokenService(
+            ApplicationDbContext context,
+            UserManager<AppUser> userManager,
+            IConfiguration configuration,
+            SubscriptionService subscriptions)
         {
             _context = context;
+            _subscriptions = subscriptions;
             _userManager = userManager;
             _configuration = configuration;
         }
@@ -39,7 +45,8 @@ namespace SineUyum.Api.Services
         {
             var roles = await _userManager.GetRolesAsync(user);
             var expiresAt = DateTime.UtcNow.Add(AccessTokenLifetime);
-            var accessToken = CreateAccessToken(user, roles, expiresAt);
+            var subscription = await _subscriptions.GetStateAsync(user.Id);
+            var accessToken = CreateAccessToken(user, roles, expiresAt, subscription.IsActive);
             var refreshToken = await CreateRefreshTokenAsync(user, deviceInfo);
 
             return new AuthResponseDto
@@ -54,8 +61,8 @@ namespace SineUyum.Api.Services
                     Email = user.Email,
                     Bio = user.Bio,
                     ProfileImageUrl = user.ProfileImageUrl,
-                    IsSubscribed = user.IsSubscribed,
-                    SubscriptionExpires = user.SubscriptionExpires,
+                    IsSubscribed = subscription.IsActive,
+                    SubscriptionExpires = subscription.ExpiresAt,
                     Roles = roles.ToList()
                 }
             };
@@ -112,13 +119,15 @@ namespace SineUyum.Api.Services
             }
         }
 
-        private string CreateAccessToken(AppUser user, IEnumerable<string> roles, DateTime expiresAt)
+        // IsSubscribed claim'i yalnızca istemcinin arayüzü içindir; ücretli
+        // özellikler sunucuda veritabanından denetlenir ([RequiresSubscription]).
+        private string CreateAccessToken(AppUser user, IEnumerable<string> roles, DateTime expiresAt, bool isSubscribed)
         {
             var claims = new List<Claim>
             {
                 new(ClaimTypes.NameIdentifier, user.Id),
                 new(ClaimTypes.Name, user.UserName ?? string.Empty),
-                new("IsSubscribed", user.IsSubscribed.ToString())
+                new("IsSubscribed", isSubscribed.ToString())
             };
 
             foreach (var role in roles)

@@ -40,12 +40,12 @@ class AuthRepository {
     );
   }
 
-  /// Abonelik aktifleştirildiğinde token yenilenir (abonelik claim'i token
-  /// içinde taşındığı için).
-  Future<AuthResult> activateSubscription() async {
-    final data = await _client.post<Map<String, dynamic>>(
-      '/api/v1/subscription/activate',
+  /// Abonelik durumu (tek kaynak sunucu). Ödemesiz aktivasyon kaldırıldı;
+  /// abonelik doğrulanmış ödeme ya da yönetici tanımlamasıyla açılır.
+  Future<SubscriptionInfo> subscription() async {
+    final data = await _client.get<Map<String, dynamic>>(
+      '/api/v1/subscription',
     );
-    return AuthResult.fromJson(data);
+    return SubscriptionInfo.fromJson(data);
   }
 }

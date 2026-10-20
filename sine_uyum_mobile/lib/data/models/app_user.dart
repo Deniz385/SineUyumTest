@@ -111,3 +111,39 @@ class UserSearchResult {
     );
   }
 }
+
+/// `/api/v1/subscription` yanıtı.
+class SubscriptionInfo {
+  const SubscriptionInfo({
+    required this.isActive,
+    this.expiresAt,
+    this.provider,
+    this.willRenew = false,
+    this.availableProviders = const [],
+  });
+
+  final bool isActive;
+  final DateTime? expiresAt;
+  final String? provider;
+
+  /// false: iptal edildi, [expiresAt]'te sona erecek.
+  final bool willRenew;
+
+  /// Sunucuda yapılandırılmış ödeme sağlayıcıları (boşsa satın alınamaz).
+  final List<String> availableProviders;
+
+  factory SubscriptionInfo.fromJson(Map<String, dynamic> json) =>
+      SubscriptionInfo(
+        isActive: json['isActive'] as bool? ?? false,
+        expiresAt: json['expiresAt'] == null
+            ? null
+            : DateTime.tryParse(json['expiresAt'] as String),
+        provider: json['provider'] as String?,
+        willRenew: json['willRenew'] as bool? ?? false,
+        availableProviders:
+            (json['availableProviders'] as List?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            const [],
+      );
+}

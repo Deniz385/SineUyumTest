@@ -87,12 +87,42 @@ Daha önce `Password123!` ile oluşmuş hesapların parolası hâlâ değiştiri
 Bunun için uygulamada hiçbir yol yoktu; `POST /api/account/change-password`
 eklendi (kullanım: kök README → "Parola değiştirme").
 
-### G4 — Ödeme doğrulaması olmayan abonelik
-`SubscriptionController.ActivateSubscription` hiçbir ödeme kanıtı istemeden
-`IsSubscribed = true` yapıyor. `Iyzipay` ve `Stripe.net` paketleri `.csproj`'a
-eklenmiş ama hiç kullanılmıyor. Herhangi bir kullanıcı tek POST isteğiyle
-ücretsiz abone olabiliyor. **Yapılacak:** gerçek ödeme sağlayıcı entegrasyonu
-+ webhook ile sunucu tarafı doğrulama.
+### G4 — Ödeme doğrulaması olmayan abonelik — ✅ açık kapatıldı, altyapı hazır
+`ActivateSubscription` ödeme kanıtı istemeden `IsSubscribed = true` yapıyordu:
+herkes tek istekle ücretsiz abone olabiliyordu. Ayrıca:
+- **Ücretli özellik yalnızca istemcide gizleniyordu:** etkinlik katılımı/oylama
+  sunucuda hiç denetlenmiyordu (mobilde istemcide de gizlenmiyordu); API'yi
+  doğrudan çağıran ödemeden katılabiliyordu.
+- **Abonelik hiç bitmiyordu:** `SubscriptionExpires` yazılıyor ama hiçbir yerde
+  bugünle karşılaştırılmıyordu.
+- Mobil ekranda var olmayan özellikler ("sınırsız izleme listesi", "eşleştirmede
+  öncelik") abonelik avantajı olarak listeleniyordu.
+
+**Yapılan:**
+- `Subscriptions` tablosu (sağlayıcı, sağlayıcı referansı, durum, dönem sonu)
+  tek kaynak; `AppUser.IsSubscribed/SubscriptionExpires` kaldırıldı. Abonelik
+  her seferinde veritabanından ve **bitiş tarihine bakılarak** hesaplanır.
+  (Eski bayraktaki "abonelikler" ödemesiz olduğu için taşınmadı.)
+- `[RequiresSubscription]`: etkinliğe katılma ve oylama aktif abonelik yoksa
+  **402** döner (yöneticiler hariç). JWT claim'i yalnızca arayüz içindir.
+- Sağlayıcıdan bağımsız `IPaymentProvider` (doğrulama + imzalı webhook) ve uçlar:
+  `GET /api/v1/subscription`, `POST /api/v1/subscription/verify`
+  (sağlayıcıyla doğrulanır, yeni token döner), `POST /api/v1/subscription/webhooks/{provider}`
+  (yenileme / iptal → dönem sonuna kadar geçerli / iade → hemen biter).
+  Aynı ödeme ikinci bir hesabı açamaz (409). `activate` → **410 Gone**.
+- Yönetici elle abonelik tanımlayabilir: `POST /api/v1/admin/users/{id}/subscription {days}`
+  (promosyon, destek; ödeme entegrasyonu öncesi premium özellikleri denemek).
+- Kullanılmayan `Iyzipay` ve `Stripe.net` paketleri kaldırıldı (gerçek
+  entegrasyonda eklenecek).
+- G13 de kapatıldı: olmayan etkinliğe katılım 404, geçmiş etkinliğe 400.
+- İstemciler: "aboneliği test et" düğmeleri kaldırıldı, durum sunucudan
+  okunuyor (token eskiyse tazeleniyor), 402'de abonelik sayfasına
+  yönlendirme; mobil avantaj listesi gerçek özelliklerle düzeltildi.
+
+**Kalan (ödeme hesabı bilgileri gerekli):** gerçek sağlayıcılar —
+web için iyzico (ödeme formu + sunucu doğrulaması + webhook imzası), mobil
+için App Store / Google Play abonelik doğrulaması ve sunucu bildirimleri.
+Her biri yalnızca bir `IPaymentProvider` sınıfı + kayıt satırıdır.
 
 ### G5 — Rate limiting yok
 `/api/account/login` brute force'a açık; TMDb proxy endpoint'leri (`/api/movies/*`)
@@ -162,7 +192,7 @@ ayarlanmadığı için aynı e-posta ile birden fazla hesap açılabilir.
 hedef kullanıcının tüm puanlamalarını ve istatistiklerini açıyor. Gizli hesap
 / görünürlük tercihi kavramı yok.
 
-### G13 — Etkinlik katılımında doğrulama eksik
+### G13 — Etkinlik katılımında doğrulama eksik — ✅ kapatıldı (G4 ile)
 `EventController.JoinEvent` `eventId`'nin var olup olmadığını ve etkinlik
 tarihinin geçmiş olup olmadığını kontrol etmiyor; geçersiz id ile FK hatası,
 geçmiş etkinliğe katılım mümkün.
@@ -627,7 +657,7 @@ destek yok (PWA ayrı bir iş).
 20. Store yayın hazırlığı: ikonlar, splash, gizlilik politikası, zorunlu güncelleme
 
 ### Faz 4 — İş modeli ve ölçekleme
-21. Gerçek ödeme entegrasyonu (G4)
+21. Gerçek ödeme entegrasyonu (G4) — ✅ açık kapatıldı + altyapı; sağlayıcılar hesap bilgisi bekliyor
 22. Eşleştirmeyi arka plan işine taşı (M7)
 23. `SuggestedMovieIds` tablosuna normalizasyon (M8)
 24. Rate limiting'i tüm API'ye yay (G5)

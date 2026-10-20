@@ -94,9 +94,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Token'ı yenileyip kullanıcı bilgisini (ör. abonelik claim'i) tazeler.
+  // Abonelik sunucuda değişince (yönetici tanımladı, ödeme doğrulandı)
+  // eski token'daki claim'in bir saat beklemesine gerek kalmaz.
+  const refreshSession = useCallback(async () => {
+    const newToken = await refreshAccessTokenOnce();
+    const refreshed = getUserFromToken(newToken);
+    if (refreshed) setUser(refreshed);
+    return refreshed;
+  }, []);
+
   const authContextValue = {
     user,
     isRestoring,
+    refreshSession,
     loginAction,
     logoutAction,
   };

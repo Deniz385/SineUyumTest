@@ -22,6 +22,7 @@
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<DeviceToken> DeviceTokens { get; set; }
+        public DbSet<Subscription> Subscriptions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -35,6 +36,25 @@
 
             builder.Entity<DeviceToken>()
                 .HasIndex(d => d.UserId);
+
+            // Bir sağlayıcı satın alması tek bir kayda (ve tek bir hesaba) bağlanır.
+            builder.Entity<Subscription>()
+                .HasIndex(s => new { s.Provider, s.ProviderReference })
+                .IsUnique();
+
+            builder.Entity<Subscription>()
+                .HasIndex(s => new { s.UserId, s.CurrentPeriodEnd });
+
+            builder.Entity<Subscription>()
+                .HasOne(s => s.User)
+                .WithMany()
+                .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Subscription>()
+                .Property(s => s.Status)
+                .HasConversion<string>()
+                .HasMaxLength(16);
 
             builder.Entity<DeviceToken>()
                 .HasOne(d => d.User)

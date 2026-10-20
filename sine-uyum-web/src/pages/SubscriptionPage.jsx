@@ -1,35 +1,43 @@
-import React, { useState } from 'react';
-import { Box, Typography, Button, Paper, List, ListItem, ListItemIcon, ListItemText, CircularProgress } from '@mui/material';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Alert, Box, Typography, Button, Paper, List, ListItem, ListItemIcon, ListItemText, CircularProgress } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axiosConfig';
-import { useSnackbar } from '../context/SnackbarProvider'; // <-- SNACKBAR KANCASINI İÇE AKTAR
 
+const formatDate = (iso) => new Date(iso).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+// Abonelik durumu sunucudan okunur (tek kaynak). Ödemesiz "aboneliği test et"
+// düğmesi kaldırıldı: abonelik yalnızca doğrulanmış ödeme ya da yönetici
+// tanımlamasıyla açılır.
 export const SubscriptionPage = () => {
-    const { loginAction } = useAuth(); 
-    const [isLoading, setIsLoading] = useState(false);
-    const { showSnackbar } = useSnackbar(); // <-- SNACKBAR FONKSİYONUNU AL
+    const { user, refreshSession } = useAuth();
+    const [status, setStatus] = useState(null);
+    const [error, setError] = useState('');
 
-    const handleSubscribeClick = async () => {
-        setIsLoading(true);
+    const load = useCallback(async () => {
         try {
-            const response = await api.post('/api/v1/subscription/activate');
-            // Abonelik aktifleştirilince yeni token + refresh token döner.
-            loginAction(response.data);
-            // --- DEĞİŞİKLİK: alert() yerine showSnackbar() ---
-            showSnackbar('Aboneliğiniz başarıyla aktifleştirildi!', 'success');
+            const response = await api.get('/api/v1/subscription');
+            setStatus(response.data);
+            // Sunucudaki durum token'dakinden farklıysa (ör. yönetici az önce
+            // tanımladı) token tazelenir ki etkinlik sayfası hemen açılsın.
+            if (user && response.data.isActive !== user.isSubscribed) {
+                await refreshSession();
+            }
         } catch {
-            // --- DEĞİŞİKLİK: alert() yerine showSnackbar() ---
-            showSnackbar('Abonelik sırasında bir hata oluştu.', 'error');
-            setIsLoading(false);
+            setError('Abonelik bilgisi alınamadı.');
         }
-    };
+    }, [user, refreshSession]);
+
+    useEffect(() => {
+        load();
+    }, [load]);
 
     return (
         <Box className="page-container" sx={{ maxWidth: '700px' }}>
             <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
                 <Typography variant="h4" component="h1" gutterBottom>
-                    SineUyum Premium'a Geçin
+                    SineUyum Premium
                 </Typography>
                 <Typography variant="h6" color="text.secondary" sx={{ mb: 3 }}>
                     Film zevkine en uygun kişilerle tanış ve açık hava sineması etkinliklerine katıl!
@@ -48,16 +56,29 @@ export const SubscriptionPage = () => {
                         <ListItemText primary="Özel Açık Hava Sineması Etkinlikleri" />
                     </ListItem>
                 </List>
-                <Button 
-                    variant="contained" 
-                    size="large" 
-                    onClick={handleSubscribeClick}
-                    disabled={isLoading}
-                >
-                    {isLoading ? <CircularProgress size={24} /> : "Aboneliği Test Et"}
-                </Button>
+
+                {error && <Alert severity="error">{error}</Alert>}
+                {!status && !error && <CircularProgress />}
+
+                {status?.isActive && (
+                    <>
+                        <Alert severity="success" sx={{ textAlign: 'left', mb: 2 }}>
+                            Aboneliğin aktif — {status.willRenew ? 'yenilenme' : 'bitiş'} tarihi: {formatDate(status.expiresAt)}
+                        </Alert>
+                        <Button component={Link} to="/my-event" variant="contained" size="large">
+                            Etkinliklere git
+                        </Button>
+                    </>
+                )}
+
+                {status && !status.isActive && (
+                    <Alert severity="info" sx={{ textAlign: 'left' }}>
+                        {status.availableProviders.length === 0
+                            ? 'Online ödeme çok yakında. Şu an abonelik satın alınamıyor.'
+                            : 'Ödeme seçenekleri hazırlanıyor.'}
+                    </Alert>
+                )}
             </Paper>
         </Box>
     );
 };
-

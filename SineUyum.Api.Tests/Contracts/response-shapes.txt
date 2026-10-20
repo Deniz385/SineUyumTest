@@ -361,6 +361,30 @@
   event: object
   status: string
 
+## subscription.status(none)  GET /api/v1/subscription -> 200
+  $: object
+  availableProviders: array
+  expiresAt: null
+  isActive: bool
+  provider: null
+  willRenew: bool
+
+## admin.grantSubscription  POST /api/v1/admin/users/{id}/subscription -> 200
+  $: object
+  message: string
+
+## admin.grantSubscription(b)  POST /api/v1/admin/users/{id}/subscription -> 200
+  $: object
+  message: string
+
+## subscription.status(active)  GET /api/v1/subscription -> 200
+  $: object
+  availableProviders: array
+  expiresAt: string
+  isActive: bool
+  provider: string
+  willRenew: bool
+
 ## event.join  POST /api/v1/event/{id}/join -> 200
   $: object
   message: string
@@ -471,22 +495,6 @@
 ## follow.unfollow  DELETE /api/v1/follow/{id} -> 200
   $: object
   message: string
-
-## subscription.activate  POST /api/v1/subscription/activate -> 200
-  $: object
-  expiresAt: string
-  refreshToken: string
-  token: string
-  user.bio: string
-  user.email: string
-  user.id: string
-  user.isSubscribed: bool
-  user.profileImageUrl: string
-  user.roles: array
-  user.roles[]: string
-  user.subscriptionExpires: string
-  user.userName: string
-  user: object
 
 ## account.changePassword  POST /api/v1/account/change-password -> 200
   $: object

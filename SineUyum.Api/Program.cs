@@ -149,6 +149,10 @@ builder.Services.AddScoped<MatchingService>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<MovieCatalogService>();
 builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<SubscriptionService>();
+// Ödeme sağlayıcıları (IPaymentProvider) burada kaydedilir. Henüz gerçek
+// sağlayıcı yok: abonelik yalnızca yönetici tarafından tanımlanabilir,
+// /api/v1/subscription/verify 503 döner. Bkz. yol haritası G4.
 
 // --- MEDYA (profil fotoğrafları) ---
 // Yerel disk; Docker'da kalıcı volume (/data/media). Storage__MediaRoot ile değişir.
@@ -214,6 +218,16 @@ builder.Services.AddRateLimiter(options =>
         factory: _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = authPermitLimit,
+            Window = TimeSpan.FromMinutes(1)
+        }));
+
+    // Ödeme doğrulama: sağlayıcıya dış çağrı yapar; kullanıcı başına sınırlı.
+    options.AddPolicy("payment", context => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = uploadPermitLimit,
             Window = TimeSpan.FromMinutes(1)
         }));
 

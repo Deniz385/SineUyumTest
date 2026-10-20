@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/network/api_exception.dart';
 import '../../data/models/event.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/session_provider.dart';
@@ -79,10 +80,7 @@ class _AvailableViewState extends ConsumerState<_AvailableView> {
       await ref.read(eventRepositoryProvider).join(event.id);
       ref.invalidate(myEventProvider);
     } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.toString())));
-      }
+      if (mounted) _showActionError(context, error);
     } finally {
       if (mounted) setState(() => _isJoining = false);
     }
@@ -168,10 +166,7 @@ class _MatchedViewState extends ConsumerState<_MatchedView> {
           .vote(groupId: groupId, movieId: movieId);
       ref.invalidate(myEventProvider);
     } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.toString())));
-      }
+      if (mounted) _showActionError(context, error);
     } finally {
       if (mounted) setState(() => _isVoting = false);
     }
@@ -330,4 +325,21 @@ class _EventCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Sunucu ücretli özelliği kendisi denetler: 402'de abonelik sayfasına
+/// götüren bir eylemle birlikte mesaj gösterilir.
+void _showActionError(BuildContext context, Object error) {
+  final needsSubscription = error is ApiException && error.statusCode == 402;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(error.toString()),
+      action: needsSubscription
+          ? SnackBarAction(
+              label: 'Abonelik',
+              onPressed: () => context.push('/subscription'),
+            )
+          : null,
+    ),
+  );
 }

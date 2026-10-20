@@ -170,20 +170,6 @@ class SessionNotifier extends Notifier<SessionState> {
     await _endSession();
   }
 
-  /// Abonelik aktifleştirildiğinde token ve kullanıcı bilgisi yenilenir.
-  Future<void> activateSubscription() async {
-    final result = await _auth.activateSubscription();
-    await _storage.saveTokens(
-      accessToken: result.token,
-      refreshToken: result.refreshToken,
-    );
-    await _remember(result.user);
-    state = SessionState(
-      status: SessionStatus.authenticated,
-      user: result.user,
-    );
-  }
-
   /// Profil güncellendikten sonra oturumdaki kullanıcıyı tazeler.
   Future<void> refreshUser() async {
     if (!state.isAuthenticated) return;

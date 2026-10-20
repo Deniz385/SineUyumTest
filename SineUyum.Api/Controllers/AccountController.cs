@@ -18,12 +18,14 @@ namespace SineUyum.Api.Controllers
         private readonly UserManager<AppUser> _userManager;
         private readonly ApplicationDbContext _context;
         private readonly TokenService _tokenService;
+        private readonly SubscriptionService _subscriptions;
 
-        public AccountController(UserManager<AppUser> userManager, ApplicationDbContext context, TokenService tokenService)
+        public AccountController(UserManager<AppUser> userManager, ApplicationDbContext context, TokenService tokenService, SubscriptionService subscriptions)
         {
             _userManager = userManager;
             _context = context;
             _tokenService = tokenService;
+            _subscriptions = subscriptions;
         }
 
         [HttpPost("register")]
@@ -96,6 +98,7 @@ namespace SineUyum.Api.Controllers
             if (user == null) return Unauthorized();
 
             var roles = await _userManager.GetRolesAsync(user);
+            var subscription = await _subscriptions.GetStateAsync(user.Id);
             return Ok(new UserSummaryDto
             {
                 Id = user.Id,
@@ -103,8 +106,8 @@ namespace SineUyum.Api.Controllers
                 Email = user.Email,
                 Bio = user.Bio,
                 ProfileImageUrl = user.ProfileImageUrl,
-                IsSubscribed = user.IsSubscribed,
-                SubscriptionExpires = user.SubscriptionExpires,
+                IsSubscribed = subscription.IsActive,
+                SubscriptionExpires = subscription.ExpiresAt,
                 Roles = roles.ToList()
             });
         }

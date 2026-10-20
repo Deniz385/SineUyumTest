@@ -238,6 +238,11 @@ public class ResponseContractTests : IClassFixture<ResponseContractTests.Factory
         var eventId = ev.GetProperty("id").GetInt32();
         await Get("event.list", "/api/v1/event", admin);
         await Get("event.myStatus(AVAILABLE)", "/api/v1/event/my-status", a);
+        // Etkinlik ücretli özellik (G4): katılımdan önce abonelik gerekir.
+        await Get("subscription.status(none)", "/api/v1/subscription", a);
+        await Post("admin.grantSubscription", $"/api/v1/admin/users/{aId}/subscription", admin, new { days = 30 });
+        await Post("admin.grantSubscription(b)", $"/api/v1/admin/users/{bId}/subscription", admin, new { days = 30 });
+        await Get("subscription.status(active)", "/api/v1/subscription", a);
         await Post("event.join", $"/api/v1/event/{eventId}/join", a);
         await Post("event.join(b)", $"/api/v1/event/{eventId}/join", b);
         await Get("event.myStatus(PENDING)", "/api/v1/event/my-status", a);
@@ -258,7 +263,6 @@ public class ResponseContractTests : IClassFixture<ResponseContractTests.Factory
         await Call("watchlist.removeMovie", HttpMethod.Delete, $"/api/v1/watchlist/{listId}/movies/552", a);
         await Call("watchlist.delete", HttpMethod.Delete, $"/api/v1/watchlist/{listId}", a);
         await Call("follow.unfollow", HttpMethod.Delete, $"/api/v1/follow/{bId}", a);
-        await Post("subscription.activate", "/api/v1/subscription/activate", a);
         var changed = await Post("account.changePassword", "/api/v1/account/change-password", a,
             new { currentPassword = "Sifre123", newPassword = "YeniSifre123" });
         await Post("devices.unregister", "/api/v1/devices/unregister", null, new { token = "fcm-sozlesme-" + suffix });

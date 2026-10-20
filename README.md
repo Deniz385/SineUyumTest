@@ -155,6 +155,19 @@ refresh token geçerli kalmasın diye); isteği yapan cihaz için yeni bir token
 
 ---
 
+## Abonelik
+
+Etkinliklere katılım ve oylama aktif abonelik ister (sunucu 402 döner).
+Abonelik yalnızca doğrulanmış ödeme ya da yönetici tanımlamasıyla açılır;
+ödeme sağlayıcısı henüz bağlanmadı. Yönetici bir kullanıcıya elle abonelik
+tanımlayabilir:
+
+```bash
+curl -s -X POST "$API/api/v1/admin/users/<kullaniciId>/subscription" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" \
+  -d '{"days": 30}'
+```
+
 ## Testler ve CI
 
 Her PR'da `.github/workflows/ci.yml` üç işi paralel çalıştırır:

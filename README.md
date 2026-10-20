@@ -28,9 +28,22 @@ Hiçbir gizli bilgi repoda tutulmaz. Aşağıdakiler ortam değişkeni veya
 | `Jwt__Issuer`, `Jwt__Audience` | — | Tanımlıysa doğrulanır; boşsa doğrulama kapalıdır (yerel geliştirme). |
 | `Cors__AllowedOrigins__0` ... | — | Web istemcisinin adresi. Mobil istemci CORS'a tabi değildir. |
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_EMAIL` | — | Verilirse açılışta admin hesabı oluşturulur. **Verilmezse oluşturulmaz.** |
-| `ConnectionStrings__DefaultConnection` | — | Varsayılan: `Data Source=sineuyum.db` (SQLite). |
+| `Database__Provider` | — | `Sqlite` (varsayılan, geliştirme) veya `Postgres` (production). |
+| `ConnectionStrings__DefaultConnection` | — | Sqlite: `Data Source=sineuyum.db`. Postgres: `Host=...;Database=...;Username=...;Password=...`. |
 
 `appsettings.template.json` tüm ayarların şablonudur.
+
+**Veritabanı sağlayıcısı:** Geliştirmede varsayılan SQLite'tır; şema modelden
+üretilir (migration gerekmez). Production'da `Database__Provider=Postgres`
+verilince versiyonlu EF migration'ları uygulanır. `docker compose` yığını
+PostgreSQL kullanır. Model değişirse Postgres migration'ı eklemek için:
+
+```bash
+Database__Provider=Postgres \
+ConnectionStrings__DefaultConnection="Host=localhost;Database=sineuyum;Username=postgres;Password=postgres" \
+JWT_KEY=<64+ karakter> \
+dotnet ef migrations add <Ad> --project SineUyum.Api/SineUyum.Api.csproj
+```
 
 ### Çalıştırma
 

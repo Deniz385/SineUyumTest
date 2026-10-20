@@ -48,8 +48,22 @@ builder.Services.AddCors(options =>
 });
 
 // --- DATABASE VE IDENTITY ---
+// Sağlayıcı konfigürasyondan seçilir: "Database:Provider" = Sqlite (varsayılan,
+// geliştirme) veya Postgres (production). Ayrıntı: docs → M2.
+var dbProvider = (builder.Configuration["Database:Provider"] ?? "Sqlite").Trim();
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    if (dbProvider.Equals("Postgres", StringComparison.OrdinalIgnoreCase))
+    {
+        options.UseNpgsql(connectionString);
+    }
+    else
+    {
+        options.UseSqlite(connectionString);
+    }
+});
 
 builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
 {
@@ -192,9 +206,20 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     var logger = services.GetRequiredService<ILogger<Program>>();
 
-    // Bekleyen migration'ları uygula (deploy'da elle çalıştırma ihtiyacını kaldırır).
+    // Şema hazırlığı sağlayıcıya göre:
+    //  - Postgres (production): versiyonlu EF migration'ları uygulanır.
+    //  - SQLite (geliştirme/test): migration tutulmuyor; şema doğrudan modelden
+    //    üretilir (EnsureCreated). Model değişince dev veritabanı dosyası
+    //    silinip yeniden oluşturulur.
     var dbContext = services.GetRequiredService<ApplicationDbContext>();
-    await dbContext.Database.MigrateAsync();
+    if (dbProvider.Equals("Postgres", StringComparison.OrdinalIgnoreCase))
+    {
+        await dbContext.Database.MigrateAsync();
+    }
+    else
+    {
+        await dbContext.Database.EnsureCreatedAsync();
+    }
 
     var userManager = services.GetRequiredService<UserManager<AppUser>>();
     var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();

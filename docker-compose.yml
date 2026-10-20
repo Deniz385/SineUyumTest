@@ -1,33 +1,49 @@
-# SineUyum API'yi tek komutla ayağa kaldırmak için.
+# SineUyum API'yi PostgreSQL ile, production benzeri biçimde ayağa kaldırır.
 #
 #   1) .env dosyası oluştur (bkz. .env.docker.example)
 #   2) docker compose up --build
 #
-# Veritabanı şu an SQLite; dosya bir named volume'da kalıcı tutulur. PostgreSQL'e
-# geçince (yol haritası M2) buraya bir "db" servisi eklenecek.
+# Yerelde Docker'sız geliştirmede API varsayılan olarak SQLite kullanır
+# (Database:Provider ayarsız). Bu compose yığını Postgres kullanır.
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sineuyum}
+      POSTGRES_USER: ${POSTGRES_USER:-sineuyum}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD tanimlanmali}
+    volumes:
+      - sineuyum-pgdata:/var/lib/postgresql/data
+    # postgres imajında pg_isready var; ek araç gerekmez.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sineuyum} -d ${POSTGRES_DB:-sineuyum}"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
   api:
     build:
       context: .
       dockerfile: SineUyum.Api/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "5074:8080"
     environment:
-      # Zorunlu: değerler .env dosyasından okunur (repoya girmez).
       JWT_KEY: ${JWT_KEY:?JWT_KEY tanimlanmali (en az 64 karakter)}
       TMDB_API_KEY: ${TMDB_API_KEY:-}
-      # İsteğe bağlı admin tohumlama.
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
-      # Web istemcisinin adresi (CORS). Virgülle değil, dizini numaralandırarak:
       Cors__AllowedOrigins__0: ${WEB_ORIGIN:-http://localhost:5173}
-      # SQLite dosyası kalıcı volume'da.
-      ConnectionStrings__DefaultConnection: "Data Source=/data/sineuyum.db"
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
-    volumes:
-      - sineuyum-data:/data
+      # PostgreSQL sağlayıcısı ve bağlantısı (api içinden db servis adıyla).
+      Database__Provider: Postgres
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB:-sineuyum};Username=${POSTGRES_USER:-sineuyum};Password=${POSTGRES_PASSWORD}"
     restart: unless-stopped
 
 volumes:
-  sineuyum-data:
+  sineuyum-pgdata:

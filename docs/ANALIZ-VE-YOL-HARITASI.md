@@ -176,10 +176,26 @@ koşuyor):
 **Kalan:** eşleştirme servisi (`MatchingService.CreateGroupsForEventAsync`),
 watchlist ve mesaj controller'ları henüz test edilmedi. Kapsam genişletilmeli.
 
-### M2 — SQLite production'a uygun değil
-Tek dosya, eşzamanlı yazmada kilitlenir, yatay ölçeklenemez.
-**Yapılacak:** PostgreSQL'e geçiş (`Npgsql.EntityFrameworkCore.PostgreSQL`),
-connection string ortam değişkeninden.
+### M2 — SQLite production'a uygun değildi — ✅ çift sağlayıcı eklendi
+SQLite tek dosya; eşzamanlı yazmada kilitlenir, yatay ölçeklenemez. Çözüm:
+sağlayıcı `Database:Provider` ayarından seçiliyor.
+- **Postgres** (production): `Npgsql.EntityFrameworkCore.PostgreSQL`, versiyonlu
+  EF migration'ları (`InitialPostgres`), açılışta `MigrateAsync`.
+- **SQLite** (varsayılan; geliştirme/test): şema modelden üretilir
+  (`EnsureCreatedAsync`), migration tutulmaz.
+
+Neden karışık: EF migration'ları sağlayıcıya özeldir ve tek projede iki ayrı
+migration seti tek model snapshot'ı yüzünden çakışır. Veri katmanını ayrı
+kütüphaneye bölmek yerine bu yaygın desen seçildi (production migration'lı,
+dev EnsureCreated'lı). Her ikisi de tek `ApplicationDbContext` kullanır.
+
+**Doğrulama:** `docker compose up` ile Postgres + API yığını ayağa kaldırıldı;
+migration uygulandı (23 tablo, `__EFMigrationsHistory` kaydı), kayıt/giriş
+200. SQLite yolu 23 testle doğrulandı. CI'ın migration kontrolü Postgres
+sağlayıcısına ayarlandı.
+
+> İleride: SQLite'ı da migration'a almak istenirse veri katmanı ayrı projeye
+> çıkarılıp sağlayıcı başına migration projesi kurulmalı (daha ağır, ertelendi).
 
 ### M3 — Anonim obje döndürülen API sözleşmesi
 Neredeyse tüm endpoint'ler `new { ... }` anonim obje döndürüyor. Sonuçları:
@@ -374,7 +390,7 @@ sonra oturumdan düşerdi.
 4. ➖ GitHub Support'a başvuru: gerek görülmedi (yukarıda G2 değerlendirmesi).
 
 ### Faz 1 — Üretime hazırlık (1-2 hafta)
-4. ⬜ PostgreSQL'e geçiş (M2)
+4. ✅ PostgreSQL'e geçiş — çift sağlayıcı, env ile seçim (M2)
 5. ✅ Global hata yönetimi + Serilog (G10)
 6. ✅ Dockerfile + docker-compose (M12)
 7. ✅ API için test projesi — `CompatibilityCalculator` + auth + hata yönetimi (M1)

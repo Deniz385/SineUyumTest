@@ -32,11 +32,15 @@ jobs:
         run: dotnet test SineUyum.Api.sln --configuration Release --no-build --verbosity normal
 
       - name: Bekleyen model değişikliği için migration var mı
-        # Entity'ler değiştirilip migration eklenmediğinde uygulama açılışta
-        # şemayla uyuşmayan bir veritabanına düşer. Bu kontrol onu yakalar.
+        # Entity'ler değiştirilip Postgres migration'ı eklenmediğinde production
+        # şemayla uyuşmaz. Bu kontrol onu yakalar. Migration'lar Postgres için
+        # tutulduğundan (SQLite dev'de EnsureCreated kullanır) sağlayıcı Postgres
+        # olmalı; model karşılaştırması canlı veritabanı gerektirmez.
         env:
-          # Yalnızca design-time için; gerçek anahtar değil.
+          # Yalnızca design-time için; gerçek anahtar/bağlantı değil.
           JWT_KEY: ci-only-placeholder-key-not-a-secret-must-be-64-bytes-long-xxxxxx
+          Database__Provider: Postgres
+          ConnectionStrings__DefaultConnection: "Host=localhost;Database=sineuyum;Username=postgres;Password=postgres"
         run: |
           dotnet tool install --global dotnet-ef --version 8.*
           export PATH="$PATH:$HOME/.dotnet/tools"

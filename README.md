@@ -178,6 +178,7 @@ Gizlilik, mobil: Ayarlar > Gizlilik; API: `GET/PUT /api/v1/account/privacy`):
 | `profileVisibility` | `Public` · `Following` · `Private` | Puanlar, istatistikler, takip listeleri ve uyum kimlere açık |
 | `messagePermission` | `Everyone` · `Following` · `Nobody` | Kim yeni mesaj gönderebilir |
 | `hiddenFromSearch` | `true` / `false` | Kullanıcı aramasında görünmeme |
+| `showReadReceipts` | `true` / `false` | Okundu bilgisi ("Görüldü"); karşılıklı |
 
 `Following`, sahibin takip ettiği kişiler demektir. Engelleme
 (`POST/DELETE /api/v1/blocks/{userId}`, liste `GET /api/v1/blocks`) iki

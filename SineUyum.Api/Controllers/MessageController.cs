@@ -38,6 +38,8 @@ namespace SineUyum.Api.Controllers
 
         // SignalR "ReceiveMessage" olayının adı; istemciler bunu dinler.
         public const string ReceiveMessageEvent = "ReceiveMessage";
+        // Okundu bilgisi (M10): gönderenin ekranında "Görüldü".
+        public const string MessagesReadEvent = "MessagesRead";
 
         // Sohbetteki mesajın tek şekli: thread listesi, gönderme yanıtı ve canlı
         // olay aynı projeksiyonu kullanır (istemci üçünü de aynı modelle okur).
@@ -51,6 +53,7 @@ namespace SineUyum.Api.Controllers
                 RecipientUsername = m.Recipient.UserName,
                 Content = m.Content,
                 MessageSent = m.MessageSent,
+                DateRead = m.DateRead,
                 Movie = m.Movie == null ? null : new MovieSummaryDto
                 {
                     Id = m.Movie.Id,
@@ -155,6 +158,11 @@ namespace SineUyum.Api.Controllers
             // Sorgu en yeniden eskiye çekiliyor; istemci eskiden yeniye bekliyor.
             messages.Reverse();
 
+            if (!await ReadReceiptsVisibleAsync(currentUserId, otherUserId))
+            {
+                foreach (var message in messages) message.DateRead = null;
+            }
+
             return Ok(messages);
         }
 
@@ -179,10 +187,28 @@ namespace SineUyum.Api.Controllers
                     message.DateRead = now;
                 }
                 await _context.SaveChangesAsync();
+
+                // Okuyanın diğer sekme/cihazları her zaman; gönderen ise yalnızca
+                // iki taraf da okundu bilgisini açık tuttuysa haberdar olur.
+                var receivers = await ReadReceiptsVisibleAsync(currentUserId, otherUserId)
+                    ? new[] { currentUserId, otherUserId }
+                    : new[] { currentUserId };
+                await _hubContext.Clients.Users(receivers).SendAsync(MessagesReadEvent, new MessagesReadDto
+                {
+                    ReaderId = currentUserId,
+                    OtherUserId = otherUserId,
+                    LastReadMessageId = unread.Max(m => m.Id),
+                    ReadAt = now
+                });
             }
 
             return Ok(new MarkedAsReadDto { MarkedAsRead = unread.Count });
         }
+
+        private Task<bool> ReadReceiptsVisibleAsync(string userId, string otherUserId) =>
+            _context.Users
+                .Where(u => u.Id == userId || u.Id == otherUserId)
+                .AllAsync(u => u.ShowReadReceipts);
 
         [HttpGet]
         public async Task<ActionResult<List<ConversationDto>>> GetConversations(

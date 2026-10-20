@@ -107,18 +107,9 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
                       icon: Icons.waving_hand_outlined,
                       message: 'Henüz mesaj yok. İlk mesajı sen yaz.',
                     )
-                  : ListView.builder(
-                      // Son mesaj altta olacak şekilde ters çiziyoruz.
-                      reverse: true,
-                      padding: const EdgeInsets.all(12),
-                      itemCount: messages.length,
-                      itemBuilder: (context, index) {
-                        final message = messages[messages.length - 1 - index];
-                        return _MessageBubble(
-                          message: message,
-                          isMine: message.senderId == currentUserId,
-                        );
-                      },
+                  : _MessageList(
+                      messages: messages,
+                      currentUserId: currentUserId,
                     ),
             ),
           ),
@@ -157,11 +148,46 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
   }
 }
 
+class _MessageList extends StatelessWidget {
+  const _MessageList({required this.messages, required this.currentUserId});
+
+  final List<ChatMessage> messages;
+  final String? currentUserId;
+
+  @override
+  Widget build(BuildContext context) {
+    // "Görüldü" yalnızca okunmuş son mesajımın altında.
+    final lastSeenId = messages
+        .where((m) => m.senderId == currentUserId && m.dateRead != null)
+        .fold<int>(0, (max, m) => m.id > max ? m.id : max);
+
+    return ListView.builder(
+      // Son mesaj altta olacak şekilde ters çiziyoruz.
+      reverse: true,
+      padding: const EdgeInsets.all(12),
+      itemCount: messages.length,
+      itemBuilder: (context, index) {
+        final message = messages[messages.length - 1 - index];
+        return _MessageBubble(
+          message: message,
+          isMine: message.senderId == currentUserId,
+          showSeen: message.id == lastSeenId,
+        );
+      },
+    );
+  }
+}
+
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message, required this.isMine});
+  const _MessageBubble({
+    required this.message,
+    required this.isMine,
+    this.showSeen = false,
+  });
 
   final ChatMessage message;
   final bool isMine;
+  final bool showSeen;
 
   @override
   Widget build(BuildContext context) {
@@ -208,7 +234,11 @@ class _MessageBubble extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
-                  DateFormat.Hm('tr').format(message.messageSent!.toLocal()),
+                  showSeen && message.dateRead != null
+                      ? '${DateFormat.Hm('tr').format(message.messageSent!.toLocal())} · '
+                            'Görüldü ${DateFormat.Hm('tr').format(message.dateRead!.toLocal())}'
+                      : DateFormat.Hm('tr')
+                            .format(message.messageSent!.toLocal()),
                   style: Theme.of(context).textTheme.labelSmall
                       ?.copyWith(color: foreground.withValues(alpha: 0.7)),
                 ),

@@ -190,6 +190,14 @@ class NotificationNotifier extends Notifier<NotificationState> {
       ref.invalidate(conversationsProvider);
     });
 
+    // Okundu bilgisi (M10).
+    connection.on('MessagesRead', (arguments) {
+      final payload = arguments?.firstOrNull;
+      if (payload is! Map) return;
+      final read = MessagesRead.tryParse(payload.cast<String, dynamic>());
+      if (read != null) ref.read(chatEventsProvider).addRead(read);
+    });
+
     // Bağlantı koptuğu sürede gelenler kaçmış olabilir: bildirimler ve açık
     // sohbet sunucudan tazelenir.
     connection.onreconnected(({connectionId}) => _resync());

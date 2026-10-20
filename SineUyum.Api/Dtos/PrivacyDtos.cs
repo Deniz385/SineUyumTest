@@ -16,6 +16,10 @@ namespace SineUyum.Api.Dtos
         public MessagePermission? MessagePermission { get; set; }
 
         public bool HiddenFromSearch { get; set; }
+
+        // Okundu bilgisi (M10). PUT'ta verilmezse değişmez: bu alanı bilmeyen
+        // eski istemciler ayarı kazara kapatmasın.
+        public bool? ShowReadReceipts { get; set; }
     }
 
     // GET /api/v1/blocks

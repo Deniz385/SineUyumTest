@@ -185,6 +185,7 @@
 ## messages.create  POST /api/v1/messages -> 200
   $: object
   content: string
+  dateRead: null
   id: number
   messageSent: string
   movie: null
@@ -197,6 +198,7 @@
 ## messages.create(movie)  POST /api/v1/messages -> 200
   $: object
   content: null
+  dateRead: null
   id: number
   messageSent: string
   movie.id: number
@@ -212,6 +214,7 @@
 ## messages.create(list)  POST /api/v1/messages -> 200
   $: object
   content: null
+  dateRead: null
   id: number
   messageSent: string
   movie: null
@@ -228,6 +231,7 @@
   $: array
   [].content: null
   [].content: string
+  [].dateRead: null
   [].id: number
   [].messageSent: string
   [].movie.id: number
@@ -525,12 +529,14 @@
   hiddenFromSearch: bool
   messagePermission: string
   profileVisibility: string
+  showReadReceipts: bool
 
 ## account.privacy.update  PUT /api/v1/account/privacy -> 200
   $: object
   hiddenFromSearch: bool
   messagePermission: string
   profileVisibility: string
+  showReadReceipts: bool
 
 ## profile.get(restricted)  GET /api/v1/profile/{id} -> 200
   $: object

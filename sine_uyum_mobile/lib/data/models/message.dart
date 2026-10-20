@@ -41,6 +41,7 @@ class ChatMessage {
     required this.recipientId,
     this.content,
     this.messageSent,
+    this.dateRead,
     this.movie,
     this.watchlist,
   });
@@ -51,8 +52,23 @@ class ChatMessage {
   final String recipientId;
   final String? content;
   final DateTime? messageSent;
+
+  /// Alıcının okuduğu an; okundu bilgisi kapalıysa hep null (M10).
+  final DateTime? dateRead;
   final SharedMovie? movie;
   final SharedWatchlist? watchlist;
+
+  ChatMessage markedRead(DateTime at) => ChatMessage(
+    id: id,
+    senderId: senderId,
+    senderUsername: senderUsername,
+    recipientId: recipientId,
+    content: content,
+    messageSent: messageSent,
+    dateRead: at,
+    movie: movie,
+    watchlist: watchlist,
+  );
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
     final movieJson = (json['movie'] as Map?)?.cast<String, dynamic>();
@@ -67,10 +83,41 @@ class ChatMessage {
       messageSent: json['messageSent'] == null
           ? null
           : DateTime.tryParse(json['messageSent'] as String),
+      dateRead: json['dateRead'] == null
+          ? null
+          : DateTime.tryParse(json['dateRead'] as String),
       movie: movieJson == null ? null : SharedMovie.fromJson(movieJson),
       watchlist: watchlistJson == null
           ? null
           : SharedWatchlist.fromJson(watchlistJson),
+    );
+  }
+}
+
+/// SignalR "MessagesRead": [readerId], [otherUserId]'nin [lastReadMessageId]'ye
+/// kadarki mesajlarını [readAt]'te okudu.
+class MessagesRead {
+  const MessagesRead({
+    required this.readerId,
+    required this.otherUserId,
+    required this.lastReadMessageId,
+    required this.readAt,
+  });
+
+  final String readerId;
+  final String otherUserId;
+  final int lastReadMessageId;
+  final DateTime readAt;
+
+  static MessagesRead? tryParse(Map<String, dynamic> json) {
+    final readAt = DateTime.tryParse(json['readAt'] as String? ?? '');
+    final lastId = (json['lastReadMessageId'] as num?)?.toInt();
+    if (readAt == null || lastId == null) return null;
+    return MessagesRead(
+      readerId: json['readerId'] as String? ?? '',
+      otherUserId: json['otherUserId'] as String? ?? '',
+      lastReadMessageId: lastId,
+      readAt: readAt,
     );
   }
 }

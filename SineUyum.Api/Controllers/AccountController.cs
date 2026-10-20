@@ -166,6 +166,7 @@ namespace SineUyum.Api.Controllers
             user.ProfileVisibility = dto.ProfileVisibility!.Value;
             user.MessagePermission = dto.MessagePermission!.Value;
             user.HiddenFromSearch = dto.HiddenFromSearch;
+            if (dto.ShowReadReceipts.HasValue) user.ShowReadReceipts = dto.ShowReadReceipts.Value;
 
             var result = await _userManager.UpdateAsync(user);
             if (!result.Succeeded) return BadRequest(result.Errors);
@@ -177,7 +178,8 @@ namespace SineUyum.Api.Controllers
         {
             ProfileVisibility = user.ProfileVisibility,
             MessagePermission = user.MessagePermission,
-            HiddenFromSearch = user.HiddenFromSearch
+            HiddenFromSearch = user.HiddenFromSearch,
+            ShowReadReceipts = user.ShowReadReceipts
         };
 
         private async Task<AppUser?> CurrentUserAsync()

@@ -13,6 +13,9 @@
         public ProfileVisibility ProfileVisibility { get; set; } = ProfileVisibility.Public;
         public MessagePermission MessagePermission { get; set; } = MessagePermission.Everyone;
         public bool HiddenFromSearch { get; set; }
+        // Okundu bilgisi karşılıklıdır: kapatan, kendi okumasını göstermez ve
+        // başkalarınınkini de görmez (M10).
+        public bool ShowReadReceipts { get; set; } = true;
         public ICollection<UserRating> Ratings { get; set; } = new List<UserRating>();
         // IdentityUser sınıfı zaten Id, UserName, Email, PasswordHash gibi
         // birçok özelliği kendisi içeriyor.

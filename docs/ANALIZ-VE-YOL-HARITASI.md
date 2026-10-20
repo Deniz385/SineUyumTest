@@ -403,11 +403,20 @@ handler ile ikinci isteğin TMDb'ye gitmediğini doğruluyor.
 > Not: `CompatibilityController` ve `MatchingService` de TMDb çağırıyor; onlar
 > bu cache'i henüz kullanmıyor (ayrı iş). Ölçek gerekince Redis'e taşınabilir.
 
-### M10 — "Okundu" bilgisi hiç yazılmıyor
+### M10 — "Okundu" bilgisi hiç yazılmıyor — ✅ kapatıldı
 `Message.DateRead` alanı tanımlı ama hiçbir yerde set edilmiyor.
 `MessageController.cs:158` bu alana göre `IsRead` döndürdüğü için gelen her
 mesaj sonsuza kadar "okunmamış" görünüyor. Mesajı okundu işaretleyen endpoint
 yok.
+
+**Yapılan:** Okundu işaretleme ucu daha önce eklenmişti; eksik olan "Görüldü"ydü.
+- Thread yanıtında `dateRead`; okundu işaretlenince gönderene canlı
+  `MessagesRead` olayı (son okunan mesaj id'si + an). Web ve mobil yalnızca
+  okunmuş son mesajın altında "Görüldü HH:mm" gösterir.
+- **Okundu bilgisi** gizlilik ayarı (varsayılan açık), karşılıklı: kapatan
+  okumasını göstermez, başkalarınınkini de görmez. Okuma kaydı tutulmaya
+  devam eder (okunmamış sayısı için). Bu alanı bilmeyen eski istemciler
+  kaydederken ayarı değiştirmez.
 
 ### M11 — Gerçek zamanlı sohbet — ✅ eklendi
 SignalR yalnızca bildirim gönderiyordu; sohbet ekranı yeni mesajı görmek için
@@ -724,7 +733,7 @@ eski SignalR koduyla zaman aşımına düştü (mesaj hiç gelmedi).
 çevrimdışı gönderim anlaşılır bir hata verir. Web istemcisinde çevrimdışı
 destek yok (PWA ayrı bir iş).
 18. Gerçek zamanlı sohbet (SignalR üzerinden mesaj iletimi) (M11) — ✅
-19. Mesaj "okundu" bilgisi (M10)
+19. Mesaj "okundu" bilgisi (M10) — ✅
 20. Store yayın hazırlığı: ikonlar, splash, gizlilik politikası, zorunlu güncelleme
 
 ### Faz 4 — İş modeli ve ölçekleme

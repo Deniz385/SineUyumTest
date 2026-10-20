@@ -191,20 +191,26 @@ class PrivacySettings {
     this.profileVisibility = ProfileVisibility.public,
     this.messagePermission = MessagePermission.everyone,
     this.hiddenFromSearch = false,
+    this.showReadReceipts = true,
   });
 
   final ProfileVisibility profileVisibility;
   final MessagePermission messagePermission;
   final bool hiddenFromSearch;
 
+  /// Okundu bilgisi karşılıklı: kapatan başkalarınınkini de görmez.
+  final bool showReadReceipts;
+
   PrivacySettings copyWith({
     ProfileVisibility? profileVisibility,
     MessagePermission? messagePermission,
     bool? hiddenFromSearch,
+    bool? showReadReceipts,
   }) => PrivacySettings(
     profileVisibility: profileVisibility ?? this.profileVisibility,
     messagePermission: messagePermission ?? this.messagePermission,
     hiddenFromSearch: hiddenFromSearch ?? this.hiddenFromSearch,
+    showReadReceipts: showReadReceipts ?? this.showReadReceipts,
   );
 
   factory PrivacySettings.fromJson(Map<String, dynamic> json) =>
@@ -212,12 +218,14 @@ class PrivacySettings {
         profileVisibility: ProfileVisibility.fromApi(json['profileVisibility']),
         messagePermission: MessagePermission.fromApi(json['messagePermission']),
         hiddenFromSearch: json['hiddenFromSearch'] as bool? ?? false,
+        showReadReceipts: json['showReadReceipts'] as bool? ?? true,
       );
 
   Map<String, dynamic> toJson() => {
     'profileVisibility': profileVisibility.apiValue,
     'messagePermission': messagePermission.apiValue,
     'hiddenFromSearch': hiddenFromSearch,
+    'showReadReceipts': showReadReceipts,
   };
 }
 

@@ -100,6 +100,7 @@ void main() {
         'profileVisibility': 'Following',
         'messagePermission': 'Nobody',
         'hiddenFromSearch': true,
+        'showReadReceipts': true,
       });
     });
 

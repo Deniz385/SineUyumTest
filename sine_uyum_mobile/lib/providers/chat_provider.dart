@@ -11,17 +11,23 @@ import 'session_provider.dart';
 class ChatEvents {
   final _messages = StreamController<ChatMessage>.broadcast();
   final _reconnected = StreamController<void>.broadcast();
+  final _reads = StreamController<MessagesRead>.broadcast();
 
   Stream<ChatMessage> get messages => _messages.stream;
+
+  /// Karşı taraf mesajları okudu ("Görüldü").
+  Stream<MessagesRead> get reads => _reads.stream;
 
   /// Bağlantı koptuktan sonra yeniden kuruldu: arada kaçan olaylar olabilir.
   Stream<void> get reconnected => _reconnected.stream;
 
   void addMessage(ChatMessage message) => _messages.add(message);
   void markReconnected() => _reconnected.add(null);
+  void addRead(MessagesRead read) => _reads.add(read);
 
   void dispose() {
     _messages.close();
+    _reads.close();
     _reconnected.close();
   }
 }
@@ -71,6 +77,7 @@ class ChatThreadNotifier extends AsyncNotifier<List<ChatMessage>> {
     final subscriptions = [
       events.messages.listen(_onLive),
       events.reconnected.listen((_) => _refresh()),
+      events.reads.listen(_onRead),
     ];
     ref.onDispose(() {
       for (final subscription in subscriptions) {
@@ -121,6 +128,23 @@ class ChatThreadNotifier extends AsyncNotifier<List<ChatMessage>> {
     add(message);
     // Ekran açık: karşı taraftan gelen mesaj okundu sayılır.
     if (message.senderId == otherUserId) markAsRead();
+  }
+
+  // Karşı taraf okudu: o ana kadarki mesajlarım "Görüldü".
+  void _onRead(MessagesRead read) {
+    final me = ref.read(sessionProvider).user?.id;
+    final current = state.value;
+    if (current == null ||
+        read.readerId != otherUserId ||
+        read.otherUserId != me) {
+      return;
+    }
+    state = AsyncData([
+      for (final m in current)
+        m.senderId == me && m.dateRead == null && m.id <= read.lastReadMessageId
+            ? m.markedRead(read.readAt)
+            : m,
+    ]);
   }
 
   Future<void> markAsRead() async {

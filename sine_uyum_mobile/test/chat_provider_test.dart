@@ -127,6 +127,74 @@ void main() {
     expect(messages.readMarks, 1);
   });
 
+  test('karşı taraf okuyunca o ana kadarki mesajlarım görüldü olur', () async {
+    messages.server = [msg(1, me, ali), msg(2, ali, me), msg(3, me, ali)];
+    await load();
+    events().addMessage(msg(4, me, ali)); // okunmadan sonra gönderilen
+    await tick();
+
+    final at = DateTime.utc(2026, 10, 20, 12, 30);
+    events().addRead(
+      MessagesRead(
+        readerId: ali,
+        otherUserId: me,
+        lastReadMessageId: 3,
+        readAt: at,
+      ),
+    );
+    await tick();
+
+    final thread = container.read(chatThreadProvider(ali)).value!;
+    expect(thread.map((m) => m.dateRead).toList(), [at, null, at, null]);
+  });
+
+  test('başka sohbetin ya da benim okumam görüldü yazmaz', () async {
+    messages.server = [msg(1, me, ali)];
+    await load();
+
+    final at = DateTime.utc(2026, 10, 20);
+    // zeynep başka bir sohbeti okudu; ben ali'nin mesajlarını okudum.
+    events().addRead(
+      MessagesRead(
+        readerId: zeynep,
+        otherUserId: me,
+        lastReadMessageId: 9,
+        readAt: at,
+      ),
+    );
+    events().addRead(
+      MessagesRead(
+        readerId: me,
+        otherUserId: ali,
+        lastReadMessageId: 9,
+        readAt: at,
+      ),
+    );
+    await tick();
+
+    expect(
+      container.read(chatThreadProvider(ali)).value!.single.dateRead,
+      null,
+    );
+  });
+
+  test('olay ayrıştırma: eksik alanlı olay yok sayılır', () {
+    expect(MessagesRead.tryParse({'readerId': 'a'}), isNull);
+    final parsed = MessagesRead.tryParse({
+      'readerId': 'a',
+      'otherUserId': 'b',
+      'lastReadMessageId': 7,
+      'readAt': '2026-10-20T12:30:00Z',
+    })!;
+    expect(parsed.lastReadMessageId, 7);
+    expect(parsed.readAt, DateTime.utc(2026, 10, 20, 12, 30));
+    expect(
+      ChatMessage.fromJson({'id': 1, 'dateRead': '2026-10-20T12:31:00Z'})
+          .dateRead,
+      DateTime.utc(2026, 10, 20, 12, 31),
+    );
+  });
+
   test('başka sohbetin mesajı bu sohbete eklenmez', () async {
     await load();
 

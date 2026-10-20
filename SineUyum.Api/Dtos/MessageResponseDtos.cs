@@ -10,8 +10,21 @@ namespace SineUyum.Api.Dtos
         public string? RecipientUsername { get; set; }
         public string? Content { get; set; }
         public DateTime MessageSent { get; set; }
+        // Alıcının okuduğu an. İki taraftan biri okundu bilgisini kapattıysa
+        // her zaman null.
+        public DateTime? DateRead { get; set; }
         public MovieSummaryDto? Movie { get; set; }
         public SharedWatchlistDto? Watchlist { get; set; }
+    }
+
+    // SignalR "MessagesRead": ReaderId, OtherUserId'nin LastReadMessageId'ye
+    // kadarki mesajlarını ReadAt'te okudu.
+    public class MessagesReadDto
+    {
+        public string ReaderId { get; set; } = string.Empty;
+        public string OtherUserId { get; set; } = string.Empty;
+        public int LastReadMessageId { get; set; }
+        public DateTime ReadAt { get; set; }
     }
 
     // Mesajla paylaşılan liste.

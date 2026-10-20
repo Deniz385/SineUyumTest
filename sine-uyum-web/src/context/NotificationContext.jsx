@@ -13,6 +13,7 @@ export const useNotifications = () => {
 // Uygulamada TEK SignalR bağlantısı vardır ve burada yaşar. İki olay taşır:
 //   ReceiveNotification → bildirim listesi
 //   ReceiveMessage      → canlı sohbet (subscribeToMessages ile dinlenir)
+//   MessagesRead        → "Görüldü" (subscribeToReads ile dinlenir)
 export const NotificationProvider = ({ children }) => {
     const [notifications, setNotifications] = useState([]);
     const { user } = useAuth();
@@ -20,6 +21,7 @@ export const NotificationProvider = ({ children }) => {
 
     const messageListeners = useRef(new Set());
     const reconnectListeners = useRef(new Set());
+    const readListeners = useRef(new Set());
     // Şu an açık olan sohbetin karşı kullanıcısı: ondan gelen mesaj bildirimi
     // gösterilmez, doğrudan okundu işaretlenir (mesaj zaten ekranda).
     const activeConversation = useRef(null);
@@ -72,6 +74,10 @@ export const NotificationProvider = ({ children }) => {
             messageListeners.current.forEach(listener => listener(message));
         });
 
+        connection.on('MessagesRead', (receipt) => {
+            readListeners.current.forEach(listener => listener(receipt));
+        });
+
         // Bağlantı koptuğu sürede gelenler kaçmış olabilir: yeniden kurulunca
         // bildirimler ve açık ekranlar (sohbet) sunucudan tazelenir.
         connection.onreconnected(() => {
@@ -108,6 +114,11 @@ export const NotificationProvider = ({ children }) => {
         return () => messageListeners.current.delete(listener);
     }, []);
 
+    const subscribeToReads = useCallback((listener) => {
+        readListeners.current.add(listener);
+        return () => readListeners.current.delete(listener);
+    }, []);
+
     const subscribeToReconnect = useCallback((listener) => {
         reconnectListeners.current.add(listener);
         return () => reconnectListeners.current.delete(listener);
@@ -129,6 +140,7 @@ export const NotificationProvider = ({ children }) => {
         markAsRead,
         markAllAsRead,
         subscribeToMessages,
+        subscribeToReads,
         subscribeToReconnect,
         setActiveConversation,
     };

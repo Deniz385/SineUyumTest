@@ -128,6 +128,18 @@ export const PrivacySettings = () => {
                 label="Kullanıcı aramasında görünme"
             />
 
+            <FormControlLabel
+                sx={{ mt: 1, display: 'flex' }}
+                control={
+                    <Switch
+                        checked={settings.showReadReceipts !== false}
+                        disabled={isSaving}
+                        onChange={(e) => save({ showReadReceipts: e.target.checked })}
+                    />
+                }
+                label="Okundu bilgisi (kapatırsan başkalarınınkini de göremezsin)"
+            />
+
             <Divider sx={{ my: 3 }} />
             <Typography variant="h6" component="h3">Engellenen kullanıcılar</Typography>
             {blocked.length === 0 ? (

@@ -123,6 +123,17 @@ class _PrivacySettingsPageState extends ConsumerState<PrivacySettingsPage> {
                     ? null
                     : (value) => save(shown.copyWith(hiddenFromSearch: value)),
               ),
+              SwitchListTile(
+                title: const Text('Okundu bilgisi'),
+                subtitle: const Text(
+                  'Kapatırsan mesajlarını okuduğun görünmez; sen de '
+                  'başkalarınınkini göremezsin.',
+                ),
+                value: shown.showReadReceipts,
+                onChanged: _saving
+                    ? null
+                    : (value) => save(shown.copyWith(showReadReceipts: value)),
+              ),
               const Divider(height: 32),
               const _SectionTitle('Engellenen kullanıcılar'),
               const _BlockedUsers(),

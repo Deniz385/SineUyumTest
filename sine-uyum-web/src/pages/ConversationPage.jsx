@@ -54,7 +54,7 @@ export const ConversationPage = () => {
     const { otherUserId } = useParams();
     const { user } = useAuth();
     const { showSnackbar } = useSnackbar();
-    const { subscribeToMessages, subscribeToReconnect, setActiveConversation } = useNotifications();
+    const { subscribeToMessages, subscribeToReads, subscribeToReconnect, setActiveConversation } = useNotifications();
     const [messages, setMessages] = useState([]);
     const [otherUser, setOtherUser] = useState(null);
     const [newMessage, setNewMessage] = useState('');
@@ -123,17 +123,31 @@ export const ConversationPage = () => {
             appendMessage(message);
             if (message.senderId === otherUserId) markThreadAsRead();
         });
+        // Karşı taraf okudu (M10): o ana kadarki mesajlarım "Görüldü".
+        const unsubscribeReads = subscribeToReads((receipt) => {
+            if (receipt.readerId !== otherUserId || receipt.otherUserId !== user.id) return;
+            setMessages(prev => prev.map(m => (
+                m.senderId === user.id && !m.dateRead && m.id <= receipt.lastReadMessageId
+                    ? { ...m, dateRead: receipt.readAt }
+                    : m
+            )));
+        });
         const unsubscribeReconnect = subscribeToReconnect(fetchThread);
 
         return () => {
             unsubscribeMessages();
+            unsubscribeReads();
             unsubscribeReconnect();
             setActiveConversation(null);
         };
-    }, [user, otherUserId, subscribeToMessages, subscribeToReconnect, setActiveConversation,
+    }, [user, otherUserId, subscribeToMessages, subscribeToReads, subscribeToReconnect, setActiveConversation,
         appendMessage, markThreadAsRead, fetchThread]);
 
     useEffect(scrollToBottom, [messages]);
+
+    // "Görüldü" yalnızca okunmuş son mesajımın altında (her mesajda tekrar etmez).
+    const lastSeenId = messages.reduce(
+        (max, m) => (m.senderId === user?.id && m.dateRead && m.id > max ? m.id : max), 0);
 
     const handleSendMessage = async ({ content, movieId, watchlistId }) => {
         if (!content && !movieId && !watchlistId) return;
@@ -208,6 +222,7 @@ export const ConversationPage = () => {
                             </Box>
                             <Typography variant="caption" sx={{ display: 'block', textAlign: msg.senderId === user.id ? 'right' : 'left', color: 'text.secondary', mt: 0.5 }}>
                                 {new Date(msg.messageSent).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                                {msg.id === lastSeenId && ` · Görüldü ${new Date(msg.dateRead).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`}
                             </Typography>
                         </Box>
                     ))}

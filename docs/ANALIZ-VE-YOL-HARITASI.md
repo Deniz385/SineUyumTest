@@ -246,10 +246,15 @@ içinde çalışmalı.
 string. `EventController.cs` içinde `Split(',').Select(int.Parse)` bozuk veride
 `FormatException` fırlatır; sorgulanamaz, indekslenemez.
 
-### M9 — TMDb yanıtları cache'lenmiyor
-`MoviesController` TMDb yanıtlarını olduğu gibi proxy'liyor. Her popüler film
-listesi isteği TMDb'ye gidiyor → kota tüketimi, yavaş mobil deneyim.
-**Yapılacak:** `IMemoryCache`/Redis ile TTL'li cache.
+### M9 — TMDb yanıtları cache'lenmiyordu — ✅ IMemoryCache eklendi
+`MoviesController` her isteği TMDb'ye proxy'liyordu. Artık dört uç da TTL'li
+önbellekte: popüler & vizyondakiler 1 saat, film detayı 24 saat, arama (sorgu
+başına) 30 dakika. `SizeLimit=2048` ile farklı sorguların belleği şişirmesi
+engellendi; hatalar önbelleğe alınmaz. Test (`MovieCacheTests`) sahte sayaç
+handler ile ikinci isteğin TMDb'ye gitmediğini doğruluyor.
+
+> Not: `CompatibilityController` ve `MatchingService` de TMDb çağırıyor; onlar
+> bu cache'i henüz kullanmıyor (ayrı iş). Ölçek gerekince Redis'e taşınabilir.
 
 ### M10 — "Okundu" bilgisi hiç yazılmıyor
 `Message.DateRead` alanı tanımlı ama hiçbir yerde set edilmiyor.

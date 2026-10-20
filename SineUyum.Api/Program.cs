@@ -163,6 +163,12 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
+// --- CACHE ---
+// TMDb yanıtlarını (popüler, vizyondakiler, arama, film detayı) TTL'li
+// önbellekte tutmak için. Kota tüketimini azaltır, yanıtı hızlandırır.
+// SizeLimit, farklı arama sorgularının belleği sınırsız şişirmesini önler.
+builder.Services.AddMemoryCache(options => options.SizeLimit = 2048);
+
 // --- CONTROLLERS & SWAGGER ---
 builder.Services.AddControllers();
 builder.Services.AddSignalR();

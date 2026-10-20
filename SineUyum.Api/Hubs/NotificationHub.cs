@@ -1,13 +1,19 @@
 // SineUyum.Api/Hubs/NotificationHub.cs
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace SineUyum.Api.Hubs
 {
-    // Bu Hub, sunucu ile istemciler (tarayıcılar) arasında anlık bir bağlantı kurar.
+    // Sunucudan istemcilere anlık olaylar: "ReceiveNotification" (bildirim) ve
+    // "ReceiveMessage" (canlı sohbet). Olaylar kullanıcı kimliğine (JWT
+    // NameIdentifier) gönderilir; aynı kullanıcının tüm açık bağlantıları alır.
+    //
+    // Yalnızca giriş yapmış kullanıcılar bağlanabilir. Önceden kimliksiz
+    // bağlantılar da kabul ediliyordu: hiçbir olay almasalar da sunucuda boşuna
+    // kaynak tutuyorlardı. Token, WebSocket başlık taşıyamadığı için
+    // "access_token" sorgu parametresiyle gelir (bkz. Program.cs).
+    [Authorize]
     public class NotificationHub : Hub
     {
-        // İstemcilerin bu huba bağlanıp ayrıldığında özel bir işlem yapmamıza gerek yok,
-        // bu yüzden içi şimdilik boş kalabilir. SignalR bağlantıyı kendi yönetir.
     }
 }
-

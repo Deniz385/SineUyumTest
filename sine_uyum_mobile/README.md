@@ -83,6 +83,10 @@ lib/
 
 ### Bildirimler
 
+Aynı SignalR bağlantısı **canlı sohbeti** de taşır (`ReceiveMessage`): açık
+sohbete mesaj anında düşer, bağlantı yeniden kurulunca kaçanlar sunucudan
+tazelenir; açık sohbetten gelen mesaj bildirimi gösterilmez.
+
 İki kanal birlikte çalışır:
 
 - **Uygulama açıkken:** SignalR (`/notificationHub`) — bildirim listeye anında düşer.
@@ -133,5 +137,4 @@ Mobil tarafta tamamlanması gereken işler `docs/ANALIZ-VE-YOL-HARITASI.md`
 dosyasının "Faz 3 — Mobil tamamlama" bölümünde listelenmiştir. Öne çıkanlar:
 
 - Çevrimdışı cache
-- Gerçek zamanlı sohbet (mesajlar şu an ekran yenilendiğinde gelir)
 - Uygulama ikonu ve açılış ekranı görselleri (şu an Flutter varsayılanları)

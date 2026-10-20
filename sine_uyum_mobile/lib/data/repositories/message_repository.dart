@@ -32,13 +32,14 @@ class MessageRepository {
         .toList();
   }
 
-  Future<void> send({
+  /// Gönderilen mesajın kendisini döner (thread'deki ile aynı şekil).
+  Future<ChatMessage> send({
     required String recipientId,
     String? content,
     int? movieId,
     int? watchlistId,
   }) async {
-    await _client.post<Map<String, dynamic>>(
+    final data = await _client.post<Map<String, dynamic>>(
       '/api/v1/messages',
       body: {
         'recipientId': recipientId,
@@ -47,6 +48,7 @@ class MessageRepository {
         'watchlistId': watchlistId,
       },
     );
+    return ChatMessage.fromJson(data);
   }
 
   Future<void> markThreadAsRead(String otherUserId) async {

@@ -87,11 +87,6 @@ final conversationsProvider = FutureProvider<List<Conversation>>(
   (ref) => ref.watch(messageRepositoryProvider).conversations(),
 );
 
-final messageThreadProvider = FutureProvider.family<List<ChatMessage>, String>(
-  (ref, otherUserId) =>
-      ref.watch(messageRepositoryProvider).thread(otherUserId),
-);
-
 final myEventProvider = FutureProvider<EventState>(
   (ref) => ref.watch(eventRepositoryProvider).myStatus(),
 );

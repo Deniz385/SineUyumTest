@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api, { mediaUrl } from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import { Box, Typography, CircularProgress, List, ListItem, ListItemText, ListItemAvatar, Avatar, Divider } from '@mui/material';
 
 export const MessagesPage = () => {
@@ -9,24 +10,36 @@ export const MessagesPage = () => {
     const [conversations, setConversations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+    const { subscribeToMessages, subscribeToReconnect } = useNotifications();
+
+    const fetchConversations = useCallback(async () => {
+        if (!user) return;
+        try {
+            const response = await api.get(`/api/v1/messages`);
+            setConversations(response.data);
+            setError('');
+        } catch (err) {
+            setError('Konuşmalar yüklenirken bir hata oluştu.');
+            console.error(err);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [user]);
 
     useEffect(() => {
-        const fetchConversations = async () => {
-            if (!user) return;
-            try {
-                const response = await api.get(`/api/v1/messages`);
-                // DÜZELTME: Gelen verinin içindeki $values dizisini alıyoruz.
-                setConversations(response.data.$values || response.data);
-            } catch (err) {
-                setError('Konuşmalar yüklenirken bir hata oluştu.');
-                console.error(err);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
         fetchConversations();
-    }, [user]);
+    }, [fetchConversations]);
+
+    // Yeni mesaj gelince (ya da bağlantı yeniden kurulunca) liste sunucudan
+    // tazelenir: sıra, son mesaj ve okunma durumu tek kaynaktan gelsin.
+    useEffect(() => {
+        const unsubscribeMessages = subscribeToMessages(() => fetchConversations());
+        const unsubscribeReconnect = subscribeToReconnect(fetchConversations);
+        return () => {
+            unsubscribeMessages();
+            unsubscribeReconnect();
+        };
+    }, [subscribeToMessages, subscribeToReconnect, fetchConversations]);
 
     if (isLoading) return <CircularProgress />;
     if (error) return <Typography color="error">{error}</Typography>;
@@ -64,7 +77,9 @@ export const MessagesPage = () => {
                                             variant="body2"
                                             color="text.primary"
                                         >
-                                            {convo.lastMessageContent.substring(0, 100)}...
+                                            {convo.lastMessageContent.length > 100
+                                                ? `${convo.lastMessageContent.substring(0, 100)}…`
+                                                : convo.lastMessageContent}
                                         </Typography>
                                     }
                                 />

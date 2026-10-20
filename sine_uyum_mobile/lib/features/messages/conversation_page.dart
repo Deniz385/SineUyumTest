@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../data/models/message.dart';
+import '../../providers/chat_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/session_provider.dart';
 import '../../widgets/poster_image.dart';
@@ -26,26 +28,31 @@ class ConversationPage extends ConsumerStatefulWidget {
 class _ConversationPageState extends ConsumerState<ConversationPage> {
   final _controller = TextEditingController();
   bool _isSending = false;
+  // dispose'da ref kullanılamadığı için baştan alınır.
+  late final ActiveConversation _activeConversation;
 
   @override
   void initState() {
     super.initState();
-    // Sohbet açılınca gelen mesajlar okundu sayılır.
-    Future.microtask(() async {
-      try {
-        await ref
-            .read(messageRepositoryProvider)
-            .markThreadAsRead(widget.otherUserId);
-        ref.invalidate(conversationsProvider);
-      } catch (_) {
-        // Okundu işaretlemesi başarısız olsa da sohbet görüntülenebilir.
-      }
+    _activeConversation = ref.read(activeConversationProvider.notifier);
+    // Sohbet açılınca: bu sohbetten gelen bildirimler gösterilmez, mesajlar ve
+    // o sohbetin bildirimleri okundu sayılır.
+    Future.microtask(() {
+      _activeConversation.open(widget.otherUserId);
+      ref.read(chatThreadProvider(widget.otherUserId).notifier).markAsRead();
+      ref
+          .read(notificationsProvider.notifier)
+          .markConversationRead(widget.otherUserId);
     });
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    final otherUserId = widget.otherUserId;
+    final active = _activeConversation;
+    // Ağaç sökülürken sağlayıcı değiştirmemek için bir sonraki mikro göreve.
+    Future.microtask(() => active.close(otherUserId));
     super.dispose();
   }
 
@@ -55,11 +62,13 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
 
     setState(() => _isSending = true);
     try {
-      await ref
+      final sent = await ref
           .read(messageRepositoryProvider)
           .send(recipientId: widget.otherUserId, content: text);
       _controller.clear();
-      ref.invalidate(messageThreadProvider(widget.otherUserId));
+      // Yanıt mesajın kendisi: thread'i yeniden çekmeden eklenir (canlı yankı
+      // aynı id ile gelirse tekilleştirilir).
+      ref.read(chatThreadProvider(widget.otherUserId).notifier).add(sent);
       ref.invalidate(conversationsProvider);
     } catch (error) {
       if (mounted) {
@@ -73,7 +82,7 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
 
   @override
   Widget build(BuildContext context) {
-    final thread = ref.watch(messageThreadProvider(widget.otherUserId));
+    final thread = ref.watch(chatThreadProvider(widget.otherUserId));
     final currentUserId = ref.watch(sessionProvider).user?.id;
 
     return Scaffold(
@@ -91,7 +100,7 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
               error: (error, _) => ErrorView(
                 message: error.toString(),
                 onRetry: () =>
-                    ref.invalidate(messageThreadProvider(widget.otherUserId)),
+                    ref.invalidate(chatThreadProvider(widget.otherUserId)),
               ),
               data: (messages) => messages.isEmpty
                   ? const EmptyView(

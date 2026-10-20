@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
+using SineUyum.Api.Hubs;
 using SineUyum.Api.Models;
 using SineUyum.Api.Services;
 using System.Security.Claims;
@@ -16,15 +18,49 @@ namespace SineUyum.Api.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly NotificationService _notifications;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public MessageController(ApplicationDbContext context, NotificationService notifications)
+        public MessageController(
+            ApplicationDbContext context,
+            NotificationService notifications,
+            IHubContext<NotificationHub> hubContext)
         {
             _context = context;
             _notifications = notifications;
+            _hubContext = hubContext;
         }
 
+        // SignalR "ReceiveMessage" olayının adı; istemciler bunu dinler.
+        public const string ReceiveMessageEvent = "ReceiveMessage";
+
+        // Sohbetteki mesajın tek şekli: thread listesi, gönderme yanıtı ve canlı
+        // olay aynı projeksiyonu kullanır (istemci üçünü de aynı modelle okur).
+        private static readonly System.Linq.Expressions.Expression<Func<Message, MessageThreadItemDto>> ToThreadItem =
+            m => new MessageThreadItemDto
+            {
+                Id = m.Id,
+                SenderId = m.SenderId,
+                SenderUsername = m.Sender.UserName,
+                RecipientId = m.RecipientId,
+                RecipientUsername = m.Recipient.UserName,
+                Content = m.Content,
+                MessageSent = m.MessageSent,
+                Movie = m.Movie == null ? null : new MovieSummaryDto
+                {
+                    Id = m.Movie.Id,
+                    Title = m.Movie.Title,
+                    PosterPath = m.Movie.PosterPath
+                },
+                Watchlist = m.Watchlist == null ? null : new SharedWatchlistDto
+                {
+                    Id = m.Watchlist.Id,
+                    Name = m.Watchlist.Name,
+                    OwnerUsername = m.Watchlist.User == null ? null : m.Watchlist.User.UserName
+                }
+            };
+
         [HttpPost]
-        public async Task<ActionResult<StatusMessageDto>> CreateMessage(CreateMessageDto createMessageDto)
+        public async Task<ActionResult<MessageThreadItemDto>> CreateMessage(CreateMessageDto createMessageDto)
         {
             var senderId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (senderId == null) return Unauthorized();
@@ -67,7 +103,18 @@ namespace SineUyum.Api.Controllers
                 $"{sender.UserName} size bir mesaj gönderdi.",
                 $"/messages/{senderId}");
 
-            return Ok(new StatusMessageDto("Mesaj başarıyla gönderildi."));
+            // Canlı sohbet (M11): mesaj iki tarafa da itilir. Gönderen de alır ki
+            // aynı hesabın açık diğer sekme/cihazları güncellensin; isteği yapan
+            // istemci yanıttaki mesajla id üzerinden tekilleştirir.
+            var created = await _context.Messages
+                .Where(m => m.Id == message.Id)
+                .Select(ToThreadItem)
+                .SingleAsync();
+
+            await _hubContext.Clients.Users(senderId, createMessageDto.RecipientId)
+                .SendAsync(ReceiveMessageEvent, created);
+
+            return Ok(created);
         }
 
         // Mobil istemcinin sınırsız veri indirmemesi için sayfalama eklendi.
@@ -85,38 +132,12 @@ namespace SineUyum.Api.Controllers
             pageSize = Math.Clamp(pageSize, 1, 200);
 
             var messages = await _context.Messages
-                .Include(m => m.Sender)
-                .Include(m => m.Recipient)
-                .Include(m => m.Movie)
-                .Include(m => m.Watchlist)
-                    .ThenInclude(w => w!.User)
                 .Where(m => (m.RecipientId == currentUserId && m.SenderId == otherUserId) ||
                             (m.RecipientId == otherUserId && m.SenderId == currentUserId))
                 .OrderByDescending(m => m.MessageSent)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(m => new MessageThreadItemDto
-                {
-                    Id = m.Id,
-                    SenderId = m.SenderId,
-                    SenderUsername = m.Sender.UserName,
-                    RecipientId = m.RecipientId,
-                    RecipientUsername = m.Recipient.UserName,
-                    Content = m.Content,
-                    MessageSent = m.MessageSent,
-                    Movie = m.Movie == null ? null : new MovieSummaryDto
-                    {
-                        Id = m.Movie.Id,
-                        Title = m.Movie.Title,
-                        PosterPath = m.Movie.PosterPath
-                    },
-                    Watchlist = m.Watchlist == null ? null : new SharedWatchlistDto
-                    {
-                        Id = m.Watchlist.Id,
-                        Name = m.Watchlist.Name,
-                        OwnerUsername = m.Watchlist.User == null ? null : m.Watchlist.User.UserName
-                    }
-                })
+                .Select(ToThreadItem)
                 .ToListAsync();
 
             // Sorgu en yeniden eskiye çekiliyor; istemci eskiden yeniye bekliyor.

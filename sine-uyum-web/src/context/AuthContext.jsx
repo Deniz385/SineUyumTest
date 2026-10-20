@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
-import { setupInterceptors, saveTokens, clearTokens, TOKEN_KEY } from '../api/axiosConfig';
+import { setupInterceptors, saveTokens, clearTokens, refreshAccessTokenOnce, TOKEN_KEY, REFRESH_TOKEN_KEY } from '../api/axiosConfig';
 
 const AuthContext = createContext(null);
 
@@ -31,6 +31,27 @@ const getUserFromToken = (token) => {
 export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
   const [user, setUser] = useState(() => getUserFromToken(localStorage.getItem(TOKEN_KEY)));
+  // Açılışta access token'ın süresi dolmuş ama refresh token varsa, karar
+  // vermeden önce yenileme denenir. Önceden süresi dolmuş token doğrudan
+  // "giriş yapılmamış" sayılıyor ve kullanıcı login'e atılıyordu: access token
+  // 60 dk, refresh token 60 gün yaşadığı için bir saatten sonra geri gelen her
+  // kullanıcı (refresh token'ı geçerli olsa da) yeniden giriş yapmak zorundaydı.
+  const [isRestoring, setIsRestoring] = useState(
+    () => !user && Boolean(localStorage.getItem(REFRESH_TOKEN_KEY))
+  );
+
+  useEffect(() => {
+    if (!isRestoring) return;
+    let cancelled = false;
+    refreshAccessTokenOnce().then((newToken) => {
+      if (cancelled) return;
+      const restored = getUserFromToken(newToken);
+      if (restored) setUser(restored);
+      else clearTokens();
+      setIsRestoring(false);
+    });
+    return () => { cancelled = true; };
+  }, [isRestoring]);
 
   const logoutAction = useCallback(() => {
     setUser(null);
@@ -75,6 +96,7 @@ export const AuthProvider = ({ children }) => {
 
   const authContextValue = {
     user,
+    isRestoring,
     loginAction,
     logoutAction,
   };

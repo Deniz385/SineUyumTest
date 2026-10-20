@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:signalr_netcore/signalr_client.dart';
 
 import '../core/config/app_config.dart';
+import '../data/models/message.dart';
 import '../data/models/notification.dart';
+import 'chat_provider.dart';
 import 'repository_providers.dart';
 import 'session_provider.dart';
 
@@ -40,9 +42,9 @@ final notificationsProvider =
 
 /// Bildirimleri REST ile çeker, SignalR ile canlı dinler.
 ///
-/// NOT: SignalR yalnızca uygulama ön plandayken çalışır. Uygulama kapalıyken
-/// bildirim gönderebilmek için FCM/APNs entegrasyonu gerekir
-/// (bkz. docs/ANALIZ-VE-YOL-HARITASI.md → B7).
+/// SignalR yalnızca uygulama ön plandayken çalışır; uygulama kapalıyken
+/// bildirimler FCM ile gelir (bkz. push_provider.dart). Aynı bağlantı canlı
+/// sohbet mesajlarını da taşır ("ReceiveMessage" → [ChatEvents]).
 class NotificationNotifier extends Notifier<NotificationState> {
   HubConnection? _connection;
 
@@ -93,6 +95,35 @@ class NotificationNotifier extends Notifier<NotificationState> {
     }
   }
 
+  /// SignalR'dan gelen bildirim. O sohbet ekranda açıksa mesaj zaten
+  /// görülüyor: bildirim okundu olarak eklenir ve sunucuda da işaretlenir.
+  @visibleForTesting
+  void onNotification(AppNotification notification) {
+    final active = ref.read(activeConversationProvider);
+    if (active != null && notification.relatedUrl == '/messages/$active') {
+      state = state.copyWith(
+        items: [notification.copyWith(isRead: true), ...state.items],
+      );
+      ref
+          .read(notificationRepositoryProvider)
+          .markAsRead(notification.id)
+          .catchError((_) {});
+      return;
+    }
+    state = state.copyWith(items: [notification, ...state.items]);
+  }
+
+  /// Sohbet açılınca o sohbetin okunmamış bildirimlerini okundu işaretler.
+  Future<void> markConversationRead(String otherUserId) async {
+    final ids = state.items
+        .where((n) => !n.isRead && n.relatedUrl == '/messages/$otherUserId')
+        .map((n) => n.id)
+        .toList();
+    for (final id in ids) {
+      await markAsRead(id);
+    }
+  }
+
   Future<void> markAllAsRead() async {
     state = state.copyWith(
       items: state.items.map((item) => item.copyWith(isRead: true)).toList(),
@@ -123,14 +154,31 @@ class NotificationNotifier extends Notifier<NotificationState> {
     connection.on('ReceiveNotification', (arguments) {
       final payload = arguments?.firstOrNull;
       if (payload is Map) {
-        final notification = AppNotification.fromJson(
-          payload.cast<String, dynamic>(),
+        onNotification(
+          AppNotification.fromJson(payload.cast<String, dynamic>()),
         );
-        state = state.copyWith(items: [notification, ...state.items]);
       } else {
         // Biçim beklenmedikse listeyi yeniden çekmek güvenli olanı.
         load();
       }
+    });
+
+    // Canlı sohbet (M11).
+    connection.on('ReceiveMessage', (arguments) {
+      final payload = arguments?.firstOrNull;
+      if (payload is! Map) return;
+      ref
+          .read(chatEventsProvider)
+          .addMessage(ChatMessage.fromJson(payload.cast<String, dynamic>()));
+      ref.invalidate(conversationsProvider);
+    });
+
+    // Bağlantı koptuğu sürede gelenler kaçmış olabilir: bildirimler ve açık
+    // sohbet sunucudan tazelenir.
+    connection.onreconnected(({connectionId}) {
+      load();
+      ref.read(chatEventsProvider).markReconnected();
+      ref.invalidate(conversationsProvider);
     });
 
     _connection = connection;

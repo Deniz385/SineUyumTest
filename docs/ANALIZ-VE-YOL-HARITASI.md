@@ -308,10 +308,54 @@ handler ile ikinci isteğin TMDb'ye gitmediğini doğruluyor.
 mesaj sonsuza kadar "okunmamış" görünüyor. Mesajı okundu işaretleyen endpoint
 yok.
 
-### M11 — Gerçek zamanlı sohbet yok
-SignalR yalnızca bildirim gönderiyor; mesajın kendisi hub üzerinden
-iletilmiyor. Sohbet ekranı yeni mesajı görmek için sayfa yenilemeye muhtaç.
-`NotificationHub` tamamen boş, grup/oda yönetimi yok.
+### M11 — Gerçek zamanlı sohbet — ✅ eklendi
+SignalR yalnızca bildirim gönderiyordu; sohbet ekranı yeni mesajı görmek için
+yeniden açılmaya muhtaçtı.
+
+**Yapılan:**
+- **Sunucu:** `POST /api/v1/messages` oluşturulan mesajı döner (önceki
+  `{message}` metnini hiçbir istemci okumuyordu) ve aynı mesajı hub üzerinden
+  `ReceiveMessage` olayıyla hem alıcıya hem gönderene iter (gönderenin diğer
+  sekme/cihazları da güncellensin). Thread listesi, gönderme yanıtı ve canlı
+  olay tek bir projeksiyonu paylaşır; şekil eşitliği testle sabit. Gönderme
+  REST'te kaldı (doğrulama, güvenilir sonuç); SignalR yalnızca dağıtım yapar.
+  Grup/oda gerekmedi: olaylar kullanıcı kimliğine gider.
+- **Hub artık kimlik istiyor** (`[Authorize]`): önceden kimliksiz bağlantı da
+  kabul ediliyordu (olay almasalar da kaynak tutuyorlardı).
+- **İstemciler (web + mobil):** mesaj anında eklenir ve id ile tekilleştirilir
+  (gönderen yanıtı + canlı yankı); sohbet açıkken gelen mesaj okundu sayılır,
+  o sohbetin bildirimi gösterilmez/okundu işaretlenir; **bağlantı yeniden
+  kurulunca thread tazelenir** (kopukken gelenler kaybolmaz); sohbet listesi
+  canlı güncellenir. Mobilde ilk yükleme sürerken gelen mesaj da kaybolmaz.
+
+**Yol üstünde bulunan web hataları (eski kodla tarayıcıda yeniden üretildi):**
+- **Çift SignalR bağlantısı:** temizlik yalnızca "Connected" durumunda
+  durduruyordu; bağlanırken bileşen kaldırılınca (React Strict Mode, kullanıcı
+  değişimi) eski bağlantı yaşıyor, her olay iki kez geliyordu (tek mesajda
+  rozet 2). Dinleyiciler de start'tan sonra kaydedildiği için ilk olaylar
+  kaçabiliyordu.
+- **Bir saat sonra zorunlu yeniden giriş:** açılışta süresi dolmuş access
+  token "giriş yok" sayılıp login'e yönlendiriliyordu; hiçbir istek
+  yapılmadığı için refresh token (60 gün) hiç denenmiyordu. Artık açılışta
+  önce yenileme denenir (eşzamanlı çağrılar tek isteğe indirgenir).
+- **İlk istek kimliksiz:** axios interceptor'ları AuthContext'in useEffect'inde
+  kuruluyordu; React çocuk effect'lerini önce çalıştırdığı için sayfanın ilk
+  isteği token'sız gidip 401 alıyor, gereksiz yenileme yapılıyordu. Effect her
+  çalıştığında interceptor'lar üst üste de ekleniyordu. Artık modül yüklenirken
+  bir kez kurulur.
+- Web sohbet sayfası açılınca mesajları okundu işaretlemiyordu; sohbet
+  listesindeki "..." kısa mesajlara da ekleniyordu.
+
+**Doğrulama:** gerçek SignalR istemcisiyle API testleri (iki taraf + ikinci
+sekme alır, üçüncü kişi almaz; canlı/yanıt/thread şekli aynı; hub kimliksiz
+reddeder, sorgu parametresiyle kabul eder — mutasyonla sınandı). İki kullanıcı
+ve ayrı tarayıcı bağlamlarıyla web uçtan uca (13 kontrol; çevrimdışı/yeniden
+bağlanma dahil); aynı paket eski kodda çift bağlantıyı, zorunlu çıkışı ve
+401'i yakaladı. Mobil yığın (gerçek ApiClient + Dart SignalR + sağlayıcılar)
+Docker'daki API'ye karşı uçtan uca çalıştırıldı; 9 yeni mobil birim testi.
+
+**İleride:** okundu bilgisi (✓✓) ve "yazıyor..." göstergesi; mesaj
+sayfalaması için yukarı kaydırınca eski mesajları yükleme.
 
 ### M12 — Altyapı eksikleri — ✅ büyük ölçüde kapatıldı
 - ✅ Migration'lar açılışta otomatik uygulanıyor (`Database.MigrateAsync()`)
@@ -533,7 +577,7 @@ tüm çağrı noktaları açıkça `/api/v1/...`'e taşındı. SignalR hub'ı
 - **İleride:** dosyalar yerel diskte (`IMediaStorage` arayüzü); birden çok
   sunucuya ölçeklenince S3/Blob + CDN'e taşınmalı.
 17. Çevrimdışı cache (film listeleri, sohbetler)
-18. Gerçek zamanlı sohbet (SignalR üzerinden mesaj iletimi) (M11)
+18. Gerçek zamanlı sohbet (SignalR üzerinden mesaj iletimi) (M11) — ✅
 19. Mesaj "okundu" bilgisi (M10)
 20. Store yayın hazırlığı: ikonlar, splash, gizlilik politikası, zorunlu güncelleme
 

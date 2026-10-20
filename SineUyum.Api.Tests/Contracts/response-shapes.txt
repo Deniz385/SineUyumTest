@@ -184,15 +184,45 @@
 
 ## messages.create  POST /api/v1/messages -> 200
   $: object
-  message: string
+  content: string
+  id: number
+  messageSent: string
+  movie: null
+  recipientId: string
+  recipientUsername: string
+  senderId: string
+  senderUsername: string
+  watchlist: null
 
 ## messages.create(movie)  POST /api/v1/messages -> 200
   $: object
-  message: string
+  content: null
+  id: number
+  messageSent: string
+  movie.id: number
+  movie.posterPath: string
+  movie.title: string
+  movie: object
+  recipientId: string
+  recipientUsername: string
+  senderId: string
+  senderUsername: string
+  watchlist: null
 
 ## messages.create(list)  POST /api/v1/messages -> 200
   $: object
-  message: string
+  content: null
+  id: number
+  messageSent: string
+  movie: null
+  recipientId: string
+  recipientUsername: string
+  senderId: string
+  senderUsername: string
+  watchlist.id: number
+  watchlist.name: string
+  watchlist.ownerUsername: string
+  watchlist: object
 
 ## messages.thread  GET /api/v1/messages/thread/{id} -> 200
   $: array

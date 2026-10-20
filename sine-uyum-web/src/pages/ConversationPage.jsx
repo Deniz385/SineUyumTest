@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import { Box, Typography, CircularProgress, TextField, IconButton, Modal, Card, CardMedia, List, ListItem, ListItemButton, ListItemText, Divider } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
@@ -51,6 +52,7 @@ const WatchlistShareCard = ({ watchlist }) => (
 export const ConversationPage = () => {
     const { otherUserId } = useParams();
     const { user } = useAuth();
+    const { subscribeToMessages, subscribeToReconnect, setActiveConversation } = useNotifications();
     const [messages, setMessages] = useState([]);
     const [otherUser, setOtherUser] = useState(null);
     const [newMessage, setNewMessage] = useState('');
@@ -68,8 +70,7 @@ export const ConversationPage = () => {
         if (!user) return;
         try {
             const response = await api.get(`/api/v1/messages/thread/${otherUserId}`);
-            // DÜZELTME: Gelen verinin içindeki $values dizisini alıyoruz.
-            const messageData = response.data.$values || response.data || [];
+            const messageData = response.data || [];
             setMessages(messageData);
 
             if (messageData.length > 0) {
@@ -93,14 +94,52 @@ export const ConversationPage = () => {
         fetchThread();
     }, [fetchThread]);
 
+    // Aynı mesaj hem gönderme yanıtından hem canlı olaydan (gönderenin kendisine
+    // de itilir) gelebilir: id ile tekilleştirilir.
+    const appendMessage = useCallback((message) => {
+        setMessages(prev => (prev.some(m => m.id === message.id) ? prev : [...prev, message]));
+    }, []);
+
+    const markThreadAsRead = useCallback(() => {
+        api.post(`/api/v1/messages/thread/${otherUserId}/mark-as-read`).catch(() => {});
+    }, [otherUserId]);
+
+    // Canlı sohbet (M11): bu sohbete ait mesajlar anında eklenir; karşı taraftan
+    // gelen, ekran açık olduğu için hemen okundu sayılır. Bağlantı yeniden
+    // kurulunca kopukluk süresinde kaçanlar için thread tazelenir.
+    useEffect(() => {
+        if (!user) return undefined;
+        setActiveConversation(otherUserId);
+        markThreadAsRead();
+
+        const belongsHere = (m) =>
+            (m.senderId === otherUserId && m.recipientId === user.id) ||
+            (m.senderId === user.id && m.recipientId === otherUserId);
+
+        const unsubscribeMessages = subscribeToMessages((message) => {
+            if (!belongsHere(message)) return;
+            appendMessage(message);
+            if (message.senderId === otherUserId) markThreadAsRead();
+        });
+        const unsubscribeReconnect = subscribeToReconnect(fetchThread);
+
+        return () => {
+            unsubscribeMessages();
+            unsubscribeReconnect();
+            setActiveConversation(null);
+        };
+    }, [user, otherUserId, subscribeToMessages, subscribeToReconnect, setActiveConversation,
+        appendMessage, markThreadAsRead, fetchThread]);
+
     useEffect(scrollToBottom, [messages]);
 
     const handleSendMessage = async ({ content, movieId, watchlistId }) => {
         if (!content && !movieId && !watchlistId) return;
         try {
-            await api.post(`/api/v1/messages`, { recipientId: otherUserId, content, movieId, watchlistId });
+            const response = await api.post(`/api/v1/messages`, { recipientId: otherUserId, content, movieId, watchlistId });
             setNewMessage('');
-            fetchThread(); 
+            // Yanıt, oluşturulan mesajın kendisi; thread'i yeniden çekmeye gerek yok.
+            appendMessage(response.data);
         } catch (err) {
             console.error("Mesaj gönderilemedi:", err);
         }
@@ -123,8 +162,7 @@ export const ConversationPage = () => {
         setIsWatchlistModalOpen(true);
         try {
             const response = await api.get(`/api/v1/watchlist`);
-            // DÜZELTME: Gelen verinin içindeki $values dizisini alıyoruz.
-            setUserLists(response.data.$values || response.data || []);
+            setUserLists(response.data || []);
         } catch (err) {
             console.error("Listeler yüklenemedi:", err);
         }

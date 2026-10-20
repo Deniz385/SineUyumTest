@@ -37,6 +37,15 @@ const isAuthPath = (url = '') => AUTH_PATHS.some((path) => url.startsWith(path))
 // (Sunucu refresh token rotation uyguladığı için ikinci istek geçersiz olurdu.)
 let refreshPromise = null;
 
+// Yeni access token döner (ve token'ları kaydeder); yenilenemezse null.
+// Eşzamanlı çağrılar tek isteğe indirgenir (sunucu rotation uyguluyor).
+export const refreshAccessTokenOnce = () => {
+    refreshPromise = refreshPromise || refreshAccessToken().finally(() => {
+        refreshPromise = null;
+    });
+    return refreshPromise;
+};
+
 const refreshAccessToken = async () => {
     const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
     if (!refreshToken) return null;
@@ -54,56 +63,65 @@ const refreshAccessToken = async () => {
     }
 };
 
-// Bu fonksiyon, AuthContext'ten aldığı logoutAction ile interceptor'ları kurar.
-export const setupInterceptors = (logoutAction, onTokenRefreshed) => {
+// Interceptor'lar modül yüklenirken BİR KEZ kurulur. Önceden AuthContext'in
+// useEffect'i içinde kuruluyordu:
+//   * React çocuk bileşenlerin effect'lerini ebeveynden ÖNCE çalıştırdığı için
+//     sayfa açılışındaki ilk istekler Authorization başlığı olmadan gidip 401
+//     alıyor, ardından gereksiz bir token yenileme + tekrar deneme yapılıyordu
+//     (refresh token yoksa kullanıcı her yenilemede çıkışa düşüyordu).
+//   * effect her yeniden çalıştığında interceptor'lar üst üste ekleniyordu.
+// AuthContext artık yalnızca geri çağırımları verir (setupInterceptors).
+let onLogout = null;
+let onTokenRefreshed = null;
 
-    // İstek gönderilmeden önce çalışır
-    api.interceptors.request.use(
-        (config) => {
-            // Her istekte token'ı doğrudan localStorage'dan okur ve başlığa ekler.
-            // Bu, React state'inin gecikmelerinden etkilenmemesini sağlar.
-            if (!isAuthPath(config.url)) {
-                const token = localStorage.getItem(TOKEN_KEY);
-                if (token) {
-                    config.headers['Authorization'] = `Bearer ${token}`;
-                }
+// İstek gönderilmeden önce çalışır: token her istekte doğrudan localStorage'dan
+// okunur (React state'inin gecikmelerinden etkilenmez).
+api.interceptors.request.use(
+    (config) => {
+        if (!isAuthPath(config.url)) {
+            const token = localStorage.getItem(TOKEN_KEY);
+            if (token) {
+                config.headers['Authorization'] = `Bearer ${token}`;
             }
-            return config;
-        },
-        (error) => Promise.reject(error)
-    );
-
-    // API'den yanıt geldikten sonra çalışır
-    api.interceptors.response.use(
-        (response) => response,
-        async (error) => {
-            const originalRequest = error.config;
-            const isUnauthorized = error.response?.status === 401;
-
-            // 401 alındıysa önce refresh token ile yenilemeyi dene; başarılıysa
-            // kullanıcı hiçbir şey fark etmeden istek tekrarlanır.
-            if (isUnauthorized && originalRequest && !originalRequest._retried && !isAuthPath(originalRequest.url)) {
-                originalRequest._retried = true;
-
-                refreshPromise = refreshPromise || refreshAccessToken().finally(() => {
-                    refreshPromise = null;
-                });
-
-                const newToken = await refreshPromise;
-
-                if (newToken) {
-                    if (onTokenRefreshed) onTokenRefreshed(newToken);
-                    originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
-                    return api(originalRequest);
-                }
-
-                console.error("Oturum yenilenemedi. Çıkış yapılıyor.");
-                if (logoutAction) logoutAction();
-            }
-
-            return Promise.reject(error);
         }
-    );
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
+// API'den yanıt geldikten sonra çalışır
+api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        const originalRequest = error.config;
+        const isUnauthorized = error.response?.status === 401;
+
+        // 401 alındıysa önce refresh token ile yenilemeyi dene; başarılıysa
+        // kullanıcı hiçbir şey fark etmeden istek tekrarlanır.
+        if (isUnauthorized && originalRequest && !originalRequest._retried && !isAuthPath(originalRequest.url)) {
+            originalRequest._retried = true;
+
+            const newToken = await refreshAccessTokenOnce();
+
+            if (newToken) {
+                if (onTokenRefreshed) onTokenRefreshed(newToken);
+                originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+                return api(originalRequest);
+            }
+
+            console.error("Oturum yenilenemedi. Çıkış yapılıyor.");
+            if (onLogout) onLogout();
+        }
+
+        return Promise.reject(error);
+    }
+);
+
+// AuthContext çıkış ve token yenilendi geri çağırımlarını buradan verir.
+// Tekrar çağrılması güvenlidir; yalnızca geri çağırımlar güncellenir.
+export const setupInterceptors = (logoutAction, tokenRefreshedAction) => {
+    onLogout = logoutAction;
+    onTokenRefreshed = tokenRefreshedAction;
 };
 
 export default api;

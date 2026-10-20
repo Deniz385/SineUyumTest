@@ -43,7 +43,16 @@ public class NotificationPushTests : IClassFixture<NotificationPushTests.Capturi
         public IClientProxy Group(string groupName) => throw new NotSupportedException();
         public IClientProxy GroupExcept(string groupName, IReadOnlyList<string> excludedConnectionIds) => throw new NotSupportedException();
         public IClientProxy Groups(IReadOnlyList<string> groupNames) => throw new NotSupportedException();
-        public IClientProxy Users(IReadOnlyList<string> userIds) => throw new NotSupportedException();
+        // Canlı sohbet mesajı birden çok kullanıcıya (gönderen + alıcı) itilir.
+        public IClientProxy Users(IReadOnlyList<string> userIds) => new MultiProxy(userIds.Select(id => new Proxy(sent, id)).ToList());
+
+        private sealed class MultiProxy(List<Proxy> proxies) : IClientProxy
+        {
+            public async Task SendCoreAsync(string method, object?[] args, CancellationToken cancellationToken = default)
+            {
+                foreach (var p in proxies) await p.SendCoreAsync(method, args, cancellationToken);
+            }
+        }
 
         private sealed class Proxy(ConcurrentQueue<Pushed> sent, string userId) : IClientProxy
         {
@@ -114,9 +123,17 @@ public class NotificationPushTests : IClassFixture<NotificationPushTests.Capturi
             new { recipientId = recipient.Id, content = "merhaba" }));
         res.EnsureSuccessStatusCode();
 
-        var pushed = Assert.Single(_factory.Hub.Sent, p => p.UserId == recipient.Id);
-        Assert.Equal("ReceiveNotification", pushed.Method);
+        var pushed = Assert.Single(_factory.Hub.Sent, p => p.UserId == recipient.Id && p.Method == "ReceiveNotification");
         AssertNotificationContract(pushed.Json);
+
+        // Canlı sohbet mesajı da (M11) iki tarafa gider ve kullanıcı varlığı sızdırmaz.
+        Assert.Contains(_factory.Hub.Sent, p => p.UserId == recipient.Id && p.Method == "ReceiveMessage");
+        Assert.Contains(_factory.Hub.Sent, p => p.UserId == sender.Id && p.Method == "ReceiveMessage");
+        foreach (var p in _factory.Hub.Sent)
+        {
+            Assert.DoesNotContain("passwordHash", p.Json, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("securityStamp", p.Json, StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     [Fact]
@@ -129,7 +146,7 @@ public class NotificationPushTests : IClassFixture<NotificationPushTests.Capturi
         var res = await client.SendAsync(Authed(HttpMethod.Post, $"/api/v1/follow/{followed.Id}", follower.Token));
         res.EnsureSuccessStatusCode();
 
-        var pushed = Assert.Single(_factory.Hub.Sent, p => p.UserId == followed.Id);
+        var pushed = Assert.Single(_factory.Hub.Sent, p => p.UserId == followed.Id && p.Method == "ReceiveNotification");
         AssertNotificationContract(pushed.Json);
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
+using SineUyum.Api.Exceptions;
 using SineUyum.Api.Filters;
 using SineUyum.Api.Models;
 using System.Security.Claims;
@@ -44,7 +45,6 @@ namespace SineUyum.Api.Controllers
                     Group = new EventGroupDto
                     {
                         Id = gm.EventGroup.Id,
-                        SuggestedMovieIds = gm.EventGroup.SuggestedMovieIds,
                         Members = gm.EventGroup.Members.Select(m => new EventGroupMemberDto
                         {
                             Id = m.UserId,
@@ -62,16 +62,14 @@ namespace SineUyum.Api.Controllers
                     .Select(v => new EventGroupVoteDto { UserId = v.UserId, MovieId = v.MovieId })
                     .ToListAsync();
                 
-                var suggestedMovieIds = new List<int>();
-                if (!string.IsNullOrWhiteSpace(groupMember.Group.SuggestedMovieIds))
-                {
-                    suggestedMovieIds = groupMember.Group.SuggestedMovieIds.Split(',').Select(int.Parse).ToList();
-                }
-                
-                var suggestedMovies = await _context.Movies
-                    .Where(m => suggestedMovieIds.Contains(m.Id))
-                    .Select(m => new MovieSummaryDto { Id = m.Id, Title = m.Title, PosterPath = m.PosterPath })
+                var suggestedMovies = await _context.EventGroupSuggestions
+                    .Where(s => s.EventGroupId == groupMember.Group.Id)
+                    .OrderBy(s => s.Rank)
+                    .Select(s => new MovieSummaryDto { Id = s.Movie.Id, Title = s.Movie.Title, PosterPath = s.Movie.PosterPath })
                     .ToListAsync();
+
+                // Geriye dönük uyumluluk: eski istemciler için aynı sırayla "1,2,3".
+                groupMember.Group.SuggestedMovieIds = string.Join(",", suggestedMovies.Select(m => m.Id));
                 
                 return Ok(new EventStatusDto
                 {
@@ -125,7 +123,17 @@ namespace SineUyum.Api.Controllers
             var groupMember = await _context.EventGroupMembers.AnyAsync(gm => gm.EventGroupId == voteDto.GroupId && gm.UserId == userId);
             if (!groupMember)
             {
-                return Forbid("Bu grupta oy kullanma yetkiniz yok.");
+                // Forbid("...") metni kimlik doğrulama şeması sanıp 500 veriyordu.
+                throw new DomainException("Bu grupta oy kullanma yetkiniz yok.", StatusCodes.Status403Forbidden);
+            }
+
+            // Yalnızca gruba önerilen filmlere oy verilebilir. Önceden herhangi
+            // bir id kabul ediliyordu (olmayan filmde FK hatasıyla 500).
+            var isSuggested = await _context.EventGroupSuggestions
+                .AnyAsync(s => s.EventGroupId == voteDto.GroupId && s.MovieId == voteDto.MovieId);
+            if (!isSuggested)
+            {
+                return BadRequest(new StatusMessageDto("Bu film grubun önerileri arasında değil."));
             }
 
             var existingVote = await _context.EventVotes.FirstOrDefaultAsync(v => v.EventGroupId == voteDto.GroupId && v.UserId == userId);

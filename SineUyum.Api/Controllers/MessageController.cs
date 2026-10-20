@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
+using SineUyum.Api.Exceptions;
 using SineUyum.Api.Hubs;
 using SineUyum.Api.Models;
 using SineUyum.Api.RateLimiting;
@@ -86,7 +87,8 @@ namespace SineUyum.Api.Controllers
                 var listExists = await _context.Watchlists.AnyAsync(w => w.Id == createMessageDto.WatchlistId.Value && w.UserId == senderId);
                 if (!listExists)
                 {
-                    return Forbid("Kendinize ait olmayan bir listeyi paylaşamazsınız.");
+                    // Forbid("...") metni kimlik doğrulama şeması sanıp 500 veriyordu.
+                    throw new DomainException("Kendinize ait olmayan bir listeyi paylaşamazsınız.", StatusCodes.Status403Forbidden);
                 }
             }
 

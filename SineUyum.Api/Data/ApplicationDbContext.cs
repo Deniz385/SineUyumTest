@@ -18,6 +18,7 @@
         public DbSet<EventParticipant> EventParticipants { get; set; }
         public DbSet<EventGroup> EventGroups { get; set; }
         public DbSet<EventGroupMember> EventGroupMembers { get; set; }
+        public DbSet<EventGroupSuggestion> EventGroupSuggestions { get; set; }
         public DbSet<EventVote> EventVotes { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
@@ -102,6 +103,23 @@
                 .WithMany()
                 .HasForeignKey(t => t.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Bir film bir gruba bir kez önerilir; grup silinince öneriler de
+            // düşer. Film silinemez (oy/puan gibi geçmiş ona bağlı).
+            builder.Entity<EventGroupSuggestion>()
+                .HasKey(s => new { s.EventGroupId, s.MovieId });
+
+            builder.Entity<EventGroupSuggestion>()
+                .HasOne(s => s.EventGroup)
+                .WithMany(g => g.Suggestions)
+                .HasForeignKey(s => s.EventGroupId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<EventGroupSuggestion>()
+                .HasOne(s => s.Movie)
+                .WithMany()
+                .HasForeignKey(s => s.MovieId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // MovieGenre için birleşik birincil anahtar (composite key) tanımlaması
             builder.Entity<MovieGenre>()

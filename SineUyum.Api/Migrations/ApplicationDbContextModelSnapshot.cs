@@ -322,9 +322,6 @@ namespace SineUyum.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("SuggestedMovieIds")
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
                     b.HasIndex("CinemaEventId");
@@ -354,6 +351,24 @@ namespace SineUyum.Api.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("EventGroupMembers");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.EventGroupSuggestion", b =>
+                {
+                    b.Property<int>("EventGroupId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MovieId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Rank")
+                        .HasColumnType("integer");
+
+                    b.HasKey("EventGroupId", "MovieId");
+
+                    b.HasIndex("MovieId");
+
+                    b.ToTable("EventGroupSuggestions");
                 });
 
             modelBuilder.Entity("SineUyum.Api.Models.EventParticipant", b =>
@@ -851,6 +866,25 @@ namespace SineUyum.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SineUyum.Api.Models.EventGroupSuggestion", b =>
+                {
+                    b.HasOne("SineUyum.Api.Models.EventGroup", "EventGroup")
+                        .WithMany("Suggestions")
+                        .HasForeignKey("EventGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SineUyum.Api.Models.Movie", "Movie")
+                        .WithMany()
+                        .HasForeignKey("MovieId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("EventGroup");
+
+                    b.Navigation("Movie");
+                });
+
             modelBuilder.Entity("SineUyum.Api.Models.EventParticipant", b =>
                 {
                     b.HasOne("SineUyum.Api.Models.CinemaEvent", "CinemaEvent")
@@ -1076,6 +1110,8 @@ namespace SineUyum.Api.Migrations
             modelBuilder.Entity("SineUyum.Api.Models.EventGroup", b =>
                 {
                     b.Navigation("Members");
+
+                    b.Navigation("Suggestions");
                 });
 
             modelBuilder.Entity("SineUyum.Api.Models.Genre", b =>

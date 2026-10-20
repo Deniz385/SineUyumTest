@@ -84,7 +84,10 @@ namespace SineUyum.Api.Services
                 var newGroup = new EventGroup { CinemaEventId = eventId };
                 
                 var suggestedMovieIds = await GetGroupMovieSuggestions(groupMemberIds, userRatingsDict);
-                newGroup.SuggestedMovieIds = string.Join(",", suggestedMovieIds);
+                foreach (var (movieId, rank) in suggestedMovieIds.Distinct().Select((id, i) => (id, i)))
+                {
+                    newGroup.Suggestions.Add(new EventGroupSuggestion { MovieId = movieId, Rank = rank });
+                }
                 
                 _context.EventGroups.Add(newGroup);
                 

@@ -63,6 +63,7 @@ namespace SineUyum.Api.Dtos
     public class EventGroupDto
     {
         public int Id { get; set; }
+        // Eski istemciler için; öneriler artık EventStatusDto.SuggestedMovies'te.
         public string? SuggestedMovieIds { get; set; }
         public List<EventGroupMemberDto> Members { get; set; } = new();
     }

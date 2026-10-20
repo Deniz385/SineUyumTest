@@ -357,10 +357,21 @@ aynı desenle sayfalanabilir.
 **Yapılacak:** arka plan işine taşınmalı (Hangfire/Quartz), tek transaction
 içinde çalışmalı.
 
-### M8 — `SuggestedMovieIds` virgüllü string
+### M8 — `SuggestedMovieIds` virgüllü string — ✅ kapatıldı
 `EventGroup.SuggestedMovieIds` ilişkisel tablo yerine `"1,2,3"` biçiminde
 string. `EventController.cs` içinde `Split(',').Select(int.Parse)` bozuk veride
 `FormatException` fırlatır; sorgulanamaz, indekslenemez.
+
+**Yapılan:** `EventGroupSuggestions` tablosu (grup, film, sıra; film FK'li,
+grup silinince düşer). Migration mevcut değerleri sırasıyla taşır; sayı
+olmayan parçalar, olmayan filmler ve tekrarlar atlanır (Postgres'te bozuk
+veriyle up/down sınandı). Yanıt şekli aynı: `suggestedMovies` artık öneri
+sırasıyla, `group.suggestedMovieIds` eski istemciler için tablodan üretilir.
+- Oy yalnızca gruba önerilen filmlere verilir (önceden herhangi bir id; olmayan
+  filmde FK hatasıyla 500).
+- Yol üstünde: `Forbid("mesaj")` metni kimlik doğrulama şeması sandığı için
+  403 yerine 500 dönüyordu (gruba üye olmadan oy, başkasının listesini
+  paylaşma). DomainException 403'e çevrildi.
 
 ### M9 — TMDb yanıtları cache'lenmiyordu — ✅ IMemoryCache eklendi
 `MoviesController` her isteği TMDb'ye proxy'liyordu. Artık dört uç da TTL'li
@@ -699,6 +710,6 @@ destek yok (PWA ayrı bir iş).
 ### Faz 4 — İş modeli ve ölçekleme
 21. Gerçek ödeme entegrasyonu (G4) — ✅ açık kapatıldı + altyapı; sağlayıcılar hesap bilgisi bekliyor
 22. Eşleştirmeyi arka plan işine taşı (M7)
-23. `SuggestedMovieIds` tablosuna normalizasyon (M8)
+23. `SuggestedMovieIds` tablosuna normalizasyon (M8) — ✅
 24. Rate limiting'i tüm API'ye yay (G5) — ✅
 25. Gizlilik ayarları (G12) — ✅

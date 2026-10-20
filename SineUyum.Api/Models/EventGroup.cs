@@ -14,11 +14,12 @@ namespace SineUyum.Api.Models
         [ForeignKey("CinemaEventId")]
         public CinemaEvent CinemaEvent { get; set; } = null!;
 
-        // Gruba önerilen filmlerin ID'leri (virgülle ayrılmış)
-        public string? SuggestedMovieIds { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public ICollection<EventGroupMember> Members { get; set; } = new List<EventGroupMember>();
+
+        // Gruba önerilen filmler (Rank sırasıyla).
+        public ICollection<EventGroupSuggestion> Suggestions { get; set; } = new List<EventGroupSuggestion>();
     }
 }

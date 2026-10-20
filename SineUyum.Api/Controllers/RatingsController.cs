@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
 using SineUyum.Api.Models;
+using SineUyum.Api.Services;
 using System.Security.Claims;
 
 namespace SineUyum.Api.Controllers
@@ -11,9 +12,10 @@ namespace SineUyum.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class RatingsController(ApplicationDbContext context) : ControllerBase
+    public class RatingsController(ApplicationDbContext context, MovieCatalogService movieCatalog) : ControllerBase
     {
         private readonly ApplicationDbContext _context = context;
+        private readonly MovieCatalogService _movieCatalog = movieCatalog;
 
         [HttpPost]
         public async Task<IActionResult> AddRating(CreateRatingDto createRatingDto)
@@ -25,14 +27,9 @@ namespace SineUyum.Api.Controllers
                 return Unauthorized();
             }
 
-            var movie = await _context.Movies.FindAsync(createRatingDto.MovieId);
-
-            if (movie == null)
-            {
-                // Normalde bu durumun yaşanmaması gerekir çünkü oylamadan hemen önce film ekleniyor.
-                // Yine de bir güvenlik kontrolü olarak kalabilir.
-                return NotFound("Bu film sistemde kayıtlı değil. Lütfen önce filmi ekleyin.");
-            }
+            // Film yerelde yoksa TMDb'den çekilip eklenir (meta veri sunucudan,
+            // istemciden değil). Ayrı bir "önce ekle" çağrısı gerekmez.
+            await _movieCatalog.EnsureMovieAsync(createRatingDto.MovieId);
 
             var existingRating = await _context.UserRatings
                 .FirstOrDefaultAsync(r => r.UserId == userId && r.MovieId == createRatingDto.MovieId);
@@ -58,29 +55,15 @@ namespace SineUyum.Api.Controllers
             return Ok(new { message = "Puan başarıyla kaydedildi." });
         }
         
-        // --- DÜZELTİLMİŞ METOT ---
+        // Geriye dönük uyumluluk: istemciler puanlamadan önce bu ucu çağırıyor.
+        // Artık istemciden gelen başlık/poster YOK SAYILIR; yalnızca id okunur ve
+        // film TMDb'den çekilip eklenir (over-posting kapatıldı). AddRating zaten
+        // aynı işi yaptığı için bu çağrı opsiyoneldir.
         [HttpPost("addmovie")]
-        public async Task<IActionResult> AddMovie(Movie movie)
+        public async Task<IActionResult> AddMovie([FromBody] AddMovieDto dto)
         {
-            // Film veritabanında zaten var mı diye kontrol et
-            var movieExists = await _context.Movies.AnyAsync(m => m.Id == movie.Id);
-            
-            // Eğer film mevcut değilse, ekle. Mevcutsa hiçbir şey yapma ve başarılı dön.
-            if (!movieExists)
-            {
-                _context.Movies.Add(movie);
-                await _context.SaveChangesAsync();
-            }
-            
-            // Her iki durumda da frontend'in devam edebilmesi için OK (200) dön.
-            return Ok(movie);
-        }
-
-        [HttpGet("test")]
-        public IActionResult TestAuth()
-        {
-            var username = User.FindFirstValue(ClaimTypes.Name);
-            return Ok($"Token geçerli! Giriş yapan kullanıcı: {username}");
+            var movie = await _movieCatalog.EnsureMovieAsync(dto.MovieId);
+            return Ok(new { movie.Id, movie.Title, movie.PosterPath });
         }
     }
 }

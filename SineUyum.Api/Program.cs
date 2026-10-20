@@ -139,6 +139,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<MatchingService>();
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<MovieCatalogService>();
 
 // --- RATE LIMITING ---
 // Giriş/kayıt/yenileme uçlarına brute force koruması. Dakikadaki istek sınırı

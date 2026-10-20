@@ -107,11 +107,19 @@ abone kalır. Çıkış yapmak yalnızca `localStorage`'ı temizliyor.
 **Yapılacak:** kısa ömürlü access token + iptal edilebilir refresh token
 (bu çalışmada eklendi).
 
-### G7 — Doğrulanmamış film kaydı (over-posting)
-`RatingsController.cs:63` `AddMovie(Movie movie)` istemciden gelen `Id`, `Title`,
-`PosterPath` değerlerini doğrulamadan kaydediyor. İstemci istediği film kaydını
-uydurabilir, var olan TMDb id'lerini sahte başlıklarla doldurabilir.
-**Yapılacak:** yalnızca `movieId` alınmalı, meta veri sunucuda TMDb'den çekilmeli.
+### G7 — Doğrulanmamış film kaydı (over-posting) — ✅ kapatıldı
+`AddMovie(Movie movie)` istemciden gelen `Title`/`PosterPath`'i paylaşılan
+Movies tablosuna doğrulamadan yazıyordu; bir istemci gerçek bir TMDb id'sini
+sahte başlıkla kaydedip diğer kullanıcıların gördüğü veriyi bozabilirdi.
+Çözüm: `MovieCatalogService.EnsureMovieAsync(movieId)` filmi yalnızca TMDb'den
+çekilen meta veriyle oluşturuyor; istemci yalnızca `movieId` veriyor.
+- `AddRating` artık filmi gerektiğinde kendisi çekiyor (ayrı "önce ekle"
+  çağrısına gerek yok).
+- `addmovie` ucu geriye dönük uyumlu: istemciden gelen başlık/poster **yok
+  sayılıyor**, yalnızca `id` okunuyor.
+- TMDb yoksa/ulaşılamazsa DomainException (503/404) döner; detay sızmaz.
+- Testler (`MovieOverPostingTests`): sahte başlık yok sayılıyor; `addmovie`
+  olmadan doğrudan puanlama da filmi TMDb'den çekiyor.
 
 ### G8 — CORS ve JWT issuer/audience sabit kodlanmış
 `Program.cs:20` iki Codespaces URL'sini sabit içeriyor; `appsettings.json`'daki

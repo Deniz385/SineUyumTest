@@ -227,16 +227,27 @@ birbirinden bağımsız üç kopya halindeydi. `CompatibilityCalculator` servisi
 > veriyor. Bu muhtemelen istenmeyen bir yan etki; düzeltilirse mevcut testler
 > (`AyniPuan_BandaGoreSkorVerir`) güncellenmeli.
 
-### M5 — N+1 sorgu ve bellek içi işleme
-- `AccountController.SearchUsers` (satır 83): her eşleşen kullanıcı için ayrı
-  veritabanı sorgusu atıyor. 1000 kullanıcılı aramada 1000 sorgu.
-- `MessageController.GetConversations`: kullanıcının **tüm** mesajlarını
-  belleğe çekip sonra grupluyor.
-- `ProfileController.GetUserProfile`: tüm puanlamaları limitsiz çekiyor.
+### M5 — N+1 sorgu ve bellek içi işleme — ✅ kapatıldı
+- ✅ `AccountController.SearchUsers`: N+1 sorgusu daha önce (ilk mobil
+  çalışmasında) tek sorguya indirilmişti.
+- ✅ `MessageController.GetConversations`: artık kullanıcının tüm mesajlarını
+  belleğe çekmiyor. Sohbet başına son mesaj zamanı veritabanında (GroupBy +
+  Max) hesaplanıyor, sayfalanıyor, yalnızca o sayfadaki son mesajlar
+  ilişkileriyle çekiliyor. Koşullu GroupBy anahtarının hem SQLite hem Postgres'te
+  çevrildiği doğrulandı.
+- ✅ `ProfileController.GetUserProfile`: sayı ve ortalama veritabanında
+  hesaplanıyor; döndürülen puan listesi en yüksek 100 ile sınırlı.
 
-### M6 — Sayfalama yok
-Bildirimler dışında (`Take(50)`) hiçbir listeleme endpoint'inde sayfalama yok.
-Mobilde bu doğrudan veri kullanımı ve açılış süresi problemi demek.
+### M6 — Sayfalama yok — ✅ kritik listeler sayfalandı
+Başlangıçta yalnızca bildirimler `Take(50)` ile sınırlıydı. Eklenenler:
+- Mesaj thread'i: `?page/?pageSize` (ilk mobil çalışmasında).
+- Sohbet listesi (`GET /api/messages`): `?page/?pageSize` (varsayılan 30).
+- Kullanıcı arama: `limit` (ilk mobil çalışmasında).
+- Profil puan listesi: en yüksek 100 ile sınırlı.
+
+Yanıt biçimleri düz dizi olarak korundu (zarf değil), istemciler kırılmadı.
+Kalan büyük/büyüyebilir listeler (izleme listesi öğeleri vb.) gerektiğinde
+aynı desenle sayfalanabilir.
 
 ### M7 — Eşleştirme servisi kırılgan
 `MatchingService.CreateGroupsForEventAsync`:

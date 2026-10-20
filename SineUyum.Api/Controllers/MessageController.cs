@@ -159,48 +159,80 @@ namespace SineUyum.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetConversations()
+        public async Task<IActionResult> GetConversations(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 30)
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (currentUserId == null) return Unauthorized();
 
-            // Not: Bu sorgu kullanıcının tüm mesajlarını belleğe çekiyor.
-            // Ölçeklenmesi için sohbet başına son mesajı veritabanı tarafında
-            // hesaplayan bir sorguya dönüştürülmeli.
-            // Bkz. docs/ANALIZ-VE-YOL-HARITASI.md → M5
-            var messages = await _context.Messages
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
+            var mine = _context.Messages
+                .Where(m => m.SenderId == currentUserId || m.RecipientId == currentUserId);
+
+            // Sohbet başına son mesaj zamanı veritabanında hesaplanır; kullanıcının
+            // tüm mesajları belleğe çekilmez. Sayfalama da DB tarafında.
+            var pagedPartners = await mine
+                .GroupBy(m => m.SenderId == currentUserId ? m.RecipientId : m.SenderId)
+                .Select(g => new { PartnerId = g.Key, LastSent = g.Max(m => m.MessageSent) })
+                .OrderByDescending(x => x.LastSent)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            if (pagedPartners.Count == 0)
+            {
+                return Ok(Array.Empty<object>());
+            }
+
+            // Yalnızca bu sayfadaki sohbetlerin son mesajlarını çek (ilişkileriyle).
+            var partnerIds = pagedPartners.Select(p => p.PartnerId).ToList();
+            var lastSents = pagedPartners.Select(p => p.LastSent).ToList();
+
+            var candidates = await mine
                 .Include(m => m.Sender)
                 .Include(m => m.Recipient)
                 .Include(m => m.Watchlist)
-                .Where(m => m.SenderId == currentUserId || m.RecipientId == currentUserId)
-                .OrderByDescending(m => m.MessageSent)
+                .Where(m =>
+                    lastSents.Contains(m.MessageSent) &&
+                    (partnerIds.Contains(m.SenderId) || partnerIds.Contains(m.RecipientId)))
                 .ToListAsync();
 
-            var conversations = messages
-                .GroupBy(m => m.SenderId == currentUserId ? m.RecipientId : m.SenderId)
-                .Select(g => 
-                {
-                    var lastMessage = g.First();
-                    var otherUser = lastMessage.SenderId == currentUserId ? lastMessage.Recipient : lastMessage.Sender;
-                    
-                    string lastMessageContent = "Bir film önerdi.";
-                    if (lastMessage.WatchlistId.HasValue) {
-                         lastMessageContent = $"'{lastMessage.Watchlist?.Name}' listesini paylaştı.";
-                    } else if (!string.IsNullOrEmpty(lastMessage.Content)) {
-                        lastMessageContent = lastMessage.Content;
-                    }
+            var conversations = new List<object>(pagedPartners.Count);
+            foreach (var partner in pagedPartners)
+            {
+                // Bu partnerle, son gönderim zamanına denk gelen mesaj.
+                var lastMessage = candidates.FirstOrDefault(m =>
+                    m.MessageSent == partner.LastSent &&
+                    (m.SenderId == partner.PartnerId || m.RecipientId == partner.PartnerId));
+                if (lastMessage == null) continue;
 
-                    return new 
-                    {
-                        OtherUserId = otherUser.Id,
-                        OtherUserUsername = otherUser.UserName,
-                        OtherUserProfileImageUrl = otherUser.ProfileImageUrl,
-                        LastMessageContent = lastMessageContent,
-                        LastMessageSent = lastMessage.MessageSent,
-                        IsRead = lastMessage.DateRead != null || lastMessage.SenderId == currentUserId
-                    };
-                })
-                .ToList();
+                var otherUser = lastMessage.SenderId == currentUserId
+                    ? lastMessage.Recipient
+                    : lastMessage.Sender;
+
+                string lastMessageContent = "Bir film önerdi.";
+                if (lastMessage.WatchlistId.HasValue)
+                {
+                    lastMessageContent = $"'{lastMessage.Watchlist?.Name}' listesini paylaştı.";
+                }
+                else if (!string.IsNullOrEmpty(lastMessage.Content))
+                {
+                    lastMessageContent = lastMessage.Content;
+                }
+
+                conversations.Add(new
+                {
+                    OtherUserId = otherUser.Id,
+                    OtherUserUsername = otherUser.UserName,
+                    OtherUserProfileImageUrl = otherUser.ProfileImageUrl,
+                    LastMessageContent = lastMessageContent,
+                    LastMessageSent = lastMessage.MessageSent,
+                    IsRead = lastMessage.DateRead != null || lastMessage.SenderId == currentUserId
+                });
+            }
 
             return Ok(conversations);
         }

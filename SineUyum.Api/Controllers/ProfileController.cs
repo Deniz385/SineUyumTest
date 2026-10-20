@@ -34,11 +34,24 @@ namespace SineUyum.Api.Controllers
             }
 
 
-            var userRatings = await _context.UserRatings
-                .Where(r => r.UserId == userId)
-                .Include(r => r.Movie) 
-                .OrderByDescending(r => r.Rating) 
-                .Select(r => new 
+            var ratingsQuery = _context.UserRatings.Where(r => r.UserId == userId);
+
+            // İstatistikler veritabanında hesaplanır — tüm puanlar belleğe
+            // çekilmez (M5). Sayı ve ortalama tek sorguyla.
+            var totalRatings = await ratingsQuery.CountAsync();
+            var averageRating = totalRatings == 0
+                ? 0
+                : Math.Round(await ratingsQuery.AverageAsync(r => (double)r.Rating), 1);
+
+            // Döndürülen liste sınırlı: en yüksek puanlı ilk 100. Bir kullanıcının
+            // binlerce puanı olsa bile yanıt ve bellek sınırlı kalır.
+            const int maxRatingsReturned = 100;
+            var userRatings = await ratingsQuery
+                .Include(r => r.Movie)
+                .OrderByDescending(r => r.Rating)
+                .ThenByDescending(r => r.MovieId)
+                .Take(maxRatingsReturned)
+                .Select(r => new
                 {
                     r.MovieId,
                     r.Rating,
@@ -53,11 +66,11 @@ namespace SineUyum.Api.Controllers
                 .CountAsync();
 
             var stats = new {
-                totalRatings = userRatings.Count,
-                averageRating = userRatings.Any() ? Math.Round(userRatings.Average(r => r.Rating), 1) : 0,
-                totalMoviesInWatchlists = totalMoviesInWatchlists,
-                // En yüksek puanlı (10) filmlerden ilk 5'ini al
-                topRatedMovies = userRatings.Where(r => r.Rating == 10).Take(5).ToList() 
+                totalRatings,
+                averageRating,
+                totalMoviesInWatchlists,
+                // En yüksek puanlı (10) filmlerden ilk 5'i (liste zaten puana göre sıralı).
+                topRatedMovies = userRatings.Where(r => r.Rating == 10).Take(5).ToList()
             };
 
             var profileData = new 

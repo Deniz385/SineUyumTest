@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import api from '../api/v1/axiosConfig';
+import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Button, Box, Typography, Avatar, Grid, Paper } from '@mui/material';
 import MessageIcon from '@mui/icons-material/Message';

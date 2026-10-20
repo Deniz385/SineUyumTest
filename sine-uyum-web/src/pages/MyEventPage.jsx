@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, Paper, Avatar, AvatarGroup, Alert, Grid, Card, CardContent, CardMedia, CardActions, Button, Chip } from '@mui/material';
 import EventIcon from '@mui/icons-material/Event';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
-import api from '../api/v1/axiosConfig';
+import api from '../api/axiosConfig';
 
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 

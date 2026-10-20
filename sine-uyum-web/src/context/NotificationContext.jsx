@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import * as signalR from '@microsoft/signalr';
 import { useAuth } from './AuthContext';
-import api, { API_URL } from '../api/v1/axiosConfig';
+import api, { API_URL } from '../api/axiosConfig';
 import { useSnackbar } from './SnackbarProvider';
 
 const NotificationContext = createContext(null);

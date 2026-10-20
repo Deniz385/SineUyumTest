@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { TextField, Button, Box, Typography, CircularProgress } from '@mui/material';
 import { useSnackbar } from '../context/SnackbarProvider'; // <-- SNACKBAR KANCASINI İÇE AKTAR
-import api from '../api/v1/axiosConfig';
+import api from '../api/axiosConfig';
 
 export const RegisterPage = () => {
   const [formData, setFormData] = useState({

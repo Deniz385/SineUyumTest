@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/v1/axiosConfig';
+import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, Card, CardMedia, CircularProgress } from '@mui/material';
 import { useDraggableScroll } from '../hooks/useDraggableScroll';

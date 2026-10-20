@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api/v1/axiosConfig'; // DÜZELTME: axios yerine merkezi api import ediliyor
+import api from '../api/axiosConfig'; // DÜZELTME: axios yerine merkezi api import ediliyor
 import { Autocomplete, TextField, CircularProgress, Box } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 

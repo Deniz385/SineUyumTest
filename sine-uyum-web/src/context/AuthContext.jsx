@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
-import { setupInterceptors, saveTokens, clearTokens, TOKEN_KEY } from '../api/v1/axiosConfig';
+import { setupInterceptors, saveTokens, clearTokens, TOKEN_KEY } from '../api/axiosConfig';
 
 const AuthContext = createContext(null);
 

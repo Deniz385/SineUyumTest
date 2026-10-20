@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, Paper, Avatar, AvatarGroup, Alert, Grid, Card, CardContent, CardMedia, CardActions, Button, Chip } from '@mui/material';
 import EventIcon from '@mui/icons-material/Event';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
-import api from '../api/axiosConfig';
+import api, { mediaUrl } from '../api/axiosConfig';
 
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 
@@ -54,7 +54,7 @@ const MatchedEvent = ({ data, onVote }) => {
                 <Typography variant="h6" component="h3" sx={{ mt: 4, mb: 2 }}>Masanız</Typography>
                 <AvatarGroup max={10} sx={{ justifyContent: 'center', mb: 2 }}>
                     {groupMembers.map(member => (
-                        <Avatar key={member.id} component={Link} to={`/profile/${member.id}`} alt={member.userName} src={member.profileImageUrl} sx={{ width: 64, height: 64, border: '2px solid white' }} title={member.userName} />
+                        <Avatar key={member.id} component={Link} to={`/profile/${member.id}`} alt={member.userName} src={mediaUrl(member.profileImageUrl)} sx={{ width: 64, height: 64, border: '2px solid white' }} title={member.userName} />
                     ))}
                 </AvatarGroup>
             </Paper>

@@ -54,6 +54,11 @@
 			</array>
 		</dict>
 	</dict>
+	<!-- Profil fotoğrafı seçimi (image_picker) için izin açıklamaları. -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Profil fotoğrafı seçmek için fotoğraflarınıza erişim gerekiyor.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Profil fotoğrafı çekmek için kameraya erişim gerekiyor.</string>
 	<!-- Push bildirimi (FCM/APNs): uzak bildirimlerin arka planda işlenmesi. -->
 	<key>UIBackgroundModes</key>
 	<array>

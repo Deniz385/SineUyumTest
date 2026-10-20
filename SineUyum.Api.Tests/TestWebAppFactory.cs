@@ -17,6 +17,9 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
     // bağlantıyı fabrika ömrü boyunca elimizde tutuyoruz.
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
 
+    // Her fabrika kendi medya klasörünü kullanır (yüklenen fotoğraflar).
+    public string MediaRoot { get; } = Path.Combine(Path.GetTempPath(), "sineuyum-media-" + Guid.NewGuid().ToString("N"));
+
     public const string AdminUserName = "testadmin";
     public const string AdminPassword = "Admin123!";
 
@@ -37,6 +40,8 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable("ADMIN_EMAIL", "testadmin@sineuyum.local");
         // Testler tek IP'den çok sayıda auth isteği atıyor; limit açılsın.
         Environment.SetEnvironmentVariable("RateLimit__AuthPermitLimit", "100000");
+        Environment.SetEnvironmentVariable("RateLimit__UploadPermitLimit", "100000");
+        builder.UseSetting("Storage:MediaRoot", MediaRoot);
 
         // İsteğe bağlı: tüm paketi gerçek PostgreSQL'e karşı (migration'larla)
         // koşmak için TEST_POSTGRES_CONNECTION verin, ör.
@@ -74,6 +79,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
         if (disposing)
         {
             _connection.Dispose();
+            try { Directory.Delete(MediaRoot, recursive: true); } catch (IOException) { }
         }
     }
 }

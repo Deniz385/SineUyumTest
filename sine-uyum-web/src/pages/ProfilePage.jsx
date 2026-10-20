@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import api from '../api/axiosConfig';
+import api, { mediaUrl } from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Button, Box, Typography, Avatar, Grid, Paper } from '@mui/material';
 import MessageIcon from '@mui/icons-material/Message';
@@ -126,7 +126,7 @@ export const ProfilePage = () => {
         <>
             <div className="page-container" style={{maxWidth: '1200px'}}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 3 }}>
-                    <Avatar src={profileData?.profileImageUrl} sx={{ width: 120, height: 120, fontSize: '3.5rem' }}>
+                    <Avatar src={mediaUrl(profileData?.profileImageUrl)} sx={{ width: 120, height: 120, fontSize: '3.5rem' }}>
                         {profileData?.userName?.charAt(0).toUpperCase()}
                     </Avatar>
                     <Box sx={{ flexGrow: 1, textAlign: 'left' }}>

@@ -9,6 +9,7 @@ using SineUyum.Api.Hubs;
 using SineUyum.Api.Middleware;
 using SineUyum.Api.Models;
 using SineUyum.Api.Services;
+using SineUyum.Api.Services.Media;
 using SineUyum.Api.Services.Push;
 using System.Text;
 using System.Threading.RateLimiting;
@@ -21,6 +22,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog((context, services, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
     .ReadFrom.Services(services)
+    // ExceptionHandlerMiddleware, işleyiciye vermeden önce HER istisnayı
+    // "An unhandled exception" diye Error + stack trace ile logluyor; beklenen
+    // iş kuralı hataları (404, 413, 415...) da gerçek hata gibi görünüyordu.
+    // GlobalExceptionHandler zaten beklenmeyenleri istisnasıyla Error'da,
+    // beklenenleri Information'da logladığı için bu kopya kapatılır.
+    .MinimumLevel.Override("Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddleware", Serilog.Events.LogEventLevel.Fatal)
     .Enrich.FromLogContext()
     .WriteTo.Console());
 
@@ -143,6 +150,13 @@ builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<MovieCatalogService>();
 builder.Services.AddScoped<NotificationService>();
 
+// --- MEDYA (profil fotoğrafları) ---
+// Yerel disk; Docker'da kalıcı volume (/data/media). Storage__MediaRoot ile değişir.
+var mediaRoot = builder.Configuration["Storage:MediaRoot"]
+    ?? Path.Combine(builder.Environment.ContentRootPath, "media");
+var mediaStorage = new LocalMediaStorage(mediaRoot);
+builder.Services.AddSingleton<IMediaStorage>(mediaStorage);
+
 // --- PUSH BİLDİRİMİ (FCM HTTP v1) ---
 // Firebase servis hesabı anahtarı verilirse açılır; verilmezse push sessizce
 // kapalıdır, bildirimler REST + SignalR ile çalışmaya devam eder.
@@ -191,6 +205,7 @@ else
 // konfigürasyondan okunur (varsayılan 10); integration testleri tek IP'den çok
 // sayıda istek attığı için orada yüksek bir değere çekilir.
 var authPermitLimit = builder.Configuration.GetValue("RateLimit:AuthPermitLimit", 10);
+var uploadPermitLimit = builder.Configuration.GetValue("RateLimit:UploadPermitLimit", 10);
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -199,6 +214,16 @@ builder.Services.AddRateLimiter(options =>
         factory: _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = authPermitLimit,
+            Window = TimeSpan.FromMinutes(1)
+        }));
+
+    // Fotoğraf yükleme: resim çözmek CPU/bellek ister; kullanıcı başına sınırlı.
+    options.AddPolicy("upload", context => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = uploadPermitLimit,
             Window = TimeSpan.FromMinutes(1)
         }));
 });
@@ -247,6 +272,26 @@ else
     app.UseHttpsRedirection();
 }
 
+// --- MEDYA DOSYALARI ---
+// Yalnızca sunucunun ürettiği .jpg dosyaları sunulur; bilinmeyen uzantılar
+// (yanlışlıkla klasöre düşmüş bir dosya dahil) 404 döner. Dosya adları
+// benzersiz olduğu için uzun süre önbelleklenebilir.
+var mediaContentTypes = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+mediaContentTypes.Mappings.Clear();
+mediaContentTypes.Mappings[".jpg"] = "image/jpeg";
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(mediaStorage.Root),
+    RequestPath = mediaStorage.PublicPrefix,
+    ContentTypeProvider = mediaContentTypes,
+    ServeUnknownFileTypes = false,
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+        ctx.Context.Response.Headers["Cache-Control"] = "public, max-age=31536000, immutable";
+    },
+});
+
 // --- GERİYE DÖNÜK UYUMLULUK (SÜRÜMSÜZ /api/*) ---
 // Eski istemciler (dağıtılmış web/mobil) sürümsüz "/api/..." çağırır.
 // Rotalar artık "/api/v1/..." altında olduğundan, sürümsüz istekleri
@@ -267,8 +312,11 @@ app.Use(async (context, next) =>
 // --- MIDDLEWARE SIRASI ÖNEMLİ ---
 app.UseRouting();
 app.UseCors(corsPolicyName);
-app.UseRateLimiter();
 app.UseAuthentication();
+// Kimlik doğrulamadan SONRA: "upload" politikası kullanıcıya göre bölümlenir
+// (öncesinde context.User boş olur ve IP'ye düşerdi). "auth" politikası IP
+// tabanlı olduğu için etkilenmez.
+app.UseRateLimiter();
 app.UseAuthorization();
 
 // --- MIGRATION, ROLLER VE ADMİN KULLANICISI ---

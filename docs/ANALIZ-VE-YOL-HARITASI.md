@@ -352,7 +352,7 @@ boşluklar:
 | B5 | `/health` ve `/api/app/config` | Mobil uygulamanın bağlantı kontrolü ve zorunlu güncelleme kontrolü | ✅ Eklendi |
 | B6 | Mesaj sayfalama | Mobil veri kullanımı | ✅ `?page`/`pageSize` ile eklendi (varsayılan 100) |
 | B7 | Push notification (FCM/APNs) | SignalR mobilde arka planda çalışmaz; uygulama kapalıyken bildirim gitmez | ✅ Eklendi (Firebase projesi kurulunca açılır) |
-| B8 | Dosya yükleme endpoint'i | Profil fotoğrafı şu an sadece URL; mobilde galeriden seçim için upload gerekir | ⬜ Yapılacak |
+| B8 | Dosya yükleme endpoint'i | Profil fotoğrafı şu an sadece URL; mobilde galeriden seçim için upload gerekir | ✅ Eklendi |
 | B9 | API versiyonlama (`/api/v1/...`) | Store'daki eski sürümler API değişince kırılır | ✅ Eklendi (geriye dönük uyumlu) |
 | B10 | Tüm listelerde sayfalama | Performans | ⬜ Yapılacak (B6 kısmi) |
 
@@ -494,7 +494,44 @@ tüm çağrı noktaları açıkça `/api/v1/...`'e taşındı. SignalR hub'ı
   API'sini deprecated yaptı. FID akışı çok yeni olduğu için cihazda
   doğrulanmadan geçilmedi; FCM v1 `message.token` geçiş süresince FID'i de
   kabul ettiğinden geçiş yalnızca istemci tarafında olacak.
-16. Dosya yükleme + profil fotoğrafı (B8)
+16. Dosya yükleme + profil fotoğrafı (B8) — ✅
+
+**B8 — Profil fotoğrafı yükleme:**
+- **Uçlar:** `POST /api/v1/profile/photo` (multipart, alan `file`, ≤10 MB,
+  kullanıcı başına dakikada 10) ve `DELETE /api/v1/profile/photo`. Yanıt:
+  `{ profileImageUrl: "/media/avatars/{userId}/{rastgele}.jpg" }` — göreli
+  yol; istemciler API adresiyle birleştirir (alan adı değişince kayıtlar bozulmaz).
+- **Dosya olduğu gibi saklanmaz:** SkiaSharp (MIT) ile çözülür, EXIF yönü
+  uygulanır, ortadan kare kırpılıp 512x512 JPEG olarak yeniden kodlanır →
+  EXIF/GPS dahil tüm üst veri silinir, resim kılığındaki dosyalar elenir.
+  Yalnızca JPEG/PNG/WebP. Bildirilen boyut piksel çözülmeden kontrol edilir
+  ("decompression bomb": 50000x50000 bildiren 100 baytlık PNG reddedilir);
+  JPEG ölçekli çözüldüğü için 48 MP telefon fotoğrafları geçer.
+- **Sunma:** `/media` altında yalnızca `.jpg`, `nosniff`, kalıcı önbellek
+  (dosya adı her yüklemede yeni). Klasör dışına çıkış yok. Yeniden yükleme ve
+  silme eski dosyaları temizler. Docker: `sineuyum-media` volume (`/data/media`).
+- **Davranış değişikliği:** `PUT /api/v1/profile` artık yeni bir harici
+  `profileImageUrl` kabul etmiyor (yalnızca mevcut değer ya da boş = kaldır).
+  Harici URL, profili görüntüleyen herkesin IP'sini o sunucuya sızdırıyordu
+  (izleme pikseli). Mevcut kayıtlar görünmeye devam eder.
+- **İstemciler:** web'de yükleme/kaldırma arayüzü; büyük fotoğraflar
+  tarayıcıda 1600 px'e küçültülür (53 MB / 48 MP bir fotoğraf 1,4 MB'a inip
+  yüklendi). Mobilde galeri/kamera (image_picker; iOS'ta HEIC → JPEG).
+- **Yol üstünde düzeltilenler:** Kestrel'in reddettiği istekler (gövde çok
+  büyük vb.) 500 "sunucu hatası" dönüyordu → kendi durum kodu. Beklenen iş
+  kuralı hataları (404/413/415) ExceptionHandlerMiddleware tarafından ERR +
+  stack trace ile loglanıyordu → kopya log kapatıldı. Rate limiter kimlik
+  doğrulamadan önce çalıştığı için kullanıcıya göre sınır kurulamıyordu →
+  sıra düzeltildi.
+- **Doğrulama:** 32 yeni API testi (8 EXIF yönünün hepsi bağımsız tabloyla,
+  mutasyonla sınandı; üst veri temizliği; bomba; sınırlar; sunma; yol
+  aşımı). Üretim Docker imajında gerçek Kestrel ile: SkiaSharp yerel kitaplığı
+  çalışıyor, Pillow ile üretilmiş GPS'li 12 MP fotoğraf temiz 512x512 çıktı,
+  413 hem Content-Length'li hem chunked istekte, konteyner yeniden
+  başlatılınca dosya kalıcı. Web akışı gerçek Chromium'da uçtan uca.
+  Mobil: 7 yeni test (widget + birim).
+- **İleride:** dosyalar yerel diskte (`IMediaStorage` arayüzü); birden çok
+  sunucuya ölçeklenince S3/Blob + CDN'e taşınmalı.
 17. Çevrimdışı cache (film listeleri, sohbetler)
 18. Gerçek zamanlı sohbet (SignalR üzerinden mesaj iletimi) (M11)
 19. Mesaj "okundu" bilgisi (M10)

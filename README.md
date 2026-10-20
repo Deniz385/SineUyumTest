@@ -79,8 +79,9 @@ docker compose up --build       # API → http://localhost:5074
 
 - İmaj çok aşamalı (SDK ile derlenir, `aspnet` runtime ile çalışır), **root
   olmayan** kullanıcıyla çalışır.
-- SQLite dosyası `sineuyum-data` adlı kalıcı volume'da (`/data/sineuyum.db`)
-  tutulur; container silinse de veri kalır.
+- Kalıcı veri iki volume'dadır; container silinse de kalır:
+  - `sineuyum-pgdata` — PostgreSQL veritabanı
+  - `sineuyum-media` — yüklenen profil fotoğrafları (`/data/media`)
 - `/health` ucu sağlık kontrolü sunar. İmaja curl/wget gömülmedi (küçük
   kalsın diye); orchestrator HTTP ile problamalı:
   - **Kubernetes:** `httpGet: { path: /health, port: 8080 }` (container içi

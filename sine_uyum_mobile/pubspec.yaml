@@ -43,6 +43,7 @@ dependencies:
   signalr_netcore: ^1.4.4
   firebase_core: ^5.0.0
   firebase_messaging: ^17.0.0
+  image_picker: ^1.2.4
 
 dev_dependencies:
   flutter_test:

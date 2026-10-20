@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../core/network/api_client.dart';
 import '../models/app_user.dart';
 import '../models/profile.dart';
@@ -15,17 +17,31 @@ class SocialRepository {
     return UserProfile.fromJson(data);
   }
 
+  /// Sunucu `profileImageUrl` için yalnızca mevcut değeri (değişmedi) ya da
+  /// boşu (kaldır) kabul eder; fotoğraf [uploadProfilePhoto] ile değişir.
   Future<void> updateProfile({String? bio, String? profileImageUrl}) async {
     await _client.put<Map<String, dynamic>>(
       '/api/v1/profile',
       body: {
         'bio': bio,
-        // Boş string `[Url]` doğrulamasını bozduğu için null gönderilir.
         'profileImageUrl': (profileImageUrl?.trim().isEmpty ?? true)
             ? null
             : profileImageUrl,
       },
     );
+  }
+
+  /// Fotoğrafı yükler; sunucu 512x512 JPEG'e çevirip yeni adresi döner.
+  Future<String?> uploadProfilePhoto(String filePath) async {
+    final data = await _client.post<Map<String, dynamic>>(
+      '/api/v1/profile/photo',
+      body: FormData.fromMap({'file': await MultipartFile.fromFile(filePath)}),
+    );
+    return data['profileImageUrl'] as String?;
+  }
+
+  Future<void> deleteProfilePhoto() async {
+    await _client.delete<Map<String, dynamic>>('/api/v1/profile/photo');
   }
 
   Future<List<UserSearchResult>> searchUsers(String query) async {

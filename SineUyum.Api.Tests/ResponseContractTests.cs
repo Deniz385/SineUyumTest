@@ -102,7 +102,9 @@ public class ResponseContractTests : IClassFixture<ResponseContractTests.Factory
     {
         var req = new HttpRequestMessage(method, url);
         if (token != null) req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        if (body != null) req.Content = JsonContent.Create(body);
+        // HttpContent verilirse (ör. multipart) olduğu gibi, yoksa JSON gönderilir.
+        if (body is HttpContent content) req.Content = content;
+        else if (body != null) req.Content = JsonContent.Create(body);
 
         var res = await _client.SendAsync(req);
         var text = await res.Content.ReadAsStringAsync();
@@ -210,7 +212,19 @@ public class ResponseContractTests : IClassFixture<ResponseContractTests.Factory
 
         // Profil.
         await Get("profile.get", $"/api/v1/profile/{aId}", b);
-        await Call("profile.update", HttpMethod.Put, "/api/v1/profile", a, new { bio = "bio", profileImageUrl = "https://x/y.png" });
+        await Call("profile.update", HttpMethod.Put, "/api/v1/profile", a, new { bio = "bio", profileImageUrl = (string?)null });
+
+        // Profil fotoğrafı: yükle (sonraki yanıtlarda profileImageUrl dolu
+        // görünür), bir kez de kaldırıp yeniden yükle.
+        MultipartFormDataContent Photo()
+        {
+            var form = new MultipartFormDataContent();
+            form.Add(new ByteArrayContent(TestImages.Jpeg(300, 300)), "file", "foto.jpg");
+            return form;
+        }
+        await Post("profile.photo.upload", "/api/v1/profile/photo", a, Photo());
+        await Call("profile.photo.delete", HttpMethod.Delete, "/api/v1/profile/photo", a);
+        await Post("profile.photo.upload(2)", "/api/v1/profile/photo", a, Photo());
 
         // Etkinlik yaşam döngüsü: NONE -> AVAILABLE -> PENDING -> MATCHED.
         var adminLogin = await Post("account.login(admin)", "/api/v1/account/login", null,

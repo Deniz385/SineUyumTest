@@ -83,7 +83,8 @@ class UserAvatar extends StatelessWidget {
         ? '?'
         : userName.characters.first.toUpperCase();
 
-    if (imageUrl == null || imageUrl!.isEmpty) {
+    final url = AppConfig.resolveMediaUrl(imageUrl);
+    if (url == null) {
       return CircleAvatar(
         radius: radius,
         child: Text(initial, style: TextStyle(fontSize: radius * 0.8)),
@@ -92,7 +93,7 @@ class UserAvatar extends StatelessWidget {
 
     return CircleAvatar(
       radius: radius,
-      backgroundImage: CachedNetworkImageProvider(imageUrl!),
+      backgroundImage: CachedNetworkImageProvider(url),
       onBackgroundImageError: (_, _) {},
       child: null,
     );

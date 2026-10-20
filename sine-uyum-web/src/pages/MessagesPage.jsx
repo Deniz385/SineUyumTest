@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/axiosConfig';
+import api, { mediaUrl } from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, List, ListItem, ListItemText, ListItemAvatar, Avatar, Divider } from '@mui/material';
 
@@ -51,7 +51,7 @@ export const MessagesPage = () => {
                                 sx={{ textDecoration: 'none', color: 'inherit' }}
                             >
                                 <ListItemAvatar>
-                                    <Avatar src={convo.otherUserProfileImageUrl}>
+                                    <Avatar src={mediaUrl(convo.otherUserProfileImageUrl)}>
                                         {convo.otherUserUsername?.charAt(0).toUpperCase()}
                                     </Avatar>
                                 </ListItemAvatar>

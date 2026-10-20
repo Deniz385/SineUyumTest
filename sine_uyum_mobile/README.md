@@ -132,7 +132,6 @@ Firebase yapılandırılmadan da uygulama derlenir ve çalışır; push yalnızc
 Mobil tarafta tamamlanması gereken işler `docs/ANALIZ-VE-YOL-HARITASI.md`
 dosyasının "Faz 3 — Mobil tamamlama" bölümünde listelenmiştir. Öne çıkanlar:
 
-- Profil fotoğrafı yükleme (API şu an yalnızca URL kabul ediyor)
 - Çevrimdışı cache
 - Gerçek zamanlı sohbet (mesajlar şu an ekran yenilendiğinde gelir)
 - Uygulama ikonu ve açılış ekranı görselleri (şu an Flutter varsayılanları)

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import api from '../api/axiosConfig';
+import api, { mediaUrl } from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, Grid, Card, CardContent, Avatar, Button, Chip } from '@mui/material';
 
@@ -16,7 +16,7 @@ const UserResultCard = ({ user }) => {
             <Card sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <CardContent sx={{ flexGrow: 1, textAlign: 'center' }}>
                     <Avatar
-                        src={user.profileImageUrl}
+                        src={mediaUrl(user.profileImageUrl)}
                         sx={{ width: 80, height: 80, margin: '0 auto 16px', fontSize: '2.5rem' }}
                     >
                         {user.userName.charAt(0).toUpperCase()}

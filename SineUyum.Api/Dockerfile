@@ -25,8 +25,10 @@ WORKDIR /app
 # sahipliği ona verilir. Uygulama root olmadan çalıştığı için /app'e yazamaz;
 # varsayılan bağlantı dizesi bu yazılabilir /data dizinini gösterir. Compose
 # buraya kalıcı bir volume bağlar; PostgreSQL'e geçince (M2) bu kalkacak.
-RUN mkdir -p /data && chown $APP_UID /data
+RUN mkdir -p /data/media && chown -R $APP_UID /data
 ENV ConnectionStrings__DefaultConnection="Data Source=/data/sineuyum.db"
+# Yüklenen profil fotoğrafları (B8). Compose buraya kalıcı volume bağlar.
+ENV Storage__MediaRoot=/data/media
 
 # Root olmayan kullanıcı (aspnet imajında hazır gelir) ile çalış.
 USER $APP_UID

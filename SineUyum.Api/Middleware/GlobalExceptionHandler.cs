@@ -40,6 +40,24 @@ namespace SineUyum.Api.Middleware
                     Title = domain.Message,
                 };
             }
+            else if (exception is BadHttpRequestException badRequest)
+            {
+                // Kestrel'in istemci kaynaklı reddi (ör. gövde sınırı aşıldı → 413,
+                // bozuk istek → 400). Önceden bunlar da "sunucu hatası" 500'üne
+                // düşüyordu. Kestrel'in mesajı iç ayrıntı içerebileceği için
+                // istemciye genel bir başlık gider.
+                _logger.LogInformation(
+                    "İstemci isteği reddedildi ({StatusCode}) {TraceId}: {Message}",
+                    badRequest.StatusCode, traceId, badRequest.Message);
+
+                problem = new ProblemDetails
+                {
+                    Status = badRequest.StatusCode,
+                    Title = badRequest.StatusCode == StatusCodes.Status413PayloadTooLarge
+                        ? "İstek gövdesi izin verilen boyutu aşıyor."
+                        : "Geçersiz istek.",
+                };
+            }
             else
             {
                 // Beklenmeyen hata: tüm ayrıntı log'a, istemciye genel mesaj.

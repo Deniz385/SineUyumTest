@@ -371,3 +371,6 @@ sine_uyum_mobile/.flutter-plugins-dependencies
 # Firebase servis hesabı anahtarları (gizli; FCM push için sunucuya ortam değişkeniyle verilir)
 *-firebase-adminsdk-*.json
 fcm-service-account*.json
+
+# Yüklenen profil fotoğrafları (yerel geliştirme; Docker'da /data/media volume)
+SineUyum.Api/media/

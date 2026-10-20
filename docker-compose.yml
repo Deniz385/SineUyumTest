@@ -45,7 +45,11 @@ services:
       # PostgreSQL sağlayıcısı ve bağlantısı (api içinden db servis adıyla).
       Database__Provider: Postgres
       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB:-sineuyum};Username=${POSTGRES_USER:-sineuyum};Password=${POSTGRES_PASSWORD}"
+    volumes:
+      # Profil fotoğrafları konteyner yeniden kurulunca kaybolmasın.
+      - sineuyum-media:/data/media
     restart: unless-stopped
 
 volumes:
   sineuyum-pgdata:
+  sineuyum-media:

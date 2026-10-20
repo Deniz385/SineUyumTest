@@ -12,6 +12,14 @@ class AppConfig {
     defaultValue: 'http://10.0.2.2:5074',
   );
 
+  /// Sunucuya yüklenen medya (ör. profil fotoğrafı) göreli yolla gelir
+  /// (`/media/avatars/...`); API adresiyle birleştirilir. Eski kayıtlarda tam
+  /// URL olabilir, o zaman olduğu gibi kullanılır.
+  static String? resolveMediaUrl(String? url) {
+    if (url == null || url.isEmpty) return null;
+    return url.startsWith('/') ? '$apiUrl$url' : url;
+  }
+
   /// TMDb poster/backdrop adresleri için temel URL.
   /// Sunucu `/api/v1/app/config` ile bunu ezebilir.
   static const String tmdbImageBaseUrl = String.fromEnvironment(

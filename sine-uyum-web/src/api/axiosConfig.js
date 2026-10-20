@@ -7,6 +7,11 @@ const api = axios.create({
     baseURL: API_URL
 });
 
+// Sunucuya yüklenen medya (ör. profil fotoğrafı) göreli yolla gelir
+// ("/media/avatars/..."); tarayıcıya API adresiyle birlikte verilmeli.
+// Eski kayıtlarda tam URL olabilir, o zaman olduğu gibi kullanılır.
+export const mediaUrl = (url) => (url && url.startsWith('/') ? `${API_URL}${url}` : url || undefined);
+
 // Token'ları tek yerden okuyup yazmak için yardımcılar.
 // Access token artık kısa ömürlü (varsayılan 60 dk); süresi dolduğunda
 // refresh token ile sessizce yenileniyor.

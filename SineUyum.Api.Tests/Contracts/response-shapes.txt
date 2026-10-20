@@ -269,6 +269,18 @@
   $: object
   message: string
 
+## profile.photo.upload  POST /api/v1/profile/photo -> 200
+  $: object
+  profileImageUrl: string
+
+## profile.photo.delete  DELETE /api/v1/profile/photo -> 200
+  $: object
+  profileImageUrl: null
+
+## profile.photo.upload(2)  POST /api/v1/profile/photo -> 200
+  $: object
+  profileImageUrl: string
+
 ## account.login(admin)  POST /api/v1/account/login -> 200
   $: object
   expiresAt: string

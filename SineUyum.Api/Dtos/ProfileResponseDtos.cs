@@ -27,6 +27,13 @@ namespace SineUyum.Api.Dtos
         public List<ProfileRatingDto> TopRatedMovies { get; set; } = new();
     }
 
+    // POST/DELETE /api/v1/profile/photo. Yüklenen fotoğraflar sunucuya göreli
+    // yoldur ("/media/avatars/..."); istemci API adresiyle birleştirir.
+    public class ProfilePhotoDto
+    {
+        public string? ProfileImageUrl { get; set; }
+    }
+
     // GET /api/v1/compatibility/{targetUserId}
     public class CompatibilityDto
     {

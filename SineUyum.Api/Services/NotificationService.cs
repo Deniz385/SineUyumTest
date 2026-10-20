@@ -39,6 +39,16 @@ namespace SineUyum.Api.Services
         // kaydedildi ama bildirimi yok" gibi yarım durumlar oluşmaz.
         public async Task NotifyManyAsync(IEnumerable<string> userIds, string message, string? relatedUrl)
         {
+            var notifications = Stage(userIds, message, relatedUrl);
+            await _context.SaveChangesAsync();
+            await PublishAsync(notifications);
+        }
+
+        // Bildirimleri yalnızca bağlama ekler; çağıran kendi işiyle (ör. bir
+        // transaction içinde) kaydeder ve kayıttan SONRA PublishAsync çağırır.
+        // Böylece geri alınan bir iş için kimseye bildirim gitmez.
+        public IReadOnlyList<Notification> Stage(IEnumerable<string> userIds, string message, string? relatedUrl)
+        {
             var notifications = userIds.Distinct().Select(userId => new Notification
             {
                 UserId = userId,
@@ -47,8 +57,11 @@ namespace SineUyum.Api.Services
             }).ToList();
 
             _context.Notifications.AddRange(notifications);
-            await _context.SaveChangesAsync();
+            return notifications;
+        }
 
+        public async Task PublishAsync(IEnumerable<Notification> notifications)
+        {
             foreach (var notification in notifications)
             {
                 // Kayıttan SONRA itilir ki istemci gerçek id'yi alsın.

@@ -88,3 +88,47 @@ namespace SineUyum.Api.Dtos
         public int MovieId { get; set; }
     }
 }
+
+namespace SineUyum.Api.Dtos
+{
+    // POST /api/v1/admin/events/{id}/create-groups (202) ve
+    // GET /api/v1/admin/events/{id}/matching. Durum: Queued | Running |
+    // Succeeded | Failed. İstemci Succeeded/Failed olana dek yoklar.
+    public class MatchingRunDto
+    {
+        public int Id { get; set; }
+        public int EventId { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public DateTime? StartedAt { get; set; }
+        public DateTime? FinishedAt { get; set; }
+        public int? GroupCount { get; set; }
+        public int? UngroupedCount { get; set; }
+        public string? Error { get; set; }
+
+        // Gösterilebilir özet (eski yanıttaki "message" alanıyla uyumlu).
+        public string Message { get; set; } = string.Empty;
+
+        public static MatchingRunDto From(Models.MatchingRun run) => new()
+        {
+            Message = run.Status switch
+            {
+                Models.MatchingRunStatus.Queued => "Eşleştirme sıraya alındı.",
+                Models.MatchingRunStatus.Running => "Eşleştirme sürüyor.",
+                Models.MatchingRunStatus.Succeeded => run.UngroupedCount > 0
+                    ? $"{run.GroupCount} grup oluşturuldu; {run.UngroupedCount} kişi gruba alınamadı."
+                    : $"{run.GroupCount} grup oluşturuldu.",
+                _ => run.Error ?? "Eşleştirme başarısız oldu."
+            },
+            Id = run.Id,
+            EventId = run.CinemaEventId,
+            Status = run.Status.ToString(),
+            CreatedAt = run.CreatedAt,
+            StartedAt = run.StartedAt,
+            FinishedAt = run.FinishedAt,
+            GroupCount = run.GroupCount,
+            UngroupedCount = run.UngroupedCount,
+            Error = run.Error
+        };
+    }
+}

@@ -441,6 +441,54 @@ namespace SineUyum.Api.Migrations
                     b.ToTable("Genres");
                 });
 
+            modelBuilder.Entity("SineUyum.Api.Models.MatchingRun", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CinemaEventId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("GroupCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RequestedBy")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<int?>("UngroupedCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CinemaEventId", "CreatedAt");
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.ToTable("MatchingRuns");
+                });
+
             modelBuilder.Entity("SineUyum.Api.Models.Message", b =>
                 {
                     b.Property<int>("Id")
@@ -929,6 +977,17 @@ namespace SineUyum.Api.Migrations
                     b.Navigation("Movie");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.MatchingRun", b =>
+                {
+                    b.HasOne("SineUyum.Api.Models.CinemaEvent", "CinemaEvent")
+                        .WithMany()
+                        .HasForeignKey("CinemaEventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CinemaEvent");
                 });
 
             modelBuilder.Entity("SineUyum.Api.Models.Message", b =>

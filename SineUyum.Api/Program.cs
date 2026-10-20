@@ -145,6 +145,10 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<MatchingService>();
+// Eşleştirme arka planda (M7): kuyruk veritabanında, işçi tek örnek.
+builder.Services.Configure<MatchingOptions>(builder.Configuration.GetSection("Matching"));
+builder.Services.AddSingleton<MatchingQueue>();
+builder.Services.AddHostedService<MatchingWorker>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<MovieCatalogService>();
 builder.Services.AddScoped<NotificationService>();

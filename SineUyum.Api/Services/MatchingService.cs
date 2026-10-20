@@ -8,6 +8,8 @@ using System.Text.Json;
 
 namespace SineUyum.Api.Services
 {
+    public record MatchingResult(int GroupCount, int UngroupedCount);
+
     public class MatchingService
     {
         private readonly ApplicationDbContext _context;
@@ -35,29 +37,50 @@ namespace SineUyum.Api.Services
             _tmdbApiKey = apiKey;
         }
 
-        public async Task CreateGroupsForEventAsync(int eventId)
+        // İstek yolunda hızlı ön kontrol: yönetici hatayı (etkinlik yok, gruplar
+        // zaten var, katılımcı az) iş kuyruğa girmeden görsün. İş de aynı
+        // kontrolle başlar.
+        public async Task<CinemaEvent> ValidateAsync(int eventId)
         {
             var cinemaEvent = await _context.CinemaEvents.FindAsync(eventId);
             if (cinemaEvent == null) throw DomainException.NotFound("Etkinlik bulunamadı.");
             if (await _context.EventGroups.AnyAsync(g => g.CinemaEventId == eventId)) throw new DomainException("Bu etkinlik için gruplar zaten oluşturulmuş.");
 
+            var participantCount = await _context.EventParticipants.CountAsync(p => p.CinemaEventId == eventId);
+            if (participantCount < cinemaEvent.GroupSize)
+            {
+                throw new DomainException($"Yeterli katılımcı olmadığı için gruplar oluşturulamadı. Gerekli: {cinemaEvent.GroupSize}, Mevcut: {participantCount}");
+            }
+            return cinemaEvent;
+        }
+
+        // Arka plan işinden çağrılır (MatchingWorker). Üç aşama:
+        //  1) gruplar bellekte kurulur (veritabanına yazmadan),
+        //  2) öneriler hesaplanır — TMDb çağrısı olabilir, transaction dışında
+        //     ki dış çağrı süresince kilit tutulmasın,
+        //  3) tüm gruplar, öneriler ve bildirimler TEK transaction'da yazılır.
+        // Önceden her grup ayrı kaydediliyordu: ortada bir hata (ör. TMDb)
+        // yarım grupları kalıcı bırakıyor, yeniden deneme de "gruplar zaten
+        // oluşturulmuş" diye reddediliyordu. Canlı bildirim/push commit'ten
+        // sonra gider; geri alınan iş için kimseye bildirim gitmez.
+        public async Task<MatchingResult> CreateGroupsForEventAsync(int eventId, CancellationToken cancellationToken = default)
+        {
+            var cinemaEvent = await ValidateAsync(eventId);
+
             var participants = await _context.EventParticipants
-                .Where(p => p.CinemaEventId == eventId && !_context.EventGroupMembers.Any(gm => gm.UserId == p.UserId && gm.EventGroup.CinemaEventId == eventId))
+                .Where(p => p.CinemaEventId == eventId)
                 .Include(p => p.User)
                 .ThenInclude(u => u.Ratings)
-                .ToListAsync();
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
 
-            if (participants.Count < cinemaEvent.GroupSize)
-            {
-                throw new DomainException($"Yeterli katılımcı olmadığı için gruplar oluşturulamadı. Gerekli: {cinemaEvent.GroupSize}, Mevcut: {participants.Count}");
-            }
-            
             var userRatingsDict = participants.ToDictionary(p => p.UserId, p => p.User.Ratings.ToDictionary(r => r.MovieId, r => r.Rating));
             var userPool = participants.Select(p => p.UserId).ToList();
             // Birbirini engelleyen (herhangi yönde) iki kişi aynı gruba düşmez.
             var blockedPairs = await _privacy.BlockedPairsAmongAsync(userPool);
             var random = new Random();
 
+            var plannedGroups = new List<List<string>>();
             while (userPool.Count >= cinemaEvent.GroupSize)
             {
                 var starterUserId = PickStarter(userPool, blockedPairs, random);
@@ -81,35 +104,57 @@ namespace SineUyum.Api.Services
                 // alınmadan kalır (havuzdan çıktı), diğerleriyle devam edilir.
                 if (groupMemberIds.Count < cinemaEvent.GroupSize) continue;
 
-                var newGroup = new EventGroup { CinemaEventId = eventId };
-                
-                var suggestedMovieIds = await GetGroupMovieSuggestions(groupMemberIds, userRatingsDict);
-                foreach (var (movieId, rank) in suggestedMovieIds.Distinct().Select((id, i) => (id, i)))
-                {
-                    newGroup.Suggestions.Add(new EventGroupSuggestion { MovieId = movieId, Rank = rank });
-                }
-                
-                _context.EventGroups.Add(newGroup);
-                
-                foreach (var memberId in groupMemberIds)
-                {
-                    newGroup.Members.Add(new EventGroupMember { UserId = memberId });
-                    userPool.Remove(memberId);
-                }
-                
-                // SaveChangesAsync'i burada çağırarak grubun ve üyelerin ID'lerinin oluşmasını sağlıyoruz.
-                await _context.SaveChangesAsync();
-
-                // Grup üyelerine bildirim: kaydedilir, sonra SignalR + push.
-                await _notifications.NotifyManyAsync(
-                    groupMemberIds,
-                    $"'{cinemaEvent.LocationName}' etkinliği için bir gruba atandın!",
-                    "/my-event");
+                foreach (var memberId in groupMemberIds) userPool.Remove(memberId);
+                plannedGroups.Add(groupMemberIds);
             }
 
-            await _context.SaveChangesAsync();
+            var suggestionsByGroup = new List<List<int>>(plannedGroups.Count);
+            foreach (var members in plannedGroups)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                suggestionsByGroup.Add(await GetGroupMovieSuggestions(members, userRatingsDict));
+            }
+
+            var staged = new List<Notification>();
+            await using (var transaction = await _context.Database.BeginTransactionAsync(cancellationToken))
+            {
+                // Ön kontrolden bu yana başka bir iş grupları yazmış olabilir.
+                if (await _context.EventGroups.AnyAsync(g => g.CinemaEventId == eventId, cancellationToken))
+                {
+                    throw new DomainException("Bu etkinlik için gruplar zaten oluşturulmuş.");
+                }
+
+                for (var i = 0; i < plannedGroups.Count; i++)
+                {
+                    var group = new EventGroup { CinemaEventId = eventId };
+                    foreach (var memberId in plannedGroups[i])
+                    {
+                        group.Members.Add(new EventGroupMember { UserId = memberId });
+                    }
+                    foreach (var (movieId, rank) in suggestionsByGroup[i].Distinct().Select((id, r) => (id, r)))
+                    {
+                        group.Suggestions.Add(new EventGroupSuggestion { MovieId = movieId, Rank = rank });
+                    }
+                    _context.EventGroups.Add(group);
+
+                    staged.AddRange(_notifications.Stage(
+                        plannedGroups[i],
+                        $"'{cinemaEvent.LocationName}' etkinliği için bir gruba atandın!",
+                        "/my-event"));
+                }
+
+                // Bilinçli olarak iptal belirteci verilmez: yazma başladıysa
+                // yarıda kesilmesin (commit ya olur ya olmaz).
+                await _context.SaveChangesAsync(CancellationToken.None);
+                await transaction.CommitAsync(CancellationToken.None);
+            }
+
+            await _notifications.PublishAsync(staged);
+
+            var groupedCount = plannedGroups.Sum(g => g.Count);
+            return new MatchingResult(plannedGroups.Count, participants.Count - groupedCount);
         }
-        
+
         // ... (diğer metodlar aynı kalacak) ...
         private async Task<List<int>> GetGroupMovieSuggestions(List<string> groupMemberIds, Dictionary<string, Dictionary<int, int>> allRatings)
         {

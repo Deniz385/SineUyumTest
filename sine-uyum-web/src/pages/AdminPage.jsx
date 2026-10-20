@@ -122,10 +122,22 @@ export const AdminPage = () => {
         setIsSubmitting(true);
         showSnackbar('Eşleştirme işlemi başlatılıyor...', 'info');
         try {
-            const response = await api.post(`/api/v1/admin/events/${eventId}/create-groups`);
-            showSnackbar(response.data.message, 'success');
+            // Sunucu işi kuyruğa alıp hemen döner (202); bitene dek yoklanır.
+            let run = (await api.post(`/api/v1/admin/events/${eventId}/create-groups`)).data;
+            const deadline = Date.now() + 2 * 60 * 1000;
+            while ((run.status === 'Queued' || run.status === 'Running') && Date.now() < deadline) {
+                await new Promise((resolve) => setTimeout(resolve, 1500));
+                run = (await api.get(`/api/v1/admin/events/${eventId}/matching`)).data;
+            }
+            if (run.status === 'Succeeded') {
+                showSnackbar(run.message, 'success');
+            } else if (run.status === 'Failed') {
+                showSnackbar(run.error || run.message, 'error');
+            } else {
+                showSnackbar('Eşleştirme sürüyor; sonucu birazdan tekrar deneyerek görebilirsiniz.', 'info');
+            }
         } catch (error) {
-            const errorMessage = error.response?.data?.message || 'Eşleştirme sırasında bilinmeyen bir hata oluştu.';
+            const errorMessage = error.response?.data?.title || error.response?.data?.message || 'Eşleştirme sırasında bilinmeyen bir hata oluştu.';
             showSnackbar(errorMessage, 'error');
         } finally {
             setIsSubmitting(false);

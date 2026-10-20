@@ -406,9 +406,31 @@
   event: object
   status: string
 
-## admin.createGroups  POST /api/v1/admin/events/{id}/create-groups -> 200
+## admin.createGroups  POST /api/v1/admin/events/{id}/create-groups -> 202
   $: object
+  createdAt: string
+  error: null
+  eventId: number
+  finishedAt: null
+  groupCount: null
+  id: number
   message: string
+  startedAt: null
+  status: string
+  ungroupedCount: null
+
+## admin.matching(succeeded)  GET /api/v1/admin/events/{id}/matching -> 200
+  $: object
+  createdAt: string
+  error: null
+  eventId: number
+  finishedAt: string
+  groupCount: number
+  id: number
+  message: string
+  startedAt: string
+  status: string
+  ungroupedCount: number
 
 ## event.myStatus(MATCHED)  GET /api/v1/event/my-status -> 200
   $: object

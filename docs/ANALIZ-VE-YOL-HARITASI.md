@@ -346,7 +346,7 @@ Yanıt biçimleri düz dizi olarak korundu (zarf değil), istemciler kırılmad�
 Kalan büyük/büyüyebilir listeler (izleme listesi öğeleri vb.) gerektiğinde
 aynı desenle sayfalanabilir.
 
-### M7 — Eşleştirme servisi kırılgan
+### M7 — Eşleştirme servisi kırılgan — ✅ kapatıldı
 `MatchingService.CreateGroupsForEventAsync`:
 - `while` döngüsü içinde `SaveChangesAsync` çağırıyor, transaction yok →
   hata halinde yarım oluşmuş gruplar kalıcı oluyor
@@ -356,6 +356,26 @@ aynı desenle sayfalanabilir.
 
 **Yapılacak:** arka plan işine taşınmalı (Hangfire/Quartz), tek transaction
 içinde çalışmalı.
+
+**Yapılan:** Ek kütüphane (Hangfire/Quartz) yerine veritabanı tabanlı kuyruk:
+- `POST /admin/events/{id}/create-groups` ön kontrolü (etkinlik yok 404,
+  gruplar var / katılımcı az 400, süren iş 409) hemen yapar, `MatchingRuns`'a
+  iş yazar ve **202** döner; sonuç `GET /admin/events/{id}/matching`
+  (Queued → Running → Succeeded / Failed, grup ve grupsuz kişi sayısı).
+- `MatchingWorker` (BackgroundService) işi **atomik sahiplenir** (birden çok
+  sunucu örneği aynı işi almaz); yeniden başlatmada kuyruk kaybolmaz, 10
+  dakikadır "Running" kalan iş yeniden alınır.
+- Gruplar önce bellekte kurulur, öneriler (TMDb) transaction **dışında**
+  hesaplanır, tüm gruplar + öneriler + bildirimler **tek transaction**'da
+  yazılır; canlı bildirim/push commit'ten sonra gider. Önceden ikinci grupta
+  TMDb hatası ilk grubu ve bildirimlerini kalıcı bırakıyor, yeniden deneme de
+  "gruplar zaten oluşturulmuş" diye reddediliyordu (testte eski davranış
+  geri konunca tam bu yakalandı).
+- Hata kaydında yalnızca güvenli mesaj; ayrıntı log'da. Web yönetici sayfası
+  sonucu bekleyip gösterir. Yanıtta eski `message` alanı korunur.
+
+**Kalan:** O(n²) uyum karşılaştırması duruyor; binlerce katılımcılı
+etkinlikte işi uzatır ama artık isteği bloklamaz.
 
 ### M8 — `SuggestedMovieIds` virgüllü string — ✅ kapatıldı
 `EventGroup.SuggestedMovieIds` ilişkisel tablo yerine `"1,2,3"` biçiminde
@@ -709,7 +729,7 @@ destek yok (PWA ayrı bir iş).
 
 ### Faz 4 — İş modeli ve ölçekleme
 21. Gerçek ödeme entegrasyonu (G4) — ✅ açık kapatıldı + altyapı; sağlayıcılar hesap bilgisi bekliyor
-22. Eşleştirmeyi arka plan işine taşı (M7)
+22. Eşleştirmeyi arka plan işine taşı (M7) — ✅
 23. `SuggestedMovieIds` tablosuna normalizasyon (M8) — ✅
 24. Rate limiting'i tüm API'ye yay (G5) — ✅
 25. Gizlilik ayarları (G12) — ✅

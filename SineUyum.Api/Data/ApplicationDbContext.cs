@@ -19,6 +19,7 @@
         public DbSet<EventGroup> EventGroups { get; set; }
         public DbSet<EventGroupMember> EventGroupMembers { get; set; }
         public DbSet<EventGroupSuggestion> EventGroupSuggestions { get; set; }
+        public DbSet<MatchingRun> MatchingRuns { get; set; }
         public DbSet<EventVote> EventVotes { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
@@ -120,6 +121,32 @@
                 .WithMany()
                 .HasForeignKey(s => s.MovieId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<MatchingRun>()
+                .Property(r => r.Status)
+                .HasConversion<string>()
+                .HasMaxLength(16);
+
+            builder.Entity<MatchingRun>()
+                .Property(r => r.Error)
+                .HasMaxLength(500);
+
+            builder.Entity<MatchingRun>()
+                .Property(r => r.RequestedBy)
+                .HasMaxLength(450);
+
+            // İşçi sıradaki işi, uç da etkinliğin son işini bununla bulur.
+            builder.Entity<MatchingRun>()
+                .HasIndex(r => new { r.Status, r.CreatedAt });
+
+            builder.Entity<MatchingRun>()
+                .HasIndex(r => new { r.CinemaEventId, r.CreatedAt });
+
+            builder.Entity<MatchingRun>()
+                .HasOne(r => r.CinemaEvent)
+                .WithMany()
+                .HasForeignKey(r => r.CinemaEventId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // MovieGenre için birleşik birincil anahtar (composite key) tanımlaması
             builder.Entity<MovieGenre>()

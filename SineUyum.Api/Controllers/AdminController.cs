@@ -1,6 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
+using SineUyum.Api.Exceptions;
+using SineUyum.Api.Models;
 using SineUyum.Api.Services;
 using System.Security.Claims;
 
@@ -11,15 +15,49 @@ namespace SineUyum.Api.Controllers
     [Authorize(Roles = "Admin")]
     public class AdminController : ControllerBase
     {
+        // Eşleştirme artık istek içinde çalışmaz (M7): TMDb çağrıları ve büyük
+        // etkinlikler isteği zaman aşımına düşürüyordu. Ön kontrol hemen
+        // yapılır (hatalar 404/400 olarak döner), iş kuyruğa alınır ve 202
+        // döner; sonuç GET .../matching ile izlenir.
         [HttpPost("events/{eventId}/create-groups")]
-        public async Task<ActionResult<StatusMessageDto>> TriggerMatching(int eventId, [FromServices] MatchingService matchingService)
+        public async Task<ActionResult<MatchingRunDto>> TriggerMatching(
+            int eventId,
+            [FromServices] MatchingService matchingService,
+            [FromServices] ApplicationDbContext context,
+            [FromServices] MatchingQueue queue)
         {
-            // Hata yönetimi global handler'a bırakıldı: iş kuralı hataları
-            // (DomainException) doğru durum koduyla, beklenmeyen hatalar ise
-            // detay sızdırmadan 500 ile döner. Önceden ex.Message doğrudan
-            // istemciye yazılıyordu.
-            await matchingService.CreateGroupsForEventAsync(eventId);
-            return Ok(new StatusMessageDto("Eşleştirme başarıyla tamamlandı ve gruplar oluşturuldu."));
+            await matchingService.ValidateAsync(eventId);
+
+            var active = await context.MatchingRuns.AnyAsync(r =>
+                r.CinemaEventId == eventId &&
+                (r.Status == MatchingRunStatus.Queued || r.Status == MatchingRunStatus.Running));
+            if (active)
+            {
+                throw new DomainException("Bu etkinlik için eşleştirme zaten sürüyor.", StatusCodes.Status409Conflict);
+            }
+
+            var run = new MatchingRun
+            {
+                CinemaEventId = eventId,
+                RequestedBy = User.FindFirstValue(ClaimTypes.NameIdentifier)
+            };
+            context.MatchingRuns.Add(run);
+            await context.SaveChangesAsync();
+            queue.Signal();
+
+            return AcceptedAtAction(nameof(GetMatching), new { eventId }, MatchingRunDto.From(run));
+        }
+
+        // Etkinliğin en son eşleştirme işi.
+        [HttpGet("events/{eventId}/matching")]
+        public async Task<ActionResult<MatchingRunDto>> GetMatching(int eventId, [FromServices] ApplicationDbContext context)
+        {
+            var run = await context.MatchingRuns
+                .Where(r => r.CinemaEventId == eventId)
+                .OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id)
+                .FirstOrDefaultAsync();
+            if (run == null) throw DomainException.NotFound("Bu etkinlik için eşleştirme başlatılmamış.");
+            return Ok(MatchingRunDto.From(run));
         }
 
         // Elle abonelik (promosyon, destek; ödeme entegrasyonu öncesi deneme).

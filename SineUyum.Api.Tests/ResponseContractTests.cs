@@ -98,6 +98,21 @@ public class ResponseContractTests : IClassFixture<ResponseContractTests.Factory
     private readonly StringBuilder _report = new();
     private readonly HttpClient _client;
 
+    private async Task WaitForMatchingAsync(int eventId, string token)
+    {
+        for (var i = 0; i < 100; i++)
+        {
+            var req = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/admin/events/{eventId}/matching");
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var doc = JsonDocument.Parse(await (await _client.SendAsync(req)).Content.ReadAsStringAsync());
+            var status = doc.RootElement.GetProperty("status").GetString();
+            if (status == "Succeeded") return;
+            Assert.NotEqual("Failed", status);
+            await Task.Delay(100);
+        }
+        Assert.Fail("Eşleştirme 10 saniyede bitmedi.");
+    }
+
     private async Task<JsonElement> Call(string name, HttpMethod method, string url, string? token = null, object? body = null)
     {
         var req = new HttpRequestMessage(method, url);
@@ -247,6 +262,9 @@ public class ResponseContractTests : IClassFixture<ResponseContractTests.Factory
         await Post("event.join(b)", $"/api/v1/event/{eventId}/join", b);
         await Get("event.myStatus(PENDING)", "/api/v1/event/my-status", a);
         await Post("admin.createGroups", $"/api/v1/admin/events/{eventId}/create-groups", admin);
+        // Eşleştirme arka planda (M7): bitene dek yokla, son hâlin şeklini kaydet.
+        await WaitForMatchingAsync(eventId, admin);
+        await Get("admin.matching(succeeded)", $"/api/v1/admin/events/{eventId}/matching", admin);
         var matched = await Get("event.myStatus(MATCHED)", "/api/v1/event/my-status", a);
         var groupId = matched.GetProperty("group").GetProperty("id").GetInt32();
         var movieToVote = matched.GetProperty("suggestedMovies")[0].GetProperty("id").GetInt32();

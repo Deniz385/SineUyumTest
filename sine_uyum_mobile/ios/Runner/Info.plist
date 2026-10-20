@@ -54,6 +54,11 @@
 			</array>
 		</dict>
 	</dict>
+	<!-- Push bildirimi (FCM/APNs): uzak bildirimlerin arka planda işlenmesi. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

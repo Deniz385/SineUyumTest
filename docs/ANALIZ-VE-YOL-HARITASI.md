@@ -351,7 +351,7 @@ boşluklar:
 | B4 | `SubscriptionController` anahtar okuma hatası | `JWT_KEY` env değişkeni kullanıldığında abonelik aktivasyonu `NullReferenceException` ile çöküyordu | ✅ Düzeltildi |
 | B5 | `/health` ve `/api/app/config` | Mobil uygulamanın bağlantı kontrolü ve zorunlu güncelleme kontrolü | ✅ Eklendi |
 | B6 | Mesaj sayfalama | Mobil veri kullanımı | ✅ `?page`/`pageSize` ile eklendi (varsayılan 100) |
-| B7 | Push notification (FCM/APNs) | SignalR mobilde arka planda çalışmaz; uygulama kapalıyken bildirim gitmez | ⬜ Yapılacak |
+| B7 | Push notification (FCM/APNs) | SignalR mobilde arka planda çalışmaz; uygulama kapalıyken bildirim gitmez | ✅ Eklendi (Firebase projesi kurulunca açılır) |
 | B8 | Dosya yükleme endpoint'i | Profil fotoğrafı şu an sadece URL; mobilde galeriden seçim için upload gerekir | ⬜ Yapılacak |
 | B9 | API versiyonlama (`/api/v1/...`) | Store'daki eski sürümler API değişince kırılır | ✅ Eklendi (geriye dönük uyumlu) |
 | B10 | Tüm listelerde sayfalama | Performans | ⬜ Yapılacak (B6 kısmi) |
@@ -464,7 +464,36 @@ tüm çağrı noktaları açıkça `/api/v1/...`'e taşındı. SignalR hub'ı
 (v1 yolu çalışır + sürümsüz yol v1'e yönlenir).
 
 ### Faz 3 — Mobil tamamlama (2-3 hafta)
-15. FCM/APNs push notification (B7)
+15. FCM/APNs push notification (B7) — ✅
+
+**B7 — Push bildirimi:**
+- **Sunucu:** `DeviceToken` tablosu (benzersiz token; aynı cihazda başka
+  hesapla girişte kayıt yeni kullanıcıya taşınır; hesap başına 20 cihaz
+  sınırı) + `POST /api/v1/devices`, `POST /api/v1/devices/unregister`
+  (kimlik doğrulamasız: oturumu düşmüş cihaz da push'u durdurabilsin).
+  Tüm bildirimler artık tek yoldan geçer: `NotificationService` → kaydet →
+  SignalR → push kuyruğu. Push istek yolunu bekletmez (bellek içi kuyruk +
+  `PushDispatchService`); FCM HTTP v1, servis hesabı OAuth'u
+  `Google.Apis.Auth` ile. FCM `UNREGISTERED` derse kayıt silinir;
+  `INVALID_ARGUMENT` bizim yük hatamız da olabileceği için silmez.
+  Push gövdesi mesaj içeriğini içermez (kilit ekranı gizliliği).
+  `FCM_SERVICE_ACCOUNT_JSON` verilmezse push kapalı, her şey eskisi gibi.
+- **Mobil:** `firebase_messaging`; Firebase seçenekleri `--dart-define` ile
+  (yapılandırılmamış derleme çalışmaya devam eder). Giriş/çıkış/oturum
+  düşmesi/token yenilemesine göre kayıt; dokununca ilgili ekran.
+- **Test:** cihaz kaydı, uçtan uca boru hattı (sahte gönderici) ve gerçek
+  `Program.cs` kurulumuyla FCM kabloları: üretilmiş bir servis hesabı
+  anahtarı + yerel OAuth dinleyicisiyle Google JWT imzası/kapsamı, FCM v1
+  URL/gövde/Bearer ve UNREGISTERED temizliği. Tüm API paketi gerçek
+  PostgreSQL'de de geçti (`TEST_POSTGRES_CONNECTION`). Mobil: 12 birim testi.
+- **Doğrulanamayan:** gerçek bir Firebase projesine/cihaza gönderim ve
+  Android/iOS derlemesi (geliştirme ortamında Android SDK'ya erişim yoktu;
+  CI de yalnızca analiz+test yapıyor) — ilk kurulumda cihazda denenmeli.
+- **Sonraki adım:** firebase_messaging 17, kayıt token'ı yerine Firebase
+  Installation ID (FID; `register()`/`onRegistered`) getirdi ve token
+  API'sini deprecated yaptı. FID akışı çok yeni olduğu için cihazda
+  doğrulanmadan geçilmedi; FCM v1 `message.token` geçiş süresince FID'i de
+  kabul ettiğinden geçiş yalnızca istemci tarafında olacak.
 16. Dosya yükleme + profil fotoğrafı (B8)
 17. Çevrimdışı cache (film listeleri, sohbetler)
 18. Gerçek zamanlı sohbet (SignalR üzerinden mesaj iletimi) (M11)

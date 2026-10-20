@@ -38,11 +38,29 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
         // Testler tek IP'den çok sayıda auth isteği atıyor; limit açılsın.
         Environment.SetEnvironmentVariable("RateLimit__AuthPermitLimit", "100000");
 
+        // İsteğe bağlı: tüm paketi gerçek PostgreSQL'e karşı (migration'larla)
+        // koşmak için TEST_POSTGRES_CONNECTION verin, ör.
+        //   TEST_POSTGRES_CONNECTION="Host=localhost;Username=postgres;Password=..." dotnet test
+        // Her fabrika kendi veritabanını oluşturur. Verilmezse in-memory SQLite.
+        var postgres = Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNECTION");
+        if (!string.IsNullOrWhiteSpace(postgres))
+        {
+            Environment.SetEnvironmentVariable("Database__Provider", "Postgres");
+        }
+
         builder.ConfigureServices(services =>
         {
-            // Gerçek SQLite dosyası kaydını kaldırıp in-memory bağlantıyı koy.
+            // Gerçek veritabanı kaydını kaldırıp test veritabanını koy.
             services.RemoveAll<DbContextOptions<ApplicationDbContext>>();
             services.RemoveAll<ApplicationDbContext>();
+
+            if (!string.IsNullOrWhiteSpace(postgres))
+            {
+                var database = "sineuyum_test_" + Guid.NewGuid().ToString("N")[..12];
+                services.AddDbContext<ApplicationDbContext>(options =>
+                    options.UseNpgsql($"{postgres};Database={database}"));
+                return;
+            }
 
             _connection.Open();
             services.AddDbContext<ApplicationDbContext>(options =>

@@ -263,6 +263,44 @@ namespace SineUyum.Api.Migrations
                     b.ToTable("CinemaEvents");
                 });
 
+            modelBuilder.Entity("SineUyum.Api.Models.DeviceToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("DeviceTokens");
+                });
+
             modelBuilder.Entity("SineUyum.Api.Models.EventGroup", b =>
                 {
                     b.Property<int>("Id")
@@ -693,6 +731,17 @@ namespace SineUyum.Api.Migrations
                         .HasForeignKey("SelectedMovieId");
 
                     b.Navigation("SelectedMovie");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.DeviceToken", b =>
+                {
+                    b.HasOne("SineUyum.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SineUyum.Api.Models.EventGroup", b =>

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/notification_provider.dart';
+import 'providers/push_provider.dart';
 import 'providers/theme_provider.dart';
 
 class SineUyumApp extends ConsumerWidget {
@@ -14,6 +15,8 @@ class SineUyumApp extends ConsumerWidget {
     // Bildirim sağlayıcısı oturum açıldığında SignalR bağlantısını kurar;
     // kök widget'ta izlenerek uygulama ömrü boyunca canlı tutulur.
     ref.watch(notificationsProvider);
+    // Push: oturuma göre cihazı FCM için kaydeder/kaydını siler.
+    ref.watch(pushProvider);
 
     return MaterialApp.router(
       title: 'SineUyum',

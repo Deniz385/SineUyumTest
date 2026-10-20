@@ -83,16 +83,55 @@ lib/
 
 ### Bildirimler
 
-SignalR (`/notificationHub`) ile canlı bildirim dinlenir. **Uygulama arka
-plandayken SignalR çalışmaz**; uygulama kapalıyken bildirim gönderebilmek
-için FCM/APNs entegrasyonu gerekir. Bkz. `docs/ANALIZ-VE-YOL-HARITASI.md` → B7.
+İki kanal birlikte çalışır:
+
+- **Uygulama açıkken:** SignalR (`/notificationHub`) — bildirim listeye anında düşer.
+- **Uygulama arka planda/kapalıyken:** FCM push (iOS da FCM → APNs üzerinden).
+  Dokununca ilgili ekran açılır (soğuk açılış dahil) ve bildirim okundu işaretlenir.
+
+FCM ön planda sistem bildirimi göstermediği için çift bildirim olmaz.
+Oturum açınca cihaz `/api/v1/devices`'a kaydedilir; çıkışta **ve oturum
+süresi dolduğunda** kaydı silinir (cihaz önceki kullanıcının bildirimlerini
+almasın). Durum *Ayarlar → Anlık bildirimler* satırında görünür.
+
+#### Push'u açmak (Firebase kurulumu)
+
+Firebase yapılandırılmadan da uygulama derlenir ve çalışır; push yalnızca kapalı olur.
+
+1. [Firebase konsolunda](https://console.firebase.google.com) proje oluşturun.
+   - Android uygulaması ekleyin: paket adı `com.sineuyum.sine_uyum_mobile`
+   - iOS uygulaması ekleyin: bundle id `com.sineuyum.sineUyumMobile`
+2. *Proje ayarları → Genel → Uygulamalarınız*'dan değerleri alıp build'e verin
+   (`google-services.json` / `GoogleService-Info.plist` **gerekmez**):
+
+   ```bash
+   flutter run \
+     --dart-define=API_URL=https://api.ornek.com \
+     --dart-define=FIREBASE_API_KEY=AIza... \
+     --dart-define=FIREBASE_PROJECT_ID=sineuyum-xxxx \
+     --dart-define=FIREBASE_MESSAGING_SENDER_ID=1234567890 \
+     --dart-define=FIREBASE_ANDROID_APP_ID=1:1234567890:android:abc... \
+     --dart-define=FIREBASE_IOS_APP_ID=1:1234567890:ios:def...
+   ```
+
+3. **Sunucu:** *Proje ayarları → Hizmet hesapları → Yeni özel anahtar oluştur*
+   ile inen JSON'u API'ye `FCM_SERVICE_ACCOUNT_JSON` (içerik) ya da
+   `FCM_SERVICE_ACCOUNT_FILE` (yol) olarak verin. Bu anahtar **gizlidir**,
+   repoya girmez (`.gitignore`'da). Ayrıntı: `.env.docker.example`.
+4. **Yalnızca iOS:** Apple Developer'da bir APNs kimlik doğrulama anahtarı
+   (.p8) oluşturup *Proje ayarları → Cloud Messaging → Apple uygulaması*na
+   yükleyin. Xcode'da *Runner → Signing & Capabilities → + Capability →
+   Push Notifications* ekleyin (ücretli Apple geliştirici hesabı gerekir; bu
+   yüzden projede varsayılan açık değil — ücretsiz hesapla cihaz derlemesi
+   bozulmasın). Push iOS simülatöründe değil gerçek cihazda test edilir.
+5. Doğrulama: uygulamada giriş yapın, *Ayarlar → Anlık bildirimler* "Açık"
+   olmalı. Uygulamayı kapatıp başka bir hesaptan mesaj gönderin.
 
 ## Bilinen eksikler
 
 Mobil tarafta tamamlanması gereken işler `docs/ANALIZ-VE-YOL-HARITASI.md`
 dosyasının "Faz 3 — Mobil tamamlama" bölümünde listelenmiştir. Öne çıkanlar:
 
-- Push notification (FCM/APNs)
 - Profil fotoğrafı yükleme (API şu an yalnızca URL kabul ediyor)
 - Çevrimdışı cache
 - Gerçek zamanlı sohbet (mesajlar şu an ekran yenilendiğinde gelir)

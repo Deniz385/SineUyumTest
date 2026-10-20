@@ -38,6 +38,8 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      # Push bildirimi (FCM). Boşsa push kapalı; uygulama normal çalışır.
+      FCM_SERVICE_ACCOUNT_JSON: ${FCM_SERVICE_ACCOUNT_JSON:-}
       Cors__AllowedOrigins__0: ${WEB_ORIGIN:-http://localhost:5173}
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       # PostgreSQL sağlayıcısı ve bağlantısı (api içinden db servis adıyla).

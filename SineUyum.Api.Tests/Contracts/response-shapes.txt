@@ -74,6 +74,8 @@
   subscriptionExpires: null
   userName: string
 
+## devices.register  POST /api/v1/devices -> 204
+
 ## ratings.add  POST /api/v1/ratings -> 200
   $: object
   message: string
@@ -459,6 +461,8 @@
   user.subscriptionExpires: string
   user.userName: string
   user: object
+
+## devices.unregister  POST /api/v1/devices/unregister -> 204
 
 ## account.logout  POST /api/v1/account/logout -> 200
   $: object

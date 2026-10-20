@@ -169,6 +169,7 @@ public class ResponseContractTests : IClassFixture<ResponseContractTests.Factory
             new { refreshToken = aLogin.GetProperty("refreshToken").GetString() });
         a = refreshed.GetProperty("token").GetString()!;
         await Get("account.me", "/api/v1/account/me", a);
+        await Post("devices.register", "/api/v1/devices", a, new { token = "fcm-sozlesme-" + suffix, platform = "android" });
 
         // Puanlama (film TMDb'den çekilir) ve ortak film.
         await Post("ratings.add", "/api/v1/ratings", a, new { movieId = 550, rating = 9 });
@@ -246,6 +247,7 @@ public class ResponseContractTests : IClassFixture<ResponseContractTests.Factory
         await Post("subscription.activate", "/api/v1/subscription/activate", a);
         var changed = await Post("account.changePassword", "/api/v1/account/change-password", a,
             new { currentPassword = "Sifre123", newPassword = "YeniSifre123" });
+        await Post("devices.unregister", "/api/v1/devices/unregister", null, new { token = "fcm-sozlesme-" + suffix });
         await Post("account.logout", "/api/v1/account/logout", changed.GetProperty("token").GetString()!,
             new { refreshToken = changed.GetProperty("refreshToken").GetString() });
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/config/app_config.dart';
+import '../../providers/push_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../providers/theme_provider.dart';
 
@@ -69,6 +70,17 @@ class SettingsPage extends ConsumerWidget {
             onTap: () => context.push('/subscription'),
           ),
           const Divider(),
+          ListTile(
+            leading: const Icon(Icons.notifications_outlined),
+            title: const Text('Anlık bildirimler'),
+            subtitle: Text(switch (ref.watch(pushProvider)) {
+              PushStatus.registered => 'Açık — uygulama kapalıyken de gelir',
+              PushStatus.permissionDenied =>
+                'Kapalı — cihaz ayarlarından bildirim izni verin',
+              PushStatus.disabled => 'Bu derlemede yapılandırılmamış',
+              PushStatus.idle => 'Hazırlanıyor…',
+            }),
+          ),
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: const Text('Sürüm'),

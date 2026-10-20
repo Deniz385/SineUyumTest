@@ -24,4 +24,29 @@ class AppConfig {
     'APP_VERSION',
     defaultValue: '1.0.0',
   );
+
+  // --- Push bildirimi (Firebase Cloud Messaging) ---
+  // Değerler Firebase konsolu → Proje ayarları → "Uygulamalarınız"dan alınır
+  // ve build sırasında verilir (google-services.json / plist gerekmez):
+  //   --dart-define=FIREBASE_API_KEY=... --dart-define=FIREBASE_PROJECT_ID=...
+  //   --dart-define=FIREBASE_MESSAGING_SENDER_ID=...
+  //   --dart-define=FIREBASE_ANDROID_APP_ID=... --dart-define=FIREBASE_IOS_APP_ID=...
+  // Verilmezse push kapalıdır; uygulama SignalR ile (ön planda) bildirim
+  // almaya devam eder.
+
+  static const String firebaseApiKey = String.fromEnvironment(
+    'FIREBASE_API_KEY',
+  );
+  static const String firebaseProjectId = String.fromEnvironment(
+    'FIREBASE_PROJECT_ID',
+  );
+  static const String firebaseMessagingSenderId = String.fromEnvironment(
+    'FIREBASE_MESSAGING_SENDER_ID',
+  );
+  static const String firebaseAndroidAppId = String.fromEnvironment(
+    'FIREBASE_ANDROID_APP_ID',
+  );
+  static const String firebaseIosAppId = String.fromEnvironment(
+    'FIREBASE_IOS_APP_ID',
+  );
 }

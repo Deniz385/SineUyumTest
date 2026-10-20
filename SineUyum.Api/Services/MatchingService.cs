@@ -1,11 +1,8 @@
 // SineUyum.Api/Services/MatchingService.cs
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
-using SineUyum.Api.Dtos;
 using SineUyum.Api.Exceptions;
-using SineUyum.Api.Hubs;
 using SineUyum.Api.Models;
 using System.Text.Json;
 
@@ -17,14 +14,14 @@ namespace SineUyum.Api.Services
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly string? _tmdbApiKey;
         private const string TmdbApiBaseUrl = "https://api.themoviedb.org/3/";
-        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly NotificationService _notifications;
         private readonly UserManager<AppUser> _userManager;
 
-        public MatchingService(ApplicationDbContext context, IHttpClientFactory httpClientFactory, IConfiguration configuration, IHubContext<NotificationHub> hubContext, UserManager<AppUser> userManager)
+        public MatchingService(ApplicationDbContext context, IHttpClientFactory httpClientFactory, IConfiguration configuration, NotificationService notifications, UserManager<AppUser> userManager)
         {
             _context = context;
             _httpClientFactory = httpClientFactory;
-            _hubContext = hubContext;
+            _notifications = notifications;
             _userManager = userManager;
             // Boş string de tanımsız sayılmalı; appsettings.json'daki yer tutucu
             // aksi halde TMDB_API_KEY ortam değişkenini gölgeliyordu.
@@ -89,25 +86,11 @@ namespace SineUyum.Api.Services
                 // SaveChangesAsync'i burada çağırarak grubun ve üyelerin ID'lerinin oluşmasını sağlıyoruz.
                 await _context.SaveChangesAsync();
 
-                // BİLDİRİM GÖNDERME KISMI
-                // Önce kaydedilir, sonra itilir: önceden kayıttan önce itildiği
-                // için istemciler id=0 alıyor ve bildirimi okundu işaretleyemiyordu.
-                // Varlık değil DTO itilir (kullanıcı varlığı sızmasın).
-                var notificationMessage = $"'{cinemaEvent.LocationName}' etkinliği için bir gruba atandın!";
-                var notifications = groupMemberIds.Select(memberId => new Notification
-                {
-                    UserId = memberId,
-                    Message = notificationMessage,
-                    RelatedUrl = "/my-event"
-                }).ToList();
-                _context.Notifications.AddRange(notifications);
-                await _context.SaveChangesAsync();
-
-                foreach (var notification in notifications)
-                {
-                    await _hubContext.Clients.User(notification.UserId)
-                        .SendAsync("ReceiveNotification", NotificationDto.From(notification));
-                }
+                // Grup üyelerine bildirim: kaydedilir, sonra SignalR + push.
+                await _notifications.NotifyManyAsync(
+                    groupMemberIds,
+                    $"'{cinemaEvent.LocationName}' etkinliği için bir gruba atandın!",
+                    "/my-event");
             }
 
             await _context.SaveChangesAsync();

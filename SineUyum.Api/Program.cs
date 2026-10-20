@@ -9,6 +9,7 @@ using SineUyum.Api.Hubs;
 using SineUyum.Api.Middleware;
 using SineUyum.Api.Models;
 using SineUyum.Api.Services;
+using SineUyum.Api.Services.Push;
 using System.Text;
 using System.Threading.RateLimiting;
 
@@ -140,6 +141,50 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<MatchingService>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<MovieCatalogService>();
+builder.Services.AddScoped<NotificationService>();
+
+// --- PUSH BİLDİRİMİ (FCM HTTP v1) ---
+// Firebase servis hesabı anahtarı verilirse açılır; verilmezse push sessizce
+// kapalıdır, bildirimler REST + SignalR ile çalışmaya devam eder.
+//   FCM_SERVICE_ACCOUNT_JSON : anahtarın JSON içeriği (secret olarak), ya da
+//   FCM_SERVICE_ACCOUNT_FILE : anahtar dosyasının yolu.
+//   FCM_PROJECT_ID           : (opsiyonel) varsayılan anahtardaki project_id.
+var fcmJson = builder.Configuration["FCM_SERVICE_ACCOUNT_JSON"];
+var fcmFile = builder.Configuration["FCM_SERVICE_ACCOUNT_FILE"];
+if (string.IsNullOrWhiteSpace(fcmJson) && !string.IsNullOrWhiteSpace(fcmFile))
+{
+    fcmJson = File.ReadAllText(fcmFile);
+}
+
+builder.Services.AddSingleton<PushQueue>();
+builder.Services.AddHostedService<PushDispatchService>();
+if (!string.IsNullOrWhiteSpace(fcmJson))
+{
+    string projectId;
+    try
+    {
+        using var keyDoc = System.Text.Json.JsonDocument.Parse(fcmJson);
+        projectId = builder.Configuration["FCM_PROJECT_ID"]
+            ?? keyDoc.RootElement.GetProperty("project_id").GetString()
+            ?? throw new InvalidOperationException("project_id boş.");
+    }
+    catch (Exception ex) when (ex is System.Text.Json.JsonException or KeyNotFoundException or InvalidOperationException)
+    {
+        // Yanlış yapılandırma sessizce "push kapalı"ya dönmesin; açılışta görünsün.
+        throw new InvalidOperationException(
+            "FCM servis hesabı anahtarı okunamadı (geçerli JSON ve project_id gerekli).", ex);
+    }
+
+    builder.Services.AddSingleton(new FcmOptions { ProjectId = projectId });
+    builder.Services.AddSingleton<IFcmAccessTokenProvider>(
+        new GoogleFcmAccessTokenProvider(fcmJson));
+    builder.Services.AddHttpClient(FcmPushSender.HttpClientName);
+    builder.Services.AddSingleton<IPushSender, FcmPushSender>();
+}
+else
+{
+    builder.Services.AddSingleton<IPushSender, NullPushSender>();
+}
 
 // --- RATE LIMITING ---
 // Giriş/kayıt/yenileme uçlarına brute force koruması. Dakikadaki istek sınırı

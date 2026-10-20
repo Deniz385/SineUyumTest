@@ -1,11 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
-using SineUyum.Api.Hubs;
 using SineUyum.Api.Models;
+using SineUyum.Api.Services;
 using System.Security.Claims;
 
 namespace SineUyum.Api.Controllers
@@ -16,13 +15,12 @@ namespace SineUyum.Api.Controllers
     public class MessageController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly NotificationService _notifications;
 
-
-        public MessageController(ApplicationDbContext context, IHubContext<NotificationHub> hubContext)
+        public MessageController(ApplicationDbContext context, NotificationService notifications)
         {
             _context = context;
-            _hubContext = hubContext;
+            _notifications = notifications;
         }
 
         [HttpPost]
@@ -61,24 +59,13 @@ namespace SineUyum.Api.Controllers
                 WatchlistId = createMessageDto.WatchlistId
             };
             await _context.Messages.AddAsync(message);
-            
-            // --- BİLDİRİM OLUŞTURMA VE GÖNDERME ---
-            var notification = new Notification
-            {
-                UserId = createMessageDto.RecipientId, // Bildirim mesajın alıcısına gidecek
-                Message = $"{sender.UserName} size bir mesaj gönderdi.",
-                RelatedUrl = $"/messages/{senderId}" // Tıklayınca gönderenle olan sohbete gitsin
-            };
-            await _context.Notifications.AddAsync(notification);
 
-            await _context.SaveChangesAsync();
-            
-            // SignalR ile anlık bildirimi gönder. Varlık değil DTO itilir: alıcı
-            // yukarıda izlenen (tracked) olarak yüklendiği için EF,
-            // notification.User'ı doldurur ve varlık serileştirilince alıcının
-            // PasswordHash/SecurityStamp/e-postası istemciye gidiyordu.
-            await _hubContext.Clients.User(createMessageDto.RecipientId)
-                .SendAsync("ReceiveNotification", NotificationDto.From(notification));
+            // Mesaj ve alıcının bildirimi tek kayıtta; ardından SignalR + push.
+            // Tıklayınca gönderenle olan sohbete gider.
+            await _notifications.NotifyAsync(
+                createMessageDto.RecipientId,
+                $"{sender.UserName} size bir mesaj gönderdi.",
+                $"/messages/{senderId}");
 
             return Ok(new StatusMessageDto("Mesaj başarıyla gönderildi."));
         }

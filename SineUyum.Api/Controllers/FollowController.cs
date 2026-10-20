@@ -1,11 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SineUyum.Api.Dtos;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
-using SineUyum.Api.Hubs;
 using SineUyum.Api.Models;
+using SineUyum.Api.Services;
 using System.Security.Claims;
 
 namespace SineUyum.Api.Controllers
@@ -16,12 +15,12 @@ namespace SineUyum.Api.Controllers
     public class FollowController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly NotificationService _notifications;
 
-        public FollowController(ApplicationDbContext context, IHubContext<NotificationHub> hubContext)
+        public FollowController(ApplicationDbContext context, NotificationService notifications)
         {
             _context = context;
-            _hubContext = hubContext;
+            _notifications = notifications;
         }
 
         [HttpPost("{userIdToFollow}")]
@@ -52,19 +51,12 @@ namespace SineUyum.Api.Controllers
             };
             await _context.UserFollows.AddAsync(follow);
 
-            // --- BİLDİRİM OLUŞTURMA VE GÖNDERME ---
-            var notification = new Notification
-            {
-                UserId = userIdToFollow, // Bildirim, takip edilen kişiye gidecek
-                Message = $"{currentUser.UserName} sizi takip etmeye başladı.",
-                RelatedUrl = $"/profile/{currentUserId}" // Tıklayınca takip edenin profiline gitsin
-            };
-            await _context.Notifications.AddAsync(notification);
-
-            await _context.SaveChangesAsync();
-            
-            // SignalR ile anlık bildirimi gönder (varlık değil, REST ile aynı DTO).
-            await _hubContext.Clients.User(userIdToFollow).SendAsync("ReceiveNotification", NotificationDto.From(notification));
+            // Takip ve takip edilenin bildirimi tek kayıtta; ardından SignalR + push.
+            // Tıklayınca takip edenin profiline gider.
+            await _notifications.NotifyAsync(
+                userIdToFollow,
+                $"{currentUser.UserName} sizi takip etmeye başladı.",
+                $"/profile/{currentUserId}");
 
             return Ok(new StatusMessageDto("Kullanıcı başarıyla takip edildi."));
         }

@@ -367,3 +367,7 @@ sine_uyum_mobile/.dart_tool/
 sine_uyum_mobile/build/
 sine_uyum_mobile/.flutter-plugins
 sine_uyum_mobile/.flutter-plugins-dependencies
+
+# Firebase servis hesabı anahtarları (gizli; FCM push için sunucuya ortam değişkeniyle verilir)
+*-firebase-adminsdk-*.json
+fcm-service-account*.json

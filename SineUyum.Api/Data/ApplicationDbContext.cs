@@ -21,10 +21,26 @@
         public DbSet<EventVote> EventVotes { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<DeviceToken> DeviceTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            // Bir FCM token'ı tek kayda karşılık gelir (upsert bununla yapılır);
+            // kullanıcı silinince cihaz kayıtları da düşer.
+            builder.Entity<DeviceToken>()
+                .HasIndex(d => d.Token)
+                .IsUnique();
+
+            builder.Entity<DeviceToken>()
+                .HasIndex(d => d.UserId);
+
+            builder.Entity<DeviceToken>()
+                .HasOne(d => d.User)
+                .WithMany()
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // Refresh token'lar hash'leriyle aranır; kullanıcı silinince düşer.
             builder.Entity<RefreshToken>()

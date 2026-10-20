@@ -40,9 +40,12 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable("ADMIN_USERNAME", AdminUserName);
         Environment.SetEnvironmentVariable("ADMIN_PASSWORD", AdminPassword);
         Environment.SetEnvironmentVariable("ADMIN_EMAIL", "testadmin@sineuyum.local");
-        // Testler tek IP'den çok sayıda auth isteği atıyor; limit açılsın.
-        Environment.SetEnvironmentVariable("RateLimit__AuthPermitLimit", "100000");
-        Environment.SetEnvironmentVariable("RateLimit__UploadPermitLimit", "100000");
+        // Testler tek IP'den/kullanıcıdan çok sayıda istek atıyor; sınırlar
+        // açılsın (sınırların kendisi RateLimitTests'te düşük değerlerle).
+        foreach (var limit in new[] { "Global", "Auth", "Upload", "Tmdb", "SocialWrite" })
+        {
+            Environment.SetEnvironmentVariable($"RateLimit__{limit}PermitLimit", "100000");
+        }
         builder.UseSetting("Storage:MediaRoot", MediaRoot);
 
         // İsteğe bağlı: tüm paketi gerçek PostgreSQL'e karşı (migration'larla)

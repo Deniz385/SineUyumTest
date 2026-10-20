@@ -124,11 +124,25 @@ web için iyzico (ödeme formu + sunucu doğrulaması + webhook imzası), mobil
 için App Store / Google Play abonelik doğrulaması ve sunucu bildirimleri.
 Her biri yalnızca bir `IPaymentProvider` sınıfı + kayıt satırıdır.
 
-### G5 — Rate limiting yok
+### G5 — Rate limiting yok — ✅ kapatıldı
 `/api/account/login` brute force'a açık; TMDb proxy endpoint'leri (`/api/movies/*`)
 sınırsız çağrılabildiği için TMDb kotası tüketilebilir.
 **Yapılacak:** ASP.NET Core rate limiting. Bu çalışmada login/register/refresh
 uçlarına IP başına dakikada 10 istek sınırı eklendi; kalan uçlar açık.
+
+**Yapılan:** `RateLimitingSetup` (dakika başına, `RateLimit:*` ayarları):
+- **Genel sınır** her isteğe: giriş yapmışsa kullanıcı, yapmamışsa IP başına
+  300. `/health` ve swagger muaf.
+- Sıkı politikalar (genel sınırla birlikte geçerli): `tmdb` 60 (film uçları,
+  ortak öneri), `social-write` 30 (mesaj + takip; ikisi de bildirim üretir,
+  kotayı paylaşır), `auth` 10 (IP), `upload`/`payment` 10.
+- Ret: 429 + ProblemDetails (diğer hatalarla aynı biçim) + `Retry-After`.
+- **Ters vekil:** `TRUSTED_PROXIES` (IP/CIDR) tanımlıysa `X-Forwarded-For`
+  yalnızca o vekillerden kabul edilir; aksi halde tüm kullanıcılar vekilin
+  IP'sini paylaşıp birlikte kesilirdi. Testte bulunan tuzak: ASP.NET'te
+  güvenilen liste boşsa başlık **herkesten** kabul ediliyor (istemci her
+  istekte başka IP yazıp sınırı aşabilirdi); vekil tanımsızken başlık hiç
+  işlenmiyor. Hatalı değer açılışta hata verir.
 
 ### G6 — Token iptal edilemiyor, refresh token yok
 Token 7 gün geçerli, sunucu tarafı iptal mekanizması yok. `IsSubscribed`
@@ -686,5 +700,5 @@ destek yok (PWA ayrı bir iş).
 21. Gerçek ödeme entegrasyonu (G4) — ✅ açık kapatıldı + altyapı; sağlayıcılar hesap bilgisi bekliyor
 22. Eşleştirmeyi arka plan işine taşı (M7)
 23. `SuggestedMovieIds` tablosuna normalizasyon (M8)
-24. Rate limiting'i tüm API'ye yay (G5)
+24. Rate limiting'i tüm API'ye yay (G5) — ✅
 25. Gizlilik ayarları (G12) — ✅

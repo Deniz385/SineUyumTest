@@ -41,6 +41,9 @@ services:
       # Push bildirimi (FCM). Boşsa push kapalı; uygulama normal çalışır.
       FCM_SERVICE_ACCOUNT_JSON: ${FCM_SERVICE_ACCOUNT_JSON:-}
       Cors__AllowedOrigins__0: ${WEB_ORIGIN:-http://localhost:5173}
+      # API bir ters vekil arkasındaysa vekilin IP/CIDR'ı (IP başına istek
+      # sınırları gerçek istemciyi görsün). Boşsa X-Forwarded-For yok sayılır.
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       # PostgreSQL sağlayıcısı ve bağlantısı (api içinden db servis adıyla).
       Database__Provider: Postgres

@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
 using SineUyum.Api.Hubs;
 using SineUyum.Api.Models;
+using SineUyum.Api.RateLimiting;
 using SineUyum.Api.Services;
 using System.Security.Claims;
 
@@ -63,6 +65,8 @@ namespace SineUyum.Api.Controllers
             };
 
         [HttpPost]
+        // Her mesaj alıcıya bildirim + push üretir; spam'e karşı sıkı sınır.
+        [EnableRateLimiting(RateLimitPolicies.SocialWrite)]
         public async Task<ActionResult<MessageThreadItemDto>> CreateMessage(CreateMessageDto createMessageDto)
         {
             var senderId = User.FindFirstValue(ClaimTypes.NameIdentifier);

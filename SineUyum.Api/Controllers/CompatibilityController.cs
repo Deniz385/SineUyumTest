@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using SineUyum.Api.Dtos;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
+using SineUyum.Api.RateLimiting;
 using SineUyum.Api.Services;
 using System.Security.Claims;
 using System.Text.Json;
@@ -77,6 +79,7 @@ namespace SineUyum.Api.Controllers
         }
 
         [HttpGet("{targetUserId}/recommendations")]
+        [EnableRateLimiting(RateLimitPolicies.Tmdb)]
         public async Task<IActionResult> GetJointRecommendations(string targetUserId)
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);

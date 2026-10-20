@@ -184,6 +184,16 @@ Gizlilik, mobil: Ayarlar > Gizlilik; API: `GET/PUT /api/v1/account/privacy`):
 yönlüdür: taraflar birbirinin profilini göremez, mesajlaşamaz, takip edemez,
 aramada ve etkinlik gruplarında bir araya gelmez.
 
+## İstek sınırları
+
+Her isteğe kullanıcı (giriş yapılmamışsa IP) başına dakikada 300 istek
+sınırı uygulanır; film/TMDb uçları 60, mesaj+takip 30, giriş/kayıt IP başına
+10. Aşılınca `429` + `Retry-After` döner. Değerler `RateLimit__GlobalPermitLimit`,
+`RateLimit__TmdbPermitLimit`, `RateLimit__SocialWritePermitLimit`,
+`RateLimit__AuthPermitLimit`, `RateLimit__UploadPermitLimit` ile değişir.
+API bir ters vekil arkasındaysa `TRUSTED_PROXIES` (ör. `172.18.0.0/16`)
+verilmelidir; aksi halde IP başına sınırlar tüm kullanıcıları birlikte keser.
+
 ## Testler ve CI
 
 Her PR'da `.github/workflows/ci.yml` üç işi paralel çalıştırır:

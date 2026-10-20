@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
@@ -12,7 +11,7 @@ using SineUyum.Api.Services;
 using SineUyum.Api.Services.Media;
 using SineUyum.Api.Services.Push;
 using System.Text;
-using System.Threading.RateLimiting;
+using SineUyum.Api.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -206,42 +205,11 @@ else
 }
 
 // --- RATE LIMITING ---
-// Giriş/kayıt/yenileme uçlarına brute force koruması. Dakikadaki istek sınırı
-// konfigürasyondan okunur (varsayılan 10); integration testleri tek IP'den çok
-// sayıda istek attığı için orada yüksek bir değere çekilir.
-var authPermitLimit = builder.Configuration.GetValue("RateLimit:AuthPermitLimit", 10);
-var uploadPermitLimit = builder.Configuration.GetValue("RateLimit:UploadPermitLimit", 10);
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(
-        partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-        factory: _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = authPermitLimit,
-            Window = TimeSpan.FromMinutes(1)
-        }));
-
-    // Ödeme doğrulama: sağlayıcıya dış çağrı yapar; kullanıcı başına sınırlı.
-    options.AddPolicy("payment", context => RateLimitPartition.GetFixedWindowLimiter(
-        partitionKey: context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-            ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-        factory: _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = uploadPermitLimit,
-            Window = TimeSpan.FromMinutes(1)
-        }));
-
-    // Fotoğraf yükleme: resim çözmek CPU/bellek ister; kullanıcı başına sınırlı.
-    options.AddPolicy("upload", context => RateLimitPartition.GetFixedWindowLimiter(
-        partitionKey: context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-            ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-        factory: _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = uploadPermitLimit,
-            Window = TimeSpan.FromMinutes(1)
-        }));
-});
+// Her isteğe genel bir sınır (kullanıcı ya da IP başına) ve pahalı/kötüye
+// kullanılabilir uçlara ayrıca sıkı politikalar. Ayrıntı: RateLimitingSetup.
+builder.Services.AddSineUyumRateLimiting(builder.Configuration);
+// Ters vekil arkasında gerçek istemci IP'si (yalnızca TRUSTED_PROXIES'ten).
+builder.Services.AddTrustedProxies();
 
 // --- GLOBAL HATA YÖNETİMI ---
 // Yakalanmayan istisnalar tek yerde ProblemDetails'e çevrilir; stack trace
@@ -265,6 +233,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+// En başta: log, HTTPS yönlendirmesi ve IP başına sınırlar gerçek istemciyi görsün.
+app.UseForwardedHeaders();
 
 // İstek başına özet log (yöntem, yol, durum kodu, süre). En dışta olmalı ki
 // exception handler hatayı 404/400/500'e çevirdikten SONRA gerçek dönen durum
@@ -328,8 +299,8 @@ app.Use(async (context, next) =>
 app.UseRouting();
 app.UseCors(corsPolicyName);
 app.UseAuthentication();
-// Kimlik doğrulamadan SONRA: "upload" politikası kullanıcıya göre bölümlenir
-// (öncesinde context.User boş olur ve IP'ye düşerdi). "auth" politikası IP
+// Kimlik doğrulamadan SONRA: sınırlar kullanıcıya göre bölümlenir (öncesinde
+// context.User boş olur ve herkes IP'ye düşerdi). "auth" politikası IP
 // tabanlı olduğu için etkilenmez.
 app.UseRateLimiter();
 app.UseAuthorization();

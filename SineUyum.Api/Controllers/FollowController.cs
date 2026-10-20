@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using SineUyum.Api.Dtos;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
 using SineUyum.Api.Exceptions;
 using SineUyum.Api.Models;
+using SineUyum.Api.RateLimiting;
 using SineUyum.Api.Services;
 using System.Security.Claims;
 
@@ -27,6 +29,8 @@ namespace SineUyum.Api.Controllers
         }
 
         [HttpPost("{userIdToFollow}")]
+        // Takip bildirim üretir; takip/bırak döngüsüyle spam'e karşı sıkı sınır.
+        [EnableRateLimiting(RateLimitPolicies.SocialWrite)]
         public async Task<ActionResult<StatusMessageDto>> Follow(string userIdToFollow)
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);

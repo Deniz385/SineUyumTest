@@ -1,13 +1,17 @@
 // SineUyum.Api/Controllers/MoviesController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Caching.Memory;
+using SineUyum.Api.RateLimiting;
 
 namespace SineUyum.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
+    // Her uç TMDb'ye gidebilir (önbellek ıskası); kotayı korumak için sıkı sınır.
+    [EnableRateLimiting(RateLimitPolicies.Tmdb)]
     public class MoviesController : ControllerBase
     {
         private readonly IHttpClientFactory _httpClientFactory;

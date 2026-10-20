@@ -1,7 +1,10 @@
 
 // 1. Outlet'i react-router-dom'dan import ediyoruz
-import { Outlet } from 'react-router-dom';
+import { Suspense } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
+import { Box, CircularProgress } from '@mui/material';
 import { Navbar } from './Navbar';
+import { ErrorBoundary } from './ErrorBoundary';
 
 const layoutStyle = {
   display: 'flex',
@@ -17,14 +20,25 @@ const mainStyle = {
   justifyContent: 'center',
 };
 
+export const PageLoader = () => (
+  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 6 }}>
+    <CircularProgress aria-label="Yükleniyor" />
+  </Box>
+);
+
 export const Layout = () => {
+  const location = useLocation();
   return (
     <div style={layoutStyle}>
       <Navbar />
       <main style={mainStyle}>
-        {/* 2. BU SATIR ÇOK ÖNEMLİ */}
-        {/* App.jsx'teki çocuk rotalar (HomePage vb.) buraya render edilecek */}
-        <Outlet />
+        {/* App.jsx'teki çocuk rotalar buraya çizilir. Sayfa hatası yalnızca bu
+            alanı etkiler (gezinti çubuğu kalır); başka sayfaya geçince sıfırlanır. */}
+        <ErrorBoundary resetKey={location.pathname}>
+          <Suspense fallback={<PageLoader />}>
+            <Outlet />
+          </Suspense>
+        </ErrorBoundary>
       </main>
     </div>
   );

@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import * as signalR from '@microsoft/signalr';
 import { useAuth } from './AuthContext';
 import api, { API_URL } from '../api/axiosConfig';
 import { useSnackbar } from './SnackbarProvider';
@@ -50,44 +49,53 @@ export const NotificationProvider = ({ children }) => {
     useEffect(() => {
         if (!user) return undefined;
 
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl(`${API_URL}/notificationHub`, {
-                accessTokenFactory: () => localStorage.getItem('token')
-            })
-            .withAutomaticReconnect()
-            .build();
+        let cancelled = false;
+        let connection = null;
 
         // Dinleyiciler start'tan ÖNCE kaydedilir; aksi halde bağlantı kurulduğu
         // an gelen olaylar kaybolurdu.
-        connection.on('ReceiveNotification', (notification) => {
-            const active = activeConversation.current;
-            if (active && notification.relatedUrl === `/messages/${active}`) {
-                setNotifications(prev => [{ ...notification, isRead: true }, ...prev]);
-                api.post(`/api/v1/notification/${notification.id}/mark-as-read`).catch(() => {});
-                return;
-            }
-            showSnackbar(notification.message, 'info');
-            setNotifications(prev => [notification, ...prev]);
-        });
+        const subscribe = (hub) => {
+            hub.on('ReceiveNotification', (notification) => {
+                const active = activeConversation.current;
+                if (active && notification.relatedUrl === `/messages/${active}`) {
+                    setNotifications(prev => [{ ...notification, isRead: true }, ...prev]);
+                    api.post(`/api/v1/notification/${notification.id}/mark-as-read`).catch(() => {});
+                    return;
+                }
+                showSnackbar(notification.message, 'info');
+                setNotifications(prev => [notification, ...prev]);
+            });
 
-        connection.on('ReceiveMessage', (message) => {
-            messageListeners.current.forEach(listener => listener(message));
-        });
+            hub.on('ReceiveMessage', (message) => {
+                messageListeners.current.forEach(listener => listener(message));
+            });
 
-        connection.on('MessagesRead', (receipt) => {
-            readListeners.current.forEach(listener => listener(receipt));
-        });
+            hub.on('MessagesRead', (receipt) => {
+                readListeners.current.forEach(listener => listener(receipt));
+            });
 
-        // Bağlantı koptuğu sürede gelenler kaçmış olabilir: yeniden kurulunca
-        // bildirimler ve açık ekranlar (sohbet) sunucudan tazelenir.
-        connection.onreconnected(() => {
-            fetchNotifications();
-            reconnectListeners.current.forEach(listener => listener());
-        });
+            // Bağlantı koptuğu sürede gelenler kaçmış olabilir: yeniden kurulunca
+            // bildirimler ve açık ekranlar (sohbet) sunucudan tazelenir.
+            hub.onreconnected(() => {
+                fetchNotifications();
+                reconnectListeners.current.forEach(listener => listener());
+            });
+        };
 
-        let cancelled = false;
-        connection.start()
-            .then(() => { if (!cancelled) fetchNotifications(); })
+        // SignalR kütüphanesi yalnızca giriş yapılınca yüklenir (M13); giriş
+        // ekranının paketine girmez.
+        import('@microsoft/signalr')
+            .then((signalR) => {
+                if (cancelled) return;
+                connection = new signalR.HubConnectionBuilder()
+                    .withUrl(`${API_URL}/notificationHub`, {
+                        accessTokenFactory: () => localStorage.getItem('token')
+                    })
+                    .withAutomaticReconnect()
+                    .build();
+                subscribe(connection);
+                return connection.start().then(() => { if (!cancelled) fetchNotifications(); });
+            })
             .catch(e => { if (!cancelled) console.error('SignalR bağlantı hatası: ', e); });
 
         // Her durumda durdurulur. Önceden yalnızca "Connected" iken durduruluyordu:
@@ -95,7 +103,7 @@ export const NotificationProvider = ({ children }) => {
         // eski bağlantı yaşamaya devam ediyor ve her olay iki kez geliyordu.
         return () => {
             cancelled = true;
-            connection.stop();
+            connection?.stop();
         };
     }, [user, fetchNotifications, showSnackbar]);
 

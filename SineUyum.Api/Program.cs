@@ -15,6 +15,9 @@ using SineUyum.Api.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// "Server: Kestrel" başlığı sunucu yazılımını açık ediyordu (G9).
+builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
+
 // --- LOGLAMA (Serilog) ---
 // Yapılandırma appsettings "Serilog" bölümünden okunur; yoksa makul bir
 // varsayılana düşülür. İstek logları aşağıda UseSerilogRequestLogging ile.
@@ -240,6 +243,9 @@ var app = builder.Build();
 
 // En başta: log, HTTPS yönlendirmesi ve IP başına sınırlar gerçek istemciyi görsün.
 app.UseForwardedHeaders();
+
+// Güvenlik başlıkları her yanıta (hata ve 429 dahil); bu yüzden en dışta.
+app.UseSecurityHeaders();
 
 // İstek başına özet log (yöntem, yol, durum kodu, süre). En dışta olmalı ki
 // exception handler hatayı 404/400/500'e çevirdikten SONRA gerçek dönen durum

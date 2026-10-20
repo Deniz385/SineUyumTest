@@ -171,9 +171,18 @@ sahte başlıkla kaydedip diğer kullanıcıların gördüğü veriyi bozabilird
 çalışmaz; farklı ortamlara deploy edilemez.
 **Yapılacak:** konfigürasyona taşındı (bu çalışmada).
 
-### G9 — HTTPS zorlaması ve güvenlik başlıkları yok
+### G9 — HTTPS zorlaması ve güvenlik başlıkları yok — ✅ kapatıldı
 `UseHttpsRedirection`, HSTS, güvenlik başlıkları (`X-Content-Type-Options`,
 `Referrer-Policy` vb.) yok.
+
+**Yapılan:** HTTPS yönlendirmesi ve HSTS üretimde zaten açıktı. Her yanıta
+(hata ve 429 dahil) `X-Content-Type-Options: nosniff`, `X-Frame-Options:
+DENY`, `Referrer-Policy: no-referrer`, `Permissions-Policy`,
+`Cross-Origin-Opener-Policy` ve API'nin yalnızca JSON döndürdüğüne uygun katı
+bir CSP (`default-src 'none'`) eklendi; geliştirmedeki Swagger arayüzü CSP'den
+muaf. Sunucu yazılımını açık eden `Server: Kestrel` başlığı kaldırıldı.
+Üretim imajında doğrulandı. Web uygulamasının kendi başlıkları onu sunan
+sunucuya (nginx vb.) aittir.
 
 ### G10 — Hata detayları dışa sızıyordu — ✅ merkezi hata yönetimi eklendi
 `AdminController.TriggerMatching` `ex.Message`'ı doğrudan istemciye döndürüyor,
@@ -478,7 +487,7 @@ sayfalaması için yukarı kaydırınca eski mesajları yükleme.
 - ✅ CI (GitHub Actions): derleme + test + lint
 - ✅ Kök README (kurulum/çalıştırma, Docker dahil)
 
-### M13 — Frontend eksikleri
+### M13 — Frontend eksikleri — ✅ büyük ölçüde kapatıldı
 - `.env.example` yok; `axiosConfig.js` `localhost:5074`'e sessizce düşüyor
 - Error boundary yok → tek render hatası beyaz ekrana düşürüyor
 - `NotificationContext` içinde SignalR bağlantısı `showSnackbar` bağımlılığıyla
@@ -489,6 +498,20 @@ sayfalaması için yukarı kaydırınca eski mesajları yükleme.
 - `react-refresh/only-export-components` kuralı uyarıya çekildi: context
   dosyaları hem provider'ı hem kendi hook'unu export ediyor (yaygın kalıp,
   yalnızca hot reload'u etkiliyor)
+
+**Yapılan:** `.env.example` ve SignalR temizliği daha önce düzeltilmişti.
+- Hata sınırı: sayfa hatası yalnızca sayfa alanını bir hata kartıyla
+  değiştirir (gezinti çubuğu kalır, başka sayfaya geçince sıfırlanır); en
+  dışta bir sınır daha. Yeni sürümden sonra eksik sayfa parçasında "Uygulama
+  güncellendi, sayfayı yenileyin".
+- Kod bölme: sayfalar ihtiyaç anında yüklenir, SignalR yalnızca giriş
+  sonrası; kütüphaneler ayrı, önbelleklenebilir parçalarda. Giriş paketi
+  733 kB → 22 kB (kütüphaneler: react 220, mui 318, vendor 74 kB; ilk
+  ziyaretten sonra önbellekten).
+- Üretim paketiyle (`vite preview`) gerçek Chromium'da sınandı.
+
+**Kalan:** yükleniyor / boş / hata gösterimlerinin sayfalar arasında
+birleştirilmesi.
 
 ---
 

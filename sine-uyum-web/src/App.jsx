@@ -1,25 +1,32 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage';
-import { HomePage } from './pages/HomePage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 import { AuthProvider } from './context/AuthContext';
 import { CustomThemeProvider } from './context/ThemeContext';
 import { RegisterPage } from './pages/RegisterPage';
-import { ProfilePage } from './pages/ProfilePage';
-import { SearchResultsPage } from './pages/SearchResultsPage';
-import { MovieDetailPage } from './pages/MovieDetailPage';
-import { WatchlistPage } from './pages/WatchlistPage';
-import { WatchlistDetailPage } from './pages/WatchlistDetailPage';
-import { EditProfilePage } from './pages/EditProfilePage';
-import { MessagesPage } from './pages/MessagesPage';
-import { ConversationPage } from './pages/ConversationPage';
-import { MyEventPage } from './pages/MyEventPage';
-import { SubscriptionPage } from './pages/SubscriptionPage';
-import { AdminPage } from './pages/AdminPage';
 import { AdminRoute } from './components/AdminRoute';
 import { SnackbarProvider } from './context/SnackbarProvider';
 import { NotificationProvider } from './context/NotificationContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { PageLoader } from './components/Layout';
+
+// Sayfalar ihtiyaç anında yüklenir (M13): giriş ekranı tüm uygulamayı
+// (yönetici paneli, sohbet, SignalR...) indirmeden açılır.
+const page = (load, name) => lazy(() => load().then((m) => ({ default: m[name] })));
+const HomePage = page(() => import('./pages/HomePage'), 'HomePage');
+const ProfilePage = page(() => import('./pages/ProfilePage'), 'ProfilePage');
+const SearchResultsPage = page(() => import('./pages/SearchResultsPage'), 'SearchResultsPage');
+const MovieDetailPage = page(() => import('./pages/MovieDetailPage'), 'MovieDetailPage');
+const WatchlistPage = page(() => import('./pages/WatchlistPage'), 'WatchlistPage');
+const WatchlistDetailPage = page(() => import('./pages/WatchlistDetailPage'), 'WatchlistDetailPage');
+const EditProfilePage = page(() => import('./pages/EditProfilePage'), 'EditProfilePage');
+const MessagesPage = page(() => import('./pages/MessagesPage'), 'MessagesPage');
+const ConversationPage = page(() => import('./pages/ConversationPage'), 'ConversationPage');
+const MyEventPage = page(() => import('./pages/MyEventPage'), 'MyEventPage');
+const SubscriptionPage = page(() => import('./pages/SubscriptionPage'), 'SubscriptionPage');
+const AdminPage = page(() => import('./pages/AdminPage'), 'AdminPage');
 
 function App() {
   return (
@@ -28,6 +35,9 @@ function App() {
         <AuthProvider>
           <SnackbarProvider>
             <NotificationProvider>
+              {/* Son çare: sağlayıcılar ya da giriş ekranı çökerse beyaz ekran yerine hata kartı. */}
+              <ErrorBoundary>
+              <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* Herkesin erişebileceği rotalar */}
                 <Route path="/login" element={<LoginPage />} />
@@ -56,6 +66,8 @@ function App() {
                   </Route>
                 </Route>
               </Routes>
+              </Suspense>
+              </ErrorBoundary>
             </NotificationProvider>
           </SnackbarProvider>
         </AuthProvider>

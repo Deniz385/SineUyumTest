@@ -13,7 +13,7 @@ class AppConfig {
   );
 
   /// TMDb poster/backdrop adresleri için temel URL.
-  /// Sunucu `/api/app/config` ile bunu ezebilir.
+  /// Sunucu `/api/v1/app/config` ile bunu ezebilir.
   static const String tmdbImageBaseUrl = String.fromEnvironment(
     'TMDB_IMAGE_BASE_URL',
     defaultValue: 'https://image.tmdb.org/t/p/',

@@ -1,4 +1,4 @@
-/// `/api/watchlist` listesindeki özet kayıt.
+/// `/api/v1/watchlist` listesindeki özet kayıt.
 class WatchlistSummary {
   const WatchlistSummary({
     required this.id,
@@ -22,7 +22,7 @@ class WatchlistSummary {
   }
 }
 
-/// `/api/watchlist/{listId}` ve `/api/watchlist/public/{listId}` yanıtı.
+/// `/api/v1/watchlist/{listId}` ve `/api/v1/watchlist/public/{listId}` yanıtı.
 class WatchlistDetail {
   const WatchlistDetail({
     required this.id,

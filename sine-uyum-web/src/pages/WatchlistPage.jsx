@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import api from '../api/axiosConfig';
+import api from '../api/v1/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, Grid, Card, CardContent, Button, Modal, TextField } from '@mui/material';
 import { Link } from 'react-router-dom';
@@ -30,7 +30,7 @@ export const WatchlistPage = () => {
         if (!user) return;
         setIsLoading(true);
         try {
-            const response = await api.get(`/api/watchlist`);
+            const response = await api.get(`/api/v1/watchlist`);
             setWatchlists(response.data); // $values kontrolü kaldırıldı
         } catch {
             setError('Listeler yüklenirken bir hata oluştu.');
@@ -48,7 +48,7 @@ export const WatchlistPage = () => {
         if (!newListName.trim()) return;
 
         try {
-            await api.post(`/api/watchlist`, { name: newListName, description: newListDesc });
+            await api.post(`/api/v1/watchlist`, { name: newListName, description: newListDesc });
             setOpen(false);
             setNewListName('');
             setNewListDesc('');

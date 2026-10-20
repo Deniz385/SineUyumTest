@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/axiosConfig';
+import api from '../api/v1/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, Card, CardMedia, CircularProgress } from '@mui/material';
 import { useDraggableScroll } from '../hooks/useDraggableScroll';
@@ -45,8 +45,8 @@ export const HomePage = () => {
             setLoading(true);
             try {
                 const [popularRes, nowPlayingRes] = await Promise.all([
-                    api.get('/api/movies/popular'),
-                    api.get('/api/movies/now_playing')
+                    api.get('/api/v1/movies/popular'),
+                    api.get('/api/v1/movies/now_playing')
                 ]);
                 setPopularMovies(popularRes.data.results || []);
                 setNowPlayingMovies(nowPlayingRes.data.results || []);

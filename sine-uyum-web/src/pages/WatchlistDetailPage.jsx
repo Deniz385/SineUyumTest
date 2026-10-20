@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import api from '../api/axiosConfig';
+import api from '../api/v1/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, Grid, IconButton, Button, Modal, TextField } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -42,7 +42,7 @@ export const WatchlistDetailPage = () => {
         if (!user) return;
         setIsLoading(true);
         try {
-            const response = await api.get(`/api/watchlist/public/${listId}`);
+            const response = await api.get(`/api/v1/watchlist/public/${listId}`);
             const listData = response.data;
             setWatchlist(listData);
             setEditedListName(listData.name);
@@ -77,7 +77,7 @@ export const WatchlistDetailPage = () => {
 
     const performRemoveMovie = async (movieId) => {
         try {
-            await api.delete(`/api/watchlist/${listId}/movies/${movieId}`);
+            await api.delete(`/api/v1/watchlist/${listId}/movies/${movieId}`);
             showSnackbar('Film listeden başarıyla kaldırıldı!', 'success');
             fetchWatchlistDetails();
         } catch {
@@ -100,7 +100,7 @@ export const WatchlistDetailPage = () => {
     // --- ANA DÜZELTME BURADA ---
     const performDeleteList = async () => {
         try {
-            await api.delete(`/api/watchlist/${listId}`);
+            await api.delete(`/api/v1/watchlist/${listId}`);
             showSnackbar('Liste başarıyla silindi. Yönlendiriliyorsunuz...', 'success');
             // Yönlendirmeyi küçük bir gecikmeyle yaparak "aria-hidden" uyarısını önlüyoruz.
             setTimeout(() => navigate('/watchlist'), 1500);
@@ -114,7 +114,7 @@ export const WatchlistDetailPage = () => {
         e.preventDefault();
         if (!editedListName.trim()) return;
         try {
-            await api.put(`/api/watchlist/${listId}`, 
+            await api.put(`/api/v1/watchlist/${listId}`, 
                 { name: editedListName, description: editedListDesc }
             );
             showSnackbar('Liste başarıyla güncellendi!', 'success');

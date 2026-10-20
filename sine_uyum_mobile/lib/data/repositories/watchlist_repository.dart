@@ -8,7 +8,7 @@ class WatchlistRepository {
   final ApiClient _client;
 
   Future<List<WatchlistSummary>> myLists() async {
-    final data = await _client.get<List<dynamic>>('/api/watchlist');
+    final data = await _client.get<List<dynamic>>('/api/v1/watchlist');
     return data
         .map(
           (item) =>
@@ -19,21 +19,21 @@ class WatchlistRepository {
 
   Future<WatchlistDetail> detail(int listId) async {
     final data = await _client.get<Map<String, dynamic>>(
-      '/api/watchlist/$listId',
+      '/api/v1/watchlist/$listId',
     );
     return WatchlistDetail.fromJson(data);
   }
 
   Future<WatchlistDetail> publicDetail(int listId) async {
     final data = await _client.get<Map<String, dynamic>>(
-      '/api/watchlist/public/$listId',
+      '/api/v1/watchlist/public/$listId',
     );
     return WatchlistDetail.fromJson(data);
   }
 
   Future<void> create({required String name, String? description}) async {
     await _client.post<Map<String, dynamic>>(
-      '/api/watchlist',
+      '/api/v1/watchlist',
       body: {'name': name, 'description': description},
     );
   }
@@ -44,18 +44,18 @@ class WatchlistRepository {
     String? description,
   }) async {
     await _client.put<Map<String, dynamic>>(
-      '/api/watchlist/$listId',
+      '/api/v1/watchlist/$listId',
       body: {'name': name, 'description': description},
     );
   }
 
   Future<void> remove(int listId) async {
-    await _client.delete<Map<String, dynamic>>('/api/watchlist/$listId');
+    await _client.delete<Map<String, dynamic>>('/api/v1/watchlist/$listId');
   }
 
   Future<void> addMovie(int listId, Movie movie) async {
     await _client.post<Map<String, dynamic>>(
-      '/api/watchlist/$listId/movies',
+      '/api/v1/watchlist/$listId/movies',
       body: {
         'movieId': movie.id,
         'title': movie.title,
@@ -66,7 +66,7 @@ class WatchlistRepository {
 
   Future<void> removeMovie(int listId, int movieId) async {
     await _client.delete<Map<String, dynamic>>(
-      '/api/watchlist/$listId/movies/$movieId',
+      '/api/v1/watchlist/$listId/movies/$movieId',
     );
   }
 }

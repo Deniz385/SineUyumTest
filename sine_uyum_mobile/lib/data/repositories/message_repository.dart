@@ -7,7 +7,7 @@ class MessageRepository {
   final ApiClient _client;
 
   Future<List<Conversation>> conversations() async {
-    final data = await _client.get<List<dynamic>>('/api/messages');
+    final data = await _client.get<List<dynamic>>('/api/v1/messages');
     return data
         .map(
           (item) =>
@@ -22,7 +22,7 @@ class MessageRepository {
     int pageSize = 100,
   }) async {
     final data = await _client.get<List<dynamic>>(
-      '/api/messages/thread/$otherUserId',
+      '/api/v1/messages/thread/$otherUserId',
       query: {'page': page, 'pageSize': pageSize},
     );
     return data
@@ -39,7 +39,7 @@ class MessageRepository {
     int? watchlistId,
   }) async {
     await _client.post<Map<String, dynamic>>(
-      '/api/messages',
+      '/api/v1/messages',
       body: {
         'recipientId': recipientId,
         'content': content,
@@ -51,7 +51,7 @@ class MessageRepository {
 
   Future<void> markThreadAsRead(String otherUserId) async {
     await _client.post<Map<String, dynamic>>(
-      '/api/messages/thread/$otherUserId/mark-as-read',
+      '/api/v1/messages/thread/$otherUserId/mark-as-read',
     );
   }
 }

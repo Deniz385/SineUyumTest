@@ -326,7 +326,7 @@ boşluklar:
 | B6 | Mesaj sayfalama | Mobil veri kullanımı | ✅ `?page`/`pageSize` ile eklendi (varsayılan 100) |
 | B7 | Push notification (FCM/APNs) | SignalR mobilde arka planda çalışmaz; uygulama kapalıyken bildirim gitmez | ⬜ Yapılacak |
 | B8 | Dosya yükleme endpoint'i | Profil fotoğrafı şu an sadece URL; mobilde galeriden seçim için upload gerekir | ⬜ Yapılacak |
-| B9 | API versiyonlama (`/api/v1/...`) | Store'daki eski sürümler API değişince kırılır | ⬜ Yapılacak |
+| B9 | API versiyonlama (`/api/v1/...`) | Store'daki eski sürümler API değişince kırılır | ✅ Eklendi (geriye dönük uyumlu) |
 | B10 | Tüm listelerde sayfalama | Performans | ⬜ Yapılacak (B6 kısmi) |
 
 ### Bu çalışmada ek olarak kapatılanlar
@@ -420,12 +420,21 @@ sonra oturumdan düşerdi.
 7. ✅ API için test projesi — `CompatibilityCalculator` + auth + hata yönetimi (M1)
 
 ### Faz 2 — API olgunlaştırma (2-3 hafta)
-9. Tüm endpoint'ler için response DTO'ları (M3)
-10. Uyumluluk hesabını tek servise çıkar + unit testler (M4, M1)
-11. Sayfalama (M6) ve N+1 sorguların düzeltilmesi (M5)
-12. TMDb cache (M9)
-13. `AddMovie` güvenliği: meta veriyi sunucuda çek (G7)
-14. API versiyonlama (B9)
+9. Tüm endpoint'ler için response DTO'ları (M3) — ⬜ kalan tek madde
+10. Uyumluluk hesabını tek servise çıkar + unit testler (M4, M1) — ✅
+11. Sayfalama (M6) ve N+1 sorguların düzeltilmesi (M5) — ✅
+12. TMDb cache (M9) — ✅
+13. `AddMovie` güvenliği: meta veriyi sunucuda çek (G7) — ✅
+14. API versiyonlama (B9) — ✅
+
+**B9 — API versiyonlama (`/api/v1/...`):** Tüm controller rotaları tek bir
+`ApiV1RouteConvention` ile `api/v1/...` altına alındı (controller başına
+`[Route]` düzenlemesi gerekmedi; sürüm tek yerde). Dağıtılmış eski istemcileri
+kırmamak için sürümsüz `/api/*` istekleri routing'den önce `/api/v1/*`'e
+yönlendiriliyor (geçici deprecation katmanı). Web ve Flutter istemcilerinin
+tüm çağrı noktaları açıkça `/api/v1/...`'e taşındı. SignalR hub'ı
+(`/notificationHub`), `/health` ve swagger etkilenmedi. Test: `ApiVersioningTests`
+(v1 yolu çalışır + sürümsüz yol v1'e yönlenir).
 
 ### Faz 3 — Mobil tamamlama (2-3 hafta)
 15. FCM/APNs push notification (B7)

@@ -1,6 +1,6 @@
 import 'movie.dart';
 
-/// `/api/profile/{userId}` yanıtı.
+/// `/api/v1/profile/{userId}` yanıtı.
 class UserProfile {
   const UserProfile({
     required this.id,
@@ -68,7 +68,7 @@ class ProfileStatistics {
   }
 }
 
-/// `/api/compatibility/{userId}` yanıtı.
+/// `/api/v1/compatibility/{userId}` yanıtı.
 class CompatibilityResult {
   const CompatibilityResult({
     this.compatibilityScore = 0,
@@ -121,7 +121,7 @@ class CommonMovie {
   }
 }
 
-/// `/api/follow/{userId}/status` yanıtı.
+/// `/api/v1/follow/{userId}/status` yanıtı.
 class FollowStatus {
   const FollowStatus({
     this.isFollowing = false,

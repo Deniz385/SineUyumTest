@@ -75,7 +75,7 @@ lib/
 
 1. Giriş/kayıt sonrası `token` + `refreshToken` güvenli depoya yazılır.
 2. Her istekte `Authorization: Bearer <token>` eklenir.
-3. 401 alınırsa `/api/account/refresh` ile yeni token alınır ve **istek
+3. 401 alınırsa `/api/v1/account/refresh` ile yeni token alınır ve **istek
    otomatik tekrarlanır**; kullanıcı bunu görmez.
 4. Eşzamanlı 401'lerde tek bir yenileme isteği atılır (sunucu refresh token
    rotation uyguladığı için ikinci istek geçersiz olurdu).

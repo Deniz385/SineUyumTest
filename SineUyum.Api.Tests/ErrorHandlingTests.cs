@@ -18,7 +18,7 @@ public class ErrorHandlingTests : IClassFixture<TestWebAppFactory>
 
     private async Task<string> AdminTokenAsync(HttpClient client)
     {
-        var login = await client.PostAsJsonAsync("/api/account/login", new
+        var login = await client.PostAsJsonAsync("/api/v1/account/login", new
         {
             username = TestWebAppFactory.AdminUserName,
             password = TestWebAppFactory.AdminPassword
@@ -35,7 +35,7 @@ public class ErrorHandlingTests : IClassFixture<TestWebAppFactory>
         var token = await AdminTokenAsync(client);
 
         var request = new HttpRequestMessage(
-            HttpMethod.Post, "/api/admin/events/999999/create-groups");
+            HttpMethod.Post, "/api/v1/admin/events/999999/create-groups");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         var response = await client.SendAsync(request);
@@ -61,7 +61,7 @@ public class ErrorHandlingTests : IClassFixture<TestWebAppFactory>
     {
         // Normal kullanıcı admin ucunu çağıramaz; hata yönetimi bunu da bozmamalı.
         var client = _factory.CreateClient();
-        var response = await client.PostAsync("/api/admin/events/1/create-groups", null);
+        var response = await client.PostAsync("/api/v1/admin/events/1/create-groups", null);
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 }

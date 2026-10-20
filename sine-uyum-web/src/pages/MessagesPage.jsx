@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/axiosConfig';
+import api from '../api/v1/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, List, ListItem, ListItemText, ListItemAvatar, Avatar, Divider } from '@mui/material';
 
@@ -14,7 +14,7 @@ export const MessagesPage = () => {
         const fetchConversations = async () => {
             if (!user) return;
             try {
-                const response = await api.get(`/api/messages`);
+                const response = await api.get(`/api/v1/messages`);
                 // DÜZELTME: Gelen verinin içindeki $values dizisini alıyoruz.
                 setConversations(response.data.$values || response.data);
             } catch (err) {

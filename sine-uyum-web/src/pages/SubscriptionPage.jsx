@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, Typography, Button, Paper, List, ListItem, ListItemIcon, ListItemText, CircularProgress } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useAuth } from '../context/AuthContext';
-import api from '../api/axiosConfig';
+import api from '../api/v1/axiosConfig';
 import { useSnackbar } from '../context/SnackbarProvider'; // <-- SNACKBAR KANCASINI İÇE AKTAR
 
 export const SubscriptionPage = () => {
@@ -13,7 +13,7 @@ export const SubscriptionPage = () => {
     const handleSubscribeClick = async () => {
         setIsLoading(true);
         try {
-            const response = await api.post('/api/subscription/activate');
+            const response = await api.post('/api/v1/subscription/activate');
             // Abonelik aktifleştirilince yeni token + refresh token döner.
             loginAction(response.data);
             // --- DEĞİŞİKLİK: alert() yerine showSnackbar() ---

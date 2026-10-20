@@ -1,4 +1,4 @@
-/// `/api/notification` kaydı. SignalR `ReceiveNotification` olayı da
+/// `/api/v1/notification` kaydı. SignalR `ReceiveNotification` olayı da
 /// aynı biçimi gönderir.
 class AppNotification {
   const AppNotification({

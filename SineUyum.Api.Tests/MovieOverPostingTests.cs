@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace SineUyum.Api.Tests;
 
-// G7: /api/ratings/addmovie ve /api/ratings istemciden gelen başlık/poster'a
+// G7: /api/v1/ratings/addmovie ve /api/v1/ratings istemciden gelen başlık/poster'a
 // güvenmemeli; meta veri TMDb'den gelmeli. Sahte handler gerçek TMDb başlığını
 // döndürür; istemci kasten yanlış başlık gönderir.
 public class MovieOverPostingTests : IClassFixture<MovieOverPostingTests.TmdbStubFactory>
@@ -57,9 +57,9 @@ public class MovieOverPostingTests : IClassFixture<MovieOverPostingTests.TmdbStu
     private async Task<string> UserTokenAsync(HttpClient client)
     {
         var username = "op_" + Guid.NewGuid().ToString("N")[..8];
-        await client.PostAsJsonAsync("/api/account/register",
+        await client.PostAsJsonAsync("/api/v1/account/register",
             new { username, email = $"{username}@test.com", password = "Sifre123" });
-        var login = await client.PostAsJsonAsync("/api/account/login",
+        var login = await client.PostAsJsonAsync("/api/v1/account/login",
             new { username, password = "Sifre123" });
         login.EnsureSuccessStatusCode();
         using var doc = JsonDocument.Parse(await login.Content.ReadAsStringAsync());
@@ -73,7 +73,7 @@ public class MovieOverPostingTests : IClassFixture<MovieOverPostingTests.TmdbStu
         var token = await UserTokenAsync(client);
 
         // İstemci kasten yanlış başlık gönderiyor.
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/ratings/addmovie")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ratings/addmovie")
         {
             Content = JsonContent.Create(new
             {
@@ -102,7 +102,7 @@ public class MovieOverPostingTests : IClassFixture<MovieOverPostingTests.TmdbStu
         var token = await UserTokenAsync(client);
 
         // addmovie çağrısı olmadan doğrudan puan ver — film TMDb'den çekilmeli.
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/ratings")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ratings")
         {
             Content = JsonContent.Create(new { movieId = 550, rating = 9 }),
         };

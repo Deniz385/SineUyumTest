@@ -11,7 +11,7 @@ class AuthRepository {
     required String password,
   }) async {
     final data = await _client.post<Map<String, dynamic>>(
-      '/api/account/login',
+      '/api/v1/account/login',
       body: {'username': username, 'password': password},
     );
     return AuthResult.fromJson(data);
@@ -23,19 +23,19 @@ class AuthRepository {
     required String password,
   }) async {
     await _client.post<Map<String, dynamic>>(
-      '/api/account/register',
+      '/api/v1/account/register',
       body: {'username': username, 'email': email, 'password': password},
     );
   }
 
   Future<AppUser> me() async {
-    final data = await _client.get<Map<String, dynamic>>('/api/account/me');
+    final data = await _client.get<Map<String, dynamic>>('/api/v1/account/me');
     return AppUser.fromJson(data);
   }
 
   Future<void> logout(String refreshToken) async {
     await _client.post<Map<String, dynamic>>(
-      '/api/account/logout',
+      '/api/v1/account/logout',
       body: {'refreshToken': refreshToken},
     );
   }
@@ -44,7 +44,7 @@ class AuthRepository {
   /// içinde taşındığı için).
   Future<AuthResult> activateSubscription() async {
     final data = await _client.post<Map<String, dynamic>>(
-      '/api/subscription/activate',
+      '/api/v1/subscription/activate',
     );
     return AuthResult.fromJson(data);
   }

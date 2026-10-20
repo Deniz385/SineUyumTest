@@ -124,12 +124,12 @@ Ayrıntılar: [`sine_uyum_mobile/README.md`](sine_uyum_mobile/README.md)
 
 ## Kimlik doğrulama akışı
 
-1. `POST /api/account/login` → `{ token, refreshToken, expiresAt, user }`
+1. `POST /api/v1/account/login` → `{ token, refreshToken, expiresAt, user }`
 2. `token` kısa ömürlüdür (varsayılan 60 dk) ve `Authorization: Bearer` ile gönderilir.
-3. 401 alındığında istemci `POST /api/account/refresh` ile yeni token alır ve
+3. 401 alındığında istemci `POST /api/v1/account/refresh` ile yeni token alır ve
    isteği tekrarlar. Her yenilemede refresh token da değişir (rotation);
    eski refresh token tekrar kullanılamaz.
-4. `POST /api/account/logout` refresh token'ı sunucu tarafında iptal eder.
+4. `POST /api/v1/account/logout` refresh token'ı sunucu tarafında iptal eder.
 
 Web ve mobil istemcilerin ikisi de bu akışı uygular.
 
@@ -137,12 +137,12 @@ Web ve mobil istemcilerin ikisi de bu akışı uygular.
 
 ```bash
 # 1) Giriş yap, token'ı al
-TOKEN=$(curl -s -X POST "$API/api/account/login" \
+TOKEN=$(curl -s -X POST "$API/api/v1/account/login" \
   -H 'Content-Type: application/json' \
   -d '{"username":"<kullanici>","password":"<mevcut-parola>"}' | jq -r .token)
 
 # 2) Parolayı değiştir
-curl -s -X POST "$API/api/account/change-password" \
+curl -s -X POST "$API/api/v1/account/change-password" \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"currentPassword":"<mevcut-parola>","newPassword":"<yeni-parola>"}'

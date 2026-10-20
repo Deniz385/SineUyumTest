@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import api from '../api/axiosConfig';
+import api from '../api/v1/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, Grid, Card, CardContent, Avatar, Button, Chip } from '@mui/material';
 
@@ -64,7 +64,7 @@ export const SearchResultsPage = () => {
             setUsers([]);
 
             try {
-                const response = await api.get(`/api/account/search`, {
+                const response = await api.get(`/api/v1/account/search`, {
                     params: { query }
                 });
                 setUsers(response.data.$values || response.data);

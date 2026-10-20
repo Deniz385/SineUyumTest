@@ -32,11 +32,11 @@ public class AuthFlowTests : IClassFixture<TestWebAppFactory>
 
     private async Task<AuthResponse> RegisterAndLoginAsync(HttpClient client, string username, string password)
     {
-        var reg = await client.PostAsJsonAsync("/api/account/register",
+        var reg = await client.PostAsJsonAsync("/api/v1/account/register",
             new { username, email = $"{username}@test.com", password });
         reg.EnsureSuccessStatusCode();
 
-        var login = await client.PostAsJsonAsync("/api/account/login",
+        var login = await client.PostAsJsonAsync("/api/v1/account/login",
             new { username, password });
         login.EnsureSuccessStatusCode();
         return await ReadAsync<AuthResponse>(login);
@@ -68,7 +68,7 @@ public class AuthFlowTests : IClassFixture<TestWebAppFactory>
         var username = UniqueName();
         await RegisterAndLoginAsync(client, username, "Sifre123");
 
-        var response = await client.PostAsJsonAsync("/api/account/login",
+        var response = await client.PostAsJsonAsync("/api/v1/account/login",
             new { username, password = "YanlisParola9" });
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -81,7 +81,7 @@ public class AuthFlowTests : IClassFixture<TestWebAppFactory>
         var username = UniqueName();
         var auth = await RegisterAndLoginAsync(client, username, "Sifre123");
 
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/account/me");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/account/me");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", auth.Token);
         var response = await client.SendAsync(request);
 
@@ -94,7 +94,7 @@ public class AuthFlowTests : IClassFixture<TestWebAppFactory>
     public async Task Me_TokensizIstek_401()
     {
         var client = _factory.CreateClient();
-        var response = await client.GetAsync("/api/account/me");
+        var response = await client.GetAsync("/api/v1/account/me");
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
@@ -104,14 +104,14 @@ public class AuthFlowTests : IClassFixture<TestWebAppFactory>
         var client = _factory.CreateClient();
         var auth = await RegisterAndLoginAsync(client, UniqueName(), "Sifre123");
 
-        var first = await client.PostAsJsonAsync("/api/account/refresh",
+        var first = await client.PostAsJsonAsync("/api/v1/account/refresh",
             new { refreshToken = auth.RefreshToken });
         first.EnsureSuccessStatusCode();
         var refreshed = await ReadAsync<AuthResponse>(first);
         Assert.False(string.IsNullOrEmpty(refreshed.Token));
 
         // Rotation: aynı refresh token ikinci kez kullanılamaz.
-        var replay = await client.PostAsJsonAsync("/api/account/refresh",
+        var replay = await client.PostAsJsonAsync("/api/v1/account/refresh",
             new { refreshToken = auth.RefreshToken });
         Assert.Equal(HttpStatusCode.Unauthorized, replay.StatusCode);
     }
@@ -120,7 +120,7 @@ public class AuthFlowTests : IClassFixture<TestWebAppFactory>
     public async Task Refresh_GecersizToken_401()
     {
         var client = _factory.CreateClient();
-        var response = await client.PostAsJsonAsync("/api/account/refresh",
+        var response = await client.PostAsJsonAsync("/api/v1/account/refresh",
             new { refreshToken = "tamamen-uydurma-token" });
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -132,7 +132,7 @@ public class AuthFlowTests : IClassFixture<TestWebAppFactory>
         var username = UniqueName();
         var auth = await RegisterAndLoginAsync(client, username, "Sifre123");
 
-        var change = new HttpRequestMessage(HttpMethod.Post, "/api/account/change-password")
+        var change = new HttpRequestMessage(HttpMethod.Post, "/api/v1/account/change-password")
         {
             Content = JsonContent.Create(new
             {
@@ -145,12 +145,12 @@ public class AuthFlowTests : IClassFixture<TestWebAppFactory>
         changeResponse.EnsureSuccessStatusCode();
 
         // Eski parola artık çalışmamalı.
-        var eski = await client.PostAsJsonAsync("/api/account/login",
+        var eski = await client.PostAsJsonAsync("/api/v1/account/login",
             new { username, password = "Sifre123" });
         Assert.Equal(HttpStatusCode.Unauthorized, eski.StatusCode);
 
         // Yeni parola çalışmalı.
-        var yeni = await client.PostAsJsonAsync("/api/account/login",
+        var yeni = await client.PostAsJsonAsync("/api/v1/account/login",
             new { username, password = "YeniSifre456" });
         yeni.EnsureSuccessStatusCode();
     }
@@ -162,12 +162,12 @@ public class AuthFlowTests : IClassFixture<TestWebAppFactory>
         var username = UniqueName();
         // İki ayrı "cihaz" girişi.
         var cihaz1 = await RegisterAndLoginAsync(client, username, "Sifre123");
-        var login2 = await client.PostAsJsonAsync("/api/account/login",
+        var login2 = await client.PostAsJsonAsync("/api/v1/account/login",
             new { username, password = "Sifre123" });
         var cihaz2 = await ReadAsync<AuthResponse>(login2);
 
         // Cihaz1 parolayı değiştirir.
-        var change = new HttpRequestMessage(HttpMethod.Post, "/api/account/change-password")
+        var change = new HttpRequestMessage(HttpMethod.Post, "/api/v1/account/change-password")
         {
             Content = JsonContent.Create(new
             {
@@ -179,7 +179,7 @@ public class AuthFlowTests : IClassFixture<TestWebAppFactory>
         (await client.SendAsync(change)).EnsureSuccessStatusCode();
 
         // Cihaz2'nin refresh token'ı iptal edilmiş olmalı.
-        var replay = await client.PostAsJsonAsync("/api/account/refresh",
+        var replay = await client.PostAsJsonAsync("/api/v1/account/refresh",
             new { refreshToken = cihaz2.RefreshToken });
         Assert.Equal(HttpStatusCode.Unauthorized, replay.StatusCode);
     }
@@ -188,7 +188,7 @@ public class AuthFlowTests : IClassFixture<TestWebAppFactory>
     public async Task AdminHesabi_Tohumlanmis_GirisYapabilir()
     {
         var client = _factory.CreateClient();
-        var login = await client.PostAsJsonAsync("/api/account/login",
+        var login = await client.PostAsJsonAsync("/api/v1/account/login",
             new { username = TestWebAppFactory.AdminUserName, password = TestWebAppFactory.AdminPassword });
 
         login.EnsureSuccessStatusCode();

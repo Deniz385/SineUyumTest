@@ -20,9 +20,9 @@ public class ConversationsTests : IClassFixture<TestWebAppFactory>
     private async Task<Auth> RegisterAsync(HttpClient client)
     {
         var username = "conv_" + Guid.NewGuid().ToString("N")[..10];
-        await client.PostAsJsonAsync("/api/account/register",
+        await client.PostAsJsonAsync("/api/v1/account/register",
             new { username, email = $"{username}@test.com", password = "Sifre123" });
-        var login = await client.PostAsJsonAsync("/api/account/login",
+        var login = await client.PostAsJsonAsync("/api/v1/account/login",
             new { username, password = "Sifre123" });
         login.EnsureSuccessStatusCode();
         using var doc = JsonDocument.Parse(await login.Content.ReadAsStringAsync());
@@ -44,7 +44,7 @@ public class ConversationsTests : IClassFixture<TestWebAppFactory>
 
     private async Task SendMessageAsync(HttpClient client, string token, string recipientId, string content)
     {
-        var res = await client.SendAsync(Authed(HttpMethod.Post, "/api/messages", token,
+        var res = await client.SendAsync(Authed(HttpMethod.Post, "/api/v1/messages", token,
             new { recipientId, content }));
         res.EnsureSuccessStatusCode();
     }
@@ -62,7 +62,7 @@ public class ConversationsTests : IClassFixture<TestWebAppFactory>
         await SendMessageAsync(client, me.Token, ali.User.Id, "ali son");
         await SendMessageAsync(client, me.Token, ayse.User.Id, "ayse son");
 
-        var res = await client.SendAsync(Authed(HttpMethod.Get, "/api/messages", me.Token));
+        var res = await client.SendAsync(Authed(HttpMethod.Get, "/api/v1/messages", me.Token));
         res.EnsureSuccessStatusCode();
         var list = JsonSerializer.Deserialize<List<JsonElement>>(
             await res.Content.ReadAsStringAsync(), Json)!;
@@ -90,14 +90,14 @@ public class ConversationsTests : IClassFixture<TestWebAppFactory>
         }
 
         var page1 = await client.SendAsync(
-            Authed(HttpMethod.Get, "/api/messages?page=1&pageSize=2", me.Token));
+            Authed(HttpMethod.Get, "/api/v1/messages?page=1&pageSize=2", me.Token));
         page1.EnsureSuccessStatusCode();
         var list1 = JsonSerializer.Deserialize<List<JsonElement>>(
             await page1.Content.ReadAsStringAsync(), Json)!;
         Assert.Equal(2, list1.Count);
 
         var page2 = await client.SendAsync(
-            Authed(HttpMethod.Get, "/api/messages?page=2&pageSize=2", me.Token));
+            Authed(HttpMethod.Get, "/api/v1/messages?page=2&pageSize=2", me.Token));
         page2.EnsureSuccessStatusCode();
         var list2 = JsonSerializer.Deserialize<List<JsonElement>>(
             await page2.Content.ReadAsStringAsync(), Json)!;

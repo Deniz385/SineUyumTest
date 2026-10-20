@@ -10,14 +10,14 @@ class SocialRepository {
 
   Future<UserProfile> profile(String userId) async {
     final data = await _client.get<Map<String, dynamic>>(
-      '/api/profile/$userId',
+      '/api/v1/profile/$userId',
     );
     return UserProfile.fromJson(data);
   }
 
   Future<void> updateProfile({String? bio, String? profileImageUrl}) async {
     await _client.put<Map<String, dynamic>>(
-      '/api/profile',
+      '/api/v1/profile',
       body: {
         'bio': bio,
         // Boş string `[Url]` doğrulamasını bozduğu için null gönderilir.
@@ -31,7 +31,7 @@ class SocialRepository {
   Future<List<UserSearchResult>> searchUsers(String query) async {
     if (query.trim().isEmpty) return const [];
     final data = await _client.get<List<dynamic>>(
-      '/api/account/search',
+      '/api/v1/account/search',
       query: {'query': query},
     );
     return data
@@ -44,23 +44,23 @@ class SocialRepository {
 
   Future<CompatibilityResult> compatibility(String userId) async {
     final data = await _client.get<Map<String, dynamic>>(
-      '/api/compatibility/$userId',
+      '/api/v1/compatibility/$userId',
     );
     return CompatibilityResult.fromJson(data);
   }
 
   Future<FollowStatus> followStatus(String userId) async {
     final data = await _client.get<Map<String, dynamic>>(
-      '/api/follow/$userId/status',
+      '/api/v1/follow/$userId/status',
     );
     return FollowStatus.fromJson(data);
   }
 
   Future<void> follow(String userId) async {
-    await _client.post<Map<String, dynamic>>('/api/follow/$userId');
+    await _client.post<Map<String, dynamic>>('/api/v1/follow/$userId');
   }
 
   Future<void> unfollow(String userId) async {
-    await _client.delete<Map<String, dynamic>>('/api/follow/$userId');
+    await _client.delete<Map<String, dynamic>>('/api/v1/follow/$userId');
   }
 }

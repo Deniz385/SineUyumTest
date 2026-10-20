@@ -1,6 +1,6 @@
 import 'movie.dart';
 
-/// Kullanıcının etkinlik durumu — `/api/event/my-status`.
+/// Kullanıcının etkinlik durumu — `/api/v1/event/my-status`.
 enum EventStatus {
   /// Gruba atanmış, film oylaması açık.
   matched,

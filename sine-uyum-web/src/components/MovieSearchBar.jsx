@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api/axiosConfig'; // DÜZELTME: axios yerine merkezi api import ediliyor
+import api from '../api/v1/axiosConfig'; // DÜZELTME: axios yerine merkezi api import ediliyor
 import { Autocomplete, TextField, CircularProgress, Box } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 
@@ -23,7 +23,7 @@ export const MovieSearchBar = ({ onMovieSelect }) => {
       if (inputValue) {
         setLoading(true);
         // DÜZELTME: 'api' kullanılıyor ve header kaldırılıyor. Interceptor token'ı ekleyecek.
-        api.get(`/api/movies/search`, {
+        api.get(`/api/v1/movies/search`, {
           params: { query: inputValue }
         }).then(response => {
           const movies = response.data.results || [];

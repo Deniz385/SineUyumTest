@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography, TextField, Button, CircularProgress, Paper, Grid, List, ListItem, ListItemText, Divider, IconButton, Modal } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import api from '../api/axiosConfig';
+import api from '../api/v1/axiosConfig';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
 import { useSnackbar } from '../context/SnackbarProvider'; // <-- SNACKBAR KANCASINI İÇE AKTAR
 
@@ -57,7 +57,7 @@ export const AdminPage = () => {
     const fetchEvents = useCallback(async () => {
         setIsLoading(true);
         try {
-            const response = await api.get('/api/event');
+            const response = await api.get('/api/v1/event');
             setEvents(response.data.$values || response.data);
         } catch {
             showSnackbar('Etkinlikler yüklenemedi.', 'error');
@@ -73,7 +73,7 @@ export const AdminPage = () => {
     const handleCreateEvent = async (formData) => {
         setIsSubmitting(true);
         try {
-            await api.post('/api/event', formData);
+            await api.post('/api/v1/event', formData);
             showSnackbar('Etkinlik başarıyla oluşturuldu!', 'success');
             fetchEvents();
         } catch (error) {
@@ -98,7 +98,7 @@ export const AdminPage = () => {
     const performDelete = async (eventId) => {
         showSnackbar('Etkinlik siliniyor...', 'info');
         try {
-            await api.delete(`/api/event/${eventId}`);
+            await api.delete(`/api/v1/event/${eventId}`);
             showSnackbar('Etkinlik başarıyla silindi.', 'success');
             fetchEvents();
         } catch (error) {
@@ -122,7 +122,7 @@ export const AdminPage = () => {
         setIsSubmitting(true);
         showSnackbar('Eşleştirme işlemi başlatılıyor...', 'info');
         try {
-            const response = await api.post(`/api/admin/events/${eventId}/create-groups`);
+            const response = await api.post(`/api/v1/admin/events/${eventId}/create-groups`);
             showSnackbar(response.data.message, 'success');
         } catch (error) {
             const errorMessage = error.response?.data?.message || 'Eşleştirme sırasında bilinmeyen bir hata oluştu.';
@@ -136,7 +136,7 @@ export const AdminPage = () => {
         if (!editingEvent) return;
         setIsSubmitting(true);
         try {
-            await api.put(`/api/event/${editingEvent.id}`, formData);
+            await api.put(`/api/v1/event/${editingEvent.id}`, formData);
             showSnackbar('Etkinlik başarıyla güncellendi!', 'success');
             setEditingEvent(null);
             fetchEvents();

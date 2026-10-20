@@ -1,4 +1,4 @@
-/// `/api/messages` listesindeki sohbet özeti.
+/// `/api/v1/messages` listesindeki sohbet özeti.
 class Conversation {
   const Conversation({
     required this.otherUserId,
@@ -30,7 +30,7 @@ class Conversation {
   }
 }
 
-/// `/api/messages/thread/{otherUserId}` içindeki tek mesaj.
+/// `/api/v1/messages/thread/{otherUserId}` içindeki tek mesaj.
 /// Mesaj düz metin olabilir, bir film önerisi ya da bir izleme listesi
 /// paylaşımı taşıyabilir.
 class ChatMessage {

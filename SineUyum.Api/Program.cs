@@ -171,7 +171,9 @@ builder.Services.AddProblemDetails();
 builder.Services.AddMemoryCache(options => options.SizeLimit = 2048);
 
 // --- CONTROLLERS & SWAGGER ---
-builder.Services.AddControllers();
+// Tüm API rotaları "api/v1/..." altına alınır (bkz. ApiV1RouteConvention).
+builder.Services.AddControllers(options =>
+    options.Conventions.Add(new SineUyum.Api.Conventions.ApiV1RouteConvention()));
 builder.Services.AddSignalR();
 builder.Services.AddHealthChecks();
 builder.Services.AddEndpointsApiExplorer();
@@ -199,6 +201,23 @@ else
     app.UseHsts();
     app.UseHttpsRedirection();
 }
+
+// --- GERİYE DÖNÜK UYUMLULUK (SÜRÜMSÜZ /api/*) ---
+// Eski istemciler (dağıtılmış web/mobil) sürümsüz "/api/..." çağırır.
+// Rotalar artık "/api/v1/..." altında olduğundan, sürümsüz istekleri
+// routing'den önce v1'e yönlendiririz. Böylece sürümleme eski istemcileri
+// kırmaz; yeni istemciler doğrudan "/api/v1/..." kullanır (geçiş/deprecation).
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path.Value;
+    if (path != null &&
+        path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase) &&
+        !path.StartsWith("/api/v1/", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Request.Path = "/api/v1" + path.Substring("/api".Length);
+    }
+    await next();
+});
 
 // --- MIDDLEWARE SIRASI ÖNEMLİ ---
 app.UseRouting();

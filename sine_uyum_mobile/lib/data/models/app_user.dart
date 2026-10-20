@@ -1,4 +1,4 @@
-/// `/api/account/login`, `/api/account/me` yanıtlarındaki kullanıcı özeti.
+/// `/api/v1/account/login`, `/api/v1/account/me` yanıtlarındaki kullanıcı özeti.
 class AppUser {
   const AppUser({
     required this.id,
@@ -40,7 +40,7 @@ class AppUser {
   }
 }
 
-/// `/api/account/login`, `/refresh` ve `/api/subscription/activate` yanıtı.
+/// `/api/v1/account/login`, `/refresh` ve `/api/v1/subscription/activate` yanıtı.
 class AuthResult {
   const AuthResult({
     required this.token,
@@ -68,7 +68,7 @@ class AuthResult {
   }
 }
 
-/// `/api/account/search` sonucundaki kullanıcı + uyumluluk skoru.
+/// `/api/v1/account/search` sonucundaki kullanıcı + uyumluluk skoru.
 class UserSearchResult {
   const UserSearchResult({
     required this.id,

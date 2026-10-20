@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import api from '../api/axiosConfig';
+import api from '../api/v1/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Button, Box, Typography, Avatar, Grid, Paper } from '@mui/material';
 import MessageIcon from '@mui/icons-material/Message';
@@ -48,9 +48,9 @@ export const ProfilePage = () => {
         setError('');
         try {
             const [profileRes, compatibilityRes, followStatusRes] = await Promise.all([
-                api.get(`/api/profile/${userId}`),
-                isMyProfile ? Promise.resolve(null) : api.get(`/api/compatibility/${userId}`),
-                api.get(`/api/follow/${userId}/status`)
+                api.get(`/api/v1/profile/${userId}`),
+                isMyProfile ? Promise.resolve(null) : api.get(`/api/v1/compatibility/${userId}`),
+                api.get(`/api/v1/follow/${userId}/status`)
             ]);
             
             setProfileData(profileRes.data);
@@ -72,7 +72,7 @@ export const ProfilePage = () => {
     
     const handleFollowToggle = async () => {
         setIsFollowLoading(true);
-        const url = `/api/follow/${userId}`;
+        const url = `/api/v1/follow/${userId}`;
         try {
             if (followStatus.isFollowing) {
                 await api.delete(url);
@@ -92,7 +92,7 @@ export const ProfilePage = () => {
         setIsRecsModalOpen(true);
         setIsRecsLoading(true);
         try {
-            const response = await api.get(`/api/compatibility/${userId}/recommendations`);
+            const response = await api.get(`/api/v1/compatibility/${userId}/recommendations`);
             setRecommendations(response.data);
         } catch {
             setRecommendations([]);
@@ -106,7 +106,7 @@ export const ProfilePage = () => {
         setModalState({ open: true, type, title });
         setIsListLoading(true);
         try {
-            const response = await api.get(`/api/follow/${userId}/${type}`);
+            const response = await api.get(`/api/v1/follow/${userId}/${type}`);
             setListData(response.data);
         } catch (err) {
             console.error(`${title} listesi alınamadı:`, err);

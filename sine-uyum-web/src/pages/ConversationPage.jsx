@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import api from '../api/axiosConfig';
+import api from '../api/v1/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, TextField, IconButton, Modal, Card, CardMedia, List, ListItem, ListItemButton, ListItemText, Divider } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
@@ -67,7 +67,7 @@ export const ConversationPage = () => {
     const fetchThread = useCallback(async () => {
         if (!user) return;
         try {
-            const response = await api.get(`/api/messages/thread/${otherUserId}`);
+            const response = await api.get(`/api/v1/messages/thread/${otherUserId}`);
             // DÜZELTME: Gelen verinin içindeki $values dizisini alıyoruz.
             const messageData = response.data.$values || response.data || [];
             setMessages(messageData);
@@ -79,7 +79,7 @@ export const ConversationPage = () => {
                     { id: firstMessage.senderId, userName: firstMessage.senderUsername }
                 );
             } else {
-                const profileResponse = await api.get(`/api/profile/${otherUserId}`);
+                const profileResponse = await api.get(`/api/v1/profile/${otherUserId}`);
                 setOtherUser(profileResponse.data);
             }
         } catch (err) {
@@ -98,7 +98,7 @@ export const ConversationPage = () => {
     const handleSendMessage = async ({ content, movieId, watchlistId }) => {
         if (!content && !movieId && !watchlistId) return;
         try {
-            await api.post(`/api/messages`, { recipientId: otherUserId, content, movieId, watchlistId });
+            await api.post(`/api/v1/messages`, { recipientId: otherUserId, content, movieId, watchlistId });
             setNewMessage('');
             fetchThread(); 
         } catch (err) {
@@ -109,7 +109,7 @@ export const ConversationPage = () => {
     const handleMovieSelectAndSend = async (movie) => {
         setIsMovieModalOpen(false);
         try {
-            await api.post(`/api/ratings/addmovie`, { id: movie.id, title: movie.title, posterPath: movie.poster_path });
+            await api.post(`/api/v1/ratings/addmovie`, { id: movie.id, title: movie.title, posterPath: movie.poster_path });
         } catch (addMovieError) {
             if (addMovieError.response && addMovieError.response.status !== 400) {
                console.error("Film eklenirken bir hata oluştu:", addMovieError);
@@ -122,7 +122,7 @@ export const ConversationPage = () => {
     const handleOpenWatchlistModal = async () => {
         setIsWatchlistModalOpen(true);
         try {
-            const response = await api.get(`/api/watchlist`);
+            const response = await api.get(`/api/v1/watchlist`);
             // DÜZELTME: Gelen verinin içindeki $values dizisini alıyoruz.
             setUserLists(response.data.$values || response.data || []);
         } catch (err) {

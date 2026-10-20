@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import * as signalR from '@microsoft/signalr';
 import { useAuth } from './AuthContext';
-import api, { API_URL } from '../api/axiosConfig';
+import api, { API_URL } from '../api/v1/axiosConfig';
 import { useSnackbar } from './SnackbarProvider';
 
 const NotificationContext = createContext(null);
@@ -19,7 +19,7 @@ export const NotificationProvider = ({ children }) => {
     const fetchNotifications = useCallback(async () => {
         if (!user) return;
         try {
-            const response = await api.get('/api/notification');
+            const response = await api.get('/api/v1/notification');
             const data = response.data;
             setNotifications(data);
             setUnreadCount(data.filter(n => !n.isRead).length);
@@ -70,7 +70,7 @@ export const NotificationProvider = ({ children }) => {
 
     const markAsRead = async (notificationId) => {
         try {
-            await api.post(`/api/notification/${notificationId}/mark-as-read`);
+            await api.post(`/api/v1/notification/${notificationId}/mark-as-read`);
             setNotifications(prev =>
                 prev.map(n => (n.id === notificationId ? { ...n, isRead: true } : n))
             );
@@ -82,7 +82,7 @@ export const NotificationProvider = ({ children }) => {
     
     const markAllAsRead = async () => {
         try {
-            await api.post('/api/notification/mark-all-as-read');
+            await api.post('/api/v1/notification/mark-all-as-read');
             setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
             setUnreadCount(0);
         } catch (error) {

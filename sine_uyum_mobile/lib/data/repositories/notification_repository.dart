@@ -7,7 +7,7 @@ class NotificationRepository {
   final ApiClient _client;
 
   Future<List<AppNotification>> list() async {
-    final data = await _client.get<List<dynamic>>('/api/notification');
+    final data = await _client.get<List<dynamic>>('/api/v1/notification');
     return data
         .map(
           (item) =>
@@ -18,13 +18,13 @@ class NotificationRepository {
 
   Future<void> markAsRead(int notificationId) async {
     await _client.post<Map<String, dynamic>>(
-      '/api/notification/$notificationId/mark-as-read',
+      '/api/v1/notification/$notificationId/mark-as-read',
     );
   }
 
   Future<void> markAllAsRead() async {
     await _client.post<Map<String, dynamic>>(
-      '/api/notification/mark-all-as-read',
+      '/api/v1/notification/mark-all-as-read',
     );
   }
 }

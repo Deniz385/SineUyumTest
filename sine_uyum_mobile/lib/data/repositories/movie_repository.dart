@@ -6,18 +6,18 @@ class MovieRepository {
 
   final ApiClient _client;
 
-  Future<List<Movie>> nowPlaying() => _list('/api/movies/now_playing');
+  Future<List<Movie>> nowPlaying() => _list('/api/v1/movies/now_playing');
 
-  Future<List<Movie>> popular() => _list('/api/movies/popular');
+  Future<List<Movie>> popular() => _list('/api/v1/movies/popular');
 
   Future<List<Movie>> search(String query) async {
     if (query.trim().isEmpty) return const [];
-    return _list('/api/movies/search', query: {'query': query});
+    return _list('/api/v1/movies/search', query: {'query': query});
   }
 
   Future<Movie> detail(int movieId) async {
     final data = await _client.get<Map<String, dynamic>>(
-      '/api/movies/$movieId',
+      '/api/v1/movies/$movieId',
     );
     return Movie.fromJson(data);
   }
@@ -26,11 +26,11 @@ class MovieRepository {
   /// (API tarafı yabancı anahtar kontrolü yapıyor), bu yüzden önce kaydedilir.
   Future<void> rate(Movie movie, int rating) async {
     await _client.post<Map<String, dynamic>>(
-      '/api/ratings/addmovie',
+      '/api/v1/ratings/addmovie',
       body: movie.toRatingPayload(),
     );
     await _client.post<Map<String, dynamic>>(
-      '/api/ratings',
+      '/api/v1/ratings',
       body: {'movieId': movie.id, 'rating': rating},
     );
   }

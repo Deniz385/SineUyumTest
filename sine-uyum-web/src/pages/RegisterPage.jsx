@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { TextField, Button, Box, Typography, CircularProgress } from '@mui/material';
 import { useSnackbar } from '../context/SnackbarProvider'; // <-- SNACKBAR KANCASINI İÇE AKTAR
-import api from '../api/axiosConfig';
+import api from '../api/v1/axiosConfig';
 
 export const RegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -31,7 +31,7 @@ export const RegisterPage = () => {
     setIsLoading(true);
 
     try {
-      await api.post(`/api/account/register`, {
+      await api.post(`/api/v1/account/register`, {
         username: formData.username,
         email: formData.email,
         password: formData.password,

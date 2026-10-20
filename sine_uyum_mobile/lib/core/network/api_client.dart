@@ -45,9 +45,9 @@ class ApiClient {
   Dio get dio => _dio;
 
   static const _authPaths = {
-    '/api/account/login',
-    '/api/account/register',
-    '/api/account/refresh',
+    '/api/v1/account/login',
+    '/api/v1/account/register',
+    '/api/v1/account/refresh',
   };
 
   Future<void> _onRequest(
@@ -110,7 +110,7 @@ class ApiClient {
 
     try {
       final response = await _dio.post<Map<String, dynamic>>(
-        '/api/account/refresh',
+        '/api/v1/account/refresh',
         data: {'refreshToken': refreshToken},
       );
 

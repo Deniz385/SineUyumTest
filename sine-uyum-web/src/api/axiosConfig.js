@@ -25,7 +25,7 @@ export const clearTokens = () => {
 
 // Yenileme uçları Authorization başlığı istemez ve 401'de tekrar
 // yenilenmeye çalışılmamalıdır.
-const AUTH_PATHS = ['/api/account/login', '/api/account/register', '/api/account/refresh'];
+const AUTH_PATHS = ['/api/v1/account/login', '/api/v1/account/register', '/api/v1/account/refresh'];
 const isAuthPath = (url = '') => AUTH_PATHS.some((path) => url.startsWith(path));
 
 // Aynı anda birden fazla istek 401 alırsa tek bir yenileme isteği atılır.
@@ -38,7 +38,7 @@ const refreshAccessToken = async () => {
 
     try {
         // Interceptor döngüsüne girmemek için ayrı bir axios örneği kullanılır.
-        const response = await axios.post(`${API_URL}/api/account/refresh`, { refreshToken });
+        const response = await axios.post(`${API_URL}/api/v1/account/refresh`, { refreshToken });
         const { token, refreshToken: newRefreshToken } = response.data || {};
         if (!token || !newRefreshToken) return null;
 

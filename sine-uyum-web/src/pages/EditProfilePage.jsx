@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api/axiosConfig';
+import api from '../api/v1/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, TextField, Button, Typography, CircularProgress } from '@mui/material';
 import { useSnackbar } from '../context/SnackbarProvider'; // <-- SNACKBAR KANCASINI İÇE AKTAR
@@ -19,7 +19,7 @@ export const EditProfilePage = () => {
     const fetchProfileData = useCallback(async () => {
         if (!user) return;
         try {
-            const response = await api.get(`/api/profile/${user.id}`);
+            const response = await api.get(`/api/v1/profile/${user.id}`);
             const profile = response.data.$values ? response.data.$values[0] : response.data; // $values kontrolü
             setFormData({
                 bio: profile.bio || '',
@@ -44,7 +44,7 @@ export const EditProfilePage = () => {
         e.preventDefault();
         setIsSaving(true);
         try {
-            await api.put(`/api/profile`, formData);
+            await api.put(`/api/v1/profile`, formData);
             showSnackbar('Profil başarıyla güncellendi!', 'success');
             setTimeout(() => navigate(`/profile/${user.id}`), 1500);
         } catch {

@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, Paper, Avatar, AvatarGroup, Alert, Grid, Card, CardContent, CardMedia, CardActions, Button, Chip } from '@mui/material';
 import EventIcon from '@mui/icons-material/Event';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
-import api from '../api/axiosConfig';
+import api from '../api/v1/axiosConfig';
 
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 
@@ -93,7 +93,7 @@ export const MyEventPage = () => {
         }
         setIsLoading(true);
         try {
-            const response = await api.get('/api/event/my-status');
+            const response = await api.get('/api/v1/event/my-status');
             setStatusData(response.data);
         } catch (err) {
             if (err.response?.status !== 401) {
@@ -110,7 +110,7 @@ export const MyEventPage = () => {
 
     const handleJoinEvent = async (eventId) => {
         try {
-            await api.post(`/api/event/${eventId}/join`);
+            await api.post(`/api/v1/event/${eventId}/join`);
             fetchEventStatus();
         } catch (error) {
             alert(error.response?.data?.message || "Etkinliğe katılırken bir hata oluştu.");
@@ -119,7 +119,7 @@ export const MyEventPage = () => {
     
     const handleVote = async (movieId) => {
         try {
-            await api.post('/api/event/vote', { 
+            await api.post('/api/v1/event/vote', { 
                 groupId: statusData.group.id, 
                 movieId: movieId 
             });

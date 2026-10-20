@@ -64,9 +64,9 @@ public class MovieCacheTests : IClassFixture<MovieCacheTests.CachingFactory>
     private async Task<string> UserTokenAsync(HttpClient client)
     {
         var username = "cache_" + Guid.NewGuid().ToString("N")[..8];
-        await client.PostAsJsonAsync("/api/account/register",
+        await client.PostAsJsonAsync("/api/v1/account/register",
             new { username, email = $"{username}@test.com", password = "Sifre123" });
-        var login = await client.PostAsJsonAsync("/api/account/login",
+        var login = await client.PostAsJsonAsync("/api/v1/account/login",
             new { username, password = "Sifre123" });
         login.EnsureSuccessStatusCode();
         using var doc = JsonDocument.Parse(await login.Content.ReadAsStringAsync());
@@ -81,7 +81,7 @@ public class MovieCacheTests : IClassFixture<MovieCacheTests.CachingFactory>
 
         async Task<HttpResponseMessage> Popular()
         {
-            var req = new HttpRequestMessage(HttpMethod.Get, "/api/movies/popular");
+            var req = new HttpRequestMessage(HttpMethod.Get, "/api/v1/movies/popular");
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             return await client.SendAsync(req);
         }

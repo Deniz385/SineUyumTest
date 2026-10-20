@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { TextField, Button, Box, Typography, CircularProgress } from '@mui/material';
-import api from '../api/axiosConfig';
+import api from '../api/v1/axiosConfig';
 import { useSnackbar } from '../context/SnackbarProvider'; // <-- SNACKBAR KANCASINI İÇE AKTAR
 
 export const LoginPage = () => {
@@ -17,7 +17,7 @@ export const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      const response = await api.post(`/api/account/login`, {
+      const response = await api.post(`/api/v1/account/login`, {
         username: username,
         password: password,
       });

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import api from '../api/axiosConfig';
+import api from '../api/v1/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, Chip, CircularProgress, Button, IconButton, Modal, List, ListItem, ListItemButton, ListItemText, Divider } from '@mui/material';
 import { RatingModal } from '../components/RatingModal';
@@ -37,7 +37,7 @@ export const MovieDetailPage = () => {
         if (!user) return;
         setIsLoading(true);
         try {
-            const response = await api.get(`/api/movies/${movieId}`);
+            const response = await api.get(`/api/v1/movies/${movieId}`);
             setMovie(response.data);
         } catch {
             setError('Film detayları yüklenirken bir hata oluştu.');
@@ -53,7 +53,7 @@ export const MovieDetailPage = () => {
     const handleOpenWatchlistModal = async () => {
         setIsWatchlistModalOpen(true);
         try {
-            const response = await api.get(`/api/watchlist`);
+            const response = await api.get(`/api/v1/watchlist`);
             // $values kontrolü eklendi
             setUserLists(response.data.$values || response.data);
         } catch {
@@ -65,7 +65,7 @@ export const MovieDetailPage = () => {
         setIsWatchlistModalOpen(false);
         const movieData = { movieId: movie.id, title: movie.title, posterPath: movie.poster_path };
         try {
-            await api.post(`/api/watchlist/${listId}/movies`, movieData);
+            await api.post(`/api/v1/watchlist/${listId}/movies`, movieData);
             showSnackbar('Film listeye başarıyla eklendi!', 'success');
         } catch (err) {
             const errorMessage = err.response?.data?.message || 'Film listeye eklenemedi.';
@@ -75,12 +75,12 @@ export const MovieDetailPage = () => {
 
     const handleRateMovie = async (movieToRate, rating) => {
         try {
-            await api.post(`/api/ratings/addmovie`, { 
+            await api.post(`/api/v1/ratings/addmovie`, { 
                 id: movieToRate.id, 
                 title: movieToRate.title, 
                 posterPath: movieToRate.poster_path 
             });
-            await api.post(`/api/ratings`, { 
+            await api.post(`/api/v1/ratings`, { 
                 movieId: movieToRate.id, 
                 rating: rating 
             });

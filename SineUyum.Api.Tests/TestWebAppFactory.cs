@@ -49,6 +49,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
         // Arka plan tür tamamlaması testlerde kendiliğinden çalışmasın (TMDb
         // sahtelerindeki çağrı sayılarını bozar); gereken test doğrudan çağırır.
         Environment.SetEnvironmentVariable("GenreBackfill__Enabled", "false");
+        Environment.SetEnvironmentVariable("TasteTwin__Enabled", "false");
         builder.UseSetting("Storage:MediaRoot", MediaRoot);
 
         // İsteğe bağlı: tüm paketi gerçek PostgreSQL'e karşı (migration'larla)

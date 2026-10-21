@@ -210,6 +210,7 @@ public class ResponseContractTests : IClassFixture<ResponseContractTests.Factory
         var comment = await Post("reviews.comment", $"/api/v1/reviews/{reviewId}/comments", a, new { text = "Katılıyorum" });
         await Get("reviews.comments", $"/api/v1/reviews/{reviewId}/comments", a);
         await Get("feed", "/api/v1/feed", a);
+        await Get("tasteTwin(none)", "/api/v1/taste-twin", a);
         await Call("reviews.deleteComment", HttpMethod.Delete, $"/api/v1/reviews/comments/{comment.GetProperty("id").GetInt32()}", a);
         await Call("reviews.unlike", HttpMethod.Delete, $"/api/v1/reviews/{reviewId}/like", a);
 

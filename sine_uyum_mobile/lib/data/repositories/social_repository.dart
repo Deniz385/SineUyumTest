@@ -193,4 +193,12 @@ class SocialRepository {
     );
     return FilmIdentity.fromJson(data);
   }
+
+  /// Bu haftanın zevk ikizi; uygun aday yoksa null (sunucu 204 döner).
+  Future<TasteTwin?> tasteTwin() async {
+    final data = await _client.get<Object?>('/api/v1/taste-twin');
+    return data is Map
+        ? TasteTwin.fromJson(data.cast<String, dynamic>())
+        : null;
+  }
 }

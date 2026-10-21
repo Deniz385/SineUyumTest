@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../api/axiosConfig';
 import { Box, Button, Card, CardContent, CircularProgress, Stack, Typography } from '@mui/material';
 import { AuthorLine, ReviewCard } from '../components/ReviewCard';
+import { TasteTwinCard } from '../components/TasteTwinCard';
 
 const POSTER = 'https://image.tmdb.org/t/p/w92';
 
@@ -53,6 +54,7 @@ export const FeedPage = () => {
     return (
         <Box className="page-container" sx={{ maxWidth: 720, width: '100%' }}>
             <Typography variant="h4" component="h1" gutterBottom>Akış</Typography>
+            <TasteTwinCard />
             {error && <Typography color="error" sx={{ mb: 2 }}>Akış yüklenemedi.</Typography>}
             {items.length === 0 && !error ? (
                 <Box sx={{ mt: 4 }}>

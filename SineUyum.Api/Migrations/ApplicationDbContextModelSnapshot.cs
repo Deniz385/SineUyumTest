@@ -787,6 +787,49 @@ namespace SineUyum.Api.Migrations
                     b.ToTable("Subscriptions");
                 });
 
+            modelBuilder.Entity("SineUyum.Api.Models.TasteTwinSuggestion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CommonMovieCount")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("Compatibility")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Notified")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SuggestedUserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly>("WeekStart")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SuggestedUserId");
+
+                    b.HasIndex("UserId", "SuggestedUserId");
+
+                    b.HasIndex("UserId", "WeekStart")
+                        .IsUnique();
+
+                    b.ToTable("TasteTwinSuggestions");
+                });
+
             modelBuilder.Entity("SineUyum.Api.Models.UserBlock", b =>
                 {
                     b.Property<string>("BlockerId")
@@ -1234,6 +1277,25 @@ namespace SineUyum.Api.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.TasteTwinSuggestion", b =>
+                {
+                    b.HasOne("SineUyum.Api.Models.AppUser", "SuggestedUser")
+                        .WithMany()
+                        .HasForeignKey("SuggestedUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SineUyum.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SuggestedUser");
 
                     b.Navigation("User");
                 });

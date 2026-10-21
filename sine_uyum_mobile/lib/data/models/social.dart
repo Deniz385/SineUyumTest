@@ -223,3 +223,28 @@ class FeedPage {
     nextCursor: json['nextCursor'] as String?,
   );
 }
+
+/// `/api/v1/taste-twin`: bu haftanın zevk ikizi.
+class TasteTwin {
+  const TasteTwin({
+    required this.user,
+    this.bio,
+    required this.compatibility,
+    required this.commonMovieCount,
+    this.isFollowing = false,
+  });
+
+  final Author user;
+  final String? bio;
+  final double compatibility;
+  final int commonMovieCount;
+  final bool isFollowing;
+
+  factory TasteTwin.fromJson(Map<String, dynamic> json) => TasteTwin(
+    user: Author.fromJson(_map(json['user'])),
+    bio: json['bio'] as String?,
+    compatibility: (json['compatibility'] as num?)?.toDouble() ?? 0,
+    commonMovieCount: (json['commonMovieCount'] as num?)?.toInt() ?? 0,
+    isFollowing: json['isFollowing'] as bool? ?? false,
+  );
+}

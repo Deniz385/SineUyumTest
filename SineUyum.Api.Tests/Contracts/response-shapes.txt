@@ -263,6 +263,8 @@
   items[]: object
   nextCursor: null
 
+## tasteTwin(none)  GET /api/v1/taste-twin -> 204
+
 ## reviews.deleteComment  DELETE /api/v1/reviews/comments/{id} -> 200
   $: object
   message: string

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../data/models/social.dart';
+import '../../providers/repository_providers.dart';
 import '../../providers/social_provider.dart';
 import '../../widgets/poster_image.dart';
 import '../../widgets/state_views.dart';
@@ -25,12 +26,14 @@ class FeedView extends ConsumerWidget {
       data: (state) => RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(feedProvider);
+          ref.invalidate(tasteTwinProvider);
           await ref.read(feedProvider.future);
         },
         child: state.items.isEmpty
             ? ListView(
                 children: const [
-                  SizedBox(height: 48),
+                  Padding(padding: EdgeInsets.all(12), child: TasteTwinCard()),
+                  SizedBox(height: 24),
                   EmptyView(
                     icon: Icons.dynamic_feed_outlined,
                     message:
@@ -42,8 +45,11 @@ class FeedView extends ConsumerWidget {
               )
             : ListView.builder(
                 padding: const EdgeInsets.all(12),
-                itemCount: state.items.length + (state.hasMore ? 1 : 0),
-                itemBuilder: (context, index) {
+                // İlk öğe: bu haftanın zevk ikizi (yoksa boş).
+                itemCount: state.items.length + 1 + (state.hasMore ? 1 : 0),
+                itemBuilder: (context, position) {
+                  if (position == 0) return const TasteTwinCard();
+                  final index = position - 1;
                   if (index == state.items.length) {
                     // Sona gelince sonraki sayfa.
                     WidgetsBinding.instance.addPostFrameCallback(
@@ -112,6 +118,104 @@ class _RatedCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Bu haftanın zevk ikizi: sana en uyumlu, henüz takip etmediğin biri.
+class TasteTwinCard extends ConsumerStatefulWidget {
+  const TasteTwinCard({super.key});
+
+  @override
+  ConsumerState<TasteTwinCard> createState() => _TasteTwinCardState();
+}
+
+class _TasteTwinCardState extends ConsumerState<TasteTwinCard> {
+  bool _followed = false;
+
+  Future<void> _follow(TasteTwin twin) async {
+    try {
+      await ref.read(socialRepositoryProvider).follow(twin.user.id);
+      if (mounted) setState(() => _followed = true);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final twin = ref.watch(tasteTwinProvider).value;
+    if (twin == null) return const SizedBox.shrink();
+    final following = _followed || twin.isFollowing;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1B1038), Color(0xFF0D2A4A)],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '✨ BU HAFTANIN ZEVK İKİZİ',
+            style: TextStyle(
+              color: Color(0xFFFFD54F),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1.1,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              UserAvatar(
+                userName: twin.user.userName,
+                imageUrl: twin.user.imageUrl,
+                radius: 26,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      twin.user.userName,
+                      style: const TextStyle(color: Colors.white, fontSize: 17),
+                    ),
+                    Text(
+                      '%${twin.compatibility.round()} uyumlu · '
+                      '${twin.commonMovieCount} ortak film',
+                      style: const TextStyle(color: Color(0xFFE3E8FF)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
+                onPressed: () => context.push('/profile/${twin.user.id}'),
+                child: const Text('Profili gör'),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                onPressed: following ? null : () => _follow(twin),
+                child: Text(following ? 'Takip ediliyor' : 'Takip et'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

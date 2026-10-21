@@ -63,3 +63,8 @@ class FeedNotifier extends AsyncNotifier<FeedState> {
     }
   }
 }
+
+/// Bu haftanın zevk ikizi (akışın üstünde).
+final tasteTwinProvider = FutureProvider.autoDispose<TasteTwin?>(
+  (ref) => ref.watch(socialRepositoryProvider).tasteTwin(),
+);

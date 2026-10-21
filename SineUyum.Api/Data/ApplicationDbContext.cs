@@ -23,6 +23,7 @@
         public DbSet<Review> Reviews { get; set; }
         public DbSet<ReviewLike> ReviewLikes { get; set; }
         public DbSet<ReviewComment> ReviewComments { get; set; }
+        public DbSet<TasteTwinSuggestion> TasteTwinSuggestions { get; set; }
         public DbSet<EventVote> EventVotes { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
@@ -210,6 +211,25 @@
                 .HasOne(c => c.User)
                 .WithMany()
                 .HasForeignKey(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<TasteTwinSuggestion>()
+                .HasIndex(t => new { t.UserId, t.WeekStart })
+                .IsUnique();
+
+            builder.Entity<TasteTwinSuggestion>()
+                .HasIndex(t => new { t.UserId, t.SuggestedUserId });
+
+            builder.Entity<TasteTwinSuggestion>()
+                .HasOne(t => t.User)
+                .WithMany()
+                .HasForeignKey(t => t.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<TasteTwinSuggestion>()
+                .HasOne(t => t.SuggestedUser)
+                .WithMany()
+                .HasForeignKey(t => t.SuggestedUserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // MovieGenre için birleşik birincil anahtar (composite key) tanımlaması

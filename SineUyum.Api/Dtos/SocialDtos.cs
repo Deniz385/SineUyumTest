@@ -107,3 +107,17 @@ namespace SineUyum.Api.Dtos
         public string? NextCursor { get; set; }
     }
 }
+
+namespace SineUyum.Api.Dtos
+{
+    // GET /api/v1/taste-twin — bu haftanın zevk ikizi (yoksa 204).
+    public class TasteTwinDto
+    {
+        public UserBriefWithImageDto User { get; set; } = new();
+        public string? Bio { get; set; }
+        public double Compatibility { get; set; }
+        public int CommonMovieCount { get; set; }
+        public DateOnly WeekStart { get; set; }
+        public bool IsFollowing { get; set; }
+    }
+}

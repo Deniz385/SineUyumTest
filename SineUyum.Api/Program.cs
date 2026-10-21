@@ -162,6 +162,11 @@ builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<SubscriptionService>();
 builder.Services.AddScoped<PrivacyService>();
 builder.Services.AddScoped<SocialService>();
+builder.Services.AddScoped<TasteTwinService>();
+// Haftalık zevk ikizi bildirimleri.
+builder.Services.Configure<TasteTwinOptions>(builder.Configuration.GetSection("TasteTwin"));
+builder.Services.AddSingleton<TasteTwinWorker>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<TasteTwinWorker>());
 // Ödeme sağlayıcıları (IPaymentProvider) burada kaydedilir. Henüz gerçek
 // sağlayıcı yok: abonelik yalnızca yönetici tarafından tanımlanabilir,
 // /api/v1/subscription/verify 503 döner. Bkz. yol haritası G4.

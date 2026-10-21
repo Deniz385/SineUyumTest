@@ -5,6 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:sine_uyum_mobile/core/network/api_exception.dart';
 import 'package:sine_uyum_mobile/data/models/social.dart';
 import 'package:sine_uyum_mobile/data/repositories/social_repository.dart';
+import 'package:sine_uyum_mobile/features/social/feed_view.dart';
 import 'package:sine_uyum_mobile/features/social/movie_reviews_section.dart';
 import 'package:sine_uyum_mobile/features/social/review_card.dart';
 import 'package:sine_uyum_mobile/providers/repository_providers.dart';
@@ -43,6 +44,14 @@ class FakeSocial implements SocialRepository {
   final likes = <(int, bool)>[];
   MovieReviews reviews = const MovieReviews();
   final upserts = <(int, String, bool)>[];
+  TasteTwin? twin;
+  final follows = <String>[];
+
+  @override
+  Future<TasteTwin?> tasteTwin() async => twin;
+
+  @override
+  Future<void> follow(String userId) async => follows.add(userId);
 
   @override
   Future<FeedPage> feed({String? cursor}) async {
@@ -249,5 +258,43 @@ void main() {
     await pump(tester, const ForYouBadge(movieId: 10), fake: some);
     expect(find.text('8.7'), findsOneWidget);
     expect(find.text(' sana göre (3 uyumlu kişi)'), findsOneWidget);
+  });
+
+  testWidgets('akışın üstünde zevk ikizi; takip edilebilir', (tester) async {
+    final social = FakeSocial()
+      ..pages[null] = FeedPage(items: [item(1)])
+      ..twin = TasteTwin.fromJson({
+        'user': {'id': 'u9', 'userName': 'zeynep'},
+        'compatibility': 92.0,
+        'commonMovieCount': 14,
+        'isFollowing': false,
+      });
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [socialRepositoryProvider.overrideWithValue(social)],
+        child: const MaterialApp(home: Scaffold(body: FeedView())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('zeynep'), findsOneWidget);
+    expect(find.text('%92 uyumlu · 14 ortak film'), findsOneWidget);
+    await tester.tap(find.text('Takip et'));
+    await tester.pumpAndSettle();
+    expect(social.follows, ['u9']);
+    expect(find.text('Takip ediliyor'), findsOneWidget);
+  });
+
+  testWidgets('zevk ikizi yoksa kart görünmez', (tester) async {
+    final social = FakeSocial()..pages[null] = FeedPage(items: [item(1)]);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [socialRepositoryProvider.overrideWithValue(social)],
+        child: const MaterialApp(home: Scaffold(body: FeedView())),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('ZEVK İKİZİ'), findsNothing);
+    expect(find.text('Film 1'), findsOneWidget);
   });
 }

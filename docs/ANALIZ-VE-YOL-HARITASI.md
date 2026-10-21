@@ -808,4 +808,13 @@ Hedef: uygulamayı "puan + takip + mesaj"tan film severlerin sosyal ağına
       filmleri bir kez yeniden işlenmeye işaretler.
     - Web: kart + 1080×1350 PNG (sistem paylaşım menüsü ya da indirme).
       Mobil: kart ekranı, görüntü yakalanıp `share_plus` ile paylaşılır.
-30. Haftalık zevk ikizi
+30. Haftalık zevk ikizi — ✅
+    - Her hafta (pazartesi başlar) sana en uyumlu, takip etmediğin ve daha
+      önce önerilmemiş biri; en az 5 ortak film ve %70 uyum. Yalnızca
+      keşfedilmeye açık kişiler aday olur (profili herkese açık, aramada
+      görünmeyi kapatmamış, engel yok). `TasteTwinWorker` saatlik turlarla
+      haftada bir kez bildirir; `GET /taste-twin` gerekirse anında hesaplar
+      (uygun aday yoksa 204). Web ve mobil akışın en üstünde kart.
+    - Yol üstünde: web sayfasının dili "en" olduğu için büyük harfli tüm
+      düğme ve başlıklarda "i" → "I" oluyordu ("TAKIP ET", "BU FILMI
+      PUANLA"); `lang="tr"` ile düzeldi.

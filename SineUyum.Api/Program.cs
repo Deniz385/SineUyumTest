@@ -152,6 +152,10 @@ builder.Services.AddScoped<MatchingService>();
 builder.Services.Configure<MatchingOptions>(builder.Configuration.GetSection("Matching"));
 builder.Services.AddSingleton<MatchingQueue>();
 builder.Services.AddHostedService<MatchingWorker>();
+// Eski filmlerin boş kalan türlerini TMDb'den tamamlar (TMDb anahtarı yoksa boşta).
+builder.Services.Configure<GenreBackfillOptions>(builder.Configuration.GetSection("GenreBackfill"));
+builder.Services.AddSingleton<GenreBackfillWorker>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<GenreBackfillWorker>());
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<MovieCatalogService>();
 builder.Services.AddScoped<NotificationService>();

@@ -16,17 +16,21 @@ class ConversationPage extends ConsumerStatefulWidget {
     super.key,
     required this.otherUserId,
     this.otherUserName,
+    this.draft,
   });
 
   final String otherUserId;
   final String? otherUserName;
+
+  /// Hazır mesaj taslağı (ör. profildeki "Ona sor"); gönderilmeden düzenlenebilir.
+  final String? draft;
 
   @override
   ConsumerState<ConversationPage> createState() => _ConversationPageState();
 }
 
 class _ConversationPageState extends ConsumerState<ConversationPage> {
-  final _controller = TextEditingController();
+  late final _controller = TextEditingController(text: widget.draft ?? '');
   bool _isSending = false;
   // dispose'da ref kullanılamadığı için baştan alınır.
   late final ActiveConversation _activeConversation;

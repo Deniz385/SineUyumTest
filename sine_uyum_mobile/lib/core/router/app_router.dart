@@ -134,6 +134,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => ConversationPage(
           otherUserId: state.pathParameters['userId'] ?? '',
           otherUserName: state.uri.queryParameters['name'],
+          draft: state.uri.queryParameters['draft'],
         ),
       ),
       GoRoute(

@@ -765,3 +765,21 @@ destek yok (PWA ayrı bir iş).
 23. `SuggestedMovieIds` tablosuna normalizasyon (M8) — ✅
 24. Rate limiting'i tüm API'ye yay (G5) — ✅
 25. Gizlilik ayarları (G12) — ✅
+
+### Faz 5 — Film severler için sosyal ağ
+Hedef: uygulamayı "puan + takip + mesaj"tan film severlerin sosyal ağına
+çevirmek; çekirdek ayırt edici özellik uyum puanı.
+26. Uyum nedeni + "tartışma filmi" — ✅
+    - Uyum yanıtında `insights`: ortak sevilen / ayrışılan türler (tüm
+      puanlardan, tür başına en az 2 film), tek cümlelik özet, ortak favori,
+      en çok ayrışılan ortak film. Web ve mobil profilde gösterilir; "Ona
+      sor" sohbeti hazır taslakla açar.
+    - Yol üstünde: **türler hiç yazılmıyordu** (`Genres`/`MovieGenres` hep
+      boştu; "ortak öneriler"deki tür eşleştirmesi de bu yüzden sessizce
+      çalışmıyordu). Yeni filmde TMDb türleri kaydedilir; eskiler
+      `GenreBackfillWorker` ile 30 dakikada bir 40'ar film tamamlanır.
+27. Sosyal çekirdek: inceleme (puan + yazı, spoiler), takip akışı, beğeni ve
+    yorum
+28. "Sana göre puan": uyumlu kişilerin bir filme verdiği ortalama
+29. Film kimliği kartı (paylaşılabilir)
+30. Haftalık zevk ikizi

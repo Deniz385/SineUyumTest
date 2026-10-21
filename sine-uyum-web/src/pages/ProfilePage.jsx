@@ -10,6 +10,7 @@ import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
 import { RecommendationModal } from '../components/RecommendationModal';
 import { FollowListModal } from '../components/FollowListModal';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
+import { CompatibilityInsights } from '../components/CompatibilityInsights';
 import { useSnackbar } from '../context/SnackbarProvider';
 
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
@@ -208,6 +209,11 @@ export const ProfilePage = () => {
                         <div className="compatibility-score">
                             <h2>Uyum Puanınız: %{compatibility.compatibilityScore}</h2>
                             <p>({compatibility.commonMovieCount} ortak filme göre hesaplandı)</p>
+                            <CompatibilityInsights
+                                insights={compatibility.insights}
+                                otherUserId={userId}
+                                otherUserName={profileData?.userName}
+                            />
                             {compatibility.commonMovieCount > 0 && (
                                 <Button variant="contained" onClick={handleFetchRecommendations} sx={{ mt: 2 }}>Ortak Film Önerileri Alın</Button>
                             )}

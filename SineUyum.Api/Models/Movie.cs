@@ -13,5 +13,11 @@ namespace SineUyum.Api.Models
         public string Title { get; set; } = string.Empty;
 
         public string? PosterPath { get; set; }
+
+        // Türler TMDb'den en son ne zaman işlendi (null: hiç). Tür bilgisi
+        // önceden hiç yazılmıyordu; eski filmler arka planda tamamlanır.
+        public DateTime? GenresSyncedAt { get; set; }
+
+        public ICollection<MovieGenre> MovieGenres { get; set; } = new List<MovieGenre>();
     }
 }

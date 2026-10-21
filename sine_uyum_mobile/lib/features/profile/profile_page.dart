@@ -336,9 +336,20 @@ class _SocialActions extends ConsumerWidget {
               .when(
                 loading: () => const SizedBox(height: 28),
                 error: (_, _) => const SizedBox.shrink(),
-                data: (result) => CompatibilityBadge(
-                  score: result.compatibilityScore,
-                  commonMovieCount: result.commonMovieCount,
+                data: (result) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CompatibilityBadge(
+                      score: result.compatibilityScore,
+                      commonMovieCount: result.commonMovieCount,
+                    ),
+                    if (!result.insights.isEmpty)
+                      _Insights(
+                        insights: result.insights,
+                        userId: userId,
+                        userName: userName,
+                      ),
+                  ],
                 ),
               ),
           const SizedBox(height: 12),
@@ -388,6 +399,91 @@ class _SocialActions extends ConsumerWidget {
           orElse: () => const SizedBox.shrink(),
         ),
       ],
+    );
+  }
+}
+
+/// Uyumun nedeni, ortak favori ve "tartışma filmi" (sohbet başlatıcı).
+class _Insights extends StatelessWidget {
+  const _Insights({
+    required this.insights,
+    required this.userId,
+    required this.userName,
+  });
+
+  final CompatibilityInsights insights;
+  final String userId;
+  final String userName;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final favorite = insights.sharedFavorite;
+    final debate = insights.debateMovie;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (insights.summary != null) ...[
+            Text(insights.summary!, style: theme.textTheme.bodyMedium),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                for (final g in insights.sharedGenres)
+                  Chip(
+                    label: Text(g),
+                    visualDensity: VisualDensity.compact,
+                    backgroundColor: theme.colorScheme.primaryContainer,
+                  ),
+                for (final g in insights.divergentGenres)
+                  Chip(
+                    label: Text(g),
+                    visualDensity: VisualDensity.compact,
+                    side: BorderSide(color: theme.colorScheme.tertiary),
+                  ),
+              ],
+            ),
+          ],
+          if (favorite != null)
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.favorite, color: Colors.redAccent),
+                title: Text('Ortak favoriniz: ${favorite.title}'),
+                subtitle: Text(
+                  'Sen ${favorite.currentUserRating}, $userName ${favorite.targetUserRating}',
+                ),
+                onTap: () => context.push('/movie/${favorite.movieId}'),
+              ),
+            ),
+          if (debate != null)
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.forum_outlined),
+                title: Text('Tartışma filmi: ${debate.title}'),
+                subtitle: Text(
+                  'Sen ${debate.currentUserRating} verdin, $userName '
+                  '${debate.targetUserRating}. Sor bakalım neden?',
+                ),
+                trailing: TextButton(
+                  onPressed: () {
+                    final draft =
+                        '"${debate.title}" filmine ben ${debate.currentUserRating}, '
+                        'sen ${debate.targetUserRating} vermişsin. Neden? 😄';
+                    context.push(
+                      '/conversation/$userId?name=${Uri.encodeComponent(userName)}'
+                      '&draft=${Uri.encodeComponent(draft)}',
+                    );
+                  },
+                  child: const Text('Ona sor'),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

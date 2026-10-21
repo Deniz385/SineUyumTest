@@ -541,6 +541,9 @@ namespace SineUyum.Api.Migrations
                     b.Property<int>("Id")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("GenresSyncedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("PosterPath")
                         .HasColumnType("text");
 
@@ -1034,7 +1037,7 @@ namespace SineUyum.Api.Migrations
                         .IsRequired();
 
                     b.HasOne("SineUyum.Api.Models.Movie", "Movie")
-                        .WithMany()
+                        .WithMany("MovieGenres")
                         .HasForeignKey("MovieId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1177,6 +1180,11 @@ namespace SineUyum.Api.Migrations
                 });
 
             modelBuilder.Entity("SineUyum.Api.Models.Genre", b =>
+                {
+                    b.Navigation("MovieGenres");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.Movie", b =>
                 {
                     b.Navigation("MovieGenres");
                 });

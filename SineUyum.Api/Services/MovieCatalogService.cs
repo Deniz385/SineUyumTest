@@ -44,27 +44,69 @@ namespace SineUyum.Api.Services
             var existing = await _context.Movies.FindAsync(movieId);
             if (existing != null) return existing;
 
-            var (title, posterPath) = await FetchFromTmdbAsync(movieId);
-            var movie = new Movie { Id = movieId, Title = title, PosterPath = posterPath };
+            var details = await FetchFromTmdbAsync(movieId);
 
-            _context.Movies.Add(movie);
-            try
+            // İki deneme: eşzamanlı başka bir istek aynı filmi ya da aynı yeni
+            // türü eklemiş olabilir; ikinci denemede tür artık veritabanındadır.
+            for (var attempt = 1; ; attempt++)
             {
-                await _context.SaveChangesAsync();
+                var movie = new Movie { Id = movieId, Title = details.Title, PosterPath = details.PosterPath };
+                await AttachGenresAsync(movie, details.Genres);
+                _context.Movies.Add(movie);
+                try
+                {
+                    await _context.SaveChangesAsync();
+                    return movie;
+                }
+                catch (DbUpdateException) when (attempt < 2)
+                {
+                    // Yalnızca bu denemenin eklediklerini bırak; çağıranın bağlamdaki
+                    // diğer bekleyen değişiklikleri korunur.
+                    var genreIds = details.Genres.Select(g => g.Id).ToHashSet();
+                    foreach (var entry in _context.ChangeTracker.Entries().Where(e => e.State == EntityState.Added).ToList())
+                    {
+                        if (entry.Entity is Movie { Id: var id } && id == movieId ||
+                            entry.Entity is MovieGenre { MovieId: var mid } && mid == movieId ||
+                            entry.Entity is Genre { Id: var gid } && genreIds.Contains(gid))
+                        {
+                            entry.State = EntityState.Detached;
+                        }
+                    }
+                    var raced = await _context.Movies.FindAsync(movieId);
+                    if (raced != null) return raced;
+                }
             }
-            catch (DbUpdateException)
-            {
-                // Eşzamanlı başka bir istek aynı filmi eklemiş olabilir; onu getir.
-                _context.Entry(movie).State = EntityState.Detached;
-                var raced = await _context.Movies.FindAsync(movieId);
-                if (raced != null) return raced;
-                throw;
-            }
-
-            return movie;
         }
 
-        private async Task<(string Title, string? PosterPath)> FetchFromTmdbAsync(int movieId)
+        // Türleri eksik bir filmin türlerini TMDb'den tamamlar (GenreBackfillWorker).
+        // TMDb'de türü olmayan film de işlenmiş sayılır; tekrar sorulmaz.
+        public async Task SyncGenresAsync(int movieId)
+        {
+            var movie = await _context.Movies.Include(m => m.MovieGenres).FirstOrDefaultAsync(m => m.Id == movieId);
+            if (movie == null) return;
+
+            var details = await FetchFromTmdbAsync(movieId);
+            if (movie.MovieGenres.Count == 0) await AttachGenresAsync(movie, details.Genres);
+            movie.GenresSyncedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
+
+        private async Task AttachGenresAsync(Movie movie, IReadOnlyList<(int Id, string Name)> genres)
+        {
+            foreach (var (id, name) in genres.DistinctBy(g => g.Id))
+            {
+                var genre = await _context.Genres.FindAsync(id);
+                if (genre == null)
+                {
+                    genre = new Genre { Id = id, Name = name };
+                    _context.Genres.Add(genre);
+                }
+                movie.MovieGenres.Add(new MovieGenre { Movie = movie, Genre = genre });
+            }
+            movie.GenresSyncedAt = DateTime.UtcNow;
+        }
+
+        private async Task<(string Title, string? PosterPath, IReadOnlyList<(int Id, string Name)> Genres)> FetchFromTmdbAsync(int movieId)
         {
             if (string.IsNullOrEmpty(_tmdbApiKey))
             {
@@ -114,7 +156,20 @@ namespace SineUyum.Api.Services
             var title = root.TryGetProperty("title", out var t) ? t.GetString() : null;
             var posterPath = root.TryGetProperty("poster_path", out var p) ? p.GetString() : null;
 
-            return (title ?? "Başlıksız", posterPath);
+            var genres = new List<(int, string)>();
+            if (root.TryGetProperty("genres", out var g) && g.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in g.EnumerateArray())
+                {
+                    if (item.TryGetProperty("id", out var gid) && gid.TryGetInt32(out var genreId) &&
+                        item.TryGetProperty("name", out var gname) && gname.GetString() is { Length: > 0 } genreName)
+                    {
+                        genres.Add((genreId, genreName));
+                    }
+                }
+            }
+
+            return (title ?? "Başlıksız", posterPath, genres);
         }
     }
 }

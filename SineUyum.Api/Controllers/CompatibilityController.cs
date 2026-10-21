@@ -59,20 +59,30 @@ namespace SineUyum.Api.Controllers
                                      };
             var commonMovies = await commonRatingsQuery.ToListAsync();
 
-            if (!commonMovies.Any())
-            {
-                return Ok(new CompatibilityDto());
-            }
-            
+            // Türlere göre ortalamalar tüm puanlardan (yalnızca ortaklardan değil):
+            // ortak film az olsa da "ikiniz de dram seviyorsunuz" denebilir.
+            var tastes = await (
+                from r in _context.UserRatings
+                where r.UserId == currentUserId || r.UserId == targetUserId
+                join mg in _context.MovieGenres on r.MovieId equals mg.MovieId
+                group r by new { r.UserId, mg.GenreId, mg.Genre.Name } into g
+                select new { g.Key.UserId, g.Key.GenreId, g.Key.Name, Average = g.Average(x => (double)x.Rating), Count = g.Count() })
+                .ToListAsync();
+            List<GenreTaste> TastesOf(string userId) => tastes
+                .Where(t => t.UserId == userId)
+                .Select(t => new GenreTaste(t.GenreId, t.Name, t.Average, t.Count))
+                .ToList();
+
             var ratingPairs = commonMovies
                 .Select(m => (m.CurrentUserRating, m.TargetUserRating))
                 .ToList();
 
             var result = new CompatibilityDto
             {
-                CompatibilityScore = Math.Round(CompatibilityCalculator.Score(ratingPairs), 2),
+                CompatibilityScore = commonMovies.Count == 0 ? 0 : Math.Round(CompatibilityCalculator.Score(ratingPairs), 2),
                 CommonMovieCount = commonMovies.Count,
-                CommonMovies = commonMovies
+                CommonMovies = commonMovies,
+                Insights = CompatibilityInsights.Build(commonMovies, TastesOf(currentUserId), TastesOf(targetUserId))
             };
 
             return Ok(result);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
@@ -57,7 +57,9 @@ export const ConversationPage = () => {
     const { subscribeToMessages, subscribeToReads, subscribeToReconnect, setActiveConversation } = useNotifications();
     const [messages, setMessages] = useState([]);
     const [otherUser, setOtherUser] = useState(null);
-    const [newMessage, setNewMessage] = useState('');
+    // Profildeki "Ona sor" gibi yerlerden hazır taslakla açılabilir (?draft=).
+    const [searchParams] = useSearchParams();
+    const [newMessage, setNewMessage] = useState(() => searchParams.get('draft') ?? '');
     const [isLoading, setIsLoading] = useState(true);
     const [isMovieModalOpen, setIsMovieModalOpen] = useState(false);
     const [isWatchlistModalOpen, setIsWatchlistModalOpen] = useState(false);

@@ -45,6 +45,20 @@ namespace SineUyum.Api.Dtos
         public double CompatibilityScore { get; set; }
         public int CommonMovieCount { get; set; }
         public List<CommonMovieDto> CommonMovies { get; set; } = new();
+        // Puanın açıklaması (ortak/ayrışan türler, ortak favori, tartışma filmi).
+        public CompatibilityInsightsDto Insights { get; set; } = new();
+    }
+
+    public class CompatibilityInsightsDto
+    {
+        // Tek cümlelik özet; söylenecek bir şey yoksa null.
+        public string? Summary { get; set; }
+        public List<string> SharedGenres { get; set; } = new();
+        public List<string> DivergentGenres { get; set; } = new();
+        // İkisinin de çok sevdiği ortak film.
+        public CommonMovieDto? SharedFavorite { get; set; }
+        // En çok ayrıştıkları ortak film: sohbet başlatıcı.
+        public CommonMovieDto? DebateMovie { get; set; }
     }
 
     public class CommonMovieDto

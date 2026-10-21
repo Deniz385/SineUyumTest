@@ -111,6 +111,17 @@
   commonMovies[].title: string
   commonMovies[]: object
   compatibilityScore: number
+  insights.debateMovie: null
+  insights.divergentGenres: array
+  insights.sharedFavorite.currentUserRating: number
+  insights.sharedFavorite.movieId: number
+  insights.sharedFavorite.posterPath: string
+  insights.sharedFavorite.targetUserRating: number
+  insights.sharedFavorite.title: string
+  insights.sharedFavorite: object
+  insights.sharedGenres: array
+  insights.summary: null
+  insights: object
 
 ## follow.follow  POST /api/v1/follow/{id} -> 200
   $: object

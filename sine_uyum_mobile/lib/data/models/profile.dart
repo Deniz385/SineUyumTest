@@ -85,11 +85,13 @@ class CompatibilityResult {
     this.compatibilityScore = 0,
     this.commonMovieCount = 0,
     this.commonMovies = const [],
+    this.insights = const CompatibilityInsights(),
   });
 
   final double compatibilityScore;
   final int commonMovieCount;
   final List<CommonMovie> commonMovies;
+  final CompatibilityInsights insights;
 
   factory CompatibilityResult.fromJson(Map<String, dynamic> json) {
     return CompatibilityResult(
@@ -102,8 +104,47 @@ class CompatibilityResult {
               )
               .toList() ??
           const [],
+      insights: CompatibilityInsights.fromJson(
+        (json['insights'] as Map?)?.cast<String, dynamic>() ?? const {},
+      ),
     );
   }
+}
+
+/// Uyum puanının açıklaması: ortak/ayrışan türler, ortak favori ve sohbet
+/// başlatıcı "tartışma filmi".
+class CompatibilityInsights {
+  const CompatibilityInsights({
+    this.summary,
+    this.sharedGenres = const [],
+    this.divergentGenres = const [],
+    this.sharedFavorite,
+    this.debateMovie,
+  });
+
+  final String? summary;
+  final List<String> sharedGenres;
+  final List<String> divergentGenres;
+  final CommonMovie? sharedFavorite;
+  final CommonMovie? debateMovie;
+
+  bool get isEmpty =>
+      summary == null && sharedFavorite == null && debateMovie == null;
+
+  static CommonMovie? _movie(Object? json) =>
+      json is Map ? CommonMovie.fromJson(json.cast<String, dynamic>()) : null;
+
+  static List<String> _names(Object? json) =>
+      (json as List?)?.whereType<String>().toList() ?? const [];
+
+  factory CompatibilityInsights.fromJson(Map<String, dynamic> json) =>
+      CompatibilityInsights(
+        summary: json['summary'] as String?,
+        sharedGenres: _names(json['sharedGenres']),
+        divergentGenres: _names(json['divergentGenres']),
+        sharedFavorite: _movie(json['sharedFavorite']),
+        debateMovie: _movie(json['debateMovie']),
+      );
 }
 
 class CommonMovie {

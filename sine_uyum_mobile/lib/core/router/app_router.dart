@@ -12,6 +12,7 @@ import '../../features/movies/movie_detail_page.dart';
 import '../../features/movies/movie_search_page.dart';
 import '../../features/notifications/notifications_page.dart';
 import '../../features/profile/edit_profile_page.dart';
+import '../../features/profile/film_identity_page.dart';
 import '../../features/profile/profile_page.dart';
 import '../../features/settings/privacy_settings_page.dart';
 import '../../features/settings/settings_page.dart';
@@ -117,6 +118,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile/edit',
         builder: (_, _) => const EditProfilePage(),
+      ),
+      GoRoute(
+        path: '/profile/:userId/identity',
+        builder: (context, state) => FilmIdentityPage(
+          userId: state.pathParameters['userId'] ?? '',
+          isMine: state.uri.queryParameters['mine'] == '1',
+        ),
       ),
       GoRoute(
         path: '/profile/:userId',

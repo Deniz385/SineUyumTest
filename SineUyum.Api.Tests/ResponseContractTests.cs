@@ -238,6 +238,7 @@ public class ResponseContractTests : IClassFixture<ResponseContractTests.Factory
 
         // Profil.
         await Get("profile.get", $"/api/v1/profile/{aId}", b);
+        await Get("profile.identity", $"/api/v1/profile/{aId}/identity", b);
         await Call("profile.update", HttpMethod.Put, "/api/v1/profile", a, new { bio = "bio", profileImageUrl = (string?)null });
 
         // Profil fotoğrafı: yükle (sonraki yanıtlarda profileImageUrl dolu

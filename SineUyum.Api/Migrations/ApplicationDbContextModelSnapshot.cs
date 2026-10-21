@@ -551,6 +551,9 @@ namespace SineUyum.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<double?>("TmdbVoteAverage")
+                        .HasColumnType("double precision");
+
                     b.HasKey("Id");
 
                     b.ToTable("Movies");

@@ -288,3 +288,68 @@ class BlockedUser {
     profileImageUrl: json['profileImageUrl'] as String?,
   );
 }
+
+/// `/api/v1/profile/{userId}/identity`: paylaşılabilir film kimliği.
+class FilmIdentity {
+  const FilmIdentity({
+    required this.userName,
+    this.totalRatings = 0,
+    this.averageRating = 0,
+    required this.title,
+    required this.titleDescription,
+    this.topGenres = const [],
+    this.contrarianTake,
+    this.favorite,
+  });
+
+  final String userName;
+  final int totalRatings;
+  final double averageRating;
+  final String title;
+  final String titleDescription;
+  final List<({String name, int share, double average})> topGenres;
+  final IdentityMovie? contrarianTake;
+  final IdentityMovie? favorite;
+
+  factory FilmIdentity.fromJson(Map<String, dynamic> json) => FilmIdentity(
+    userName: json['userName'] as String? ?? '',
+    totalRatings: (json['totalRatings'] as num?)?.toInt() ?? 0,
+    averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0,
+    title: json['title'] as String? ?? '',
+    titleDescription: json['titleDescription'] as String? ?? '',
+    topGenres: [
+      for (final g in (json['topGenres'] as List? ?? const []))
+        if (g is Map)
+          (
+            name: g['name'] as String? ?? '',
+            share: (g['share'] as num?)?.toInt() ?? 0,
+            average: (g['average'] as num?)?.toDouble() ?? 0,
+          ),
+    ],
+    contrarianTake: IdentityMovie.tryParse(json['contrarianTake']),
+    favorite: IdentityMovie.tryParse(json['favorite']),
+  );
+}
+
+class IdentityMovie {
+  const IdentityMovie({
+    required this.movieId,
+    required this.title,
+    required this.rating,
+    this.tmdbAverage,
+  });
+
+  final int movieId;
+  final String title;
+  final int rating;
+  final double? tmdbAverage;
+
+  static IdentityMovie? tryParse(Object? json) => json is Map
+      ? IdentityMovie(
+          movieId: (json['movieId'] as num?)?.toInt() ?? 0,
+          title: json['title'] as String? ?? '',
+          rating: (json['rating'] as num?)?.toInt() ?? 0,
+          tmdbAverage: (json['tmdbAverage'] as num?)?.toDouble(),
+        )
+      : null;
+}

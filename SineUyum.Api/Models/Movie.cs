@@ -18,6 +18,9 @@ namespace SineUyum.Api.Models
         // önceden hiç yazılmıyordu; eski filmler arka planda tamamlanır.
         public DateTime? GenresSyncedAt { get; set; }
 
+        // TMDb genel ortalaması (0-10); "en aykırı puanın" bununla bulunur.
+        public double? TmdbVoteAverage { get; set; }
+
         public ICollection<MovieGenre> MovieGenres { get; set; } = new List<MovieGenre>();
     }
 }

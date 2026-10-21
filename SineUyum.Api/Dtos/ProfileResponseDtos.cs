@@ -70,3 +70,40 @@ namespace SineUyum.Api.Dtos
         public int TargetUserRating { get; set; }
     }
 }
+
+namespace SineUyum.Api.Dtos
+{
+    // GET /api/v1/profile/{userId}/identity — paylaşılabilir film kimliği.
+    public class FilmIdentityDto
+    {
+        public string UserName { get; set; } = string.Empty;
+        public int TotalRatings { get; set; }
+        public double AverageRating { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string TitleDescription { get; set; } = string.Empty;
+        public List<GenreShareDto> TopGenres { get; set; } = new();
+        // Puanların TMDb ortalamasından ortalama sapması (en az 8 film).
+        public double? Deviation { get; set; }
+        // Genel kanıdan en çok ayrışılan film (en az 3 puan fark).
+        public IdentityMovieDto? ContrarianTake { get; set; }
+        public IdentityMovieDto? Favorite { get; set; }
+    }
+
+    public class GenreShareDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public int Count { get; set; }
+        public double Average { get; set; }
+        // Türü belli filmler içindeki yüzde.
+        public int Share { get; set; }
+    }
+
+    public class IdentityMovieDto
+    {
+        public int MovieId { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string? PosterPath { get; set; }
+        public int Rating { get; set; }
+        public double? TmdbAverage { get; set; }
+    }
+}

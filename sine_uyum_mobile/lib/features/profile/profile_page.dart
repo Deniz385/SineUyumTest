@@ -72,6 +72,19 @@ class ProfilePage extends ConsumerWidget {
                 ],
               ] else ...[
                 _Stats(statistics: profile.statistics),
+                if (profile.statistics.totalRatings > 0)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () => context.push(
+                        '/profile/$userId/identity${isOwnProfile ? '?mine=1' : ''}',
+                      ),
+                      icon: const Icon(Icons.badge_outlined),
+                      label: Text(
+                        isOwnProfile ? 'Film kimliğim' : 'Film kimliği',
+                      ),
+                    ),
+                  ),
                 if (!isOwnProfile) ...[
                   const SizedBox(height: 20),
                   _SocialActions(userId: userId, userName: profile.userName),

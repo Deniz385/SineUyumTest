@@ -28,7 +28,7 @@ public class GenreTests : IClassFixture<GenreTests.Factory>
             var genres = id % 2 == 0
                 ? "[{\"id\":18,\"name\":\"Dram\"},{\"id\":878,\"name\":\"Bilim-Kurgu\"}]"
                 : "[{\"id\":27,\"name\":\"Korku\"}]";
-            var body = $"{{\"id\":{id},\"title\":\"Film {id}\",\"poster_path\":\"/p{id}.jpg\",\"genres\":{genres}}}";
+            var body = $"{{\"id\":{id},\"title\":\"Film {id}\",\"poster_path\":\"/p{id}.jpg\",\"vote_average\":7.84,\"genres\":{genres}}}";
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(body, Encoding.UTF8, "application/json")
@@ -93,6 +93,12 @@ public class GenreTests : IClassFixture<GenreTests.Factory>
         var me = await RegisterAsync();
         await RateAsync(me, 960002, 8);
         Assert.Equal(["Bilim-Kurgu", "Dram"], await GenresOfAsync(960002));
+        using (var scope = _factory.Services.CreateScope())
+        {
+            // TMDb ortalaması da saklanır (kimlik kartındaki "en aykırı puan" için).
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            Assert.Equal(7.8, (await db.Movies.FindAsync(960002))!.TmdbVoteAverage);
+        }
         // Aynı türü paylaşan ikinci film: tür tekrar eklenmez (birincil anahtar çakışmaz).
         await RateAsync(me, 960004, 7);
         Assert.Equal(["Bilim-Kurgu", "Dram"], await GenresOfAsync(960004));
@@ -138,5 +144,33 @@ public class GenreTests : IClassFixture<GenreTests.Factory>
         Assert.Equal(960101, insights.GetProperty("debateMovie").GetProperty("movieId").GetInt32());
         Assert.Equal(10, insights.GetProperty("debateMovie").GetProperty("currentUserRating").GetInt32());
         Assert.Equal(960102, insights.GetProperty("sharedFavorite").GetProperty("movieId").GetInt32());
+    }
+
+    [Fact]
+    public async Task KimlikKarti_PuanlardanUretilir_GizlilikeUyar()
+    {
+        var me = await RegisterAsync();
+        var viewer = await RegisterAsync();
+        // Çift id: Dram + Bilim-Kurgu; TMDb ortalaması 7.8.
+        foreach (var (id, rating) in new[] { (960202, 9), (960204, 10), (960206, 8), (960208, 9), (960210, 2) })
+        {
+            await RateAsync(me, id, rating);
+        }
+
+        var res = await SendAsync(HttpMethod.Get, $"/api/v1/profile/{me.Id}/identity", viewer);
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+        var root = doc.RootElement;
+        Assert.Equal(5, root.GetProperty("totalRatings").GetInt32());
+        Assert.Equal(7.6, root.GetProperty("averageRating").GetDouble());
+        Assert.Equal(["Bilim-Kurgu", "Dram"], root.GetProperty("topGenres").EnumerateArray().Select(g => g.GetProperty("name").GetString()));
+        Assert.Equal(960210, root.GetProperty("contrarianTake").GetProperty("movieId").GetInt32());
+        Assert.Equal(960204, root.GetProperty("favorite").GetProperty("movieId").GetInt32());
+        Assert.False(string.IsNullOrEmpty(root.GetProperty("title").GetString()));
+
+        await SendAsync(HttpMethod.Put, "/api/v1/account/privacy", me,
+            new { profileVisibility = "Private", messagePermission = "Everyone", hiddenFromSearch = false });
+        Assert.Equal(HttpStatusCode.Forbidden, (await SendAsync(HttpMethod.Get, $"/api/v1/profile/{me.Id}/identity", viewer)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await SendAsync(HttpMethod.Get, $"/api/v1/profile/{me.Id}/identity", me)).StatusCode);
     }
 }

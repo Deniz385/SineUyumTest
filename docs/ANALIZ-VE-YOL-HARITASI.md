@@ -798,5 +798,14 @@ Hedef: uygulamayı "puan + takip + mesaj"tan film severlerin sosyal ağına
       kişilerin puanlarının uyumun karesiyle ağırlıklı ortalaması; en az 2
       kişi yoksa gösterilmez. Gizlilik/engel kurallarına uyar. Film
       sayfasında TMDb puanının yanında, en uyumlu üç kişiyle birlikte.
-29. Film kimliği kartı (paylaşılabilir)
+29. Film kimliği kartı (paylaşılabilir) — ✅
+    - `GET /profile/{id}/identity`: toplam ve ortalama, en çok izlenen türler
+      (pay ve ortalama), TMDb ortalamasından sapma, "en aykırı puan" (en az 3
+      puan fark), favori ve kurallarla bir unvan (Aykırı Eleştirmen, Cömert
+      Seyirci, Zor Beğenen, {Tür} Tutkunu, Her Telden, Film Kâşifi, Yeni
+      Keşifçi). Profil ayrıntısıyla aynı görünürlük kuralı.
+    - TMDb ortalaması artık saklanıyor (`Movies.TmdbVoteAverage`); migration
+      filmleri bir kez yeniden işlenmeye işaretler.
+    - Web: kart + 1080×1350 PNG (sistem paylaşım menüsü ya da indirme).
+      Mobil: kart ekranı, görüntü yakalanıp `share_plus` ile paylaşılır.
 30. Haftalık zevk ikizi

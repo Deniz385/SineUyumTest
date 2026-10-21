@@ -439,6 +439,23 @@
   statistics: object
   userName: string
 
+## profile.identity  GET /api/v1/profile/{id}/identity -> 200
+  $: object
+  averageRating: number
+  contrarianTake: null
+  deviation: null
+  favorite.movieId: number
+  favorite.posterPath: string
+  favorite.rating: number
+  favorite.title: string
+  favorite.tmdbAverage: null
+  favorite: object
+  title: string
+  titleDescription: string
+  topGenres: array
+  totalRatings: number
+  userName: string
+
 ## profile.update  PUT /api/v1/profile -> 200
   $: object
   message: string

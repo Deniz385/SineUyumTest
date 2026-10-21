@@ -12,6 +12,7 @@ namespace SineUyum.Api.Services
         public int IntervalMinutes { get; set; } = 30;
     }
 
+    // TMDb ortalaması da aynı istekten gelir ve saklanır.
     // Tür bilgisi önceden hiç yazılmadığı için mevcut filmlerin türleri boştu;
     // uyum açıklaması, film kimliği ve tür bazlı öneriler buna dayanır. Bu iş
     // türü işlenmemiş filmleri küçük partilerle TMDb'den tamamlar (kota

@@ -120,6 +120,32 @@ namespace SineUyum.Api.Controllers
             return Ok(profileData);
         }
 
+        // Paylaşılabilir film kimliği (Faz 5). Puanlardan türediği için profil
+        // ayrıntısıyla aynı görünürlük kuralı.
+        [HttpGet("{userId}/identity")]
+        public async Task<ActionResult<FilmIdentityDto>> GetIdentity(string userId)
+        {
+            var viewerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (viewerId == null) return Unauthorized();
+            var owner = await _privacy.EnsureCanViewDetailsAsync(viewerId, userId, User.IsInRole("Admin"));
+
+            var rows = await _context.UserRatings
+                .Where(r => r.UserId == userId)
+                .Select(r => new
+                {
+                    r.MovieId,
+                    r.Movie.Title,
+                    r.Movie.PosterPath,
+                    r.Rating,
+                    r.Movie.TmdbVoteAverage,
+                    Genres = r.Movie.MovieGenres.Select(mg => mg.Genre.Name).ToList()
+                })
+                .ToListAsync();
+
+            return Ok(FilmIdentity.Build(owner.UserName ?? string.Empty,
+                rows.Select(r => new RatedMovieFacts(r.MovieId, r.Title, r.PosterPath, r.Rating, r.TmdbVoteAverage, r.Genres)).ToList()));
+        }
+
         [HttpPut]
         public async Task<ActionResult<StatusMessageDto>> UpdateProfile([FromBody] UpdateProfileDto updateDto)
         {

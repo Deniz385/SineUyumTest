@@ -11,6 +11,7 @@ import { RecommendationModal } from '../components/RecommendationModal';
 import { FollowListModal } from '../components/FollowListModal';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
 import { CompatibilityInsights } from '../components/CompatibilityInsights';
+import { FilmIdentityDialog } from '../components/FilmIdentityDialog';
 import { useSnackbar } from '../context/SnackbarProvider';
 
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
@@ -44,6 +45,7 @@ export const ProfilePage = () => {
     const [listData, setListData] = useState([]);
     const [isListLoading, setIsListLoading] = useState(false);
     const [isBlockDialogOpen, setIsBlockDialogOpen] = useState(false);
+    const [isIdentityOpen, setIsIdentityOpen] = useState(false);
 
     const isMyProfile = user?.id === userId;
 
@@ -196,6 +198,14 @@ export const ProfilePage = () => {
                     </Alert>
                 )}
 
+                {stats && stats.totalRatings > 0 && (
+                    <Box sx={{ textAlign: 'center', mt: 2 }}>
+                        <Button variant="outlined" color="secondary" onClick={() => setIsIdentityOpen(true)}>
+                            {isMyProfile ? 'Film kimliğim' : 'Film kimliği'}
+                        </Button>
+                    </Box>
+                )}
+
                 {stats && (
                     <Grid container spacing={2} sx={{ my: 3, justifyContent: 'center' }}>
                         <StatCard icon={<RateReviewIcon color="primary" sx={{mb:1}}/>} value={stats.totalRatings} label="Film Oyladı" />
@@ -254,6 +264,7 @@ export const ProfilePage = () => {
             </div>
             
             {profileData && <RecommendationModal open={isRecsModalOpen} onClose={() => setIsRecsModalOpen(false)} recommendations={recommendations} isLoading={isRecsLoading} targetUserName={profileData.userName} />}
+            <FilmIdentityDialog open={isIdentityOpen} onClose={() => setIsIdentityOpen(false)} userId={userId} isMine={isMyProfile} />
             <ConfirmationDialog
                 open={isBlockDialogOpen}
                 onClose={() => setIsBlockDialogOpen(false)}

@@ -186,4 +186,11 @@ class SocialRepository {
     );
     return FeedPage.fromJson(data);
   }
+
+  Future<FilmIdentity> identity(String userId) async {
+    final data = await _client.get<Map<String, dynamic>>(
+      '/api/v1/profile/$userId/identity',
+    );
+    return FilmIdentity.fromJson(data);
+  }
 }

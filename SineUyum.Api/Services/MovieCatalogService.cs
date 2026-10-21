@@ -50,7 +50,7 @@ namespace SineUyum.Api.Services
             // türü eklemiş olabilir; ikinci denemede tür artık veritabanındadır.
             for (var attempt = 1; ; attempt++)
             {
-                var movie = new Movie { Id = movieId, Title = details.Title, PosterPath = details.PosterPath };
+                var movie = new Movie { Id = movieId, Title = details.Title, PosterPath = details.PosterPath, TmdbVoteAverage = details.VoteAverage };
                 await AttachGenresAsync(movie, details.Genres);
                 _context.Movies.Add(movie);
                 try
@@ -88,6 +88,7 @@ namespace SineUyum.Api.Services
             var details = await FetchFromTmdbAsync(movieId);
             if (movie.MovieGenres.Count == 0) await AttachGenresAsync(movie, details.Genres);
             movie.GenresSyncedAt = DateTime.UtcNow;
+            movie.TmdbVoteAverage = details.VoteAverage;
             await _context.SaveChangesAsync();
         }
 
@@ -106,7 +107,7 @@ namespace SineUyum.Api.Services
             movie.GenresSyncedAt = DateTime.UtcNow;
         }
 
-        private async Task<(string Title, string? PosterPath, IReadOnlyList<(int Id, string Name)> Genres)> FetchFromTmdbAsync(int movieId)
+        private async Task<(string Title, string? PosterPath, IReadOnlyList<(int Id, string Name)> Genres, double? VoteAverage)> FetchFromTmdbAsync(int movieId)
         {
             if (string.IsNullOrEmpty(_tmdbApiKey))
             {
@@ -169,7 +170,12 @@ namespace SineUyum.Api.Services
                 }
             }
 
-            return (title ?? "Başlıksız", posterPath, genres);
+            // Oy yoksa TMDb 0 döner; "ortalama yok" sayılır.
+            double? voteAverage = root.TryGetProperty("vote_average", out var va) && va.TryGetDouble(out var avg) && avg > 0
+                ? Math.Round(avg, 1)
+                : null;
+
+            return (title ?? "Başlıksız", posterPath, genres, voteAverage);
         }
     }
 }

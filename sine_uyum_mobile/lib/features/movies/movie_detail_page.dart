@@ -7,6 +7,8 @@ import '../../providers/repository_providers.dart';
 import '../../widgets/movie_widgets.dart';
 import '../../widgets/poster_image.dart';
 import '../../widgets/state_views.dart';
+import '../../providers/social_provider.dart';
+import '../social/movie_reviews_section.dart';
 
 class MovieDetailPage extends ConsumerWidget {
   const MovieDetailPage({super.key, required this.movieId});
@@ -60,6 +62,9 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
       await ref.read(movieRepositoryProvider).rate(_movie, rating);
       // Profil istatistikleri değiştiği için ilgili sağlayıcılar tazelenir.
       ref.invalidate(myEventProvider);
+      // Puan verildi: inceleme yazma alanı açılsın, akış güncellensin.
+      ref.invalidate(movieReviewsProvider(_movie.id));
+      ref.invalidate(feedProvider);
       _showMessage('Puanın kaydedildi: $rating/10');
     } catch (error) {
       _showMessage(error.toString());
@@ -199,6 +204,7 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
           const SizedBox(height: 8),
           Text(_movie.overview!, style: theme.textTheme.bodyMedium),
         ],
+        MovieReviewsSection(movieId: _movie.id),
       ],
     );
   }

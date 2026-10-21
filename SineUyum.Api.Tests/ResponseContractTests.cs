@@ -202,6 +202,17 @@ public class ResponseContractTests : IClassFixture<ResponseContractTests.Factory
         await Get("follow.followers", $"/api/v1/follow/{bId}/followers", a);
         await Get("follow.following", $"/api/v1/follow/{aId}/following", a);
 
+        // Sosyal çekirdek: inceleme, beğeni, yorum, akış.
+        var review = await Call("reviews.upsert", HttpMethod.Put, "/api/v1/reviews/movie/550", b, new { text = "İzleyin", containsSpoilers = false });
+        var reviewId = review.GetProperty("id").GetInt32();
+        await Get("reviews.forMovie", "/api/v1/reviews/movie/550", a);
+        await Post("reviews.like", $"/api/v1/reviews/{reviewId}/like", a);
+        var comment = await Post("reviews.comment", $"/api/v1/reviews/{reviewId}/comments", a, new { text = "Katılıyorum" });
+        await Get("reviews.comments", $"/api/v1/reviews/{reviewId}/comments", a);
+        await Get("feed", "/api/v1/feed", a);
+        await Call("reviews.deleteComment", HttpMethod.Delete, $"/api/v1/reviews/comments/{comment.GetProperty("id").GetInt32()}", a);
+        await Call("reviews.unlike", HttpMethod.Delete, $"/api/v1/reviews/{reviewId}/like", a);
+
         // İzleme listesi.
         var list = await Post("watchlist.create", "/api/v1/watchlist", a, new { name = "Liste", description = "Aciklama" });
         var listId = list.GetProperty("id").GetInt32();

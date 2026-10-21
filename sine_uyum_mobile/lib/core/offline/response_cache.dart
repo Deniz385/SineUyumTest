@@ -31,6 +31,8 @@ class ResponseCache {
     RegExp(r'^/api/v1/subscription$'),
     RegExp(r'^/api/v1/account/privacy$'),
     RegExp(r'^/api/v1/blocks$'),
+    RegExp(r'^/api/v1/feed$'),
+    RegExp(r'^/api/v1/reviews/movie/\d+$'),
   ];
 
   static bool isCacheable(String path) =>

@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../core/network/api_client.dart';
 import '../models/app_user.dart';
 import '../models/profile.dart';
+import '../models/social.dart';
 
 /// Profil, takip ve kullanıcı arama işlemleri.
 class SocialRepository {
@@ -110,5 +111,79 @@ class SocialRepository {
 
   Future<void> unblock(String userId) async {
     await _client.delete<Map<String, dynamic>>('/api/v1/blocks/$userId');
+  }
+
+  // --- Sosyal çekirdek: inceleme, beğeni, yorum, akış ---
+
+  Future<MovieReviews> movieReviews(int movieId, {int page = 1}) async {
+    final data = await _client.get<Map<String, dynamic>>(
+      '/api/v1/reviews/movie/$movieId',
+      query: {'page': page},
+    );
+    return MovieReviews.fromJson(data);
+  }
+
+  Future<Review> upsertReview(
+    int movieId, {
+    required String text,
+    required bool containsSpoilers,
+  }) async {
+    final data = await _client.put<Map<String, dynamic>>(
+      '/api/v1/reviews/movie/$movieId',
+      body: {'text': text, 'containsSpoilers': containsSpoilers},
+    );
+    return Review.fromJson(data);
+  }
+
+  Future<void> deleteReview(int movieId) async {
+    await _client.delete<Map<String, dynamic>>(
+      '/api/v1/reviews/movie/$movieId',
+    );
+  }
+
+  /// Beğeni durumunu ayarlar; sunucunun güncel sayısını döner.
+  Future<({bool liked, int likeCount})> setLiked(
+    int reviewId,
+    bool liked,
+  ) async {
+    final path = '/api/v1/reviews/$reviewId/like';
+    final data = liked
+        ? await _client.post<Map<String, dynamic>>(path)
+        : await _client.delete<Map<String, dynamic>>(path);
+    return (
+      liked: data['liked'] as bool? ?? liked,
+      likeCount: (data['likeCount'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  Future<List<ReviewComment>> comments(int reviewId) async {
+    final data = await _client.get<List<dynamic>>(
+      '/api/v1/reviews/$reviewId/comments',
+    );
+    return data
+        .map((e) => ReviewComment.fromJson((e as Map).cast<String, dynamic>()))
+        .toList();
+  }
+
+  Future<ReviewComment> addComment(int reviewId, String text) async {
+    final data = await _client.post<Map<String, dynamic>>(
+      '/api/v1/reviews/$reviewId/comments',
+      body: {'text': text},
+    );
+    return ReviewComment.fromJson(data);
+  }
+
+  Future<void> deleteComment(int commentId) async {
+    await _client.delete<Map<String, dynamic>>(
+      '/api/v1/reviews/comments/$commentId',
+    );
+  }
+
+  Future<FeedPage> feed({String? cursor}) async {
+    final data = await _client.get<Map<String, dynamic>>(
+      '/api/v1/feed',
+      query: cursor == null ? null : {'cursor': cursor},
+    );
+    return FeedPage.fromJson(data);
   }
 }

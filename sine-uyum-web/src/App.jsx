@@ -27,6 +27,7 @@ const ConversationPage = page(() => import('./pages/ConversationPage'), 'Convers
 const MyEventPage = page(() => import('./pages/MyEventPage'), 'MyEventPage');
 const SubscriptionPage = page(() => import('./pages/SubscriptionPage'), 'SubscriptionPage');
 const AdminPage = page(() => import('./pages/AdminPage'), 'AdminPage');
+const FeedPage = page(() => import('./pages/FeedPage'), 'FeedPage');
 
 function App() {
   return (
@@ -51,6 +52,7 @@ function App() {
                   }
                 >                
                   <Route path="/home" element={<HomePage />} />
+                  <Route path="/feed" element={<FeedPage />} />
                   <Route path="/profile/:userId" element={<ProfilePage />} />
                   <Route path="/search" element={<SearchResultsPage />} />
                   <Route path="/movie/:movieId" element={<MovieDetailPage />} />

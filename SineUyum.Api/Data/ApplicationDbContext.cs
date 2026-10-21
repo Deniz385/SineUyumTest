@@ -20,6 +20,9 @@
         public DbSet<EventGroupMember> EventGroupMembers { get; set; }
         public DbSet<EventGroupSuggestion> EventGroupSuggestions { get; set; }
         public DbSet<MatchingRun> MatchingRuns { get; set; }
+        public DbSet<Review> Reviews { get; set; }
+        public DbSet<ReviewLike> ReviewLikes { get; set; }
+        public DbSet<ReviewComment> ReviewComments { get; set; }
         public DbSet<EventVote> EventVotes { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
@@ -146,6 +149,67 @@
                 .HasOne(r => r.CinemaEvent)
                 .WithMany()
                 .HasForeignKey(r => r.CinemaEventId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Akış: takip edilenlerin etkinliği ActivityAt'e göre sayfalanır.
+            builder.Entity<UserRating>()
+                .HasIndex(r => new { r.UserId, r.ActivityAt });
+
+            // Kullanıcı ve film başına tek puan (önceden yalnızca kodda
+            // denetleniyordu; eşzamanlı iki istek çift kayıt açabiliyordu).
+            builder.Entity<UserRating>()
+                .HasIndex(r => new { r.UserId, r.MovieId })
+                .IsUnique();
+
+            builder.Entity<Review>()
+                .HasIndex(r => new { r.UserId, r.MovieId })
+                .IsUnique();
+
+            builder.Entity<Review>()
+                .HasIndex(r => new { r.MovieId, r.CreatedAt });
+
+            builder.Entity<Review>()
+                .Property(r => r.Text)
+                .HasMaxLength(2000);
+
+            builder.Entity<Review>()
+                .HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<ReviewLike>()
+                .HasKey(l => new { l.ReviewId, l.UserId });
+
+            builder.Entity<ReviewLike>()
+                .HasOne(l => l.Review)
+                .WithMany(r => r.Likes)
+                .HasForeignKey(l => l.ReviewId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<ReviewLike>()
+                .HasOne(l => l.User)
+                .WithMany()
+                .HasForeignKey(l => l.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<ReviewComment>()
+                .HasIndex(c => new { c.ReviewId, c.CreatedAt });
+
+            builder.Entity<ReviewComment>()
+                .Property(c => c.Text)
+                .HasMaxLength(500);
+
+            builder.Entity<ReviewComment>()
+                .HasOne(c => c.Review)
+                .WithMany(r => r.Comments)
+                .HasForeignKey(c => c.ReviewId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<ReviewComment>()
+                .HasOne(c => c.User)
+                .WithMany()
+                .HasForeignKey(c => c.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // MovieGenre için birleşik birincil anahtar (composite key) tanımlaması

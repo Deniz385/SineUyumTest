@@ -36,22 +36,37 @@ namespace SineUyum.Api.Controllers
 
             if (existingRating != null)
             {
-                // Kullanıcı bu filme daha önce oy verdiyse, sadece puanını güncelle
+                // Puanı değiştirmek akışta öne taşımaz.
                 existingRating.Rating = createRatingDto.Rating;
+                await _context.SaveChangesAsync();
             }
             else
             {
-                // Kullanıcı bu filme ilk defa oy veriyorsa, yeni bir kayıt oluştur
-                var newRating = new UserRating
+                var now = DateTime.UtcNow;
+                _context.UserRatings.Add(new UserRating
                 {
                     MovieId = createRatingDto.MovieId,
                     UserId = userId,
-                    Rating = createRatingDto.Rating
-                };
-                await _context.UserRatings.AddAsync(newRating);
+                    Rating = createRatingDto.Rating,
+                    CreatedAt = now,
+                    ActivityAt = now
+                });
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateException)
+                {
+                    // Eşzamanlı ikinci istek aynı puanı açtı (benzersiz indeks): onu güncelle.
+                    _context.ChangeTracker.Clear();
+                    var raced = await _context.UserRatings
+                        .FirstOrDefaultAsync(r => r.UserId == userId && r.MovieId == createRatingDto.MovieId);
+                    if (raced == null) throw;
+                    raced.Rating = createRatingDto.Rating;
+                    await _context.SaveChangesAsync();
+                }
             }
 
-            await _context.SaveChangesAsync();
             return Ok(new StatusMessageDto("Puan başarıyla kaydedildi."));
         }
         

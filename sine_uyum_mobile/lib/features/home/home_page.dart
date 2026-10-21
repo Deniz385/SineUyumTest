@@ -5,9 +5,33 @@ import '../../data/models/movie.dart';
 import '../../providers/repository_providers.dart';
 import '../../widgets/movie_widgets.dart';
 import '../../widgets/state_views.dart';
+import '../social/feed_view.dart';
 
-class HomePage extends ConsumerWidget {
+/// Ana sayfa: takip edilenlerin akışı ve film şeritleri.
+class HomePage extends StatelessWidget {
   const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          TabBar(
+            tabs: [
+              Tab(text: 'Akış'),
+              Tab(text: 'Filmler'),
+            ],
+          ),
+          Expanded(child: TabBarView(children: [FeedView(), _MoviesTab()])),
+        ],
+      ),
+    );
+  }
+}
+
+class _MoviesTab extends ConsumerWidget {
+  const _MoviesTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

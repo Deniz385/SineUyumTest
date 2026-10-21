@@ -69,6 +69,9 @@ export const Navbar = () => {
       <Typography variant="h6" sx={{ my: 2 }}>SineUyum</Typography>
       <List>
         <ListItem disablePadding>
+          <ListItemButton component={Link} to="/feed"><ListItemText primary="Akış" /></ListItemButton>
+        </ListItem>
+        <ListItem disablePadding>
           <ListItemButton component={Link} to="/my-event"><ListItemText primary="Etkinliğim" /></ListItemButton>
         </ListItem>
         <ListItem disablePadding>
@@ -102,6 +105,7 @@ export const Navbar = () => {
             <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center' }}>
               <MovieSearchBar />
               <UserSearch />
+              <Link to="/feed" style={{ color: '#fff', margin: '0 15px', textDecoration: 'none' }}>Akış</Link>
               <Link to="/my-event" style={{ color: '#fff', margin: '0 15px', textDecoration: 'none' }}>Etkinliğim</Link>
               <Link to="/messages" style={{ color: '#fff', margin: '0 15px', textDecoration: 'none' }}>Mesajlar</Link>
               <Link to="/watchlist" style={{ color: '#fff', margin: '0 15px', textDecoration: 'none' }}>İzleme Listem</Link>

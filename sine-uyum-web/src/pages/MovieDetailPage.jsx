@@ -4,6 +4,7 @@ import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, Chip, CircularProgress, Button, IconButton, Modal, List, ListItem, ListItemButton, ListItemText, Divider } from '@mui/material';
 import { RatingModal } from '../components/RatingModal';
+import { MovieReviews } from '../components/MovieReviews';
 import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd';
 import { useSnackbar } from '../context/SnackbarProvider'; // <-- SNACKBAR KANCASINI İÇE AKTAR
 
@@ -32,6 +33,7 @@ export const MovieDetailPage = () => {
     const [isWatchlistModalOpen, setIsWatchlistModalOpen] = useState(false);
     const [userLists, setUserLists] = useState([]);
     const [refetchTrigger, setRefetchTrigger] = useState(0);
+    const [reviewsKey, setReviewsKey] = useState(0);
 
     const fetchMovieDetails = useCallback(async () => {
         if (!user) return;
@@ -86,6 +88,8 @@ export const MovieDetailPage = () => {
             });
             showSnackbar(`'${movieToRate.title}' filmine ${rating} puan verdiniz!`, 'success');
             setRefetchTrigger(prev => prev + 1);
+            // Puan verildi: inceleme yazma alanı açılsın.
+            setReviewsKey(prev => prev + 1);
         } catch {
             showSnackbar('Puan kaydedilirken bir hata oluştu.', 'error');
         }
@@ -123,6 +127,7 @@ export const MovieDetailPage = () => {
                            <Typography variant="caption" color="text.secondary">{actor.character}</Typography>
                         </div>
                     ))}</div>
+                    <MovieReviews movieId={movie.id} refreshKey={reviewsKey} />
                 </div>
             </div>
 

@@ -145,6 +145,132 @@
   [].userName: string
   []: object
 
+## reviews.upsert  PUT /api/v1/reviews/movie/{id} -> 200
+  $: object
+  author.id: string
+  author.profileImageUrl: null
+  author.userName: string
+  author: object
+  authorCompatibility: null
+  commentCount: number
+  containsSpoilers: bool
+  createdAt: string
+  id: number
+  isMine: bool
+  likeCount: number
+  likedByMe: bool
+  movie.id: number
+  movie.posterPath: string
+  movie.title: string
+  movie: object
+  rating: number
+  text: string
+  updatedAt: null
+
+## reviews.forMovie  GET /api/v1/reviews/movie/{id} -> 200
+  $: object
+  mine: null
+  myRating: number
+  reviews: array
+  reviews[].author.id: string
+  reviews[].author.profileImageUrl: null
+  reviews[].author.userName: string
+  reviews[].author: object
+  reviews[].authorCompatibility: number
+  reviews[].commentCount: number
+  reviews[].containsSpoilers: bool
+  reviews[].createdAt: string
+  reviews[].id: number
+  reviews[].isMine: bool
+  reviews[].likeCount: number
+  reviews[].likedByMe: bool
+  reviews[].movie.id: number
+  reviews[].movie.posterPath: string
+  reviews[].movie.title: string
+  reviews[].movie: object
+  reviews[].rating: number
+  reviews[].text: string
+  reviews[].updatedAt: null
+  reviews[]: object
+  totalCount: number
+
+## reviews.like  POST /api/v1/reviews/{id}/like -> 200
+  $: object
+  likeCount: number
+  liked: bool
+
+## reviews.comment  POST /api/v1/reviews/{id}/comments -> 200
+  $: object
+  author.id: string
+  author.profileImageUrl: null
+  author.userName: string
+  author: object
+  canDelete: bool
+  createdAt: string
+  id: number
+  text: string
+
+## reviews.comments  GET /api/v1/reviews/{id}/comments -> 200
+  $: array
+  [].author.id: string
+  [].author.profileImageUrl: null
+  [].author.userName: string
+  [].author: object
+  [].canDelete: bool
+  [].createdAt: string
+  [].id: number
+  [].text: string
+  []: object
+
+## feed  GET /api/v1/feed -> 200
+  $: object
+  items: array
+  items[].activityAt: string
+  items[].author.id: string
+  items[].author.profileImageUrl: null
+  items[].author.userName: string
+  items[].author: object
+  items[].authorCompatibility: null
+  items[].authorCompatibility: number
+  items[].movie.id: number
+  items[].movie.posterPath: string
+  items[].movie.title: string
+  items[].movie: object
+  items[].rating: number
+  items[].review.author.id: string
+  items[].review.author.profileImageUrl: null
+  items[].review.author.userName: string
+  items[].review.author: object
+  items[].review.authorCompatibility: number
+  items[].review.commentCount: number
+  items[].review.containsSpoilers: bool
+  items[].review.createdAt: string
+  items[].review.id: number
+  items[].review.isMine: bool
+  items[].review.likeCount: number
+  items[].review.likedByMe: bool
+  items[].review.movie.id: number
+  items[].review.movie.posterPath: string
+  items[].review.movie.title: string
+  items[].review.movie: object
+  items[].review.rating: number
+  items[].review.text: string
+  items[].review.updatedAt: null
+  items[].review: null
+  items[].review: object
+  items[].type: string
+  items[]: object
+  nextCursor: null
+
+## reviews.deleteComment  DELETE /api/v1/reviews/comments/{id} -> 200
+  $: object
+  message: string
+
+## reviews.unlike  DELETE /api/v1/reviews/{id}/like -> 200
+  $: object
+  likeCount: number
+  liked: bool
+
 ## watchlist.create  POST /api/v1/watchlist -> 201
   $: object
   description: string

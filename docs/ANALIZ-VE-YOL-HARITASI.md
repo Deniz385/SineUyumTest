@@ -779,7 +779,20 @@ Hedef: uygulamayı "puan + takip + mesaj"tan film severlerin sosyal ağına
       çalışmıyordu). Yeni filmde TMDb türleri kaydedilir; eskiler
       `GenreBackfillWorker` ile 30 dakikada bir 40'ar film tamamlanır.
 27. Sosyal çekirdek: inceleme (puan + yazı, spoiler), takip akışı, beğeni ve
-    yorum
+    yorum — ✅
+    - İnceleme bir puanın yazılı hâli (önce puan gerekir), spoiler işareti;
+      her incelemede yazarla "%N uyumlu" rozeti. Beğeni ve yorum yazara
+      bildirim gönderir (bildirimde yorum metni yok).
+    - Akış: takip edilenlerin ve kendinin puanları ve incelemeleri, imleçli
+      sayfalama. Puanı değiştirmek öne taşımaz, ilk inceleme taşır. Akıştan
+      önceki puanların zamanı bilinmediği için akışta görünmezler.
+    - Görünürlük G12 ile aynı kural (gizli profil, engel); engellenen
+      kişinin yorumları gizlenir, engelli kişiye yorum yapılamaz.
+    - Yol üstünde: "kullanıcı başına tek puan" yalnızca kodda denetleniyordu;
+      benzersiz indeks eklendi (migration önce çiftleri temizler, en son
+      puan kalır).
+    - Web: film sayfasında incelemeler, "Akış" sayfası. Mobil: ana sayfada
+      Akış / Filmler sekmeleri, film sayfasında incelemeler, yorum paneli.
 28. "Sana göre puan": uyumlu kişilerin bir filme verdiği ortalama
 29. Film kimliği kartı (paylaşılabilir)
 30. Haftalık zevk ikizi

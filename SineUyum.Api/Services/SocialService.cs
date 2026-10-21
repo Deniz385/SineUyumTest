@@ -37,7 +37,11 @@ namespace SineUyum.Api.Services
 
         // Görüntüleyenin verilen yazarlarla uyumu (tek sorgu). Ortak filmi
         // olmayanlar ve kendisi listede yer almaz.
-        public async Task<Dictionary<string, double>> CompatibilityWithAsync(string viewerId, IReadOnlyCollection<string> authorIds)
+        public async Task<Dictionary<string, double>> CompatibilityWithAsync(string viewerId, IReadOnlyCollection<string> authorIds) =>
+            (await CompatibilityDetailsAsync(viewerId, authorIds)).ToDictionary(p => p.Key, p => p.Value.Score);
+
+        // Uyum ve dayandığı ortak film sayısı (güvenilirlik eşiği için).
+        public async Task<Dictionary<string, (double Score, int CommonCount)>> CompatibilityDetailsAsync(string viewerId, IReadOnlyCollection<string> authorIds)
         {
             var others = authorIds.Where(id => id != viewerId).Distinct().ToList();
             if (others.Count == 0) return new();
@@ -52,7 +56,55 @@ namespace SineUyum.Api.Services
                 .GroupBy(p => p.UserId)
                 .ToDictionary(
                     g => g.Key,
-                    g => Math.Round(CompatibilityCalculator.Score(g.Select(p => (p.Mine, p.Theirs)).ToList()), 0));
+                    g => (Math.Round(CompatibilityCalculator.Score(g.Select(p => (p.Mine, p.Theirs)).ToList()), 0), g.Count()));
+        }
+
+        // "Sana göre puan": bu filmi puanlamış, sana güvenilir biçimde uyumlu
+        // kişilerin puanlarının uyumla ağırlıklı ortalaması. Genel ortalama
+        // herkesin zevkidir; bu, senin zevkine benzeyenlerin.
+        public const int ForYouMinCommonMovies = 3;
+        public const double ForYouMinCompatibility = 60;
+        public const int ForYouMinRaters = 2;
+        private const int ForYouMaxRaters = 300;
+
+        public async Task<ForYouScoreDto?> ForYouScoreAsync(string viewerId, int movieId)
+        {
+            var visible = VisibleAuthors(viewerId).Select(u => u.Id);
+            var raters = await _context.UserRatings
+                .Where(r => r.MovieId == movieId && r.UserId != viewerId && visible.Contains(r.UserId))
+                .OrderByDescending(r => r.Id)
+                .Take(ForYouMaxRaters)
+                .Select(r => new { r.UserId, r.Rating, r.User.UserName, r.User.ProfileImageUrl })
+                .ToListAsync();
+            if (raters.Count < ForYouMinRaters) return null;
+
+            var compatibility = await CompatibilityDetailsAsync(viewerId, raters.Select(r => r.UserId).ToList());
+            var matches = raters
+                .Where(r => compatibility.TryGetValue(r.UserId, out var c) &&
+                            c.CommonCount >= ForYouMinCommonMovies && c.Score >= ForYouMinCompatibility)
+                .Select(r => (Rater: r, Compatibility: compatibility[r.UserId].Score))
+                .ToList();
+            if (matches.Count < ForYouMinRaters) return null;
+
+            // Ağırlık uyumun karesi: %95 uyumlunun sözü %65'inkinden çok daha değerli.
+            var weights = matches.Select(m => Math.Pow(m.Compatibility / 100.0, 2)).ToList();
+            var score = matches.Select((m, i) => m.Rater.Rating * weights[i]).Sum() / weights.Sum();
+
+            return new ForYouScoreDto
+            {
+                Score = Math.Round(score, 1),
+                BasedOn = matches.Count,
+                TopMatches = matches
+                    .OrderByDescending(m => m.Compatibility).ThenBy(m => m.Rater.UserId, StringComparer.Ordinal)
+                    .Take(3)
+                    .Select(m => new ForYouRaterDto
+                    {
+                        Author = new UserBriefWithImageDto { Id = m.Rater.UserId, UserName = m.Rater.UserName, ProfileImageUrl = m.Rater.ProfileImageUrl },
+                        Rating = m.Rater.Rating,
+                        Compatibility = m.Compatibility
+                    })
+                    .ToList()
+            };
         }
 
         // İncelemeleri görüntüleyen için DTO'ya çevirir (beğeni/yorum sayıları,

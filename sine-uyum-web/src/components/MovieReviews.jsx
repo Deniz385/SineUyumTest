@@ -8,7 +8,7 @@ const PAGE_SIZE = 20;
 
 // Film sayfasındaki incelemeler: kendi incelemesini yaz/düzenle/sil ve
 // başkalarının incelemeleri (en yeniden eskiye).
-export const MovieReviews = ({ movieId, refreshKey }) => {
+export const MovieReviews = ({ movieId, refreshKey, onForYou }) => {
     const { showSnackbar } = useSnackbar();
     const [data, setData] = useState(null);
     const [reviews, setReviews] = useState([]);
@@ -21,6 +21,7 @@ export const MovieReviews = ({ movieId, refreshKey }) => {
         try {
             const res = await api.get(`/api/v1/reviews/movie/${movieId}`, { params: { page: nextPage, pageSize: PAGE_SIZE } });
             setData(res.data);
+            if (nextPage === 1) onForYou?.(res.data.forYou ?? null);
             setReviews((prev) => (nextPage === 1 ? res.data.reviews : [...prev, ...res.data.reviews]));
             setPage(nextPage);
             if (nextPage === 1) {
@@ -30,7 +31,7 @@ export const MovieReviews = ({ movieId, refreshKey }) => {
         } catch {
             setData((prev) => prev ?? { reviews: [], totalCount: 0 });
         }
-    }, [movieId]);
+    }, [movieId, onForYou]);
 
     useEffect(() => { load(1); }, [load, refreshKey]);
 

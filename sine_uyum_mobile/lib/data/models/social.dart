@@ -96,18 +96,52 @@ class Review {
   );
 }
 
+/// "Sana göre puan": sana uyumlu kişilerin bu filme verdiği puanların
+/// uyumla ağırlıklı ortalaması.
+class ForYouScore {
+  const ForYouScore({
+    required this.score,
+    required this.basedOn,
+    this.topMatches = const [],
+  });
+
+  final double score;
+  final int basedOn;
+  final List<({Author author, int rating, double compatibility})> topMatches;
+
+  static ForYouScore? tryParse(Map<String, dynamic>? json) {
+    final score = (json?['score'] as num?)?.toDouble();
+    if (json == null || score == null) return null;
+    return ForYouScore(
+      score: score,
+      basedOn: (json['basedOn'] as num?)?.toInt() ?? 0,
+      topMatches: [
+        for (final m in (json['topMatches'] as List? ?? const []))
+          if (m is Map)
+            (
+              author: Author.fromJson(_map(m['author'])),
+              rating: (m['rating'] as num?)?.toInt() ?? 0,
+              compatibility: (m['compatibility'] as num?)?.toDouble() ?? 0,
+            ),
+      ],
+    );
+  }
+}
+
 class MovieReviews {
   const MovieReviews({
     this.myRating,
     this.mine,
     this.reviews = const [],
     this.totalCount = 0,
+    this.forYou,
   });
 
   final int? myRating;
   final Review? mine;
   final List<Review> reviews;
   final int totalCount;
+  final ForYouScore? forYou;
 
   factory MovieReviews.fromJson(Map<String, dynamic> json) => MovieReviews(
     myRating: (json['myRating'] as num?)?.toInt(),
@@ -120,6 +154,7 @@ class MovieReviews {
             .toList() ??
         const [],
     totalCount: (json['totalCount'] as num?)?.toInt() ?? 0,
+    forYou: ForYouScore.tryParse(_map(json['forYou'])),
   );
 }
 

@@ -282,4 +282,48 @@ public class SocialTests : IClassFixture<TestWebAppFactory>
         var feed = await JsonAsync(await SendAsync(HttpMethod.Get, "/api/v1/feed", me));
         Assert.Empty(feed.GetProperty("items").EnumerateArray());
     }
+
+    [Fact]
+    public async Task SanaGorePuan_YalnizcaGuvenilirUyumlularin_AgirlikliOrtalamasi()
+    {
+        var me = await RegisterAsync();
+        var twin1 = await RegisterAsync();
+        var twin2 = await RegisterAsync();
+        var opposite = await RegisterAsync();
+        var newbie = await RegisterAsync();
+        var commons = new[] { await NewMovieAsync(), await NewMovieAsync(), await NewMovieAsync() };
+        var target = await NewMovieAsync();
+
+        var taste = new[] { 10, 1, 10 };
+        for (var i = 0; i < commons.Length; i++)
+        {
+            await RateAsync(me, commons[i], taste[i]);
+            await RateAsync(twin1, commons[i], taste[i]);
+            await RateAsync(twin2, commons[i], taste[i]);
+            await RateAsync(opposite, commons[i], 11 - taste[i]);
+        }
+        await RateAsync(newbie, commons[0], 10); // tek ortak film: güvenilir değil
+
+        await RateAsync(twin1, target, 10);
+        var single = await JsonAsync(await SendAsync(HttpMethod.Get, $"/api/v1/reviews/movie/{target}", me));
+        // Tek uyumlu kişi yetmez.
+        Assert.Equal(JsonValueKind.Null, single.GetProperty("forYou").ValueKind);
+
+        await RateAsync(twin2, target, 8);
+        await RateAsync(opposite, target, 2);
+        await RateAsync(newbie, target, 1);
+
+        var forYou = (await JsonAsync(await SendAsync(HttpMethod.Get, $"/api/v1/reviews/movie/{target}", me))).GetProperty("forYou");
+        Assert.Equal(9.0, forYou.GetProperty("score").GetDouble());
+        Assert.Equal(2, forYou.GetProperty("basedOn").GetInt32());
+        var top = forYou.GetProperty("topMatches").EnumerateArray().ToList();
+        Assert.Equal(2, top.Count);
+        Assert.All(top, t => Assert.Equal(100, t.GetProperty("compatibility").GetDouble()));
+
+        // Gizli profil sayılmaz: geriye tek uyumlu kalır, puan gösterilmez.
+        await SendAsync(HttpMethod.Put, "/api/v1/account/privacy", twin2,
+            new { profileVisibility = "Private", messagePermission = "Everyone", hiddenFromSearch = false });
+        var hidden = await JsonAsync(await SendAsync(HttpMethod.Get, $"/api/v1/reviews/movie/{target}", me));
+        Assert.Equal(JsonValueKind.Null, hidden.GetProperty("forYou").ValueKind);
+    }
 }

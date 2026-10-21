@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
-import { Box, Typography, Chip, CircularProgress, Button, IconButton, Modal, List, ListItem, ListItemButton, ListItemText, Divider } from '@mui/material';
+import { Box, Typography, Chip, CircularProgress, Button, IconButton, Modal, List, ListItem, ListItemButton, ListItemText, Divider, Tooltip } from '@mui/material';
 import { RatingModal } from '../components/RatingModal';
 import { MovieReviews } from '../components/MovieReviews';
 import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd';
@@ -34,6 +34,8 @@ export const MovieDetailPage = () => {
     const [userLists, setUserLists] = useState([]);
     const [refetchTrigger, setRefetchTrigger] = useState(0);
     const [reviewsKey, setReviewsKey] = useState(0);
+    // "Sana göre puan": sana uyumlu kişilerin puanı (incelemelerle birlikte gelir).
+    const [forYou, setForYou] = useState(null);
 
     const fetchMovieDetails = useCallback(async () => {
         if (!user) return;
@@ -112,13 +114,21 @@ export const MovieDetailPage = () => {
                         <Box className="tmdb-score-circle" sx={{ borderColor: tmdbScore > 70 ? 'success.main' : tmdbScore > 40 ? 'warning.main' : 'error.main' }}>
                             <Typography variant="h6" component="span">{tmdbScore}%</Typography>
                         </Box>
+                        {forYou && (
+                            <Tooltip title={`Sana uyumlu ${forYou.basedOn} kişiye göre: ${forYou.topMatches.map(m => `${m.author.userName} (%${m.compatibility}) ${m.rating}`).join(', ')}`}>
+                                <Box data-testid="for-you-score" sx={{ textAlign: 'center' }}>
+                                    <Typography variant="h5" component="span" color="secondary" sx={{ fontWeight: 'bold' }}>{forYou.score.toFixed(1)}</Typography>
+                                    <Typography variant="caption" sx={{ display: 'block' }}>Sana göre</Typography>
+                                </Box>
+                            </Tooltip>
+                        )}
                         <Button variant="contained" size="large" onClick={() => setIsRatingModalOpen(true)}>Bu Filmi Puanla</Button>
                         <IconButton onClick={handleOpenWatchlistModal} color="primary" title="Listeye Ekle"><BookmarkAddIcon fontSize="large" /></IconButton>
                     </Box>
                     <Box sx={{ my: 2 }}>{movie.genres.map(genre => <Chip label={genre.name} key={genre.id} sx={{ mr: 1, mb: 1 }} />)}</Box>
                     <Typography variant="body1" paragraph>{movie.overview}</Typography>
-                    <Typography variant="subtitle1">**Süre:** {movie.runtime} dakika</Typography>
-                    <Typography variant="subtitle1">**Yayın Tarihi:** {new Date(movie.release_date).toLocaleDateString('tr-TR')}</Typography>
+                    <Typography variant="subtitle1"><strong>Süre:</strong> {movie.runtime} dakika</Typography>
+                    <Typography variant="subtitle1"><strong>Yayın Tarihi:</strong> {new Date(movie.release_date).toLocaleDateString('tr-TR')}</Typography>
                     <Typography variant="h5" sx={{ mt: 3, mb: 2, fontWeight: 'bold' }}>Başrol Oyuncuları</Typography>
                     <div className="cast-list-visual">{movie.credits.cast.slice(0, 10).map(actor => (
                         <div key={actor.cast_id} className="actor-card-visual">
@@ -127,7 +137,7 @@ export const MovieDetailPage = () => {
                            <Typography variant="caption" color="text.secondary">{actor.character}</Typography>
                         </div>
                     ))}</div>
-                    <MovieReviews movieId={movie.id} refreshKey={reviewsKey} />
+                    <MovieReviews movieId={movie.id} refreshKey={reviewsKey} onForYou={setForYou} />
                 </div>
             </div>
 

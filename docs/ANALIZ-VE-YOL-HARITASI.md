@@ -793,6 +793,10 @@ Hedef: uygulamayı "puan + takip + mesaj"tan film severlerin sosyal ağına
       puan kalır).
     - Web: film sayfasında incelemeler, "Akış" sayfası. Mobil: ana sayfada
       Akış / Filmler sekmeleri, film sayfasında incelemeler, yorum paneli.
-28. "Sana göre puan": uyumlu kişilerin bir filme verdiği ortalama
+28. "Sana göre puan": uyumlu kişilerin bir filme verdiği ortalama — ✅
+    - Filmi puanlamış, seninle en az 3 ortak filmi ve en az %60 uyumu olan
+      kişilerin puanlarının uyumun karesiyle ağırlıklı ortalaması; en az 2
+      kişi yoksa gösterilmez. Gizlilik/engel kurallarına uyar. Film
+      sayfasında TMDb puanının yanında, en uyumlu üç kişiyle birlikte.
 29. Film kimliği kartı (paylaşılabilir)
 30. Haftalık zevk ikizi

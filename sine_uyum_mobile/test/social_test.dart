@@ -116,6 +116,25 @@ void main() {
     expect(FeedPage.fromJson({}).items, isEmpty);
   });
 
+  test('sana göre puan ayrıştırılır; yoksa null', () {
+    final parsed = MovieReviews.fromJson({
+      'forYou': {
+        'score': 8.7,
+        'basedOn': 4,
+        'topMatches': [
+          {
+            'author': {'id': 'a', 'userName': 'ayse'},
+            'rating': 9,
+            'compatibility': 93.0,
+          },
+        ],
+      },
+    });
+    expect(parsed.forYou!.score, 8.7);
+    expect(parsed.forYou!.topMatches.single.author.userName, 'ayse');
+    expect(MovieReviews.fromJson({'forYou': null}).forYou, isNull);
+  });
+
   test('akış sonraki sayfayı ekler; hata eldekini korur', () async {
     final social = FakeSocial()
       ..pages[null] = FeedPage(items: [item(1), item(2)], nextCursor: 'c1')
@@ -216,5 +235,19 @@ void main() {
     await tester.tap(find.text('Paylaş'));
     await tester.pumpAndSettle();
     expect(rated.upserts, [(10, 'Başyapıt.', true)]);
+  });
+
+  testWidgets('sana göre rozeti yalnızca veri varsa', (tester) async {
+    final none = FakeSocial();
+    await pump(tester, const ForYouBadge(movieId: 10), fake: none);
+    expect(find.textContaining('sana göre'), findsNothing);
+
+    final some = FakeSocial()
+      ..reviews = const MovieReviews(
+        forYou: ForYouScore(score: 8.66, basedOn: 3),
+      );
+    await pump(tester, const ForYouBadge(movieId: 10), fake: some);
+    expect(find.text('8.7'), findsOneWidget);
+    expect(find.text(' sana göre (3 uyumlu kişi)'), findsOneWidget);
   });
 }

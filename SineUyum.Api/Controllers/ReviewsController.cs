@@ -57,7 +57,9 @@ namespace SineUyum.Api.Controllers
                     .FirstOrDefaultAsync(),
                 Mine = mine.SingleOrDefault(),
                 Reviews = reviews,
-                TotalCount = await others.CountAsync()
+                TotalCount = await others.CountAsync(),
+                // Yalnızca ilk sayfada (sayfalar arasında değişmez).
+                ForYou = page == 1 ? await _social.ForYouScoreAsync(Me, movieId) : null
             });
         }
 

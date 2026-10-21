@@ -162,6 +162,7 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
                       ],
                     ),
                   ],
+                  ForYouBadge(movieId: _movie.id),
                 ],
               ),
             ),

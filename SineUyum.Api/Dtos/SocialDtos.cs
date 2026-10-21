@@ -45,6 +45,24 @@ namespace SineUyum.Api.Dtos
         public ReviewDto? Mine { get; set; }
         public List<ReviewDto> Reviews { get; set; } = new();
         public int TotalCount { get; set; }
+        // Sana uyumlu kişilere göre puan; yeterli veri yoksa null.
+        public ForYouScoreDto? ForYou { get; set; }
+    }
+
+    public class ForYouScoreDto
+    {
+        public double Score { get; set; }
+        // Hesaba katılan uyumlu kişi sayısı.
+        public int BasedOn { get; set; }
+        // En uyumlu ilk üç kişi ve verdikleri puan.
+        public List<ForYouRaterDto> TopMatches { get; set; } = new();
+    }
+
+    public class ForYouRaterDto
+    {
+        public UserBriefWithImageDto Author { get; set; } = new();
+        public int Rating { get; set; }
+        public double Compatibility { get; set; }
     }
 
     public class ReviewCommentDto

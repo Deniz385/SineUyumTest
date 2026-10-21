@@ -181,3 +181,48 @@ class _MovieReviewsSectionState extends ConsumerState<MovieReviewsSection> {
     );
   }
 }
+
+/// Film başlığının yanında "Sana göre" puanı; yeterli veri yoksa hiçbir şey.
+/// İncelemelerle aynı istekten gelir (ek çağrı yok).
+class ForYouBadge extends ConsumerWidget {
+  const ForYouBadge({super.key, required this.movieId});
+
+  final int movieId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final forYou = ref.watch(movieReviewsProvider(movieId)).value?.forYou;
+    if (forYou == null) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    final who = forYou.topMatches
+        .map(
+          (m) =>
+              '${m.author.userName} (%${m.compatibility.round()}) ${m.rating}',
+        )
+        .join(', ');
+
+    return Tooltip(
+      message: 'Sana uyumlu ${forYou.basedOn} kişiye göre: $who',
+      triggerMode: TooltipTriggerMode.tap,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Row(
+          children: [
+            Icon(Icons.favorite, size: 16, color: theme.colorScheme.secondary),
+            const SizedBox(width: 4),
+            Text(
+              forYou.score.toStringAsFixed(1),
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: theme.colorScheme.secondary,
+              ),
+            ),
+            Text(
+              ' sana göre (${forYou.basedOn} uyumlu kişi)',
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

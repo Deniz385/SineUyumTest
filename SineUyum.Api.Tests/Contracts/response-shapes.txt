@@ -169,6 +169,7 @@
 
 ## reviews.forMovie  GET /api/v1/reviews/movie/{id} -> 200
   $: object
+  forYou: null
   mine: null
   myRating: number
   reviews: array

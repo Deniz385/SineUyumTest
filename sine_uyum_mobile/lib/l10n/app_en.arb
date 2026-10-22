@@ -753,5 +753,345 @@
       }
     }
   },
-  "diaryLoadMore": "Load more"
+  "diaryLoadMore": "Load more",
+  "recapButtonMine": "Your {year} recap",
+  "@recapButtonMine": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "recapButtonTheirs": "{year} recap",
+  "@recapButtonTheirs": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "recapClose": "Close",
+  "recapPickYear": "Change year",
+  "recapIntroMine": "Your {year} in film",
+  "@recapIntroMine": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "recapIntroTheirs": "{userName}'s {year} in film",
+  "@recapIntroTheirs": {
+    "placeholders": {
+      "userName": {
+        "type": "String"
+      },
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "recapIntroMoviesMine": "{count, plural, =1{movie you watched} other{movies you watched}}",
+  "@recapIntroMoviesMine": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recapIntroMoviesTheirs": "{count, plural, =1{movie watched} other{movies watched}}",
+  "@recapIntroMoviesTheirs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recapTotalsTitle": "The year in numbers",
+  "recapTotalDiaryEntries": "{count, plural, =1{diary entry} other{diary entries}}",
+  "@recapTotalDiaryEntries": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recapTotalRewatches": "{count, plural, =1{repeat viewing} other{repeat viewings}}",
+  "@recapTotalRewatches": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recapTotalRatings": "{count, plural, =1{movie rated} other{movies rated}}",
+  "@recapTotalRatings": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recapTotalReviews": "{count, plural, =1{review written} other{reviews written}}",
+  "@recapTotalReviews": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recapTotalLikesMine": "{count, plural, =1{like on your reviews} other{likes on your reviews}}",
+  "@recapTotalLikesMine": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recapTotalLikesTheirs": "{count, plural, =1{like on their reviews} other{likes on their reviews}}",
+  "@recapTotalLikesTheirs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recapTotalCommentsMine": "{count, plural, =1{comment on your reviews} other{comments on your reviews}}",
+  "@recapTotalCommentsMine": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recapTotalCommentsTheirs": "{count, plural, =1{comment on their reviews} other{comments on their reviews}}",
+  "@recapTotalCommentsTheirs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recapRhythmTitle": "Month by month",
+  "recapBusiestMonthMine": "{month} was your busiest month: {count, plural, =1{1 movie} other{{count} movies}}.",
+  "@recapBusiestMonthMine": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recapBusiestMonthTheirs": "{month} was their busiest month: {count, plural, =1{1 movie} other{{count} movies}}.",
+  "@recapBusiestMonthTheirs": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recapFavoriteWeekdayMine": "Your favorite movie day: {weekday}.",
+  "@recapFavoriteWeekdayMine": {
+    "placeholders": {
+      "weekday": {
+        "type": "String"
+      }
+    }
+  },
+  "recapFavoriteWeekdayTheirs": "Their favorite movie day: {weekday}.",
+  "@recapFavoriteWeekdayTheirs": {
+    "placeholders": {
+      "weekday": {
+        "type": "String"
+      }
+    }
+  },
+  "recapGenresTitleMine": "Your top genres",
+  "recapGenresTitleTheirs": "Their top genres",
+  "recapTopMoviesTitleMine": "Your highest rated",
+  "recapTopMoviesTitleTheirs": "Their highest rated",
+  "recapFavoriteBadge": "Favorite",
+  "recapContrarianTitle": "Against the crowd",
+  "recapContrarianLineMine": "Everyone gave {title} {average}; you gave it {rating}.",
+  "@recapContrarianLineMine": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "average": {
+        "type": "String"
+      },
+      "rating": {
+        "type": "int"
+      }
+    }
+  },
+  "recapContrarianLineTheirs": "Everyone gave {title} {average}; {userName} gave it {rating}.",
+  "@recapContrarianLineTheirs": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "average": {
+        "type": "String"
+      },
+      "userName": {
+        "type": "String"
+      },
+      "rating": {
+        "type": "int"
+      }
+    }
+  },
+  "recapBookendsTitle": "How the year went",
+  "recapFirstMovie": "First of the year",
+  "recapLastMovie": "Most recent",
+  "recapMostRewatched": "Most rewatched",
+  "recapWatchedTimes": "{count, plural, =1{Watched once} =2{Watched twice} other{Watched {count} times}}",
+  "@recapWatchedTimes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recapRatingTitleMine": "Your average rating",
+  "recapRatingTitleTheirs": "Average rating",
+  "recapRatingHigher": "Up from {previous} in {previousYear}",
+  "@recapRatingHigher": {
+    "placeholders": {
+      "previous": {
+        "type": "String"
+      },
+      "previousYear": {
+        "type": "int"
+      }
+    }
+  },
+  "recapRatingLower": "Down from {previous} in {previousYear}",
+  "@recapRatingLower": {
+    "placeholders": {
+      "previous": {
+        "type": "String"
+      },
+      "previousYear": {
+        "type": "int"
+      }
+    }
+  },
+  "recapRatingSame": "Same as in {previousYear}",
+  "@recapRatingSame": {
+    "placeholders": {
+      "previousYear": {
+        "type": "int"
+      }
+    }
+  },
+  "recapTasteMateTitleMine": "Your taste mate",
+  "recapTasteMateTitleTheirs": "Their taste mate",
+  "recapCompatible": "{percent} compatible",
+  "@recapCompatible": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "recapCommonMovies": "{count, plural, =1{1 movie in common} other{{count} movies in common}}",
+  "@recapCommonMovies": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recapFinaleLabelMine": "Your {year} film identity",
+  "@recapFinaleLabelMine": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "recapFinaleLabelTheirs": "{year} film identity",
+  "@recapFinaleLabelTheirs": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "recapShare": "Share",
+  "recapShareTextMine": "My {year} in film on SineUyum: {title}",
+  "@recapShareTextMine": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "recapShareTextTheirs": "{userName}'s {year} in film on SineUyum: {title}",
+  "@recapShareTextTheirs": {
+    "placeholders": {
+      "userName": {
+        "type": "String"
+      },
+      "year": {
+        "type": "int"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "recapCardHeader": "SINEUYUM · YEAR IN REVIEW",
+  "recapCardTopGenre": "TOP GENRE",
+  "recapCardBusiestMonth": "BUSIEST MONTH",
+  "recapCardIdentity": "FILM IDENTITY",
+  "recapNotReadyTitle": "Not quite yet",
+  "recapNotReadyMine": "Log at least {minMovies, plural, =1{1 film} other{{minMovies} films}} in {year} to unlock your recap.",
+  "@recapNotReadyMine": {
+    "placeholders": {
+      "minMovies": {
+        "type": "int"
+      },
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "recapNotReadyTheirs": "{userName} needs at least {minMovies, plural, =1{1 film} other{{minMovies} films}} in {year} for a recap.",
+  "@recapNotReadyTheirs": {
+    "placeholders": {
+      "userName": {
+        "type": "String"
+      },
+      "minMovies": {
+        "type": "int"
+      },
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "recapOpenDiary": "Open my diary",
+  "recapBannerTitle": "Your {year} in film is ready",
+  "@recapBannerTitle": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "recapBannerBody": "Relive your year in movies and share it.",
+  "recapBannerOpen": "See my recap",
+  "recapBannerDismiss": "Hide"
 }

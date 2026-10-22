@@ -8,6 +8,7 @@ import '../../providers/repository_providers.dart';
 import '../../providers/social_provider.dart';
 import '../../widgets/poster_image.dart';
 import '../../widgets/state_views.dart';
+import '../year_in_review/year_in_review_banner.dart';
 import 'review_card.dart';
 
 /// Ratings and reviews from the people you follow (and your own).
@@ -35,7 +36,9 @@ class FeedView extends ConsumerWidget {
                 children: [
                   const Padding(
                     padding: EdgeInsets.all(12),
-                    child: TasteTwinCard(),
+                    child: Column(
+                      children: [YearInReviewBanner(), TasteTwinCard()],
+                    ),
                   ),
                   const SizedBox(height: 24),
                   EmptyView(
@@ -46,10 +49,15 @@ class FeedView extends ConsumerWidget {
               )
             : ListView.builder(
                 padding: const EdgeInsets.all(12),
-                // First item: this week's taste twin (empty if none).
+                // First item: the yearly recap banner (in season) and this
+                // week's taste twin (each empty if none).
                 itemCount: state.items.length + 1 + (state.hasMore ? 1 : 0),
                 itemBuilder: (context, position) {
-                  if (position == 0) return const TasteTwinCard();
+                  if (position == 0) {
+                    return const Column(
+                      children: [YearInReviewBanner(), TasteTwinCard()],
+                    );
+                  }
                   final index = position - 1;
                   if (index == state.items.length) {
                     // Reached the end: load the next page.

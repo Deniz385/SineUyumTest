@@ -1,7 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-/// Small user preferences that must survive restarts (currently the app
-/// language).
+/// Small user preferences that must survive restarts (the app language and
+/// which yearly recap banner was dismissed).
 ///
 /// Uses the same secure storage as the tokens: it is already a dependency,
 /// and one short value does not justify adding shared_preferences. Unlike
@@ -39,6 +39,25 @@ class PreferencesStorage {
       } else {
         await _storage.write(key: _languageKey, value: code);
       }
+    } catch (_) {}
+  }
+
+  static String _recapKey(String userId) => 'recap_banner_dismissed_$userId';
+
+  /// The last recap year whose feed banner [userId] dismissed, or null.
+  /// Only the latest matters: the banner is offered for one year at a time.
+  Future<int?> readDismissedRecapYear(String userId) async {
+    try {
+      return int.tryParse(await _storage.read(key: _recapKey(userId)) ?? '');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Failures are ignored: the banner stays hidden for this session.
+  Future<void> writeDismissedRecapYear(String userId, int year) async {
+    try {
+      await _storage.write(key: _recapKey(userId), value: '$year');
     } catch (_) {}
   }
 }

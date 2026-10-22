@@ -6,6 +6,7 @@ import '../../data/models/profile.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/session_provider.dart';
+import '../../providers/year_in_review_provider.dart';
 import '../../widgets/movie_widgets.dart';
 import '../../widgets/poster_image.dart';
 import '../../widgets/state_views.dart';
@@ -21,6 +22,7 @@ class ProfilePage extends ConsumerWidget {
     final profile = ref.watch(userProfileProvider(userId));
     final isOwnProfile = ref.watch(sessionProvider).user?.id == userId;
     final loaded = profile.asData?.value;
+    final recapYear = recapYearFor(ref.watch(clockProvider)());
 
     return Scaffold(
       appBar: AppBar(
@@ -94,6 +96,17 @@ class ProfilePage extends ConsumerWidget {
                       icon: const Icon(Icons.menu_book_outlined),
                       label: Text(
                         isOwnProfile ? l10n.myDiary : l10n.diaryTitle,
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () => context.push(
+                        '/profile/$userId/year-in-review?year=$recapYear',
+                      ),
+                      icon: const Icon(Icons.auto_awesome_outlined),
+                      label: Text(
+                        isOwnProfile
+                            ? l10n.recapButtonMine(recapYear)
+                            : l10n.recapButtonTheirs(recapYear),
                       ),
                     ),
                   ],

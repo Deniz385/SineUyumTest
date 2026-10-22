@@ -308,7 +308,9 @@ class FilmIdentity {
   final double averageRating;
   final String title;
   final String titleDescription;
-  final List<({String name, int share, double average})> topGenres;
+
+  /// [share] is a percentage among the movies with a known genre.
+  final List<({String name, int count, int share, double average})> topGenres;
   final IdentityMovie? contrarianTake;
   final IdentityMovie? favorite;
 
@@ -323,6 +325,7 @@ class FilmIdentity {
         if (g is Map)
           (
             name: g['name'] as String? ?? '',
+            count: (g['count'] as num?)?.toInt() ?? 0,
             share: (g['share'] as num?)?.toInt() ?? 0,
             average: (g['average'] as num?)?.toDouble() ?? 0,
           ),
@@ -337,11 +340,13 @@ class IdentityMovie {
     required this.movieId,
     required this.title,
     required this.rating,
+    this.posterPath,
     this.tmdbAverage,
   });
 
   final int movieId;
   final String title;
+  final String? posterPath;
   final int rating;
   final double? tmdbAverage;
 
@@ -349,6 +354,7 @@ class IdentityMovie {
       ? IdentityMovie(
           movieId: (json['movieId'] as num?)?.toInt() ?? 0,
           title: json['title'] as String? ?? '',
+          posterPath: json['posterPath'] as String?,
           rating: (json['rating'] as num?)?.toInt() ?? 0,
           tmdbAverage: (json['tmdbAverage'] as num?)?.toDouble(),
         )

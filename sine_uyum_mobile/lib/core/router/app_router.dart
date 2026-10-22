@@ -23,6 +23,7 @@ import '../../features/subscription/subscription_page.dart';
 import '../../features/users/user_search_page.dart';
 import '../../features/watchlists/watchlist_detail_page.dart';
 import '../../features/watchlists/watchlists_page.dart';
+import '../../features/year_in_review/year_in_review_page.dart';
 import '../../providers/session_provider.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -131,6 +132,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/profile/:userId/diary',
         builder: (context, state) =>
             DiaryPage(userId: state.pathParameters['userId'] ?? ''),
+      ),
+      GoRoute(
+        path: '/profile/:userId/year-in-review',
+        builder: (context, state) => YearInReviewPage(
+          userId: state.pathParameters['userId'] ?? '',
+          year: int.tryParse(state.uri.queryParameters['year'] ?? ''),
+        ),
       ),
       GoRoute(
         path: '/profile/:userId',

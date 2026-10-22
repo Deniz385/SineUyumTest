@@ -86,6 +86,17 @@ class MemoryPreferences extends PreferencesStorage {
 
   @override
   Future<void> writeLanguage(String? code) async => language = code;
+
+  /// userId → last dismissed recap year.
+  final dismissedRecapYears = <String, int>{};
+
+  @override
+  Future<int?> readDismissedRecapYear(String userId) async =>
+      dismissedRecapYears[userId];
+
+  @override
+  Future<void> writeDismissedRecapYear(String userId, int year) async =>
+      dismissedRecapYears[userId] = year;
 }
 
 Map<String, Object?> userJson(String id) => {

@@ -9,6 +9,7 @@ import 'package:sine_uyum_mobile/features/social/movie_reviews_section.dart';
 import 'package:sine_uyum_mobile/features/social/review_card.dart';
 import 'package:sine_uyum_mobile/providers/repository_providers.dart';
 import 'package:sine_uyum_mobile/providers/social_provider.dart';
+import 'package:sine_uyum_mobile/providers/year_in_review_provider.dart';
 
 import 'support/localized_app.dart';
 
@@ -212,7 +213,12 @@ void main() {
   }) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [socialRepositoryProvider.overrideWithValue(social)],
+        overrides: [
+          socialRepositoryProvider.overrideWithValue(social),
+          // Outside the yearly recap season: no recap banner (it would
+          // need a session); covered in year_in_review_test.dart.
+          clockProvider.overrideWithValue(() => DateTime(2026, 3, 10)),
+        ],
         child: localizedApp(
           locale: locale,
           home: const Scaffold(body: FeedView()),

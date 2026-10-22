@@ -14,6 +14,7 @@ import '../data/repositories/movie_repository.dart';
 import '../data/repositories/notification_repository.dart';
 import '../data/repositories/social_repository.dart';
 import '../data/repositories/watchlist_repository.dart';
+import '../data/repositories/year_in_review_repository.dart';
 import 'locale_provider.dart';
 import 'session_provider.dart';
 
@@ -39,6 +40,10 @@ final watchlistRepositoryProvider = Provider<WatchlistRepository>(
 
 final diaryRepositoryProvider = Provider<DiaryRepository>(
   (ref) => DiaryRepository(_client(ref)),
+);
+
+final yearInReviewRepositoryProvider = Provider<YearInReviewRepository>(
+  (ref) => YearInReviewRepository(_client(ref)),
 );
 
 final messageRepositoryProvider = Provider<MessageRepository>(

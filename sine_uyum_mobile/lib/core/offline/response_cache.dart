@@ -42,6 +42,12 @@ class ResponseCache {
     // A diary (pages and yearly summary) can be read back offline; the
     // providers refetch after every change, which refreshes the copy.
     RegExp(r'^/api/v1/diary/user/[^/]+(/summary)?$'),
+    // A yearly recap is read-only and the same data as the diary above, so
+    // it may be shown offline too. Each year is its own key (the query is
+    // part of it); a past year no longer changes, and the current one is
+    // refreshed whenever it is opened online. A 403/404 is never masked by
+    // the copy (only network errors fall back to it).
+    RegExp(r'^/api/v1/year-in-review/user/[^/]+$'),
   ];
 
   static bool isCacheable(String path) =>

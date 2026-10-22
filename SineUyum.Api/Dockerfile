@@ -1,47 +1,49 @@
 # syntax=docker/dockerfile:1
 
-# --- BUILD AŞAMASI ---
-# SDK imajında restore + publish yapılır; sonuç runtime imajına kopyalanır,
-# böylece son imajda SDK ve ara dosyalar yer almaz.
+# --- BUILD STAGE ---
+# Restore + publish run in the SDK image; the output is copied into the runtime
+# image, so the final image contains neither the SDK nor intermediate files.
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Önce yalnızca csproj'u kopyalayıp restore et — kaynak değişse de bağımlılık
-# katmanı değişmediği sürece Docker bu adımı cache'ler.
+# Copy only the csproj first and restore — Docker caches this step as long as
+# the dependency layer is unchanged, even when the source changes.
 COPY SineUyum.Api/SineUyum.Api.csproj SineUyum.Api/
 RUN dotnet restore SineUyum.Api/SineUyum.Api.csproj
 
-# Kalan kaynağı kopyala ve yayınla.
+# Copy the remaining source and publish.
 COPY SineUyum.Api/ SineUyum.Api/
 RUN dotnet publish SineUyum.Api/SineUyum.Api.csproj \
     -c Release -o /app/publish /p:UseAppHost=false
 
-# --- RUNTIME AŞAMASI ---
-# Sadece ASP.NET Core çalışma zamanı; daha küçük ve daha az saldırı yüzeyi.
+# --- RUNTIME STAGE ---
+# ASP.NET Core runtime only; smaller, with less attack surface.
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 
-# Root olmayan kullanıcı yazabilsin diye veritabanı için ayrı bir dizin açılıp
-# sahipliği ona verilir. Uygulama root olmadan çalıştığı için /app'e yazamaz;
-# varsayılan bağlantı dizesi bu yazılabilir /data dizinini gösterir. Compose
-# buraya kalıcı bir volume bağlar; PostgreSQL'e geçince (M2) bu kalkacak.
+# A separate directory is created for the database and owned by the non-root
+# user so it can write there. Since the app runs without root it cannot write
+# to /app; the default connection string points to this writable /data
+# directory. Compose mounts a persistent volume here; this goes away once we
+# move to PostgreSQL (M2).
 RUN mkdir -p /data/media && chown -R $APP_UID /data
 ENV ConnectionStrings__DefaultConnection="Data Source=/data/sineuyum.db"
-# Yüklenen profil fotoğrafları (B8). Compose buraya kalıcı volume bağlar.
+# Uploaded profile photos (B8). Compose mounts a persistent volume here.
 ENV Storage__MediaRoot=/data/media
 
-# Root olmayan kullanıcı (aspnet imajında hazır gelir) ile çalış.
+# Run as the non-root user (provided by the aspnet image).
 USER $APP_UID
 
-# Konteyner 8080'de dinler; ana makineye -p 5074:8080 ile bağlanır.
+# The container listens on 8080; map it to the host with -p 5074:8080.
 ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 
 COPY --from=build /app/publish .
 
-# Sağlık kontrolü imaja gömülmüyor: aspnet imajında curl/wget yok ve imajı
-# şişirmemek için kurulmuyor. Uygulama /health ucunu sunuyor; orchestrator
-# bununla problamalı — Kubernetes httpGet prob'u container içi araç
-# gerektirmez, docker-compose örneği için README'ye bakın.
+# No health check is baked into the image: the aspnet image has no curl/wget
+# and we do not install them to keep the image small. The app exposes a
+# /health endpoint; the orchestrator should probe it — a Kubernetes httpGet
+# probe needs no tools inside the container; see the README for a
+# docker-compose example.
 
 ENTRYPOINT ["dotnet", "SineUyum.Api.dll"]

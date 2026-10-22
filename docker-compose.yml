@@ -1,20 +1,20 @@
-# SineUyum API'yi PostgreSQL ile, production benzeri biçimde ayağa kaldırır.
+# Runs the SineUyum API with PostgreSQL in a production-like setup.
 #
-#   1) .env dosyası oluştur (bkz. .env.docker.example)
+#   1) Create a .env file (see .env.docker.example)
 #   2) docker compose up --build
 #
-# Yerelde Docker'sız geliştirmede API varsayılan olarak SQLite kullanır
-# (Database:Provider ayarsız). Bu compose yığını Postgres kullanır.
+# In local development without Docker the API uses SQLite by default
+# (Database:Provider not set). This compose stack uses Postgres.
 services:
   db:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-sineuyum}
       POSTGRES_USER: ${POSTGRES_USER:-sineuyum}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD tanimlanmali}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
     volumes:
       - sineuyum-pgdata:/var/lib/postgresql/data
-    # postgres imajında pg_isready var; ek araç gerekmez.
+    # The postgres image ships pg_isready; no extra tools needed.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sineuyum} -d ${POSTGRES_DB:-sineuyum}"]
       interval: 10s
@@ -33,23 +33,23 @@ services:
     ports:
       - "5074:8080"
     environment:
-      JWT_KEY: ${JWT_KEY:?JWT_KEY tanimlanmali (en az 64 karakter)}
+      JWT_KEY: ${JWT_KEY:?JWT_KEY must be set (at least 64 characters)}
       TMDB_API_KEY: ${TMDB_API_KEY:-}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
-      # Push bildirimi (FCM). Boşsa push kapalı; uygulama normal çalışır.
+      # Push notifications (FCM). If empty, push is disabled; the app works normally.
       FCM_SERVICE_ACCOUNT_JSON: ${FCM_SERVICE_ACCOUNT_JSON:-}
       Cors__AllowedOrigins__0: ${WEB_ORIGIN:-http://localhost:5173}
-      # API bir ters vekil arkasındaysa vekilin IP/CIDR'ı (IP başına istek
-      # sınırları gerçek istemciyi görsün). Boşsa X-Forwarded-For yok sayılır.
+      # If the API is behind a reverse proxy, the proxy's IP/CIDR (so per-IP
+      # request limits see the real client). If empty, X-Forwarded-For is ignored.
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
-      # PostgreSQL sağlayıcısı ve bağlantısı (api içinden db servis adıyla).
+      # PostgreSQL provider and connection (reached from api via the db service name).
       Database__Provider: Postgres
       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB:-sineuyum};Username=${POSTGRES_USER:-sineuyum};Password=${POSTGRES_PASSWORD}"
     volumes:
-      # Profil fotoğrafları konteyner yeniden kurulunca kaybolmasın.
+      # Keep profile photos when the container is recreated.
       - sineuyum-media:/data/media
     restart: unless-stopped
 

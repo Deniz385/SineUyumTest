@@ -1,116 +1,119 @@
-# SineUyum Mobil (Flutter)
+# SineUyum Mobile (Flutter)
 
-SineUyum API'si (`SineUyum.Api`) üzerine çalışan iOS + Android uygulaması.
+iOS + Android app running on top of the SineUyum API (`SineUyum.Api`).
 
-## Gereksinimler
+## Requirements
 
-- Flutter 3.35 veya üzeri (geliştirme Flutter 3.47 / Dart 3.13 ile yapıldı)
-- Çalışan bir SineUyum.Api örneği
+- Flutter 3.35 or later (developed with Flutter 3.47 / Dart 3.13)
+- A running SineUyum.Api instance
 
-## Çalıştırma
+## Running
 
-API adresi koda gömülü değildir, derleme zamanında verilir:
+The API address is not hard-coded; it is provided at build time:
 
 ```bash
-# Android emülatörü (ana makine 10.0.2.2 olarak görünür)
+# Android emulator (the host machine is visible as 10.0.2.2)
 flutter run --dart-define=API_URL=http://10.0.2.2:5074
 
-# iOS simülatörü
+# iOS simulator
 flutter run --dart-define=API_URL=http://localhost:5074
 
-# Gerçek cihaz (bilgisayarın yerel IP'si)
+# Physical device (the computer's local IP)
 flutter run --dart-define=API_URL=http://192.168.1.25:5074
 ```
 
-`API_URL` verilmezse varsayılan `http://10.0.2.2:5074` kullanılır.
+If `API_URL` is not given, the default `http://10.0.2.2:5074` is used.
 
-Diğer derleme değişkenleri:
+Other build variables:
 
-| Değişken | Varsayılan | Açıklama |
+| Variable | Default | Description |
 |---|---|---|
-| `API_URL` | `http://10.0.2.2:5074` | API temel adresi |
-| `TMDB_IMAGE_BASE_URL` | `https://image.tmdb.org/t/p/` | Poster adresleri |
-| `APP_VERSION` | `1.0.0` | Sunucudaki minimum sürümle karşılaştırılır |
+| `API_URL` | `http://10.0.2.2:5074` | API base address |
+| `TMDB_IMAGE_BASE_URL` | `https://image.tmdb.org/t/p/` | Poster URLs |
+| `APP_VERSION` | `1.0.0` | Compared with the minimum version on the server |
 
-> Şifrelenmemiş HTTP yalnızca **debug** derlemesinde ve yalnızca yerel
-> adresler (`10.0.2.2`, `localhost`, `127.0.0.1`) için açıktır. Release
-> derlemesi HTTPS zorunlu tutar — yayına çıkarken `API_URL` `https://` ile
-> başlamalıdır.
+> Unencrypted HTTP is only allowed in **debug** builds and only for local
+> addresses (`10.0.2.2`, `localhost`, `127.0.0.1`). Release builds require
+> HTTPS — when publishing, `API_URL` must start with `https://`.
 
-## Derleme
+## Building
 
 ```bash
-flutter build apk --release --dart-define=API_URL=https://api.ornek.com
-flutter build ipa --release --dart-define=API_URL=https://api.ornek.com
+flutter build apk --release --dart-define=API_URL=https://api.example.com
+flutter build ipa --release --dart-define=API_URL=https://api.example.com
 ```
 
-## Testler ve statik analiz
+## Tests and static analysis
 
 ```bash
 flutter analyze
 flutter test
 ```
 
-## Mimari
+## Architecture
 
 ```
 lib/
   core/
-    config/      Derleme zamanı yapılandırması (API_URL vb.)
-    network/     Dio istemcisi, token ekleme, 401'de sessiz yenileme, hata dönüşümü
-    router/      go_router rotaları ve oturum tabanlı yönlendirme
-    storage/     Token'ların güvenli depoda (Keychain / Keystore) tutulması
-    theme/       Material 3 açık/koyu temalar (web paletiyle hizalı)
+    config/      Build-time configuration (API_URL etc.)
+    network/     Dio client, token injection, silent refresh on 401, error mapping
+    router/      go_router routes and session-based redirects
+    storage/     Keeping tokens in secure storage (Keychain / Keystore)
+    theme/       Material 3 light/dark themes (aligned with the web palette)
   data/
-    models/      API yanıtlarının Dart karşılıkları
-    repositories/ Endpoint başına veri erişimi
-  providers/     Riverpod sağlayıcıları (oturum, bildirimler, tema, veri)
-  features/      Ekranlar (auth, home, movies, profile, users, watchlists,
+    models/      Dart counterparts of the API responses
+    repositories/ Data access per endpoint
+  providers/     Riverpod providers (session, notifications, theme, data)
+  features/      Screens (auth, home, movies, profile, users, watchlists,
                  messages, events, notifications, settings, subscription, shell)
-  widgets/       Paylaşılan bileşenler (poster, avatar, durum görünümleri,
-                 uyumluluk etiketi, puanlama alt sayfası)
+  widgets/       Shared components (poster, avatar, state views,
+                 compatibility badge, rating bottom sheet)
 ```
 
-### Oturum yönetimi
+### Session management
 
-1. Giriş/kayıt sonrası `token` + `refreshToken` güvenli depoya yazılır.
-2. Her istekte `Authorization: Bearer <token>` eklenir.
-3. 401 alınırsa `/api/v1/account/refresh` ile yeni token alınır ve **istek
-   otomatik tekrarlanır**; kullanıcı bunu görmez.
-4. Eşzamanlı 401'lerde tek bir yenileme isteği atılır (sunucu refresh token
-   rotation uyguladığı için ikinci istek geçersiz olurdu).
-5. Yenileme de başarısızsa token'lar silinir ve giriş ekranına dönülür.
+1. After login/registration, `token` + `refreshToken` are written to secure storage.
+2. `Authorization: Bearer <token>` is added to every request.
+3. On a 401, a new token is obtained via `/api/v1/account/refresh` and the
+   **request is retried automatically**; the user does not notice.
+4. For concurrent 401s only a single refresh request is sent (since the server
+   rotates refresh tokens, a second request would be invalid).
+5. If the refresh also fails, the tokens are deleted and the app returns to
+   the login screen.
 
-### Bildirimler
+### Notifications
 
-Aynı SignalR bağlantısı **canlı sohbeti** de taşır (`ReceiveMessage`): açık
-sohbete mesaj anında düşer, bağlantı yeniden kurulunca kaçanlar sunucudan
-tazelenir; açık sohbetten gelen mesaj bildirimi gösterilmez.
+The same SignalR connection also carries **live chat** (`ReceiveMessage`): a
+message shows up in the open conversation instantly, missed messages are
+refreshed from the server when the connection is re-established, and no
+notification is shown for messages from the conversation that is open.
 
-İki kanal birlikte çalışır:
+Two channels work together:
 
-- **Uygulama açıkken:** SignalR (`/notificationHub`) — bildirim listeye anında düşer.
-- **Uygulama arka planda/kapalıyken:** FCM push (iOS da FCM → APNs üzerinden).
-  Dokununca ilgili ekran açılır (soğuk açılış dahil) ve bildirim okundu işaretlenir.
+- **While the app is open:** SignalR (`/notificationHub`) — the notification appears in the list instantly.
+- **While the app is in the background/closed:** FCM push (on iOS too, via FCM → APNs).
+  Tapping it opens the relevant screen (including a cold start) and marks the notification as read.
 
-FCM ön planda sistem bildirimi göstermediği için çift bildirim olmaz.
-Oturum açınca cihaz `/api/v1/devices`'a kaydedilir; çıkışta **ve oturum
-süresi dolduğunda** kaydı silinir (cihaz önceki kullanıcının bildirimlerini
-almasın). Durum *Ayarlar → Anlık bildirimler* satırında görünür.
+Since FCM does not show a system notification in the foreground, there are no
+duplicate notifications. On login the device is registered at
+`/api/v1/devices`; on logout **and when the session expires** it is
+unregistered (so the device does not receive the previous user's
+notifications). The status is shown in the *Settings → Push notifications* row.
 
-#### Push'u açmak (Firebase kurulumu)
+#### Enabling push (Firebase setup)
 
-Firebase yapılandırılmadan da uygulama derlenir ve çalışır; push yalnızca kapalı olur.
+The app builds and runs without Firebase configuration; push is simply disabled.
 
-1. [Firebase konsolunda](https://console.firebase.google.com) proje oluşturun.
-   - Android uygulaması ekleyin: paket adı `com.sineuyum.sine_uyum_mobile`
-   - iOS uygulaması ekleyin: bundle id `com.sineuyum.sineUyumMobile`
-2. *Proje ayarları → Genel → Uygulamalarınız*'dan değerleri alıp build'e verin
-   (`google-services.json` / `GoogleService-Info.plist` **gerekmez**):
+1. Create a project in the [Firebase console](https://console.firebase.google.com).
+   - Add an Android app: package name `com.sineuyum.sine_uyum_mobile`
+   - Add an iOS app: bundle id `com.sineuyum.sineUyumMobile`
+2. Take the values from *Project settings → General → Your apps* and pass them
+   to the build (`google-services.json` / `GoogleService-Info.plist` are **not
+   needed**):
 
    ```bash
    flutter run \
-     --dart-define=API_URL=https://api.ornek.com \
+     --dart-define=API_URL=https://api.example.com \
      --dart-define=FIREBASE_API_KEY=AIza... \
      --dart-define=FIREBASE_PROJECT_ID=sineuyum-xxxx \
      --dart-define=FIREBASE_MESSAGING_SENDER_ID=1234567890 \
@@ -118,31 +121,34 @@ Firebase yapılandırılmadan da uygulama derlenir ve çalışır; push yalnızc
      --dart-define=FIREBASE_IOS_APP_ID=1:1234567890:ios:def...
    ```
 
-3. **Sunucu:** *Proje ayarları → Hizmet hesapları → Yeni özel anahtar oluştur*
-   ile inen JSON'u API'ye `FCM_SERVICE_ACCOUNT_JSON` (içerik) ya da
-   `FCM_SERVICE_ACCOUNT_FILE` (yol) olarak verin. Bu anahtar **gizlidir**,
-   repoya girmez (`.gitignore`'da). Ayrıntı: `.env.docker.example`.
-4. **Yalnızca iOS:** Apple Developer'da bir APNs kimlik doğrulama anahtarı
-   (.p8) oluşturup *Proje ayarları → Cloud Messaging → Apple uygulaması*na
-   yükleyin. Xcode'da *Runner → Signing & Capabilities → + Capability →
-   Push Notifications* ekleyin (ücretli Apple geliştirici hesabı gerekir; bu
-   yüzden projede varsayılan açık değil — ücretsiz hesapla cihaz derlemesi
-   bozulmasın). Push iOS simülatöründe değil gerçek cihazda test edilir.
-5. Doğrulama: uygulamada giriş yapın, *Ayarlar → Anlık bildirimler* "Açık"
-   olmalı. Uygulamayı kapatıp başka bir hesaptan mesaj gönderin.
+3. **Server:** pass the JSON downloaded via *Project settings → Service
+   accounts → Generate new private key* to the API as
+   `FCM_SERVICE_ACCOUNT_JSON` (contents) or `FCM_SERVICE_ACCOUNT_FILE` (path).
+   This key is **secret** and is not committed to the repository (it is in
+   `.gitignore`). Details: `.env.docker.example`.
+4. **iOS only:** create an APNs authentication key (.p8) in Apple Developer and
+   upload it under *Project settings → Cloud Messaging → Apple app*. In Xcode,
+   add *Runner → Signing & Capabilities → + Capability → Push Notifications*
+   (this requires a paid Apple developer account, which is why it is not
+   enabled in the project by default — so device builds with a free account
+   keep working). Push is tested on a physical device, not in the iOS simulator.
+5. Verification: log in to the app; *Settings → Push notifications* should
+   show "On". Close the app and send a message from another account.
 
-### Çevrimdışı kullanım
+### Offline use
 
-İnternet yokken profil, sohbetler ve mesajlar, izleme listeleri, bildirimler
-ve film listeleri son kaydedilen haliyle açılır; ekranın altında
-"kayıtlı veriler gösteriliyor" şeridi çıkar. Bağlantı dönünce canlı bağlantı
-kendiliğinden kurulur ve veriler tazelenir. İnternetsiz açılış oturumu
-kapatmaz. Önbellek tek kullanıcılıktır; çıkışta ve hesap değişince silinir.
+Without internet access, the profile, conversations and messages, watchlists,
+notifications and movie lists open in their last saved state; a "showing saved
+data" banner appears at the bottom of the screen. When the connection comes
+back, the live connection is re-established automatically and the data is
+refreshed. Starting the app without internet does not log the user out. The
+cache holds a single user; it is cleared on logout and when the account
+changes.
 
-## Bilinen eksikler
+## Known gaps
 
-Mobil tarafta tamamlanması gereken işler `docs/ANALIZ-VE-YOL-HARITASI.md`
-dosyasının "Faz 3 — Mobil tamamlama" bölümünde listelenmiştir. Öne çıkanlar:
+Work still to be done on the mobile side is listed in the "Phase 3 — Mobile
+completion" section of `docs/ANALYSIS-AND-ROADMAP.md`. Highlights:
 
-- Çevrimdışı mesaj gönderme (gönderme kuyruğu) — okuma çevrimdışı çalışıyor
-- Uygulama ikonu ve açılış ekranı görselleri (şu an Flutter varsayılanları)
+- Sending messages offline (send queue) — reading already works offline
+- App icon and splash screen images (currently the Flutter defaults)

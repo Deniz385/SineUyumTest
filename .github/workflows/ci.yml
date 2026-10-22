@@ -6,7 +6,7 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Aynı dal için yeni push geldiğinde eski çalışmayı iptal et.
+# Cancel the previous run when a new push arrives for the same branch.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -31,13 +31,13 @@ jobs:
       - name: Test
         run: dotnet test SineUyum.Api.sln --configuration Release --no-build --verbosity normal
 
-      - name: Bekleyen model değişikliği için migration var mı
-        # Entity'ler değiştirilip Postgres migration'ı eklenmediğinde production
-        # şemayla uyuşmaz. Bu kontrol onu yakalar. Migration'lar Postgres için
-        # tutulduğundan (SQLite dev'de EnsureCreated kullanır) sağlayıcı Postgres
-        # olmalı; model karşılaştırması canlı veritabanı gerektirmez.
+      - name: Check for model changes without a migration
+        # If entities change without a Postgres migration being added, the
+        # production schema no longer matches. This check catches that. Since
+        # migrations are kept for Postgres (SQLite uses EnsureCreated in dev), the
+        # provider must be Postgres; the model comparison needs no live database.
         env:
-          # Yalnızca design-time için; gerçek anahtar/bağlantı değil.
+          # Design-time only; not a real key/connection.
           JWT_KEY: ci-only-placeholder-key-not-a-secret-must-be-64-bytes-long-xxxxxx
           Database__Provider: Postgres
           ConnectionStrings__DefaultConnection: "Host=localhost;Database=sineuyum;Username=postgres;Password=postgres"
@@ -73,7 +73,7 @@ jobs:
         run: npm run build
 
   mobile:
-    name: Mobil (Flutter)
+    name: Mobile (Flutter)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -83,21 +83,21 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          # Sürüm sabitlendi: yeni bir Flutter stable'ının getirdiği analiz
-          # kuralları CI'ı beklenmedik şekilde kırmasın. Yükseltme bilinçli
-          # yapılmalı (pubspec'teki sdk kısıtıyla birlikte).
+          # Version pinned so that analysis rules introduced by a new Flutter
+          # stable do not break CI unexpectedly. Upgrade deliberately
+          # (together with the sdk constraint in pubspec).
           flutter-version: 3.47.7
           channel: stable
           cache: true
 
-      - name: Bağımlılıkları çek
+      - name: Fetch dependencies
         run: flutter pub get
 
-      - name: Biçim kontrolü
+      - name: Format check
         run: dart format --output=none --set-exit-if-changed .
 
-      - name: Statik analiz
+      - name: Static analysis
         run: flutter analyze
 
-      - name: Testler
+      - name: Tests
         run: flutter test

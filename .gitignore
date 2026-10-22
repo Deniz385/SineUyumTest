@@ -1,15 +1,15 @@
 ===================================================================
-Projeye Özel Önemli Kurallar (Project-Specific Important Rules)
+Project-Specific Important Rules
 ===================================================================
-SQLite veritabanı dosyalarını yoksay
+Ignore SQLite database files
 *.db
 *.db-journal
 
-Frontend ortam değişkeni dosyalarını yoksay (GÜVENLİK)
+Ignore frontend environment variable files (SECURITY)
 .env
 .env*.local
-# YENİ EKLENEN SATIR
-# ASP.NET Core ayar dosyaları (hassas veriler içerebilir)
+# NEWLY ADDED LINE
+# ASP.NET Core settings files (may contain sensitive data)
 appsettings.json
 appsettings.Development.json
 
@@ -21,7 +21,7 @@ dist/
 dist-ssr/
 *.local
 
-Log dosyaları
+Log files
 logs
 .log
 npm-debug.log
@@ -31,7 +31,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 ===================================================================
-.NET / Visual Studio Standart Şablonu (Standard Template)
+.NET / Visual Studio Standard Template
 ===================================================================
 User-specific files
 *.rsuser
@@ -357,7 +357,7 @@ Ionide (cross platform F# VS Code tools) working folder
 
 Fody - auto-generated XML schema
 FodyWeavers.xsd
-# Yerel SQLite veritabani dosyalari (hassas veri icerir, repoya girmemeli)
+# Local SQLite database files (contain sensitive data, must not be committed)
 *.db
 *.db-shm
 *.db-wal
@@ -368,9 +368,9 @@ sine_uyum_mobile/build/
 sine_uyum_mobile/.flutter-plugins
 sine_uyum_mobile/.flutter-plugins-dependencies
 
-# Firebase servis hesabı anahtarları (gizli; FCM push için sunucuya ortam değişkeniyle verilir)
+# Firebase service account keys (secret; provided to the server via an environment variable for FCM push)
 *-firebase-adminsdk-*.json
 fcm-service-account*.json
 
-# Yüklenen profil fotoğrafları (yerel geliştirme; Docker'da /data/media volume)
+# Uploaded profile photos (local development; /data/media volume in Docker)
 SineUyum.Api/media/

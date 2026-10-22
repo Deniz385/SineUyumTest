@@ -13,6 +13,7 @@ import { FollowListModal } from '../components/FollowListModal';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
 import { CompatibilityInsights } from '../components/CompatibilityInsights';
 import { FilmIdentityDialog } from '../components/FilmIdentityDialog';
+import { ProfileDiary } from '../components/ProfileDiary';
 import { useSnackbar } from '../context/SnackbarProvider';
 
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
@@ -245,6 +246,8 @@ export const ProfilePage = () => {
                         </Box>
                     </Box>
                 )}
+
+                <ProfileDiary key={userId} userId={userId} isMine={isMyProfile} />
 
                 {!isRestricted && (
                     <>

@@ -6,7 +6,9 @@ import { useAuth } from '../context/AuthContext';
 import { Box, Typography, Chip, CircularProgress, Button, IconButton, Modal, List, ListItem, ListItemButton, ListItemText, Divider, Tooltip } from '@mui/material';
 import { RatingModal } from '../components/RatingModal';
 import { MovieReviews } from '../components/MovieReviews';
+import { DiaryEntryDialog } from '../components/DiaryEntryDialog';
 import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd';
+import EditCalendarIcon from '@mui/icons-material/EditCalendar';
 import { useSnackbar } from '../context/SnackbarProvider';
 
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
@@ -38,6 +40,9 @@ export const MovieDetailPage = () => {
     const [reviewsKey, setReviewsKey] = useState(0);
     // "For you" score: the rating from people who share your taste (arrives with the reviews).
     const [forYou, setForYou] = useState(null);
+    // Your current rating (arrives with the reviews); prefills the diary dialog.
+    const [myRating, setMyRating] = useState(null);
+    const [isDiaryOpen, setIsDiaryOpen] = useState(false);
 
     const fetchMovieDetails = useCallback(async () => {
         if (!user) return;
@@ -99,6 +104,12 @@ export const MovieDetailPage = () => {
         }
     };
     
+    // Logging with a new rating also changes your rating: refresh the reviews
+    // (they carry your rating) so the review form and the dialog prefill follow.
+    const handleDiarySaved = (entry) => {
+        if (entry.rating !== myRating) setReviewsKey(prev => prev + 1);
+    };
+
     if (isLoading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
     if (error) return <div className="page-container"><Typography color="error">{error}</Typography></div>;
     if (!movie) return null;
@@ -112,7 +123,7 @@ export const MovieDetailPage = () => {
                 <div className="movie-detail-info">
                     <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold' }}>{movie.title}</Typography>
                     {movie.tagline && <Typography variant="h6" color="text.secondary" gutterBottom>"{movie.tagline}"</Typography>}
-                    <Box sx={{ display: 'flex', alignItems: 'center', my: 2, gap: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', my: 2, gap: 2, flexWrap: 'wrap' }}>
                         <Box className="tmdb-score-circle" sx={{ borderColor: tmdbScore > 70 ? 'success.main' : tmdbScore > 40 ? 'warning.main' : 'error.main' }}>
                             <Typography variant="h6" component="span">{tmdbScore}%</Typography>
                         </Box>
@@ -129,6 +140,7 @@ export const MovieDetailPage = () => {
                         )}
                         <Button variant="contained" size="large" onClick={() => setIsRatingModalOpen(true)}>{t('movie.rateThis')}</Button>
                         <IconButton onClick={handleOpenWatchlistModal} color="primary" title={t('movie.addToList')} aria-label={t('movie.addToList')}><BookmarkAddIcon fontSize="large" /></IconButton>
+                        <Button variant="outlined" size="large" startIcon={<EditCalendarIcon />} onClick={() => setIsDiaryOpen(true)}>{t('diary.addToDiary')}</Button>
                     </Box>
                     <Box sx={{ my: 2 }}>{movie.genres.map(genre => <Chip label={genre.name} key={genre.id} sx={{ mr: 1, mb: 1 }} />)}</Box>
                     <Typography variant="body1" paragraph>{movie.overview}</Typography>
@@ -142,11 +154,18 @@ export const MovieDetailPage = () => {
                            <Typography variant="caption" color="text.secondary">{actor.character}</Typography>
                         </div>
                     ))}</div>
-                    <MovieReviews movieId={movie.id} refreshKey={reviewsKey} onForYou={setForYou} />
+                    <MovieReviews movieId={movie.id} refreshKey={reviewsKey} onForYou={setForYou} onMyRating={setMyRating} />
                 </div>
             </div>
 
             {movie && <RatingModal movie={movie} open={isRatingModalOpen} onClose={() => setIsRatingModalOpen(false)} onRate={handleRateMovie} />}
+            <DiaryEntryDialog
+                open={isDiaryOpen}
+                onClose={() => setIsDiaryOpen(false)}
+                movie={movie}
+                initialRating={myRating}
+                onSaved={handleDiarySaved}
+            />
 
             <Modal open={isWatchlistModalOpen} onClose={() => setIsWatchlistModalOpen(false)}>
                 <Box sx={modalStyle}>

@@ -9,7 +9,7 @@ const PAGE_SIZE = 20;
 
 // Reviews on the movie page: write/edit/delete your own review, plus
 // everyone else's (newest first).
-export const MovieReviews = ({ movieId, refreshKey, onForYou }) => {
+export const MovieReviews = ({ movieId, refreshKey, onForYou, onMyRating }) => {
     const { t } = useTranslation();
     const { showSnackbar } = useSnackbar();
     const [data, setData] = useState(null);
@@ -23,7 +23,10 @@ export const MovieReviews = ({ movieId, refreshKey, onForYou }) => {
         try {
             const res = await api.get(`/api/v1/reviews/movie/${movieId}`, { params: { page: nextPage, pageSize: PAGE_SIZE } });
             setData(res.data);
-            if (nextPage === 1) onForYou?.(res.data.forYou ?? null);
+            if (nextPage === 1) {
+                onForYou?.(res.data.forYou ?? null);
+                onMyRating?.(res.data.myRating ?? null);
+            }
             setReviews((prev) => (nextPage === 1 ? res.data.reviews : [...prev, ...res.data.reviews]));
             setPage(nextPage);
             if (nextPage === 1) {
@@ -33,7 +36,7 @@ export const MovieReviews = ({ movieId, refreshKey, onForYou }) => {
         } catch {
             setData((prev) => prev ?? { reviews: [], totalCount: 0 });
         }
-    }, [movieId, onForYou]);
+    }, [movieId, onForYou, onMyRating]);
 
     useEffect(() => { load(1); }, [load, refreshKey]);
 

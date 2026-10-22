@@ -1,820 +1,883 @@
-# SineUyum — Proje Analizi ve Mobil Yol Haritası
+# SineUyum — Project Analysis and Mobile Roadmap
 
-> Bu doküman mevcut kod tabanının (SineUyum.Api + sine-uyum-web) incelenmesi
-> sonucu tespit edilen eksikleri ve mobil uygulamaya geçiş için gereken
-> adımları listeler.
+> This document lists the gaps found while reviewing the existing code base
+> (SineUyum.Api + sine-uyum-web) and the steps required to move to a mobile
+> app.
 
-**İncelenen sürüm:** `claude/loving-carson-a7k46a` (4b5bd97)
-**Kapsam:** .NET 8 Web API (SQLite + Identity + JWT + SignalR), React 19 + Vite + MUI web istemcisi
+**Reviewed version:** `claude/loving-carson-a7k46a` (4b5bd97)
+**Scope:** .NET 8 Web API (SQLite + Identity + JWT + SignalR), React 19 + Vite + MUI web client
 
 ---
 
-## 1. Mevcut Durum Özeti
+## 1. Current State Summary
 
-| Katman | Teknoloji | Durum |
+| Layer | Technology | Status |
 |---|---|---|
-| Backend | ASP.NET Core 8, EF Core, Identity, JWT, SignalR | Çalışıyor, 12 controller, 14 entity |
-| Veritabanı | SQLite (dosya) | Geliştirme için uygun, production için değil |
-| Web | React 19, Vite 5, MUI 7, axios, SignalR client | 14 sayfa, 10 bileşen, 4 context |
-| Mobil | — | **Yok** (bu çalışmada Flutter ile eklendi) |
-| Test | — | **Yok** (mobil tarafa 21 birim test eklendi; API hâlâ testsiz) |
-| CI/CD | — | GitHub Actions eklendi (API derleme + migration kontrolü, web lint/build, mobil format/analiz/test) |
-| Docker | — | **Yok** |
-| README | Sadece Vite şablonu (`sine-uyum-web/README.md`) | Kök README ve `.env.example` bu çalışmada eklendi |
+| Backend | ASP.NET Core 8, EF Core, Identity, JWT, SignalR | Working, 12 controllers, 14 entities |
+| Database | SQLite (file) | Fine for development, not for production |
+| Web | React 19, Vite 5, MUI 7, axios, SignalR client | 14 pages, 10 components, 4 contexts |
+| Mobile | — | **None** (added with Flutter in this work) |
+| Test | — | **None** (21 unit tests added on the mobile side; the API still has no tests) |
+| CI/CD | — | GitHub Actions added (API build + migration check, web lint/build, mobile format/analyze/test) |
+| Docker | — | **None** |
+| README | Only the Vite template (`sine-uyum-web/README.md`) | Root README and `.env.example` added in this work |
 
-**Çalışan özellikler:** kayıt/giriş, TMDb film arama ve detay, 1-10 film puanlama,
-uyumluluk yüzdesi hesaplama, kullanıcı arama/takip, özel izleme listeleri,
-mesajlaşma (film/liste paylaşımı dahil), sinema etkinliği + otomatik grup
-eşleştirme + grup içi film oylaması, anlık bildirim (SignalR), admin paneli,
-abonelik bayrağı.
-
----
-
-## 2. Güvenlik Açıkları
-
-Bunlar üretime çıkmadan önce kapatılmalı. Numaralandırma öncelik sırasına göredir.
-
-### G1 — JWT imzalama anahtarı git geçmişindeydi — ✅ temizlendi
-`appsettings.json` içinde commit edilmiş bir `Jwt:Key` değeri vardı. Değer
-üretilmiş bir gizli anahtar değil, "bunu değiştir" anlamına gelen bir **yer
-tutucuydu** — ama uygulama token'ları onunla imzaladığı için onu bilen biri
-istediği kullanıcı adına (admin dahil) geçerli token üretebilirdi.
-
-`git filter-repo` ile tüm geçmişten silindi. Anahtar artık yalnızca `JWT_KEY`
-ortam değişkeninden okunuyor ve açılışta HS512 için ≥64 byte olduğu
-doğrulanıyor, yani eski değer teknik olarak da kullanılamaz.
-
-**Hâlâ yapılması gereken:** Uygulamayı bu anahtarla herhangi bir ortamda
-çalıştırdıysanız yeni bir anahtar üretin (zaten sadece bir yer tutucuydu, ama
-temiz olması için).
-
-> Not: force-push sonrası eski commit objeleri bir süre doğrudan SHA ile
-> erişilebilir kalabilir. GitHub Support ile kalıcı silme de düşünüldü, ancak
-> GitHub bu hizmeti yalnızca riskin kimlik bilgisi rotasyonuyla
-> giderilemediği durumlarda veriyor; buradaki anahtar rotasyonla çözüldüğü
-> için başvuru gerekmedi.
-
-> TMDb API anahtarı hiç commit edilmemişti (geçmişte her zaman `""`).
-
-### G2 — Veritabanı repoya commit edilmişti — ✅ temizlendi
-`SineUyum.Api/sineuyum.db` (266 KB) git'te izleniyordu ve repo **public**'ti.
-İçinde 11 kullanıcı kaydı (e-posta adresleri ve parola hash'leri), 20 mesaj,
-bildirimler ve puanlamalar vardı. Veriler geliştirme amaçlı test kayıtlarıydı
-(`test@gmail.com` gibi tek kullanımlık adresler), yine de herkese açıktı.
-
-SQLite'ın yan dosyaları `sineuyum.db-shm` (32 KB) ve `sineuyum.db-wal` de
-commit edilmişti; bunlar da veri sayfası taşıyabildiği için birlikte silindi.
-
-`git filter-repo --invert-paths --path-glob 'SineUyum.Api/sineuyum.db*'` ile
-tüm geçmişten çıkarıldı, `*.db` `.gitignore`'a eklendi.
-
-**Değerlendirme:** Veritabanı tamamen geliştirme sırasında elle girilmiş test
-kayıtlarından oluşuyordu — rastgele e-posta adresleri (`aasdfghjk@gmail.com`
-gibi), içerik taşımayan mesajlar (`"sa"`, `"as"`), gerçek kişi verisi yok.
-Parola hash'leri de ASP.NET Core Identity V3 (HMAC-SHA512, 100.000 iterasyon,
-kullanıcı başına salt) ile korunuyordu. Bu nedenle GitHub Support'a başvuru
-yapılmadı; dosyanın geçmişten silinmesi ve `*.db`'nin `.gitignore`'a eklenmesi
-yeterli görüldü. Bu veritabanındaki `admin` gibi hesaplar başka bir ortamda
-hâlâ kullanılıyorsa parolaları yine de değiştirilmeli.
-
-### G3 — Sabit kodlanmış admin hesabı (KRİTİK)
-`Program.cs:120-128` her açılışta `admin` / `Password123!` hesabını oluşturuyor —
-ortam ayrımı yok, yani production'da da oluşur. Repoyu gören herkes admin olur.
-**Yapılacak:** kullanıcı adı/parola konfigürasyondan okunmalı, parola yoksa
-hesap oluşturulmamalı (bu çalışmada düzeltildi).
-
-Daha önce `Password123!` ile oluşmuş hesapların parolası hâlâ değiştirilmeli.
-Bunun için uygulamada hiçbir yol yoktu; `POST /api/account/change-password`
-eklendi (kullanım: kök README → "Parola değiştirme").
-
-### G4 — Ödeme doğrulaması olmayan abonelik — ✅ açık kapatıldı, altyapı hazır
-`ActivateSubscription` ödeme kanıtı istemeden `IsSubscribed = true` yapıyordu:
-herkes tek istekle ücretsiz abone olabiliyordu. Ayrıca:
-- **Ücretli özellik yalnızca istemcide gizleniyordu:** etkinlik katılımı/oylama
-  sunucuda hiç denetlenmiyordu (mobilde istemcide de gizlenmiyordu); API'yi
-  doğrudan çağıran ödemeden katılabiliyordu.
-- **Abonelik hiç bitmiyordu:** `SubscriptionExpires` yazılıyor ama hiçbir yerde
-  bugünle karşılaştırılmıyordu.
-- Mobil ekranda var olmayan özellikler ("sınırsız izleme listesi", "eşleştirmede
-  öncelik") abonelik avantajı olarak listeleniyordu.
-
-**Yapılan:**
-- `Subscriptions` tablosu (sağlayıcı, sağlayıcı referansı, durum, dönem sonu)
-  tek kaynak; `AppUser.IsSubscribed/SubscriptionExpires` kaldırıldı. Abonelik
-  her seferinde veritabanından ve **bitiş tarihine bakılarak** hesaplanır.
-  (Eski bayraktaki "abonelikler" ödemesiz olduğu için taşınmadı.)
-- `[RequiresSubscription]`: etkinliğe katılma ve oylama aktif abonelik yoksa
-  **402** döner (yöneticiler hariç). JWT claim'i yalnızca arayüz içindir.
-- Sağlayıcıdan bağımsız `IPaymentProvider` (doğrulama + imzalı webhook) ve uçlar:
-  `GET /api/v1/subscription`, `POST /api/v1/subscription/verify`
-  (sağlayıcıyla doğrulanır, yeni token döner), `POST /api/v1/subscription/webhooks/{provider}`
-  (yenileme / iptal → dönem sonuna kadar geçerli / iade → hemen biter).
-  Aynı ödeme ikinci bir hesabı açamaz (409). `activate` → **410 Gone**.
-- Yönetici elle abonelik tanımlayabilir: `POST /api/v1/admin/users/{id}/subscription {days}`
-  (promosyon, destek; ödeme entegrasyonu öncesi premium özellikleri denemek).
-- Kullanılmayan `Iyzipay` ve `Stripe.net` paketleri kaldırıldı (gerçek
-  entegrasyonda eklenecek).
-- G13 de kapatıldı: olmayan etkinliğe katılım 404, geçmiş etkinliğe 400.
-- İstemciler: "aboneliği test et" düğmeleri kaldırıldı, durum sunucudan
-  okunuyor (token eskiyse tazeleniyor), 402'de abonelik sayfasına
-  yönlendirme; mobil avantaj listesi gerçek özelliklerle düzeltildi.
-
-**Kalan (ödeme hesabı bilgileri gerekli):** gerçek sağlayıcılar —
-web için iyzico (ödeme formu + sunucu doğrulaması + webhook imzası), mobil
-için App Store / Google Play abonelik doğrulaması ve sunucu bildirimleri.
-Her biri yalnızca bir `IPaymentProvider` sınıfı + kayıt satırıdır.
-
-### G5 — Rate limiting yok — ✅ kapatıldı
-`/api/account/login` brute force'a açık; TMDb proxy endpoint'leri (`/api/movies/*`)
-sınırsız çağrılabildiği için TMDb kotası tüketilebilir.
-**Yapılacak:** ASP.NET Core rate limiting. Bu çalışmada login/register/refresh
-uçlarına IP başına dakikada 10 istek sınırı eklendi; kalan uçlar açık.
-
-**Yapılan:** `RateLimitingSetup` (dakika başına, `RateLimit:*` ayarları):
-- **Genel sınır** her isteğe: giriş yapmışsa kullanıcı, yapmamışsa IP başına
-  300. `/health` ve swagger muaf.
-- Sıkı politikalar (genel sınırla birlikte geçerli): `tmdb` 60 (film uçları,
-  ortak öneri), `social-write` 30 (mesaj + takip; ikisi de bildirim üretir,
-  kotayı paylaşır), `auth` 10 (IP), `upload`/`payment` 10.
-- Ret: 429 + ProblemDetails (diğer hatalarla aynı biçim) + `Retry-After`.
-- **Ters vekil:** `TRUSTED_PROXIES` (IP/CIDR) tanımlıysa `X-Forwarded-For`
-  yalnızca o vekillerden kabul edilir; aksi halde tüm kullanıcılar vekilin
-  IP'sini paylaşıp birlikte kesilirdi. Testte bulunan tuzak: ASP.NET'te
-  güvenilen liste boşsa başlık **herkesten** kabul ediliyor (istemci her
-  istekte başka IP yazıp sınırı aşabilirdi); vekil tanımsızken başlık hiç
-  işlenmiyor. Hatalı değer açılışta hata verir.
-
-### G6 — Token iptal edilemiyor, refresh token yok
-Token 7 gün geçerli, sunucu tarafı iptal mekanizması yok. `IsSubscribed`
-claim'i token'ın içinde olduğu için abonelik iptal edilse bile kullanıcı 7 gün
-abone kalır. Çıkış yapmak yalnızca `localStorage`'ı temizliyor.
-**Yapılacak:** kısa ömürlü access token + iptal edilebilir refresh token
-(bu çalışmada eklendi).
-
-### G7 — Doğrulanmamış film kaydı (over-posting) — ✅ kapatıldı
-`AddMovie(Movie movie)` istemciden gelen `Title`/`PosterPath`'i paylaşılan
-Movies tablosuna doğrulamadan yazıyordu; bir istemci gerçek bir TMDb id'sini
-sahte başlıkla kaydedip diğer kullanıcıların gördüğü veriyi bozabilirdi.
-Çözüm: `MovieCatalogService.EnsureMovieAsync(movieId)` filmi yalnızca TMDb'den
-çekilen meta veriyle oluşturuyor; istemci yalnızca `movieId` veriyor.
-- `AddRating` artık filmi gerektiğinde kendisi çekiyor (ayrı "önce ekle"
-  çağrısına gerek yok).
-- `addmovie` ucu geriye dönük uyumlu: istemciden gelen başlık/poster **yok
-  sayılıyor**, yalnızca `id` okunuyor.
-- TMDb yoksa/ulaşılamazsa DomainException (503/404) döner; detay sızmaz.
-- Testler (`MovieOverPostingTests`): sahte başlık yok sayılıyor; `addmovie`
-  olmadan doğrudan puanlama da filmi TMDb'den çekiyor.
-
-### G8 — CORS ve JWT issuer/audience sabit kodlanmış
-`Program.cs:20` iki Codespaces URL'sini sabit içeriyor; `appsettings.json`'daki
-`Jwt:Issuer`/`Audience` de aynı geçici URL. Codespace değiştiğinde proje
-çalışmaz; farklı ortamlara deploy edilemez.
-**Yapılacak:** konfigürasyona taşındı (bu çalışmada).
-
-### G9 — HTTPS zorlaması ve güvenlik başlıkları yok — ✅ kapatıldı
-`UseHttpsRedirection`, HSTS, güvenlik başlıkları (`X-Content-Type-Options`,
-`Referrer-Policy` vb.) yok.
-
-**Yapılan:** HTTPS yönlendirmesi ve HSTS üretimde zaten açıktı. Her yanıta
-(hata ve 429 dahil) `X-Content-Type-Options: nosniff`, `X-Frame-Options:
-DENY`, `Referrer-Policy: no-referrer`, `Permissions-Policy`,
-`Cross-Origin-Opener-Policy` ve API'nin yalnızca JSON döndürdüğüne uygun katı
-bir CSP (`default-src 'none'`) eklendi; geliştirmedeki Swagger arayüzü CSP'den
-muaf. Sunucu yazılımını açık eden `Server: Kestrel` başlığı kaldırıldı.
-Üretim imajında doğrulandı. Web uygulamasının kendi başlıkları onu sunan
-sunucuya (nginx vb.) aittir.
-
-### G10 — Hata detayları dışa sızıyordu — ✅ merkezi hata yönetimi eklendi
-`AdminController.TriggerMatching` `ex.Message`'ı doğrudan istemciye döndürüyor,
-global exception handler yoktu. Çözüldü:
-- `GlobalExceptionHandler` (IExceptionHandler) tüm yakalanmayan istisnaları
-  `ProblemDetails`'e çevirir. Beklenen iş kuralı hataları (`DomainException`)
-  kendi durum koduyla (400/404) ve güvenli mesajla döner; diğer her şey 500 +
-  genel mesaj, ayrıntı yalnızca log'a yazılır. Stack trace artık sızmıyor.
-- `DomainException` tipi eklendi; `MatchingService`'teki ham `Exception`
-  fırlatmaları buna geçirildi, `AdminController`'daki try/catch kaldırıldı.
-- Her yanıtta `traceId` var; aynı id log'da da görünüyor (korelasyon).
-- Testler: `ErrorHandlingTests` — 404 ProblemDetails biçimini ve stack
-  trace'in sızmadığını doğruluyor.
-
-### G10b — Yapılandırılmış loglama (Serilog) — ✅ eklendi
-Önceden yapılandırılmış log ve istek logu yoktu. Serilog eklendi:
-konsola yapılandırılmış çıktı, `UseSerilogRequestLogging` ile istek başına özet
-(yöntem, yol, durum kodu, süre), seviye `appsettings`'teki `Serilog` bölümünden.
-Request logging exception handler'ın dışında, böylece 404/400'e çevrilen
-hatalar log'da gerçek durum koduyla görünüyor.
-
-### G11 — Parola politikası ve e-posta tekilliği tanımsız
-`AddIdentity` varsayılanları kullanılıyor; `RegisterDto` "en az 6 karakter"
-diyor ama Identity varsayılanı rakam + büyük/küçük harf + özel karakter de
-istiyor → kullanıcıya yanlış mesaj gösteriliyor. `RequireUniqueEmail`
-ayarlanmadığı için aynı e-posta ile birden fazla hesap açılabilir.
-
-### G12 — Gizlilik ayarı yok — ✅ kapatıldı
-`ProfileController.GetUserProfile` herhangi bir giriş yapmış kullanıcıya
-hedef kullanıcının tüm puanlamalarını ve istatistiklerini açıyor. Gizli hesap
-/ görünürlük tercihi kavramı yok.
-
-**Yapılan:** Dört ayar, her biri bağımsız açılıp kapatılır (varsayılanlar
-eski davranışla aynı; mevcut hesaplar migration ile böyle başlar). Kurallar
-tek yerde, `PrivacyService`'te; istemciler yalnızca gösterir.
-- **Profil görünürlüğü** (`Public` / `Following` / `Private`): puanlar,
-  istatistikler, takip listeleri ve uyum (puanlardan türediği için) kapanır;
-  ad, fotoğraf ve biyografi görünür kalır. "Following" = sahibin takip
-  ettikleri: takip onaysız olduğu için "takipçilerim" koruma sağlamazdı.
-  Yönetici her şeyi görür.
-- **Mesaj izni** (`Everyone` / `Following` / `Nobody`): yalnızca yeni mesajı
-  engeller (403, gerekçeli); geçmiş sohbet okunur.
-- **Aramada görünmeme:** kullanıcı aramasından çıkar; profil bağlantısı çalışır.
-- **Engelleme** (`/api/v1/blocks`): iki yönlü etki. Engellenen, engelleyeni
-  hiç göremez (404); taraflar mesajlaşamaz, takip edemez, aramada birbirini
-  bulamaz, etkinlik eşleştirmesinde aynı gruba düşmez. Karşılıklı takip
-  silinir, engel kalkınca geri gelmez.
-- Eşleştirme: engel varsa en çok çakışması olan önce yerleştirilir; aksi
-  halde birbirini engelleyenler sona kalıp geçerli bir dağılım varken
-  gruptan dışarıda kalıyordu (testte yakalandı).
-- Yol üstünde: olmayan kullanıcıyı takip etmek FK hatasıyla 500 veriyordu
-  (artık 404).
-- Web: Profili Düzenle > Gizlilik; profilde Engelle / Engeli Kaldır. Mobil:
-  Ayarlar > Gizlilik; profil menüsünde Engelle.
-
-**Kalan:** Paylaşılan izleme listesi bağlantısı (`watchlist/public/{id}`)
-gizlilik ayarından bağımsız; liste bilinçli olarak mesajla paylaşılır.
-
-### G13 — Etkinlik katılımında doğrulama eksik — ✅ kapatıldı (G4 ile)
-`EventController.JoinEvent` `eventId`'nin var olup olmadığını ve etkinlik
-tarihinin geçmiş olup olmadığını kontrol etmiyor; geçersiz id ile FK hatası,
-geçmiş etkinliğe katılım mümkün.
+**Working features:** registration/login, TMDb movie search and details, 1-10 movie
+ratings, compatibility percentage calculation, user search/follow, custom
+watchlists, messaging (including movie/list sharing), cinema events + automatic
+group matching + in-group movie voting, real-time notifications (SignalR),
+admin panel, subscription flag.
 
 ---
 
-## 3. Mimari ve Kod Kalitesi
+## 2. Security Vulnerabilities
 
-### M1 — Test yoktu — ✅ başlangıç paketi eklendi
-Önceden hiç test yoktu. `SineUyum.Api.Tests` projesi eklendi (21 test, CI'da
-koşuyor):
-- **Birim testleri:** `CompatibilityCalculator` — uyumluluk algoritmasının
-  davranışı (uç/orta bant ağırlıkları, 0-100 sınırı, ortak film filtresi).
-- **Integration testleri:** `WebApplicationFactory` + in-memory SQLite ile
-  uçtan uca auth akışı — kayıt, giriş, yanlış parola, `/me`, token yenileme
-  (rotation + replay reddi), parola değiştirme (eski/yeni + diğer oturumların
-  iptali), admin tohumlama.
+These must be closed before going to production. The numbering follows priority.
 
-**Kalan:** eşleştirme servisi (`MatchingService.CreateGroupsForEventAsync`),
-watchlist ve mesaj controller'ları henüz test edilmedi. Kapsam genişletilmeli.
+### G1 — The JWT signing key was in the git history — ✅ cleaned up
+A `Jwt:Key` value had been committed in `appsettings.json`. The value was not a
+generated secret but a **placeholder** meaning "change this" — but since the
+application signed tokens with it, anyone who knew it could create valid
+tokens for any user (including admin).
 
-### M2 — SQLite production'a uygun değildi — ✅ çift sağlayıcı eklendi
-SQLite tek dosya; eşzamanlı yazmada kilitlenir, yatay ölçeklenemez. Çözüm:
-sağlayıcı `Database:Provider` ayarından seçiliyor.
-- **Postgres** (production): `Npgsql.EntityFrameworkCore.PostgreSQL`, versiyonlu
-  EF migration'ları (`InitialPostgres`), açılışta `MigrateAsync`.
-- **SQLite** (varsayılan; geliştirme/test): şema modelden üretilir
-  (`EnsureCreatedAsync`), migration tutulmaz.
+It was removed from the entire history with `git filter-repo`. The key is now
+read only from the `JWT_KEY` environment variable and validated on startup to
+be ≥64 bytes for HS512, so the old value cannot technically be used either.
 
-Neden karışık: EF migration'ları sağlayıcıya özeldir ve tek projede iki ayrı
-migration seti tek model snapshot'ı yüzünden çakışır. Veri katmanını ayrı
-kütüphaneye bölmek yerine bu yaygın desen seçildi (production migration'lı,
-dev EnsureCreated'lı). Her ikisi de tek `ApplicationDbContext` kullanır.
+**Still to do:** if you ran the application with this key in any environment,
+generate a new key (it was only a placeholder anyway, but for the sake of
+cleanliness).
 
-**Doğrulama:** `docker compose up` ile Postgres + API yığını ayağa kaldırıldı;
-migration uygulandı (23 tablo, `__EFMigrationsHistory` kaydı), kayıt/giriş
-200. SQLite yolu 23 testle doğrulandı. CI'ın migration kontrolü Postgres
-sağlayıcısına ayarlandı.
+> Note: after a force-push, old commit objects may remain directly accessible
+> by SHA for a while. Permanent removal via GitHub Support was also
+> considered, but GitHub only offers this service when the risk cannot be
+> mitigated by rotating credentials; since the key here was resolved by
+> rotation, no request was needed.
 
-> İleride: SQLite'ı da migration'a almak istenirse veri katmanı ayrı projeye
-> çıkarılıp sağlayıcı başına migration projesi kurulmalı (daha ağır, ertelendi).
+> The TMDb API key was never committed (always `""` in the history).
 
-### M3 — Anonim obje döndürülen API sözleşmesi — ✅ response DTO'larına geçildi
-Neredeyse tüm endpoint'ler `new { ... }` anonim obje ya da doğrudan EF varlığı
-döndürüyordu: Swagger şeması üretilemiyor, alan adı değişiklikleri derleme
-zamanında yakalanmıyordu.
+### G2 — The database had been committed to the repository — ✅ cleaned up
+`SineUyum.Api/sineuyum.db` (266 KB) was tracked in git and the repository was
+**public**. It contained 11 user records (email addresses and password
+hashes), 20 messages, notifications and ratings. The data consisted of test
+records for development (throwaway addresses such as `test@gmail.com`), but
+it was publicly accessible nonetheless.
 
-**Yapılan:**
-- Tüm JSON uçları açık response DTO'ları ve `ActionResult<T>` döndürüyor
-  (`Dtos/*ResponseDtos.cs`, `NotificationDto`). Swagger'da 47 işlemin 42'si
-  tipli yanıt şemasına sahip; kalan 5'i TMDb yanıtını olduğu gibi aktaran
-  uçlar (şema TMDb'nin, bizim değil).
-- **Sözleşme testi:** `ResponseContractTests` gerçekçi bir senaryoyla 54 çağrı
-  yapıp her yanıtın şeklini (durum kodu + alan adları + değer türleri)
-  `SineUyum.Api.Tests/Contracts/response-shapes.txt` altın dosyasıyla
-  karşılaştırır. İstemcinin okuduğu bir alan kazara silinir/yeniden
-  adlandırılırsa CI kırılır. Bilinçli değişiklikte
+SQLite's side files `sineuyum.db-shm` (32 KB) and `sineuyum.db-wal` had also
+been committed; since these can carry data pages too, they were removed along
+with it.
+
+It was removed from the entire history with
+`git filter-repo --invert-paths --path-glob 'SineUyum.Api/sineuyum.db*'`, and
+`*.db` was added to `.gitignore`.
+
+**Assessment:** the database consisted entirely of test records entered by hand
+during development — random email addresses (such as `aasdfghjk@gmail.com`),
+messages without content (`"sa"`, `"as"`), no real personal data. The password
+hashes were also protected by ASP.NET Core Identity V3 (HMAC-SHA512, 100,000
+iterations, per-user salt). Therefore no request was made to GitHub Support;
+removing the file from the history and adding `*.db` to `.gitignore` was
+considered sufficient. If accounts from this database such as `admin` are
+still used in another environment, their passwords should be changed anyway.
+
+### G3 — Hard-coded admin account (CRITICAL)
+`Program.cs:120-128` creates the `admin` / `Password123!` account on every
+startup — with no environment distinction, so it is created in production too.
+Anyone who sees the repository becomes admin.
+**To do:** the username/password should be read from configuration, and the
+account should not be created when no password is given (fixed in this work).
+
+The passwords of accounts previously created with `Password123!` must still be
+changed. There was no way to do that in the application;
+`POST /api/account/change-password` was added (usage: root README → "Changing
+a password").
+
+### G4 — Subscription without payment verification — ✅ hole closed, infrastructure ready
+`ActivateSubscription` set `IsSubscribed = true` without asking for proof of
+payment: anyone could subscribe for free with a single request. In addition:
+- **The paid feature was only hidden on the client:** event participation/voting
+  was not checked on the server at all (and on mobile it was not even hidden on
+  the client); anyone calling the API directly could join without paying.
+- **Subscriptions never ended:** `SubscriptionExpires` was written but never
+  compared with the current date anywhere.
+- The mobile screen listed features that did not exist ("unlimited watchlists",
+  "priority in matching") as subscription benefits.
+
+**Done:**
+- The `Subscriptions` table (provider, provider reference, status, period end)
+  is the single source; `AppUser.IsSubscribed/SubscriptionExpires` were removed.
+  The subscription is computed from the database every time, **taking the end
+  date into account**. (The "subscriptions" in the old flag were not migrated,
+  since they were never paid.)
+- `[RequiresSubscription]`: joining an event and voting return **402** without an
+  active subscription (except for administrators). The JWT claim is for the UI
+  only.
+- Provider-agnostic `IPaymentProvider` (verification + signed webhook) and
+  endpoints: `GET /api/v1/subscription`, `POST /api/v1/subscription/verify`
+  (verified with the provider, returns a new token), `POST /api/v1/subscription/webhooks/{provider}`
+  (renewal / cancellation → valid until the end of the period / refund → ends
+  immediately). The same payment cannot activate a second account (409).
+  `activate` → **410 Gone**.
+- An administrator can grant a subscription manually: `POST /api/v1/admin/users/{id}/subscription {days}`
+  (promotions, support; trying out premium features before the payment
+  integration).
+- The unused `Iyzipay` and `Stripe.net` packages were removed (to be added in
+  the real integration).
+- G13 was closed as well: joining a non-existent event returns 404, a past event 400.
+- Clients: the "test subscription" buttons were removed, the status is read
+  from the server (refreshed if the token is stale), and a 402 redirects to the
+  subscription page; the mobile benefits list was corrected to the real
+  features.
+
+**Remaining (requires payment account details):** real providers — iyzico for
+web (payment form + server-side verification + webhook signature), App Store /
+Google Play subscription verification and server notifications for mobile.
+Each of them is just an `IPaymentProvider` class + a registration line.
+
+### G5 — No rate limiting — ✅ closed
+`/api/account/login` is open to brute force; the TMDb proxy endpoints
+(`/api/movies/*`) can be called without limit, so the TMDb quota can be
+exhausted.
+**To do:** ASP.NET Core rate limiting. In this work a limit of 10 requests per
+minute per IP was added to the login/register/refresh endpoints; the other
+endpoints are open.
+
+**Done:** `RateLimitingSetup` (per minute, `RateLimit:*` settings):
+- **Global limit** on every request: 300 per user when logged in, per IP
+  otherwise. `/health` and swagger are exempt.
+- Strict policies (applied together with the global limit): `tmdb` 60 (movie
+  endpoints, shared recommendations), `social-write` 30 (messages + follows;
+  both generate notifications, so they share the quota), `auth` 10 (IP),
+  `upload`/`payment` 10.
+- Rejection: 429 + ProblemDetails (same format as other errors) + `Retry-After`.
+- **Reverse proxy:** when `TRUSTED_PROXIES` (IP/CIDR) is set, `X-Forwarded-For`
+  is accepted only from those proxies; otherwise all users would share the
+  proxy's IP and be throttled together. A pitfall found in testing: in ASP.NET,
+  if the trusted list is empty the header is accepted **from anyone** (a client
+  could write a different IP on every request and bypass the limit); when no
+  proxy is defined, the header is not processed at all. An invalid value fails
+  on startup.
+
+### G6 — Tokens cannot be revoked, no refresh token
+The token is valid for 7 days and there is no server-side revocation
+mechanism. Since the `IsSubscribed` claim is inside the token, the user stays
+subscribed for 7 days even if the subscription is cancelled. Logging out only
+clears `localStorage`.
+**To do:** short-lived access token + revocable refresh token (added in this
+work).
+
+### G7 — Unvalidated movie records (over-posting) — ✅ closed
+`AddMovie(Movie movie)` wrote the `Title`/`PosterPath` sent by the client into
+the shared Movies table without validation; a client could save a real TMDb id
+with a fake title and corrupt the data other users see.
+Solution: `MovieCatalogService.EnsureMovieAsync(movieId)` creates the movie only
+from metadata fetched from TMDb; the client only provides `movieId`.
+- `AddRating` now fetches the movie itself when needed (no separate "add
+  first" call needed).
+- The `addmovie` endpoint stays backward compatible: the title/poster sent by
+  the client are **ignored**, only `id` is read.
+- If TMDb is missing/unreachable, a DomainException (503/404) is returned; no
+  details leak.
+- Tests (`MovieOverPostingTests`): a fake title is ignored; rating directly
+  without `addmovie` also fetches the movie from TMDb.
+
+### G8 — CORS and JWT issuer/audience hard-coded
+`Program.cs:20` contains two hard-coded Codespaces URLs; `Jwt:Issuer`/`Audience`
+in `appsettings.json` are the same temporary URL. When the Codespace changes,
+the project stops working; it cannot be deployed to different environments.
+**To do:** moved to configuration (in this work).
+
+### G9 — No HTTPS enforcement and no security headers — ✅ closed
+No `UseHttpsRedirection`, HSTS or security headers (`X-Content-Type-Options`,
+`Referrer-Policy` etc.).
+
+**Done:** HTTPS redirection and HSTS were already enabled in production. Every
+response (including errors and 429) now gets `X-Content-Type-Options: nosniff`,
+`X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Permissions-Policy`,
+`Cross-Origin-Opener-Policy` and a strict CSP (`default-src 'none'`) suited to
+an API that only returns JSON; the Swagger UI in development is exempt from the
+CSP. The `Server: Kestrel` header, which revealed the server software, was
+removed. Verified on the production image. The web app's own headers belong to
+the server that serves it (nginx etc.).
+
+### G10 — Error details were leaking — ✅ central error handling added
+`AdminController.TriggerMatching` returned `ex.Message` directly to the client,
+and there was no global exception handler. Resolved:
+- `GlobalExceptionHandler` (IExceptionHandler) converts all unhandled exceptions
+  into `ProblemDetails`. Expected business-rule errors (`DomainException`) are
+  returned with their own status code (400/404) and a safe message; everything
+  else becomes 500 + a generic message, with details written only to the log.
+  Stack traces no longer leak.
+- A `DomainException` type was added; the raw `Exception` throws in
+  `MatchingService` were switched to it, and the try/catch in `AdminController`
+  was removed.
+- Every response has a `traceId`; the same id also appears in the log
+  (correlation).
+- Tests: `ErrorHandlingTests` — verifies the 404 ProblemDetails format and that
+  the stack trace does not leak.
+
+### G10b — Structured logging (Serilog) — ✅ added
+Previously there was no structured logging and no request logging. Serilog was
+added: structured console output, a per-request summary with
+`UseSerilogRequestLogging` (method, path, status code, duration), and the level
+from the `Serilog` section in `appsettings`. Request logging sits outside the
+exception handler, so errors converted to 404/400 appear in the log with their
+real status code.
+
+### G11 — Password policy and email uniqueness undefined
+`AddIdentity` defaults are used; `RegisterDto` says "at least 6 characters" but
+the Identity default also requires a digit + upper/lower case + a special
+character → the user is shown a wrong message. Since `RequireUniqueEmail` is not
+set, multiple accounts can be created with the same email.
+
+### G12 — No privacy settings — ✅ closed
+`ProfileController.GetUserProfile` exposes all of the target user's ratings and
+statistics to any logged-in user. There is no concept of a private account /
+visibility preference.
+
+**Done:** Four settings, each toggled independently (the defaults match the old
+behaviour; existing accounts start out that way via the migration). The rules
+live in one place, `PrivacyService`; clients only display them.
+- **Profile visibility** (`Public` / `Following` / `Private`): ratings,
+  statistics, follow lists and compatibility (since it is derived from ratings)
+  are hidden; name, photo and bio stay visible. "Following" = the people the
+  owner follows: since following requires no approval, "my followers" would not
+  offer any protection. Administrators see everything.
+- **Message permission** (`Everyone` / `Following` / `Nobody`): only blocks new
+  messages (403, with a reason); past conversations can still be read.
+- **Hidden from search:** removed from user search; the profile link still works.
+- **Blocking** (`/api/v1/blocks`): works both ways. The blocked user cannot see
+  the blocker at all (404); the parties cannot message or follow each other,
+  cannot find each other in search, and do not end up in the same group in
+  event matching. Mutual follows are deleted and do not come back when the
+  block is lifted.
+- Matching: when there are blocks, the person with the most conflicts is placed
+  first; otherwise users who blocked each other were left to the end and stayed
+  outside the groups even when a valid assignment existed (caught in testing).
+- Along the way: following a non-existent user returned 500 due to an FK error
+  (now 404).
+- Web: Edit Profile > Privacy; Block / Unblock on the profile. Mobile:
+  Settings > Privacy; Block in the profile menu.
+
+**Remaining:** the shared watchlist link (`watchlist/public/{id}`) is independent
+of the privacy settings; a list is deliberately shared via a message.
+
+### G13 — Missing validation when joining events — ✅ closed (with G4)
+`EventController.JoinEvent` does not check whether the `eventId` exists or
+whether the event date has passed; an invalid id causes an FK error, and joining
+a past event is possible.
+
+---
+
+## 3. Architecture and Code Quality
+
+### M1 — There were no tests — ✅ starter suite added
+Previously there were no tests at all. The `SineUyum.Api.Tests` project was
+added (21 tests, running in CI):
+- **Unit tests:** `CompatibilityCalculator` — the behaviour of the compatibility
+  algorithm (extreme/middle band weights, 0-100 bounds, common movie filter).
+- **Integration tests:** end-to-end auth flow with `WebApplicationFactory` +
+  in-memory SQLite — registration, login, wrong password, `/me`, token refresh
+  (rotation + replay rejection), password change (old/new + revoking the other
+  sessions), admin seeding.
+
+**Remaining:** the matching service (`MatchingService.CreateGroupsForEventAsync`),
+and the watchlist and message controllers are not tested yet. Coverage should
+be expanded.
+
+### M2 — SQLite was not suitable for production — ✅ dual provider added
+SQLite is a single file; it locks under concurrent writes and cannot scale
+horizontally. Solution: the provider is selected from the `Database:Provider`
+setting.
+- **Postgres** (production): `Npgsql.EntityFrameworkCore.PostgreSQL`, versioned
+  EF migrations (`InitialPostgres`), `MigrateAsync` on startup.
+- **SQLite** (default; development/test): the schema is generated from the model
+  (`EnsureCreatedAsync`), no migrations are kept.
+
+Why mixed: EF migrations are provider-specific, and two separate migration sets
+in one project conflict because of the single model snapshot. Instead of
+splitting the data layer into a separate library, this common pattern was
+chosen (production with migrations, dev with EnsureCreated). Both use a single
+`ApplicationDbContext`.
+
+**Verification:** the Postgres + API stack was brought up with `docker compose up`;
+the migration was applied (23 tables, `__EFMigrationsHistory` entry),
+registration/login 200. The SQLite path was verified with 23 tests. The CI
+migration check was set to the Postgres provider.
+
+> Later: if SQLite should also use migrations, the data layer should be moved to
+> a separate project with a migration project per provider (heavier, postponed).
+
+### M3 — API contract returning anonymous objects — ✅ moved to response DTOs
+Almost all endpoints returned a `new { ... }` anonymous object or an EF entity
+directly: no Swagger schema could be generated, and field name changes were not
+caught at compile time.
+
+**Done:**
+- All JSON endpoints return explicit response DTOs and `ActionResult<T>`
+  (`Dtos/*ResponseDtos.cs`, `NotificationDto`). In Swagger, 42 of the 47
+  operations have a typed response schema; the remaining 5 are endpoints that
+  pass the TMDb response through as is (the schema is TMDb's, not ours).
+- **Contract test:** `ResponseContractTests` makes 54 calls in a realistic
+  scenario and compares the shape of every response (status code + field names
+  + value types) with the golden file
+  `SineUyum.Api.Tests/Contracts/response-shapes.txt`. If a field the client
+  reads is accidentally removed/renamed, CI breaks. For a deliberate change:
   `UPDATE_CONTRACTS=1 dotnet test --filter ResponseContractTests`.
-- Refaktör öncesi ve sonrası şekiller karşılaştırıldı; tek fark aşağıdaki
-  bilinçli olarak kaldırılan sızıntı alanları. İstemciler etkilenmedi.
+- The shapes before and after the refactor were compared; the only difference is
+  the leaking fields deliberately removed below. Clients were not affected.
 
-**Yol üstünde bulunan ve düzeltilen hatalar:**
-- **Güvenlik — SignalR ile parola hash'i sızıyordu:** mesaj bildirimi
-  `Notification` varlığı olarak itiliyordu; alıcı izlenen (tracked) olarak
-  yüklendiğinden EF `notification.User`'ı dolduruyor, alıcının `passwordHash`,
-  `securityStamp`, `email`, `normalizedEmail` alanları istemciye gidiyordu
-  (testle doğrulandı). Artık REST ile aynı `NotificationDto` itiliyor
-  (`NotificationPushTests`).
-- **Güvenlik — izleme listesine film eklerken over-posting (G7'nin ikizi):**
-  film yerelde yoksa istemcinin gönderdiği başlık/poster paylaşılan `Movies`
-  tablosuna yazılıyordu. Artık `MovieCatalogService` ile TMDb'den çekiliyor;
-  `title`/`posterPath` geriye dönük uyumluluk için kabul edilip yok sayılıyor.
-- Eşleştirme bildirimleri kayıttan **önce** itildiği için istemciler `id: 0`
-  alıyor, bildirimi okundu işaretleyemiyordu; artık önce kaydediliyor.
-- Kaldırılan sızıntı alanları: bildirimlerde `userId`/`user`, liste
-  oluşturma yanıtında `userId`/`user`, etkinliklerde hiç yüklenmeyen
-  `selectedMovie` navigasyonu (`selectedMovieId` korunuyor).
+**Bugs found and fixed along the way:**
+- **Security — the password hash was leaking via SignalR:** the message
+  notification was pushed as a `Notification` entity; since the recipient was
+  loaded as tracked, EF populated `notification.User`, and the recipient's
+  `passwordHash`, `securityStamp`, `email` and `normalizedEmail` fields were
+  sent to the client (verified with a test). Now the same `NotificationDto` as
+  in REST is pushed (`NotificationPushTests`).
+- **Security — over-posting when adding a movie to a watchlist (G7's twin):**
+  if the movie did not exist locally, the title/poster sent by the client was
+  written into the shared `Movies` table. Now it is fetched from TMDb via
+  `MovieCatalogService`; `title`/`posterPath` are accepted for backward
+  compatibility and ignored.
+- Matching notifications were pushed **before** being saved, so clients received
+  `id: 0` and could not mark the notification as read; they are now saved first.
+- Removed leaking fields: `userId`/`user` in notifications, `userId`/`user` in
+  the list creation response, and the never-loaded `selectedMovie` navigation in
+  events (`selectedMovieId` is kept).
 
-### M4 — Uyumluluk algoritması üç yerde kopyalanmış — ✅ tek servise alındı
-Aynı ağırlıklı skor hesabı `AccountController.SearchUsers`,
-`CompatibilityController` ve `MatchingService.CalculateCompatibility` içinde
-birbirinden bağımsız üç kopya halindeydi. `CompatibilityCalculator` servisine
-çıkarıldı; `SineUyum.Api.Tests` içindeki birim testleri davranışını sabitliyor.
+### M4 — The compatibility algorithm was copied in three places — ✅ moved into a single service
+The same weighted score calculation existed as three independent copies in
+`AccountController.SearchUsers`, `CompatibilityController` and
+`MatchingService.CalculateCompatibility`. It was extracted into the
+`CompatibilityCalculator` service; the unit tests in `SineUyum.Api.Tests` pin
+its behaviour.
 
-> **İyileştirme adayı (algoritma davranışı):** Skor, maksimum ağırlık 1.5'e göre
-> normalize ediliyor; ağırlık yalnızca iki uç bantta (ikisi de ≥8 ya da ≤3)
-> 1.5 oluyor. Sonuç: orta bantta (4-7) birebir aynı puan veren iki kullanıcı
-> %66.7'den yüksek uyum alamıyor — yalnızca uç puanlarda tam anlaşma %100
-> veriyor. Bu muhtemelen istenmeyen bir yan etki; düzeltilirse mevcut testler
-> (`AyniPuan_BandaGoreSkorVerir`) güncellenmeli.
+> **Improvement candidate (algorithm behaviour):** the score is normalized
+> against the maximum weight of 1.5; the weight is 1.5 only in the two extreme
+> bands (both ≥8 or both ≤3). Result: two users who give exactly the same rating
+> in the middle band (4-7) cannot get more than 66.7% compatibility — only full
+> agreement on extreme ratings gives 100%. This is probably an unintended side
+> effect; if it is fixed, the existing tests (`AyniPuan_BandaGoreSkorVerir`)
+> must be updated.
 
-### M5 — N+1 sorgu ve bellek içi işleme — ✅ kapatıldı
-- ✅ `AccountController.SearchUsers`: N+1 sorgusu daha önce (ilk mobil
-  çalışmasında) tek sorguya indirilmişti.
-- ✅ `MessageController.GetConversations`: artık kullanıcının tüm mesajlarını
-  belleğe çekmiyor. Sohbet başına son mesaj zamanı veritabanında (GroupBy +
-  Max) hesaplanıyor, sayfalanıyor, yalnızca o sayfadaki son mesajlar
-  ilişkileriyle çekiliyor. Koşullu GroupBy anahtarının hem SQLite hem Postgres'te
-  çevrildiği doğrulandı.
-- ✅ `ProfileController.GetUserProfile`: sayı ve ortalama veritabanında
-  hesaplanıyor; döndürülen puan listesi en yüksek 100 ile sınırlı.
+### M5 — N+1 queries and in-memory processing — ✅ closed
+- ✅ `AccountController.SearchUsers`: the N+1 query had already been reduced to a
+  single query earlier (in the first mobile work).
+- ✅ `MessageController.GetConversations`: no longer loads all of the user's
+  messages into memory. The last message time per conversation is computed in
+  the database (GroupBy + Max) and paginated, and only the last messages on that
+  page are fetched with their relations. It was verified that the conditional
+  GroupBy key is translated on both SQLite and Postgres.
+- ✅ `ProfileController.GetUserProfile`: count and average are computed in the
+  database; the returned rating list is limited to the top 100.
 
-### M6 — Sayfalama yok — ✅ kritik listeler sayfalandı
-Başlangıçta yalnızca bildirimler `Take(50)` ile sınırlıydı. Eklenenler:
-- Mesaj thread'i: `?page/?pageSize` (ilk mobil çalışmasında).
-- Sohbet listesi (`GET /api/messages`): `?page/?pageSize` (varsayılan 30).
-- Kullanıcı arama: `limit` (ilk mobil çalışmasında).
-- Profil puan listesi: en yüksek 100 ile sınırlı.
+### M6 — No pagination — ✅ critical lists paginated
+Initially only notifications were limited with `Take(50)`. Added:
+- Message thread: `?page/?pageSize` (in the first mobile work).
+- Conversation list (`GET /api/messages`): `?page/?pageSize` (default 30).
+- User search: `limit` (in the first mobile work).
+- Profile rating list: limited to the top 100.
 
-Yanıt biçimleri düz dizi olarak korundu (zarf değil), istemciler kırılmadı.
-Kalan büyük/büyüyebilir listeler (izleme listesi öğeleri vb.) gerektiğinde
-aynı desenle sayfalanabilir.
+The response formats were kept as plain arrays (not envelopes), so clients did
+not break. The remaining large/growing lists (watchlist items etc.) can be
+paginated with the same pattern when needed.
 
-### M7 — Eşleştirme servisi kırılgan — ✅ kapatıldı
+### M7 — The matching service is fragile — ✅ closed
 `MatchingService.CreateGroupsForEventAsync`:
-- `while` döngüsü içinde `SaveChangesAsync` çağırıyor, transaction yok →
-  hata halinde yarım oluşmuş gruplar kalıcı oluyor
-- Döngü içinde senkron TMDb HTTP çağrısı yapıyor → istek zaman aşımı riski
-- O(n²) karşılaştırma, tüm katılımcı puanları belleğe yükleniyor
-- `Exception` sınıfını doğrudan fırlatıyor (tipli domain hatası yok)
+- calls `SaveChangesAsync` inside a `while` loop with no transaction → on
+  failure, half-created groups are persisted
+- makes synchronous TMDb HTTP calls inside the loop → risk of request timeouts
+- O(n²) comparison, all participant ratings are loaded into memory
+- throws the `Exception` class directly (no typed domain error)
 
-**Yapılacak:** arka plan işine taşınmalı (Hangfire/Quartz), tek transaction
-içinde çalışmalı.
+**To do:** it should be moved to a background job (Hangfire/Quartz) and run in
+a single transaction.
 
-**Yapılan:** Ek kütüphane (Hangfire/Quartz) yerine veritabanı tabanlı kuyruk:
-- `POST /admin/events/{id}/create-groups` ön kontrolü (etkinlik yok 404,
-  gruplar var / katılımcı az 400, süren iş 409) hemen yapar, `MatchingRuns`'a
-  iş yazar ve **202** döner; sonuç `GET /admin/events/{id}/matching`
-  (Queued → Running → Succeeded / Failed, grup ve grupsuz kişi sayısı).
-- `MatchingWorker` (BackgroundService) işi **atomik sahiplenir** (birden çok
-  sunucu örneği aynı işi almaz); yeniden başlatmada kuyruk kaybolmaz, 10
-  dakikadır "Running" kalan iş yeniden alınır.
-- Gruplar önce bellekte kurulur, öneriler (TMDb) transaction **dışında**
-  hesaplanır, tüm gruplar + öneriler + bildirimler **tek transaction**'da
-  yazılır; canlı bildirim/push commit'ten sonra gider. Önceden ikinci grupta
-  TMDb hatası ilk grubu ve bildirimlerini kalıcı bırakıyor, yeniden deneme de
-  "gruplar zaten oluşturulmuş" diye reddediliyordu (testte eski davranış
-  geri konunca tam bu yakalandı).
-- Hata kaydında yalnızca güvenli mesaj; ayrıntı log'da. Web yönetici sayfası
-  sonucu bekleyip gösterir. Yanıtta eski `message` alanı korunur.
+**Done:** a database-backed queue instead of an extra library (Hangfire/Quartz):
+- `POST /admin/events/{id}/create-groups` performs the pre-checks immediately
+  (event missing 404, groups exist / too few participants 400, job running 409),
+  writes a job to `MatchingRuns` and returns **202**; the result is at
+  `GET /admin/events/{id}/matching` (Queued → Running → Succeeded / Failed, with
+  the number of groups and of people without a group).
+- `MatchingWorker` (BackgroundService) **claims the job atomically** (multiple
+  server instances do not pick up the same job); the queue is not lost on
+  restart, and a job that has been "Running" for 10 minutes is picked up again.
+- Groups are built in memory first, recommendations (TMDb) are computed
+  **outside** the transaction, and all groups + recommendations + notifications
+  are written in a **single transaction**; live notifications/push go out after
+  the commit. Previously a TMDb error in the second group left the first group
+  and its notifications persisted, and a retry was rejected with "groups already
+  created" (exactly this was caught when the old behaviour was put back in a
+  test).
+- Only a safe message is stored in the failure record; details go to the log.
+  The web admin page waits for the result and shows it. The old `message` field
+  is kept in the response.
 
-**Kalan:** O(n²) uyum karşılaştırması duruyor; binlerce katılımcılı
-etkinlikte işi uzatır ama artık isteği bloklamaz.
+**Remaining:** the O(n²) compatibility comparison remains; for an event with
+thousands of participants it makes the job longer but no longer blocks the
+request.
 
-### M8 — `SuggestedMovieIds` virgüllü string — ✅ kapatıldı
-`EventGroup.SuggestedMovieIds` ilişkisel tablo yerine `"1,2,3"` biçiminde
-string. `EventController.cs` içinde `Split(',').Select(int.Parse)` bozuk veride
-`FormatException` fırlatır; sorgulanamaz, indekslenemez.
+### M8 — `SuggestedMovieIds` as a comma-separated string — ✅ closed
+`EventGroup.SuggestedMovieIds` is a string in the form `"1,2,3"` instead of a
+relational table. `Split(',').Select(int.Parse)` in `EventController.cs` throws
+a `FormatException` on corrupt data; it cannot be queried or indexed.
 
-**Yapılan:** `EventGroupSuggestions` tablosu (grup, film, sıra; film FK'li,
-grup silinince düşer). Migration mevcut değerleri sırasıyla taşır; sayı
-olmayan parçalar, olmayan filmler ve tekrarlar atlanır (Postgres'te bozuk
-veriyle up/down sınandı). Yanıt şekli aynı: `suggestedMovies` artık öneri
-sırasıyla, `group.suggestedMovieIds` eski istemciler için tablodan üretilir.
-- Oy yalnızca gruba önerilen filmlere verilir (önceden herhangi bir id; olmayan
-  filmde FK hatasıyla 500).
-- Yol üstünde: `Forbid("mesaj")` metni kimlik doğrulama şeması sandığı için
-  403 yerine 500 dönüyordu (gruba üye olmadan oy, başkasının listesini
-  paylaşma). DomainException 403'e çevrildi.
+**Done:** the `EventGroupSuggestions` table (group, movie, order; movie with FK,
+removed when the group is deleted). The migration moves the existing values in
+order; non-numeric parts, non-existent movies and duplicates are skipped
+(up/down tested on Postgres with corrupt data). The response shape is the same:
+`suggestedMovies` is now in recommendation order, and `group.suggestedMovieIds`
+is generated from the table for old clients.
+- Votes can only be cast for movies recommended to the group (previously any id;
+  a non-existent movie gave a 500 due to an FK error).
+- Along the way: the text in `Forbid("message")` was taken as an authentication
+  scheme, so it returned 500 instead of 403 (voting without being a group member,
+  sharing someone else's list). Changed to a DomainException with 403.
 
-### M9 — TMDb yanıtları cache'lenmiyordu — ✅ IMemoryCache eklendi
-`MoviesController` her isteği TMDb'ye proxy'liyordu. Artık dört uç da TTL'li
-önbellekte: popüler & vizyondakiler 1 saat, film detayı 24 saat, arama (sorgu
-başına) 30 dakika. `SizeLimit=2048` ile farklı sorguların belleği şişirmesi
-engellendi; hatalar önbelleğe alınmaz. Test (`MovieCacheTests`) sahte sayaç
-handler ile ikinci isteğin TMDb'ye gitmediğini doğruluyor.
+### M9 — TMDb responses were not cached — ✅ IMemoryCache added
+`MoviesController` proxied every request to TMDb. Now all four endpoints are in
+a cache with a TTL: popular & now playing 1 hour, movie details 24 hours, search
+(per query) 30 minutes. `SizeLimit=2048` prevents different queries from
+bloating memory; errors are not cached. A test (`MovieCacheTests`) uses a fake
+counting handler to verify that the second request does not reach TMDb.
 
-> Not: `CompatibilityController` ve `MatchingService` de TMDb çağırıyor; onlar
-> bu cache'i henüz kullanmıyor (ayrı iş). Ölçek gerekince Redis'e taşınabilir.
+> Note: `CompatibilityController` and `MatchingService` also call TMDb; they do
+> not use this cache yet (separate task). It can be moved to Redis when scale
+> requires it.
 
-### M10 — "Okundu" bilgisi hiç yazılmıyor — ✅ kapatıldı
-`Message.DateRead` alanı tanımlı ama hiçbir yerde set edilmiyor.
-`MessageController.cs:158` bu alana göre `IsRead` döndürdüğü için gelen her
-mesaj sonsuza kadar "okunmamış" görünüyor. Mesajı okundu işaretleyen endpoint
-yok.
+### M10 — "Read" status is never written — ✅ closed
+The `Message.DateRead` field is defined but never set anywhere. Since
+`MessageController.cs:158` returns `IsRead` based on this field, every incoming
+message appears "unread" forever. There is no endpoint to mark a message as
+read.
 
-**Yapılan:** Okundu işaretleme ucu daha önce eklenmişti; eksik olan "Görüldü"ydü.
-- Thread yanıtında `dateRead`; okundu işaretlenince gönderene canlı
-  `MessagesRead` olayı (son okunan mesaj id'si + an). Web ve mobil yalnızca
-  okunmuş son mesajın altında "Görüldü HH:mm" gösterir.
-- **Okundu bilgisi** gizlilik ayarı (varsayılan açık), karşılıklı: kapatan
-  okumasını göstermez, başkalarınınkini de görmez. Okuma kaydı tutulmaya
-  devam eder (okunmamış sayısı için). Bu alanı bilmeyen eski istemciler
-  kaydederken ayarı değiştirmez.
+**Done:** the mark-as-read endpoint had already been added; what was missing was
+"Seen".
+- `dateRead` in the thread response; when messages are marked as read, a live
+  `MessagesRead` event is sent to the sender (id of the last read message +
+  timestamp). Web and mobile show "Seen HH:mm" only under the last read message.
+- **Read receipts** are a privacy setting (on by default) and mutual: whoever
+  turns them off does not show their reads and does not see others' either. Read
+  records are still kept (for the unread count). Old clients that do not know
+  this field do not change the setting when saving.
 
-### M11 — Gerçek zamanlı sohbet — ✅ eklendi
-SignalR yalnızca bildirim gönderiyordu; sohbet ekranı yeni mesajı görmek için
-yeniden açılmaya muhtaçtı.
+### M11 — Real-time chat — ✅ added
+SignalR only sent notifications; the chat screen had to be reopened to see a new
+message.
 
-**Yapılan:**
-- **Sunucu:** `POST /api/v1/messages` oluşturulan mesajı döner (önceki
-  `{message}` metnini hiçbir istemci okumuyordu) ve aynı mesajı hub üzerinden
-  `ReceiveMessage` olayıyla hem alıcıya hem gönderene iter (gönderenin diğer
-  sekme/cihazları da güncellensin). Thread listesi, gönderme yanıtı ve canlı
-  olay tek bir projeksiyonu paylaşır; şekil eşitliği testle sabit. Gönderme
-  REST'te kaldı (doğrulama, güvenilir sonuç); SignalR yalnızca dağıtım yapar.
-  Grup/oda gerekmedi: olaylar kullanıcı kimliğine gider.
-- **Hub artık kimlik istiyor** (`[Authorize]`): önceden kimliksiz bağlantı da
-  kabul ediliyordu (olay almasalar da kaynak tutuyorlardı).
-- **İstemciler (web + mobil):** mesaj anında eklenir ve id ile tekilleştirilir
-  (gönderen yanıtı + canlı yankı); sohbet açıkken gelen mesaj okundu sayılır,
-  o sohbetin bildirimi gösterilmez/okundu işaretlenir; **bağlantı yeniden
-  kurulunca thread tazelenir** (kopukken gelenler kaybolmaz); sohbet listesi
-  canlı güncellenir. Mobilde ilk yükleme sürerken gelen mesaj da kaybolmaz.
+**Done:**
+- **Server:** `POST /api/v1/messages` returns the created message (no client read
+  the previous `{message}` text) and pushes the same message over the hub with
+  the `ReceiveMessage` event to both the recipient and the sender (so the
+  sender's other tabs/devices are updated too). The thread list, the send
+  response and the live event share a single projection; shape equality is
+  pinned by a test. Sending stays on REST (validation, reliable result); SignalR
+  only does the distribution. No groups/rooms were needed: events go to the user
+  identity.
+- **The hub now requires authentication** (`[Authorize]`): previously
+  unauthenticated connections were accepted as well (they received no events
+  but held resources).
+- **Clients (web + mobile):** messages are added instantly and deduplicated by
+  id (sender response + live echo); a message arriving while the conversation is
+  open counts as read, and that conversation's notification is not shown/marked
+  as read; **the thread is refreshed when the connection is re-established**
+  (messages arriving while disconnected are not lost); the conversation list is
+  updated live. On mobile, a message arriving while the first load is still in
+  progress is not lost either.
 
-**Yol üstünde bulunan web hataları (eski kodla tarayıcıda yeniden üretildi):**
-- **Çift SignalR bağlantısı:** temizlik yalnızca "Connected" durumunda
-  durduruyordu; bağlanırken bileşen kaldırılınca (React Strict Mode, kullanıcı
-  değişimi) eski bağlantı yaşıyor, her olay iki kez geliyordu (tek mesajda
-  rozet 2). Dinleyiciler de start'tan sonra kaydedildiği için ilk olaylar
-  kaçabiliyordu.
-- **Bir saat sonra zorunlu yeniden giriş:** açılışta süresi dolmuş access
-  token "giriş yok" sayılıp login'e yönlendiriliyordu; hiçbir istek
-  yapılmadığı için refresh token (60 gün) hiç denenmiyordu. Artık açılışta
-  önce yenileme denenir (eşzamanlı çağrılar tek isteğe indirgenir).
-- **İlk istek kimliksiz:** axios interceptor'ları AuthContext'in useEffect'inde
-  kuruluyordu; React çocuk effect'lerini önce çalıştırdığı için sayfanın ilk
-  isteği token'sız gidip 401 alıyor, gereksiz yenileme yapılıyordu. Effect her
-  çalıştığında interceptor'lar üst üste de ekleniyordu. Artık modül yüklenirken
-  bir kez kurulur.
-- Web sohbet sayfası açılınca mesajları okundu işaretlemiyordu; sohbet
-  listesindeki "..." kısa mesajlara da ekleniyordu.
+**Web bugs found along the way (reproduced in the browser with the old code):**
+- **Double SignalR connection:** cleanup only stopped the connection in the
+  "Connected" state; when the component was unmounted while connecting (React
+  Strict Mode, user change) the old connection stayed alive and every event
+  arrived twice (badge 2 for a single message). Listeners were also registered
+  after start, so the first events could be missed.
+- **Forced re-login after one hour:** on startup an expired access token was
+  treated as "not logged in" and redirected to login; since no request was made,
+  the refresh token (60 days) was never tried. Now a refresh is attempted first
+  on startup (concurrent calls are collapsed into a single request).
+- **First request unauthenticated:** the axios interceptors were set up in
+  AuthContext's useEffect; since React runs child effects first, the page's first
+  request went out without a token, got a 401 and caused an unnecessary refresh.
+  The interceptors were also stacked every time the effect ran. They are now set
+  up once when the module loads.
+- The web chat page did not mark messages as read when opened; the "..." in the
+  conversation list was also appended to short messages.
 
-**Doğrulama:** gerçek SignalR istemcisiyle API testleri (iki taraf + ikinci
-sekme alır, üçüncü kişi almaz; canlı/yanıt/thread şekli aynı; hub kimliksiz
-reddeder, sorgu parametresiyle kabul eder — mutasyonla sınandı). İki kullanıcı
-ve ayrı tarayıcı bağlamlarıyla web uçtan uca (13 kontrol; çevrimdışı/yeniden
-bağlanma dahil); aynı paket eski kodda çift bağlantıyı, zorunlu çıkışı ve
-401'i yakaladı. Mobil yığın (gerçek ApiClient + Dart SignalR + sağlayıcılar)
-Docker'daki API'ye karşı uçtan uca çalıştırıldı; 9 yeni mobil birim testi.
+**Verification:** API tests with a real SignalR client (both parties + a second
+tab receive it, a third person does not; live/response/thread shapes are the
+same; the hub rejects unauthenticated connections and accepts the query
+parameter — tested with mutation). Web end to end with two users and separate
+browser contexts (13 checks; including offline/reconnection); the same suite
+caught the double connection, the forced logout and the 401 on the old code. The
+mobile stack (real ApiClient + Dart SignalR + providers) was run end to end
+against the API in Docker; 9 new mobile unit tests.
 
-**İleride:** okundu bilgisi (✓✓) ve "yazıyor..." göstergesi; mesaj
-sayfalaması için yukarı kaydırınca eski mesajları yükleme.
+**Later:** read receipts (✓✓) and a "typing..." indicator; loading older
+messages when scrolling up for message pagination.
 
-### M12 — Altyapı eksikleri — ✅ büyük ölçüde kapatıldı
-- ✅ Migration'lar açılışta otomatik uygulanıyor (`Database.MigrateAsync()`)
-- ✅ Health check ucu eklendi (`/health`)
-- ✅ Yapılandırılmış loglama (Serilog + istek logu + traceId) — G10
-- ✅ Dockerfile + docker-compose eklendi (çok aşamalı, root olmayan kullanıcı,
-  SQLite kalıcı volume'da). İmaj yerelde build edilip çalıştırılarak doğrulandı:
-  `/health` → Healthy, admin login → 200. `.dockerignore` ve
-  `.env.docker.example` da eklendi.
-- ✅ CI (GitHub Actions): derleme + test + lint
-- ✅ Kök README (kurulum/çalıştırma, Docker dahil)
+### M12 — Infrastructure gaps — ✅ largely closed
+- ✅ Migrations are applied automatically on startup (`Database.MigrateAsync()`)
+- ✅ Health check endpoint added (`/health`)
+- ✅ Structured logging (Serilog + request log + traceId) — G10
+- ✅ Dockerfile + docker-compose added (multi-stage, non-root user, SQLite on a
+  persistent volume). The image was verified by building and running it locally:
+  `/health` → Healthy, admin login → 200. `.dockerignore` and
+  `.env.docker.example` were added as well.
+- ✅ CI (GitHub Actions): build + test + lint
+- ✅ Root README (setup/running, including Docker)
 
-### M13 — Frontend eksikleri — ✅ büyük ölçüde kapatıldı
-- `.env.example` yok; `axiosConfig.js` `localhost:5074`'e sessizce düşüyor
-- Error boundary yok → tek render hatası beyaz ekrana düşürüyor
-- `NotificationContext` içinde SignalR bağlantısı `showSnackbar` bağımlılığıyla
-  yeniden kurulabiliyor; cleanup yalnızca `Connected` durumunu kapatıyor,
-  `Connecting` durumunda bağlantı sızıyor
-- Yükleniyor / boş durum / hata gösterimleri sayfalar arasında tutarsız
-- Kod bölme (lazy route) yok; tek bundle 711 kB
-- `react-refresh/only-export-components` kuralı uyarıya çekildi: context
-  dosyaları hem provider'ı hem kendi hook'unu export ediyor (yaygın kalıp,
-  yalnızca hot reload'u etkiliyor)
+### M13 — Frontend gaps — ✅ largely closed
+- No `.env.example`; `axiosConfig.js` silently falls back to `localhost:5074`
+- No error boundary → a single render error results in a white screen
+- In `NotificationContext` the SignalR connection can be re-created through the
+  `showSnackbar` dependency; cleanup only closes the `Connected` state, so the
+  connection leaks in the `Connecting` state
+- Loading / empty state / error displays are inconsistent across pages
+- No code splitting (lazy routes); a single 711 kB bundle
+- The `react-refresh/only-export-components` rule was lowered to a warning:
+  context files export both the provider and their own hook (a common pattern,
+  it only affects hot reload)
 
-**Yapılan:** `.env.example` ve SignalR temizliği daha önce düzeltilmişti.
-- Hata sınırı: sayfa hatası yalnızca sayfa alanını bir hata kartıyla
-  değiştirir (gezinti çubuğu kalır, başka sayfaya geçince sıfırlanır); en
-  dışta bir sınır daha. Yeni sürümden sonra eksik sayfa parçasında "Uygulama
-  güncellendi, sayfayı yenileyin".
-- Kod bölme: sayfalar ihtiyaç anında yüklenir, SignalR yalnızca giriş
-  sonrası; kütüphaneler ayrı, önbelleklenebilir parçalarda. Giriş paketi
-  733 kB → 22 kB (kütüphaneler: react 220, mui 318, vendor 74 kB; ilk
-  ziyaretten sonra önbellekten).
-- Üretim paketiyle (`vite preview`) gerçek Chromium'da sınandı.
+**Done:** `.env.example` and the SignalR cleanup had been fixed earlier.
+- Error boundary: a page error replaces only the page area with an error card
+  (the navigation bar stays, and it resets when moving to another page); there is
+  one more boundary at the outermost level. After a new release, a missing page
+  chunk shows "The app has been updated, please reload the page".
+- Code splitting: pages are loaded on demand, SignalR only after login;
+  libraries are in separate, cacheable chunks. Entry bundle 733 kB → 22 kB
+  (libraries: react 220, mui 318, vendor 74 kB; from the cache after the first
+  visit).
+- Tested with the production bundle (`vite preview`) in real Chromium.
 
-**Kalan:** yükleniyor / boş / hata gösterimlerinin sayfalar arasında
-birleştirilmesi.
+**Remaining:** unifying the loading / empty / error displays across pages.
 
 ---
 
-## 4. Mobil Uygulama İçin Gereken Backend Değişiklikleri
+## 4. Backend Changes Required for the Mobile App
 
-Mobil istemcinin çalışabilmesi için backend'de kapatılması **zorunlu** olan
-boşluklar:
+Gaps that **must** be closed in the backend for the mobile client to work:
 
-| # | Eksik | Neden mobil için zorunlu | Durum |
+| # | Gap | Why it is required for mobile | Status |
 |---|---|---|---|
-| B1 | Refresh token | Mobilde kullanıcı her hafta yeniden giriş yapmak istemez; access token kısa ömürlü olmalı | ✅ Bu çalışmada eklendi |
-| B2 | Tipli auth yanıtı (`token`, `refreshToken`, `expiresAt`, `user`) | Dart tarafında güvenli deserializasyon | ✅ Eklendi |
-| B3 | Konfigürasyondan JWT issuer/audience | Codespaces URL'sine bağlı token mobil build'de geçersiz olur | ✅ Eklendi |
-| B4 | `SubscriptionController` anahtar okuma hatası | `JWT_KEY` env değişkeni kullanıldığında abonelik aktivasyonu `NullReferenceException` ile çöküyordu | ✅ Düzeltildi |
-| B5 | `/health` ve `/api/app/config` | Mobil uygulamanın bağlantı kontrolü ve zorunlu güncelleme kontrolü | ✅ Eklendi |
-| B6 | Mesaj sayfalama | Mobil veri kullanımı | ✅ `?page`/`pageSize` ile eklendi (varsayılan 100) |
-| B7 | Push notification (FCM/APNs) | SignalR mobilde arka planda çalışmaz; uygulama kapalıyken bildirim gitmez | ✅ Eklendi (Firebase projesi kurulunca açılır) |
-| B8 | Dosya yükleme endpoint'i | Profil fotoğrafı şu an sadece URL; mobilde galeriden seçim için upload gerekir | ✅ Eklendi |
-| B9 | API versiyonlama (`/api/v1/...`) | Store'daki eski sürümler API değişince kırılır | ✅ Eklendi (geriye dönük uyumlu) |
-| B10 | Tüm listelerde sayfalama | Performans | ⬜ Yapılacak (B6 kısmi) |
+| B1 | Refresh token | On mobile users do not want to log in again every week; the access token must be short-lived | ✅ Added in this work |
+| B2 | Typed auth response (`token`, `refreshToken`, `expiresAt`, `user`) | Safe deserialization on the Dart side | ✅ Added |
+| B3 | JWT issuer/audience from configuration | A token tied to the Codespaces URL becomes invalid in the mobile build | ✅ Added |
+| B4 | Key-reading bug in `SubscriptionController` | When the `JWT_KEY` env variable was used, subscription activation crashed with a `NullReferenceException` | ✅ Fixed |
+| B5 | `/health` and `/api/app/config` | Connectivity check and forced-update check for the mobile app | ✅ Added |
+| B6 | Message pagination | Mobile data usage | ✅ Added with `?page`/`pageSize` (default 100) |
+| B7 | Push notifications (FCM/APNs) | SignalR does not run in the background on mobile; no notifications arrive while the app is closed | ✅ Added (enabled once a Firebase project is set up) |
+| B8 | File upload endpoint | The profile photo is currently just a URL; picking from the gallery on mobile requires an upload | ✅ Added |
+| B9 | API versioning (`/api/v1/...`) | Old versions in the stores break when the API changes | ✅ Added (backward compatible) |
+| B10 | Pagination on all lists | Performance | ⬜ To do (B6 partial) |
 
-### Bu çalışmada ek olarak kapatılanlar
+### Also closed in this work
 
-Mobil için zorunlu olmayan ama yol üstünde olduğu için düzeltilen maddeler:
+Items not required for mobile but fixed because they were along the way:
 
-- **G3** Admin hesabı artık `ADMIN_USERNAME`/`ADMIN_PASSWORD` ile oluşturuluyor;
-  parola verilmezse hesap hiç açılmıyor.
-- **G2** `*.db` `.gitignore`'a eklendi ve `sineuyum.db` takipten çıkarıldı.
-  *(Dosya git geçmişinde hâlâ duruyor — Faz 0'da temizlenmeli.)*
-- **G8** CORS origin listesi ve JWT issuer/audience konfigürasyona taşındı.
-- **G9** Production'da HSTS + HTTPS yönlendirmesi devrede.
-- **G11** Parola politikası `RegisterDto`'daki mesajla hizalandı,
-  `RequireUniqueEmail` açıldı.
-- **M4** Uyumluluk hesabı tek `CompatibilityCalculator` servisine taşındı;
-  üç kopya kaldırıldı.
-- **M5** `AccountController.SearchUsers` N+1 sorgusu tek sorguya indirildi,
-  `(dynamic)` sıralaması tipli DTO ile değiştirildi, sonuç sayısı sınırlandı.
-- **M10** `POST /api/messages/thread/{userId}/mark-as-read` eklendi;
-  `DateRead` artık gerçekten yazılıyor.
-- **Parola değiştirme** uygulamada hiç yoktu (ne kullanıcı ne admin için).
-  `POST /api/account/change-password` eklendi; parola değişince kullanıcının
-  diğer tüm oturumları iptal ediliyor.
-  **Not:** parola *sıfırlama* (e-posta ile "şifremi unuttum") hâlâ yok;
-  e-posta gönderimi altyapısı gerektiriyor.
-- **M12** Migration'lar açılışta otomatik uygulanıyor, `/health` eklendi,
-  kök README ve `sine-uyum-web/.env.example` yazıldı, GitHub Actions CI
-  kuruldu (`.github/workflows/ci.yml`).
-- **M13 kısmi** Web lint'i sıfır hataya indirildi: 17 kullanılmayan `catch`
-  bağlantısı temizlendi ve **gerçek bir hata** düzeltildi —
-  `WatchlistDetailPage` düzenleme modalı var olmayan `setNewListName` /
-  `setNewListDesc` fonksiyonlarını çağırıyordu, yani liste adı/açıklaması
-  düzenlenemiyordu.
-- **G1 kısmi** HS512 için anahtar uzunluğu (≥64 byte) açılışta doğrulanıyor.
-  *(Anahtar rotasyonu ve geçmiş temizliği hâlâ yapılmalı.)*
+- **G3** The admin account is now created with `ADMIN_USERNAME`/`ADMIN_PASSWORD`;
+  if no password is given, no account is created at all.
+- **G2** `*.db` was added to `.gitignore` and `sineuyum.db` was untracked.
+  *(The file is still in the git history — to be cleaned up in Phase 0.)*
+- **G8** The CORS origin list and the JWT issuer/audience were moved to
+  configuration.
+- **G9** HSTS + HTTPS redirection are active in production.
+- **G11** The password policy was aligned with the message in `RegisterDto`, and
+  `RequireUniqueEmail` was enabled.
+- **M4** The compatibility calculation was moved into a single
+  `CompatibilityCalculator` service; the three copies were removed.
+- **M5** The N+1 query in `AccountController.SearchUsers` was reduced to a single
+  query, the `(dynamic)` sorting was replaced with a typed DTO, and the number of
+  results was limited.
+- **M10** `POST /api/messages/thread/{userId}/mark-as-read` was added;
+  `DateRead` is now actually written.
+- **Password change** did not exist in the application at all (neither for users
+  nor for admins). `POST /api/account/change-password` was added; when the
+  password changes, all other sessions of the user are revoked.
+  **Note:** password *reset* (a "forgot my password" email) still does not exist;
+  it requires an email sending infrastructure.
+- **M12** Migrations are applied automatically on startup, `/health` was added,
+  the root README and `sine-uyum-web/.env.example` were written, and GitHub
+  Actions CI was set up (`.github/workflows/ci.yml`).
+- **M13 partial** Web lint was brought down to zero errors: 17 unused `catch`
+  bindings were cleaned up and **a real bug** was fixed —
+  the `WatchlistDetailPage` edit modal called the non-existent `setNewListName` /
+  `setNewListDesc` functions, so the list name/description could not be edited.
+- **G1 partial** The key length for HS512 (≥64 bytes) is validated on startup.
+  *(Key rotation and history cleanup still need to be done.)*
 
-Web istemcisi de access token kısaldığı için refresh token akışına bağlandı
-(`axiosConfig.js` + `AuthContext.jsx`); aksi halde web kullanıcıları 1 saat
-sonra oturumdan düşerdi.
-
----
-
-## 5. Mobil Uygulama (Flutter) — Bu Çalışmada Yapılanlar
-
-`sine_uyum_mobile/` dizininde Flutter 3 uygulaması:
-
-**Altyapı**
-- Riverpod ile durum yönetimi, `go_router` ile navigasyon ve auth yönlendirme
-- `dio` tabanlı API katmanı; interceptor ile otomatik token ekleme ve
-  **401'de refresh token ile sessiz yenileme**
-- `flutter_secure_storage` ile token saklama (iOS Keychain / Android Keystore)
-- Material 3 tema, açık/koyu mod, uygulamanın web tarafındaki renk paletiyle uyumlu
-- `signalr_netcore` ile canlı bildirim dinleme
-- `--dart-define=API_URL=...` ile derleme zamanı API adresi
-
-**Doğrulama**
-- `flutter analyze`: 0 bulgu
-- `flutter test`: 21 test geçiyor (API hata ayrıştırma, model deserializasyonu,
-  bildirim rota çevirisi)
-- Android: release derlemesi için `INTERNET` izni; şifrelenmemiş HTTP yalnızca
-  debug derlemesinde ve yalnızca yerel adresler için açık
-- iOS: `NSAllowsLocalNetworking` yalnızca yerel ağ için
-
-**Ekranlar**
-- Giriş / Kayıt
-- Ana sayfa (vizyondakiler + popüler film şeritleri)
-- Film arama ve film detay (puanlama, listeye ekleme)
-- Profil (istatistikler, puanlanan filmler, takip et/bırak)
-- Kullanıcı arama (uyumluluk yüzdesiyle)
-- İzleme listeleri ve liste detayı
-- Mesajlar ve sohbet
-- Etkinlik (durum, katılma, grup üyeleri, film oylaması)
-- Bildirimler
-- Ayarlar (tema, çıkış)
+Since the access token became shorter, the web client was also connected to the
+refresh token flow (`axiosConfig.js` + `AuthContext.jsx`); otherwise web users
+would be logged out after 1 hour.
 
 ---
 
-## 6. Önerilen Yol Haritası
+## 5. Mobile App (Flutter) — Done in This Work
 
-### Faz 0 — Güvenlik acil müdahale ✅
-1. ✅ JWT anahtarı git geçmişinden silindi (G1)
-2. ✅ `sineuyum.db` ve yan dosyaları git geçmişinden silindi (G2)
-3. ✅ Sabit admin hesabı kaldırıldı; `admin`'e bilinen bir parola set edildi,
-   değiştirmek için `POST /api/account/change-password` eklendi (G3)
-4. ➖ GitHub Support'a başvuru: gerek görülmedi (yukarıda G2 değerlendirmesi).
+A Flutter 3 app in the `sine_uyum_mobile/` directory:
 
-### Faz 1 — Üretime hazırlık (1-2 hafta)
-4. ✅ PostgreSQL'e geçiş — çift sağlayıcı, env ile seçim (M2)
-5. ✅ Global hata yönetimi + Serilog (G10)
+**Infrastructure**
+- State management with Riverpod, navigation and auth redirects with `go_router`
+- `dio`-based API layer; automatic token injection via an interceptor and
+  **silent refresh with the refresh token on 401**
+- Token storage with `flutter_secure_storage` (iOS Keychain / Android Keystore)
+- Material 3 theme, light/dark mode, matching the colour palette of the web app
+- Live notification listening with `signalr_netcore`
+- Build-time API address via `--dart-define=API_URL=...`
+
+**Verification**
+- `flutter analyze`: 0 issues
+- `flutter test`: 21 tests passing (API error parsing, model deserialization,
+  notification route mapping)
+- Android: `INTERNET` permission for the release build; unencrypted HTTP is only
+  allowed in the debug build and only for local addresses
+- iOS: `NSAllowsLocalNetworking` for the local network only
+
+**Screens**
+- Login / Registration
+- Home (now playing + popular movie carousels)
+- Movie search and movie details (rating, adding to a list)
+- Profile (statistics, rated movies, follow/unfollow)
+- User search (with compatibility percentage)
+- Watchlists and list details
+- Messages and chat
+- Event (status, joining, group members, movie voting)
+- Notifications
+- Settings (theme, logout)
+
+---
+
+## 6. Proposed Roadmap
+
+### Phase 0 — Emergency security response ✅
+1. ✅ The JWT key was removed from the git history (G1)
+2. ✅ `sineuyum.db` and its side files were removed from the git history (G2)
+3. ✅ The hard-coded admin account was removed; a known password was set for
+   `admin`, and `POST /api/account/change-password` was added to change it (G3)
+4. ➖ Request to GitHub Support: not considered necessary (see the G2 assessment above).
+
+### Phase 1 — Production readiness (1-2 weeks)
+4. ✅ Move to PostgreSQL — dual provider, selected via env (M2)
+5. ✅ Global error handling + Serilog (G10)
 6. ✅ Dockerfile + docker-compose (M12)
-7. ✅ API için test projesi — `CompatibilityCalculator` + auth + hata yönetimi (M1)
+7. ✅ Test project for the API — `CompatibilityCalculator` + auth + error handling (M1)
 
-### Faz 2 — API olgunlaştırma (2-3 hafta)
-9. Tüm endpoint'ler için response DTO'ları (M3) — ✅ (Faz 2 tamamlandı)
-10. Uyumluluk hesabını tek servise çıkar + unit testler (M4, M1) — ✅
-11. Sayfalama (M6) ve N+1 sorguların düzeltilmesi (M5) — ✅
+### Phase 2 — API maturation (2-3 weeks)
+9. Response DTOs for all endpoints (M3) — ✅ (Phase 2 completed)
+10. Extract the compatibility calculation into a single service + unit tests (M4, M1) — ✅
+11. Pagination (M6) and fixing the N+1 queries (M5) — ✅
 12. TMDb cache (M9) — ✅
-13. `AddMovie` güvenliği: meta veriyi sunucuda çek (G7) — ✅
-14. API versiyonlama (B9) — ✅
+13. `AddMovie` security: fetch the metadata on the server (G7) — ✅
+14. API versioning (B9) — ✅
 
-**B9 — API versiyonlama (`/api/v1/...`):** Tüm controller rotaları tek bir
-`ApiV1RouteConvention` ile `api/v1/...` altına alındı (controller başına
-`[Route]` düzenlemesi gerekmedi; sürüm tek yerde). Dağıtılmış eski istemcileri
-kırmamak için sürümsüz `/api/*` istekleri routing'den önce `/api/v1/*`'e
-yönlendiriliyor (geçici deprecation katmanı). Web ve Flutter istemcilerinin
-tüm çağrı noktaları açıkça `/api/v1/...`'e taşındı. SignalR hub'ı
-(`/notificationHub`), `/health` ve swagger etkilenmedi. Test: `ApiVersioningTests`
-(v1 yolu çalışır + sürümsüz yol v1'e yönlenir).
+**B9 — API versioning (`/api/v1/...`):** all controller routes were moved under
+`api/v1/...` with a single `ApiV1RouteConvention` (no per-controller `[Route]`
+changes were needed; the version lives in one place). To avoid breaking
+deployed old clients, unversioned `/api/*` requests are rewritten to `/api/v1/*`
+before routing (a temporary deprecation layer). All call sites of the web and
+Flutter clients were explicitly moved to `/api/v1/...`. The SignalR hub
+(`/notificationHub`), `/health` and swagger were not affected. Test:
+`ApiVersioningTests` (the v1 path works + the unversioned path is routed to v1).
 
-### Faz 3 — Mobil tamamlama (2-3 hafta)
-15. FCM/APNs push notification (B7) — ✅
+### Phase 3 — Mobile completion (2-3 weeks)
+15. FCM/APNs push notifications (B7) — ✅
 
-**B7 — Push bildirimi:**
-- **Sunucu:** `DeviceToken` tablosu (benzersiz token; aynı cihazda başka
-  hesapla girişte kayıt yeni kullanıcıya taşınır; hesap başına 20 cihaz
-  sınırı) + `POST /api/v1/devices`, `POST /api/v1/devices/unregister`
-  (kimlik doğrulamasız: oturumu düşmüş cihaz da push'u durdurabilsin).
-  Tüm bildirimler artık tek yoldan geçer: `NotificationService` → kaydet →
-  SignalR → push kuyruğu. Push istek yolunu bekletmez (bellek içi kuyruk +
-  `PushDispatchService`); FCM HTTP v1, servis hesabı OAuth'u
-  `Google.Apis.Auth` ile. FCM `UNREGISTERED` derse kayıt silinir;
-  `INVALID_ARGUMENT` bizim yük hatamız da olabileceği için silmez.
-  Push gövdesi mesaj içeriğini içermez (kilit ekranı gizliliği).
-  `FCM_SERVICE_ACCOUNT_JSON` verilmezse push kapalı, her şey eskisi gibi.
-- **Mobil:** `firebase_messaging`; Firebase seçenekleri `--dart-define` ile
-  (yapılandırılmamış derleme çalışmaya devam eder). Giriş/çıkış/oturum
-  düşmesi/token yenilemesine göre kayıt; dokununca ilgili ekran.
-- **Test:** cihaz kaydı, uçtan uca boru hattı (sahte gönderici) ve gerçek
-  `Program.cs` kurulumuyla FCM kabloları: üretilmiş bir servis hesabı
-  anahtarı + yerel OAuth dinleyicisiyle Google JWT imzası/kapsamı, FCM v1
-  URL/gövde/Bearer ve UNREGISTERED temizliği. Tüm API paketi gerçek
-  PostgreSQL'de de geçti (`TEST_POSTGRES_CONNECTION`). Mobil: 12 birim testi.
-- **Doğrulanamayan:** gerçek bir Firebase projesine/cihaza gönderim ve
-  Android/iOS derlemesi (geliştirme ortamında Android SDK'ya erişim yoktu;
-  CI de yalnızca analiz+test yapıyor) — ilk kurulumda cihazda denenmeli.
-- **Sonraki adım:** firebase_messaging 17, kayıt token'ı yerine Firebase
-  Installation ID (FID; `register()`/`onRegistered`) getirdi ve token
-  API'sini deprecated yaptı. FID akışı çok yeni olduğu için cihazda
-  doğrulanmadan geçilmedi; FCM v1 `message.token` geçiş süresince FID'i de
-  kabul ettiğinden geçiş yalnızca istemci tarafında olacak.
-16. Dosya yükleme + profil fotoğrafı (B8) — ✅
+**B7 — Push notifications:**
+- **Server:** `DeviceToken` table (unique token; when another account logs in on
+  the same device the record moves to the new user; a limit of 20 devices per
+  account) + `POST /api/v1/devices`, `POST /api/v1/devices/unregister`
+  (unauthenticated: a device whose session has expired can still stop push).
+  All notifications now go through a single path: `NotificationService` → save →
+  SignalR → push queue. Push does not hold up the request path (in-memory queue +
+  `PushDispatchService`); FCM HTTP v1, with service account OAuth via
+  `Google.Apis.Auth`. If FCM says `UNREGISTERED` the record is deleted;
+  `INVALID_ARGUMENT` does not delete it, since it may also be an error in our
+  payload. The push body does not include the message content (lock screen
+  privacy). If `FCM_SERVICE_ACCOUNT_JSON` is not provided, push is disabled and
+  everything works as before.
+- **Mobile:** `firebase_messaging`; the Firebase options come via `--dart-define`
+  (an unconfigured build keeps working). Registration follows
+  login/logout/session expiry/token refresh; tapping opens the relevant screen.
+- **Test:** device registration, the end-to-end pipeline (fake sender) and the
+  FCM wiring with the real `Program.cs` setup: the Google JWT signature/scope with
+  a generated service account key + a local OAuth listener, the FCM v1
+  URL/body/Bearer and the UNREGISTERED cleanup. The whole API suite also passed on
+  real PostgreSQL (`TEST_POSTGRES_CONNECTION`). Mobile: 12 unit tests.
+- **Not verified:** sending to a real Firebase project/device and the
+  Android/iOS builds (the development environment had no access to the Android
+  SDK; CI also only runs analysis+tests) — to be tried on a device at first setup.
+- **Next step:** firebase_messaging 17 introduced the Firebase Installation ID
+  (FID; `register()`/`onRegistered`) instead of the registration token and
+  deprecated the token API. Since the FID flow is very new, we did not switch
+  without verifying it on a device; since FCM v1 `message.token` also accepts the
+  FID during the transition period, the switch will be client-side only.
+16. File upload + profile photo (B8) — ✅
 
-**B8 — Profil fotoğrafı yükleme:**
-- **Uçlar:** `POST /api/v1/profile/photo` (multipart, alan `file`, ≤10 MB,
-  kullanıcı başına dakikada 10) ve `DELETE /api/v1/profile/photo`. Yanıt:
-  `{ profileImageUrl: "/media/avatars/{userId}/{rastgele}.jpg" }` — göreli
-  yol; istemciler API adresiyle birleştirir (alan adı değişince kayıtlar bozulmaz).
-- **Dosya olduğu gibi saklanmaz:** SkiaSharp (MIT) ile çözülür, EXIF yönü
-  uygulanır, ortadan kare kırpılıp 512x512 JPEG olarak yeniden kodlanır →
-  EXIF/GPS dahil tüm üst veri silinir, resim kılığındaki dosyalar elenir.
-  Yalnızca JPEG/PNG/WebP. Bildirilen boyut piksel çözülmeden kontrol edilir
-  ("decompression bomb": 50000x50000 bildiren 100 baytlık PNG reddedilir);
-  JPEG ölçekli çözüldüğü için 48 MP telefon fotoğrafları geçer.
-- **Sunma:** `/media` altında yalnızca `.jpg`, `nosniff`, kalıcı önbellek
-  (dosya adı her yüklemede yeni). Klasör dışına çıkış yok. Yeniden yükleme ve
-  silme eski dosyaları temizler. Docker: `sineuyum-media` volume (`/data/media`).
-- **Davranış değişikliği:** `PUT /api/v1/profile` artık yeni bir harici
-  `profileImageUrl` kabul etmiyor (yalnızca mevcut değer ya da boş = kaldır).
-  Harici URL, profili görüntüleyen herkesin IP'sini o sunucuya sızdırıyordu
-  (izleme pikseli). Mevcut kayıtlar görünmeye devam eder.
-- **İstemciler:** web'de yükleme/kaldırma arayüzü; büyük fotoğraflar
-  tarayıcıda 1600 px'e küçültülür (53 MB / 48 MP bir fotoğraf 1,4 MB'a inip
-  yüklendi). Mobilde galeri/kamera (image_picker; iOS'ta HEIC → JPEG).
-- **Yol üstünde düzeltilenler:** Kestrel'in reddettiği istekler (gövde çok
-  büyük vb.) 500 "sunucu hatası" dönüyordu → kendi durum kodu. Beklenen iş
-  kuralı hataları (404/413/415) ExceptionHandlerMiddleware tarafından ERR +
-  stack trace ile loglanıyordu → kopya log kapatıldı. Rate limiter kimlik
-  doğrulamadan önce çalıştığı için kullanıcıya göre sınır kurulamıyordu →
-  sıra düzeltildi.
-- **Doğrulama:** 32 yeni API testi (8 EXIF yönünün hepsi bağımsız tabloyla,
-  mutasyonla sınandı; üst veri temizliği; bomba; sınırlar; sunma; yol
-  aşımı). Üretim Docker imajında gerçek Kestrel ile: SkiaSharp yerel kitaplığı
-  çalışıyor, Pillow ile üretilmiş GPS'li 12 MP fotoğraf temiz 512x512 çıktı,
-  413 hem Content-Length'li hem chunked istekte, konteyner yeniden
-  başlatılınca dosya kalıcı. Web akışı gerçek Chromium'da uçtan uca.
-  Mobil: 7 yeni test (widget + birim).
-- **İleride:** dosyalar yerel diskte (`IMediaStorage` arayüzü); birden çok
-  sunucuya ölçeklenince S3/Blob + CDN'e taşınmalı.
-17. Çevrimdışı cache (film listeleri, sohbetler) — ✅ (Faz 3 tamamlandı)
+**B8 — Profile photo upload:**
+- **Endpoints:** `POST /api/v1/profile/photo` (multipart, field `file`, ≤10 MB,
+  10 per minute per user) and `DELETE /api/v1/profile/photo`. Response:
+  `{ profileImageUrl: "/media/avatars/{userId}/{random}.jpg" }` — a relative
+  path; clients combine it with the API address (records do not break when the
+  domain changes).
+- **The file is not stored as is:** it is decoded with SkiaSharp (MIT), the EXIF
+  orientation is applied, it is center-cropped to a square and re-encoded as a
+  512x512 JPEG → all metadata including EXIF/GPS is removed, and files disguised
+  as images are filtered out. JPEG/PNG/WebP only. The declared size is checked
+  before decoding the pixels ("decompression bomb": a 100-byte PNG declaring
+  50000x50000 is rejected); since JPEG is decoded scaled, 48 MP phone photos get
+  through.
+- **Serving:** only `.jpg` under `/media`, `nosniff`, permanent caching (the file
+  name is new on every upload). No escaping the folder. Re-uploading and deleting
+  clean up old files. Docker: `sineuyum-media` volume (`/data/media`).
+- **Behaviour change:** `PUT /api/v1/profile` no longer accepts a new external
+  `profileImageUrl` (only the existing value, or empty = remove). An external URL
+  leaked the IP of everyone viewing the profile to that server (tracking pixel).
+  Existing records keep being displayed.
+- **Clients:** upload/remove UI on the web; large photos are downscaled to
+  1600 px in the browser (a 53 MB / 48 MP photo shrank to 1.4 MB and was
+  uploaded). Gallery/camera on mobile (image_picker; HEIC → JPEG on iOS).
+- **Fixed along the way:** requests rejected by Kestrel (body too large etc.)
+  returned 500 "server error" → now their own status code. Expected business-rule
+  errors (404/413/415) were logged as ERR + stack trace by
+  ExceptionHandlerMiddleware → the duplicate log was turned off. Since the rate
+  limiter ran before authentication, per-user limits could not be applied → the
+  order was fixed.
+- **Verification:** 32 new API tests (all 8 EXIF orientations against an
+  independent table, tested with mutation; metadata cleanup; bomb; limits;
+  serving; path traversal). On the production Docker image with real Kestrel:
+  the SkiaSharp native library works, a 12 MP photo with GPS generated with
+  Pillow came out as a clean 512x512, 413 for both Content-Length and chunked
+  requests, and the file persists when the container is restarted. The web flow
+  end to end in real Chromium. Mobile: 7 new tests (widget + unit).
+- **Later:** the files are on local disk (`IMediaStorage` interface); when
+  scaling to multiple servers they should move to S3/Blob + CDN.
+17. Offline cache (movie lists, conversations) — ✅ (Phase 3 completed)
 
-**Çevrimdışı kullanım (mobil):**
-- **Okuma önbelleği** `ApiClient` katmanında: izinli GET uçları (profil,
-  sohbet listesi ve mesajlar, izleme listeleri, bildirimler, etkinlik,
-  popüler/vizyondaki filmler, film detayı) her başarılı yanıtta saklanır;
-  ağ hatasında son kopya döner. Cihaz çevrimdışıysa ağ hiç beklenmez (15 sn
-  zaman aşımı yok). Sunucunun verdiği yanıtlar (403/404) önbellekle
-  örtülmez; arama/öneri saklanmaz. Film afişleri zaten
-  `cached_network_image` ile diskte.
-- **Gizlilik:** önbellekte aynı anda tek kullanıcı; başka hesapla girişte,
-  çıkışta ve oturum düşünce silinir. İşletim sisteminin önbellek dizininde
-  (yedeklemeye girmez), en fazla 300 kayıt. Önbellek hatası (disk dolu)
-  hiçbir isteği/girişi bozmaz.
-- **Ekranda:** tüm ekranların altında "Çevrimdışısın / Sunucuya
-  ulaşılamıyor — kayıtlı veriler gösteriliyor" şeridi; ağ var ama internet
-  yoksa (giriş yapılmamış otel Wi-Fi'ı) da gösterilir.
+**Offline use (mobile):**
+- **Read cache** in the `ApiClient` layer: allowed GET endpoints (profile,
+  conversation list and messages, watchlists, notifications, event,
+  popular/now-playing movies, movie details) are stored on every successful
+  response; on a network error the last copy is returned. If the device is
+  offline, the network is not waited for at all (no 15 s timeout). Responses
+  given by the server (403/404) are not masked by the cache; search/recommendations
+  are not stored. Movie posters are already on disk via `cached_network_image`.
+- **Privacy:** the cache holds a single user at a time; it is cleared when
+  another account logs in, on logout and when the session expires. It lives in
+  the operating system's cache directory (not included in backups), at most 300
+  entries. A cache error (disk full) never breaks any request/login.
+- **On screen:** a "You're offline / Can't reach the server — showing saved data"
+  banner at the bottom of every screen; it is also shown when there is a network
+  but no internet (hotel Wi-Fi without login).
 
-**Yol üstünde bulunan, çevrimdışını bozan hatalar (testle yeniden üretildi):**
-- **İnternetsiz açılış oturumu kapatıyordu:** açılıştaki `/me` her hatada
-  token'ları siliyordu; metroda uygulamayı açan kullanıcı yeniden giriş
-  yapmak zorundaydı. Artık yalnızca sunucunun kesin reddi oturumu kapatır;
-  ağ yoksa kayıtlı profille açılır ya da açılış ekranında bekleyip ağ
-  dönünce devam eder.
-- **Token yenilerken ağ kopması "oturum bitti" sayılıyordu:** refresh
-  isteği sunucuya ulaşamayınca da token'lar siliniyordu. Artık yalnızca
-  sunucu reddederse; aksi halde çağırana 401 değil ağ hatası gider.
-- **SignalR kalıcı ölüyordu:** açılışta bağlanamazsa bir daha denenmiyordu;
-  otomatik yeniden bağlanma ~40 sn sonra vazgeçince de bağlantı kapalı
-  kalıyordu — canlı bildirim/sohbet uygulama yeniden açılana dek gelmiyordu.
-  Artık kapanınca 5/15/30/60 sn aralıklarla yeniden denenir, ağ dönünce
-  hemen bağlanır ve kaçanlar tazelenir. Push cihaz kaydı da ağ dönünce
-  yeniden denenir.
-- `/me` önbelleğe ancak üçüncü açılışta giriyordu (kullanıcı kimliği
-  `/me`'nin yanıtından öğreniliyor); artık giriş/açılışta açıkça saklanır.
+**Bugs breaking offline use found along the way (reproduced with tests):**
+- **Starting without internet logged the user out:** the `/me` call on startup
+  deleted the tokens on any error; a user opening the app on the metro had to log
+  in again. Now only a definite rejection by the server ends the session; without
+  a network the app opens with the saved profile, or waits on the splash screen
+  and continues when the network comes back.
+- **A network drop while refreshing the token counted as "session ended":** the
+  tokens were also deleted when the refresh request could not reach the server.
+  Now only if the server rejects it; otherwise the caller gets a network error,
+  not a 401.
+- **SignalR died permanently:** if it could not connect on startup it was never
+  retried; when automatic reconnection gave up after ~40 s the connection stayed
+  closed too — live notifications/chat did not arrive until the app was reopened.
+  Now it is retried at 5/15/30/60 s intervals after closing, connects immediately
+  when the network comes back, and missed items are refreshed. The push device
+  registration is also retried when the network comes back.
+- `/me` only made it into the cache on the third launch (the user id is learned
+  from the `/me` response); it is now stored explicitly on login/startup.
 
-**Doğrulama:** 19 yeni mobil test (oturum + önbellek + dosya deposu +
-şerit; iki ana düzeltme mutasyonla sınandı), toplam 68. Gerçek mobil yığın
-Docker'daki API'ye karşı: sunucu 50 sn kapatıldı → veriler önbellekten,
-şerit açık; sunucu dönünce istemci kendiliğinden bağlandı, kesintide
-gönderilen mesaj geldi, sonraki canlı mesaj 124 ms'de düştü. Aynı senaryo
-eski SignalR koduyla zaman aşımına düştü (mesaj hiç gelmedi).
+**Verification:** 19 new mobile tests (session + cache + file store + banner; the
+two main fixes tested with mutation), 68 in total. The real mobile stack against
+the API in Docker: the server was shut down for 50 s → data from the cache,
+banner shown; when the server came back the client reconnected on its own, the
+message sent during the outage arrived, and the next live message arrived in
+124 ms. The same scenario with the old SignalR code timed out (the message never
+arrived).
 
-**İleride:** çevrimdışı yazma (mesaj gönderme kuyruğu / outbox). Şimdilik
-çevrimdışı gönderim anlaşılır bir hata verir. Web istemcisinde çevrimdışı
-destek yok (PWA ayrı bir iş).
-18. Gerçek zamanlı sohbet (SignalR üzerinden mesaj iletimi) (M11) — ✅
-19. Mesaj "okundu" bilgisi (M10) — ✅
-20. Store yayın hazırlığı: ikonlar, splash, gizlilik politikası, zorunlu güncelleme
+**Later:** offline writes (message send queue / outbox). For now, sending offline
+gives an understandable error. The web client has no offline support (a PWA is a
+separate task).
+18. Real-time chat (message delivery via SignalR) (M11) — ✅
+19. Message "read" status (M10) — ✅
+20. Store release preparation: icons, splash, privacy policy, forced update
 
-### Faz 4 — İş modeli ve ölçekleme
-21. Gerçek ödeme entegrasyonu (G4) — ✅ açık kapatıldı + altyapı; sağlayıcılar hesap bilgisi bekliyor
-22. Eşleştirmeyi arka plan işine taşı (M7) — ✅
-23. `SuggestedMovieIds` tablosuna normalizasyon (M8) — ✅
-24. Rate limiting'i tüm API'ye yay (G5) — ✅
-25. Gizlilik ayarları (G12) — ✅
+### Phase 4 — Business model and scaling
+21. Real payment integration (G4) — ✅ hole closed + infrastructure; providers are waiting for account details
+22. Move matching to a background job (M7) — ✅
+23. Normalize `SuggestedMovieIds` into a table (M8) — ✅
+24. Extend rate limiting to the whole API (G5) — ✅
+25. Privacy settings (G12) — ✅
 
-### Faz 5 — Film severler için sosyal ağ
-Hedef: uygulamayı "puan + takip + mesaj"tan film severlerin sosyal ağına
-çevirmek; çekirdek ayırt edici özellik uyum puanı.
-26. Uyum nedeni + "tartışma filmi" — ✅
-    - Uyum yanıtında `insights`: ortak sevilen / ayrışılan türler (tüm
-      puanlardan, tür başına en az 2 film), tek cümlelik özet, ortak favori,
-      en çok ayrışılan ortak film. Web ve mobil profilde gösterilir; "Ona
-      sor" sohbeti hazır taslakla açar.
-    - Yol üstünde: **türler hiç yazılmıyordu** (`Genres`/`MovieGenres` hep
-      boştu; "ortak öneriler"deki tür eşleştirmesi de bu yüzden sessizce
-      çalışmıyordu). Yeni filmde TMDb türleri kaydedilir; eskiler
-      `GenreBackfillWorker` ile 30 dakikada bir 40'ar film tamamlanır.
-27. Sosyal çekirdek: inceleme (puan + yazı, spoiler), takip akışı, beğeni ve
-    yorum — ✅
-    - İnceleme bir puanın yazılı hâli (önce puan gerekir), spoiler işareti;
-      her incelemede yazarla "%N uyumlu" rozeti. Beğeni ve yorum yazara
-      bildirim gönderir (bildirimde yorum metni yok).
-    - Akış: takip edilenlerin ve kendinin puanları ve incelemeleri, imleçli
-      sayfalama. Puanı değiştirmek öne taşımaz, ilk inceleme taşır. Akıştan
-      önceki puanların zamanı bilinmediği için akışta görünmezler.
-    - Görünürlük G12 ile aynı kural (gizli profil, engel); engellenen
-      kişinin yorumları gizlenir, engelli kişiye yorum yapılamaz.
-    - Yol üstünde: "kullanıcı başına tek puan" yalnızca kodda denetleniyordu;
-      benzersiz indeks eklendi (migration önce çiftleri temizler, en son
-      puan kalır).
-    - Web: film sayfasında incelemeler, "Akış" sayfası. Mobil: ana sayfada
-      Akış / Filmler sekmeleri, film sayfasında incelemeler, yorum paneli.
-28. "Sana göre puan": uyumlu kişilerin bir filme verdiği ortalama — ✅
-    - Filmi puanlamış, seninle en az 3 ortak filmi ve en az %60 uyumu olan
-      kişilerin puanlarının uyumun karesiyle ağırlıklı ortalaması; en az 2
-      kişi yoksa gösterilmez. Gizlilik/engel kurallarına uyar. Film
-      sayfasında TMDb puanının yanında, en uyumlu üç kişiyle birlikte.
-29. Film kimliği kartı (paylaşılabilir) — ✅
-    - `GET /profile/{id}/identity`: toplam ve ortalama, en çok izlenen türler
-      (pay ve ortalama), TMDb ortalamasından sapma, "en aykırı puan" (en az 3
-      puan fark), favori ve kurallarla bir unvan (Aykırı Eleştirmen, Cömert
-      Seyirci, Zor Beğenen, {Tür} Tutkunu, Her Telden, Film Kâşifi, Yeni
-      Keşifçi). Profil ayrıntısıyla aynı görünürlük kuralı.
-    - TMDb ortalaması artık saklanıyor (`Movies.TmdbVoteAverage`); migration
-      filmleri bir kez yeniden işlenmeye işaretler.
-    - Web: kart + 1080×1350 PNG (sistem paylaşım menüsü ya da indirme).
-      Mobil: kart ekranı, görüntü yakalanıp `share_plus` ile paylaşılır.
-30. Haftalık zevk ikizi — ✅
-    - Her hafta (pazartesi başlar) sana en uyumlu, takip etmediğin ve daha
-      önce önerilmemiş biri; en az 5 ortak film ve %70 uyum. Yalnızca
-      keşfedilmeye açık kişiler aday olur (profili herkese açık, aramada
-      görünmeyi kapatmamış, engel yok). `TasteTwinWorker` saatlik turlarla
-      haftada bir kez bildirir; `GET /taste-twin` gerekirse anında hesaplar
-      (uygun aday yoksa 204). Web ve mobil akışın en üstünde kart.
-    - Yol üstünde: web sayfasının dili "en" olduğu için büyük harfli tüm
-      düğme ve başlıklarda "i" → "I" oluyordu ("TAKIP ET", "BU FILMI
-      PUANLA"); `lang="tr"` ile düzeldi.
+### Phase 5 — A social network for movie lovers
+Goal: turn the app from "ratings + follows + messages" into a social network for
+movie lovers; the core differentiating feature is the compatibility score.
+26. Reason for compatibility + "discussion movie" — ✅
+    - `insights` in the compatibility response: genres both love / disagree on
+      (from all ratings, at least 2 movies per genre), a one-sentence summary, a
+      shared favourite, and the shared movie with the biggest disagreement. Shown
+      on the profile on web and mobile; "Ask them" ("Ona sor") opens the chat with
+      a ready-made draft.
+    - Along the way: **genres were never written** (`Genres`/`MovieGenres` were
+      always empty; this is also why genre matching in "shared recommendations"
+      silently did not work). TMDb genres are saved for new movies; old ones are
+      backfilled by `GenreBackfillWorker`, 40 movies every 30 minutes.
+27. Social core: reviews (rating + text, spoiler), following feed, likes and
+    comments — ✅
+    - A review is the written form of a rating (a rating is required first), with
+      a spoiler flag; every review shows a "N% compatible" badge with the author.
+      Likes and comments send a notification to the author (without the comment
+      text in the notification).
+    - Feed: ratings and reviews of the people you follow and your own, with cursor
+      pagination. Changing a rating does not move it to the top; the first review
+      does. Ratings from before the feed existed do not appear in it, since their
+      time is unknown.
+    - Visibility follows the same rule as G12 (private profile, block); comments by
+      blocked people are hidden, and you cannot comment on a blocked person.
+    - Along the way: "one rating per user" was only enforced in code; a unique
+      index was added (the migration first removes duplicates, keeping the latest
+      rating).
+    - Web: reviews on the movie page, a "Feed" page. Mobile: Feed / Movies tabs on
+      the home screen, reviews on the movie page, a comment panel.
+28. "Score for you": the average rating compatible people gave a movie — ✅
+    - The average of the ratings of people who rated the movie and have at least 3
+      movies in common and at least 60% compatibility with you, weighted by the
+      square of the compatibility; not shown if there are fewer than 2 such
+      people. Follows the privacy/block rules. Shown on the movie page next to the
+      TMDb rating, together with the three most compatible people.
+29. Movie identity card (shareable) — ✅
+    - `GET /profile/{id}/identity`: total and average, most-watched genres (share
+      and average), deviation from the TMDb average, "most contrarian rating" (at
+      least 3 points apart), favourite, and a rule-based title (Contrarian Critic,
+      Generous Viewer, Hard to Please, {Genre} Enthusiast, All-Rounder, Film
+      Explorer, New Explorer). Same visibility rule as the profile details.
+    - The TMDb average is now stored (`Movies.TmdbVoteAverage`); the migration
+      flags the movies to be reprocessed once.
+    - Web: card + 1080×1350 PNG (system share menu or download).
+      Mobile: card screen, the image is captured and shared with `share_plus`.
+30. Weekly taste twin — ✅
+    - Every week (starting on Monday) the person most compatible with you whom you
+      do not follow and who has not been suggested before; at least 5 movies in
+      common and 70% compatibility. Only people open to discovery are candidates
+      (public profile, not hidden from search, no block). `TasteTwinWorker`
+      notifies once a week in hourly rounds; `GET /taste-twin` computes it
+      immediately if needed (204 if there is no suitable candidate). A card at the
+      top of the feed on web and mobile.
+    - Along the way: since the web page's language was "en", "i" became "I" in all
+      upper-case buttons and headings (e.g. "TAKIP ET" instead of "TAKİP ET" for
+      "Follow", "BU FILMI PUANLA" instead of "BU FİLMİ PUANLA" for "Rate this
+      movie"); fixed with `lang="tr"`.
+31. Multi-language support (Turkish + English, extensible) — ⏳ in progress
+    - Clients send the selected language in the `Accept-Language` header; the API
+      localizes every user-facing message (errors, notifications, generated texts,
+      genre names, TMDb data) and falls back to English.
+    - The user's language is stored (`PUT /api/v1/account/language`), so
+      notifications and push messages are rendered in the recipient's language.
+    - Adding a language = one translation file per platform (API
+      `SineUyum.Api/Resources/Locales/<lang>.json`, web
+      `sine-uyum-web/src/locales/<lang>.json`, mobile
+      `sine_uyum_mobile/lib/l10n/app_<lang>.arb`) + registering the code in each
+      platform's list of supported languages. See the "Localization" section of
+      the root README.
+    - **Follow-up:** per-language titles for the locally stored movie catalog
+      (currently stored in a single language).

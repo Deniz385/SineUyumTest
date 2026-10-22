@@ -1,12 +1,19 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import api from '../api/axiosConfig';
+import api, { mediaUrl } from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
-import { Box, Typography, CircularProgress, Grid, IconButton, Button, Modal, TextField } from '@mui/material';
+import {
+    Box, Typography, CircularProgress, Grid, IconButton, Button, Modal, TextField, Avatar, AvatarGroup, Tooltip,
+    Chip, FormControlLabel, Switch,
+} from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import GroupIcon from '@mui/icons-material/Group';
+import LogoutIcon from '@mui/icons-material/Logout';
+import CheckIcon from '@mui/icons-material/Check';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
+import { WatchlistMembersDialog } from '../components/WatchlistMembersDialog';
 import { useSnackbar } from '../context/SnackbarProvider';
 
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
@@ -23,6 +30,8 @@ const modalStyle = {
   p: 4,
 };
 
+const initial = (name) => name?.charAt(0).toUpperCase();
+
 export const WatchlistDetailPage = () => {
     const { t } = useTranslation();
     const { listId } = useParams();
@@ -30,40 +39,67 @@ export const WatchlistDetailPage = () => {
     const navigate = useNavigate();
     const { showSnackbar } = useSnackbar();
     const [watchlist, setWatchlist] = useState(null);
+    // 'member': I own the list or am an accepted member (full detail).
+    // 'public': someone else's list opened from a shared message (read only).
+    const [access, setAccess] = useState('member');
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
-    const [isOwner, setIsOwner] = useState(false);
 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editedListName, setEditedListName] = useState('');
     const [editedListDesc, setEditedListDesc] = useState('');
-    
+    const [isMembersOpen, setIsMembersOpen] = useState(false);
+    const [onlyUnwatched, setOnlyUnwatched] = useState(false);
+
     const [dialog, setDialog] = useState({ isOpen: false, title: '', description: '', onConfirm: null });
 
-    const fetchWatchlistDetails = useCallback(async () => {
+    const fetchWatchlistDetails = useCallback(async ({ silent = false } = {}) => {
         if (!user) return;
-        setIsLoading(true);
+        if (!silent) setIsLoading(true);
         try {
-            const response = await api.get(`/api/v1/watchlist/public/${listId}`);
-            const listData = response.data;
+            let listData;
+            try {
+                listData = (await api.get(`/api/v1/watchlist/${listId}`)).data;
+                setAccess('member');
+            } catch (err) {
+                // Not mine and not a member: fall back to the read-only public view.
+                if (err.response?.status !== 404) throw err;
+                listData = (await api.get(`/api/v1/watchlist/public/${listId}`)).data;
+                setAccess('public');
+            }
             setWatchlist(listData);
             setEditedListName(listData.name);
             setEditedListDesc(listData.description || '');
-
-            if (user?.username === listData.ownerUsername) {
-                setIsOwner(true);
-            }
-
         } catch {
-            setError(t('watchlist.notFound'));
+            if (!silent) setError(t('watchlist.notFound'));
         } finally {
-            setIsLoading(false);
+            if (!silent) setIsLoading(false);
         }
     }, [listId, user, t]);
 
     useEffect(() => {
         fetchWatchlistDetails();
     }, [fetchWatchlistDetails]);
+
+    const isMemberView = access === 'member';
+    const isOwner = isMemberView && Boolean(watchlist?.isOwner);
+    const owner = isMemberView ? watchlist?.owner : null;
+    const ownerName = owner?.userName || watchlist?.ownerUsername;
+    const acceptedMembers = useMemo(
+        () => (isMemberView ? (watchlist?.members || []).filter((m) => m.accepted) : []),
+        [isMemberView, watchlist]
+    );
+    // Same rule as the list summaries: someone else's list, or one with accepted members.
+    const isShared = isMemberView && (!isOwner || acceptedMembers.length > 0);
+    // The list's people: owner first, then accepted members.
+    const people = useMemo(
+        () => (owner ? [owner, ...acceptedMembers.map((m) => m.user)] : []),
+        [owner, acceptedMembers]
+    );
+    const avatarByName = useMemo(
+        () => new Map(people.map((p) => [p.userName, p.profileImageUrl])),
+        [people]
+    );
 
     const handleRemoveMovie = (movieId) => {
         setDialog({
@@ -81,7 +117,7 @@ export const WatchlistDetailPage = () => {
         try {
             await api.delete(`/api/v1/watchlist/${listId}/movies/${movieId}`);
             showSnackbar(t('watchlist.movieRemoved'), 'success');
-            fetchWatchlistDetails();
+            fetchWatchlistDetails({ silent: true });
         } catch {
             showSnackbar(t('watchlist.removeMovieFailed'), 'error');
         }
@@ -110,25 +146,54 @@ export const WatchlistDetailPage = () => {
         }
     };
 
+    const handleLeaveList = () => {
+        setDialog({
+            isOpen: true,
+            title: t('watchlist.leave.title'),
+            description: t('watchlist.leave.body', { name: watchlist.name }),
+            onConfirm: () => {
+                setDialog({ isOpen: false });
+                performLeaveList();
+            }
+        });
+    };
+
+    // Leaving is a member removing their own membership.
+    const performLeaveList = async () => {
+        try {
+            await api.delete(`/api/v1/watchlist/${listId}/members/${user.id}`);
+            showSnackbar(t('watchlist.leave.done', { name: watchlist.name }), 'success');
+            navigate('/watchlist');
+        } catch (err) {
+            showSnackbar(err.response?.data?.title || t('watchlist.leave.failed'), 'error');
+        }
+    };
+
     const handleUpdateList = async (e) => {
         e.preventDefault();
         if (!editedListName.trim()) return;
         try {
-            await api.put(`/api/v1/watchlist/${listId}`, 
+            await api.put(`/api/v1/watchlist/${listId}`,
                 { name: editedListName, description: editedListDesc }
             );
             showSnackbar(t('watchlist.updated'), 'success');
             setIsEditModalOpen(false);
-            fetchWatchlistDetails();
+            fetchWatchlistDetails({ silent: true });
         } catch {
             showSnackbar(t('watchlist.updateFailed'), 'error');
         }
+    };
+
+    const handleMembersChange = (members) => {
+        setWatchlist((current) => ({ ...current, members }));
     };
 
     if (isLoading) return <CircularProgress />;
     if (error) return <Typography color="error">{error}</Typography>;
 
     const items = watchlist?.items || [];
+    const visibleItems = onlyUnwatched ? items.filter((item) => !item.watchedBy?.length) : items;
+    const pendingCount = isOwner ? (watchlist?.members || []).filter((m) => !m.accepted).length : 0;
 
     return (
         <>
@@ -136,28 +201,98 @@ export const WatchlistDetailPage = () => {
                 <Box sx={{ mb: 3 }}>
                     <Typography variant="h4" component="h1" gutterBottom>{watchlist?.name}</Typography>
                     <Typography variant="body1" color="text.secondary">{watchlist?.description}</Typography>
-                    <Typography variant="caption" color="text.secondary">{t('watchlist.createdBy', { userName: watchlist?.ownerUsername })}</Typography>
-                    
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, mt: 1, flexWrap: 'wrap' }}>
+                        {people.length > 0 && (
+                            <AvatarGroup max={6} sx={{ '& .MuiAvatar-root': { width: 32, height: 32, fontSize: '0.9rem' } }}>
+                                {people.map((person) => (
+                                    <Tooltip key={person.id} title={`@${person.userName}`}>
+                                        <Avatar src={mediaUrl(person.profileImageUrl)} alt={person.userName}>
+                                            {initial(person.userName)}
+                                        </Avatar>
+                                    </Tooltip>
+                                ))}
+                            </AvatarGroup>
+                        )}
+                        <Box sx={{ textAlign: people.length > 0 ? 'left' : 'center' }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                {t('watchlist.createdBy', { userName: ownerName })}
+                            </Typography>
+                            {isShared && (
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                    {t('watchlist.peopleCount', { count: people.length })}
+                                </Typography>
+                            )}
+                        </Box>
+                    </Box>
+
                     {isOwner && (
-                        <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+                        <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
+                            <Button variant="outlined" startIcon={<GroupIcon />} onClick={() => setIsMembersOpen(true)}>
+                                {pendingCount > 0
+                                    ? t('watchlist.members.buttonWithPending', { count: pendingCount })
+                                    : t('watchlist.members.button')}
+                            </Button>
                             <Button variant="outlined" startIcon={<EditIcon />} onClick={() => setIsEditModalOpen(true)}>{t('watchlist.edit')}</Button>
                             <Button variant="contained" color="error" startIcon={<DeleteIcon />} onClick={handleDeleteList}>{t('watchlist.delete')}</Button>
                         </Box>
                     )}
+                    {isMemberView && !isOwner && (
+                        <Box sx={{ mt: 2 }}>
+                            <Button variant="outlined" color="error" startIcon={<LogoutIcon />} onClick={handleLeaveList}>{t('watchlist.leave.button')}</Button>
+                        </Box>
+                    )}
                 </Box>
+
+                {isMemberView && items.length > 0 && (
+                    <FormControlLabel
+                        sx={{ mb: 2 }}
+                        control={<Switch checked={onlyUnwatched} onChange={(e) => setOnlyUnwatched(e.target.checked)} />}
+                        label={isShared ? t('watchlist.filter.unwatchedByAll') : t('watchlist.filter.notWatchedYet')}
+                    />
+                )}
 
                 {items.length === 0 ? (
                     <Typography>{t('watchlist.noMovies')}</Typography>
+                ) : visibleItems.length === 0 ? (
+                    <Typography color="text.secondary">
+                        {isShared ? t('watchlist.filter.noneLeftShared') : t('watchlist.filter.noneLeftSolo')}
+                    </Typography>
                 ) : (
                     <Grid container spacing={3}>
-                        {items.map(item => (
+                        {visibleItems.map(item => (
                             <Grid item xs={6} sm={4} md={3} key={item.movieId}>
                                 <Box sx={{ position: 'relative' }}>
                                     <Link to={`/movie/${item.movieId}`}>
                                         <img src={item.posterPath ? `${IMAGE_BASE_URL}${item.posterPath}` : '/vite.svg'} alt={item.title} style={{ width: '100%', borderRadius: '8px', display: 'block' }}/>
                                         <Typography variant="subtitle2" align="center" sx={{ mt: 1 }}>{item.title}</Typography>
                                     </Link>
-                                    {isOwner && (
+                                    {isShared && item.addedByUsername && (
+                                        <Typography variant="caption" color="text.secondary" align="center" sx={{ display: 'block' }}>
+                                            {t('watchlist.addedBy', { userName: item.addedByUsername })}
+                                        </Typography>
+                                    )}
+                                    {isMemberView && item.watchedBy?.length > 0 && (
+                                        isShared ? (
+                                            <Box sx={{ mt: 0.5, display: 'flex', flexWrap: 'wrap', gap: 0.5, justifyContent: 'center', alignItems: 'center' }}>
+                                                <Typography variant="caption" color="text.secondary">{t('watchlist.watchedBy')}</Typography>
+                                                {item.watchedBy.map((name) => (
+                                                    <Chip
+                                                        key={name}
+                                                        size="small"
+                                                        variant="outlined"
+                                                        avatar={<Avatar src={mediaUrl(avatarByName.get(name))} alt={name}>{initial(name)}</Avatar>}
+                                                        label={`@${name}`}
+                                                    />
+                                                ))}
+                                            </Box>
+                                        ) : (
+                                            <Box sx={{ mt: 0.5, display: 'flex', justifyContent: 'center' }}>
+                                                <Chip size="small" color="success" variant="outlined" icon={<CheckIcon />} label={t('watchlist.watched')} />
+                                            </Box>
+                                        )
+                                    )}
+                                    {isMemberView && (
                                         <IconButton onClick={() => handleRemoveMovie(item.movieId)} sx={{ position: 'absolute', top: 0, right: 0, color: 'white', backgroundColor: 'rgba(0,0,0,0.6)' }} aria-label={t('watchlist.removeMovie')}>
                                             <DeleteIcon />
                                         </IconButton>
@@ -177,6 +312,14 @@ export const WatchlistDetailPage = () => {
                     <Button type="submit" variant="contained" sx={{ mt: 2 }}>{t('common.save')}</Button>
                 </Box>
             </Modal>
+            {isOwner && (
+                <WatchlistMembersDialog
+                    open={isMembersOpen}
+                    onClose={() => setIsMembersOpen(false)}
+                    watchlist={watchlist}
+                    onMembersChange={handleMembersChange}
+                />
+            )}
             <ConfirmationDialog
                 open={dialog.isOpen}
                 onClose={() => setDialog({ ...dialog, isOpen: false })}

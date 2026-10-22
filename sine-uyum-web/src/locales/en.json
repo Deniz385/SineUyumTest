@@ -303,7 +303,62 @@
     "deleted": "List deleted. Redirecting...",
     "deleteFailed": "Something went wrong while deleting the list.",
     "updated": "List updated!",
-    "updateFailed": "Something went wrong while updating the list."
+    "updateFailed": "Something went wrong while updating the list.",
+    "ownedBy": "by @{{userName}}",
+    "sharedChip_one": "Shared · {{count}} person",
+    "sharedChip_other": "Shared · {{count}} people",
+    "peopleCount_one": "{{count}} person on this list",
+    "peopleCount_other": "{{count}} people on this list",
+    "addedBy": "added by @{{userName}}",
+    "watchedBy": "Watched by",
+    "watched": "Watched",
+    "invitations": {
+      "title_one": "You have an invitation",
+      "title_other": "You have {{count}} invitations",
+      "invitedBy": "Invited by @{{userName}}",
+      "accept": "Accept",
+      "decline": "Decline",
+      "accepted": "You joined \"{{name}}\".",
+      "declined": "Invitation declined.",
+      "acceptFailed": "Something went wrong while accepting the invitation.",
+      "declineFailed": "Something went wrong while declining the invitation."
+    },
+    "members": {
+      "button": "Members",
+      "buttonWithPending_one": "Members ({{count}} pending)",
+      "buttonWithPending_other": "Members ({{count}} pending)",
+      "title": "List Members",
+      "owner": "Owner",
+      "accepted": "Member",
+      "pending": "Pending",
+      "remove": "Remove from list",
+      "cancelInvite": "Cancel invitation",
+      "removed": "@{{userName}} was removed from the list.",
+      "inviteCancelled": "The invitation to @{{userName}} was cancelled.",
+      "removeFailed": "Something went wrong while removing the member.",
+      "inviteLabel": "Invite someone",
+      "invitePlaceholder": "Search by username",
+      "typeToSearch": "Type a username to search",
+      "noResults": "No users found",
+      "alreadyMember": "Already a member",
+      "alreadyInvited": "Already invited",
+      "inviteSent": "Invitation sent to @{{userName}}.",
+      "inviteFailed": "Something went wrong while sending the invitation.",
+      "empty": "No one else is on this list yet. Invite someone to plan your movies together."
+    },
+    "leave": {
+      "button": "Leave List",
+      "title": "Leave List?",
+      "body": "You'll no longer see \"{{name}}\" or be able to add movies to it. The owner can invite you again.",
+      "done": "You left \"{{name}}\".",
+      "failed": "Something went wrong while leaving the list."
+    },
+    "filter": {
+      "unwatchedByAll": "Unwatched by all of us",
+      "notWatchedYet": "Not watched yet",
+      "noneLeftShared": "Every movie here has been watched by at least one of you.",
+      "noneLeftSolo": "You've watched every movie in this list."
+    }
   },
   "messages": {
     "title": "Messages",

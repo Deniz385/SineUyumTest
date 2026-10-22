@@ -303,7 +303,62 @@
     "deleted": "Liste başarıyla silindi. Yönlendiriliyorsunuz...",
     "deleteFailed": "Liste silinirken bir hata oluştu.",
     "updated": "Liste başarıyla güncellendi!",
-    "updateFailed": "Liste güncellenirken bir hata oluştu."
+    "updateFailed": "Liste güncellenirken bir hata oluştu.",
+    "ownedBy": "Sahibi: @{{userName}}",
+    "sharedChip_one": "Ortak · {{count}} kişi",
+    "sharedChip_other": "Ortak · {{count}} kişi",
+    "peopleCount_one": "Bu listede {{count}} kişi var",
+    "peopleCount_other": "Bu listede {{count}} kişi var",
+    "addedBy": "ekleyen: @{{userName}}",
+    "watchedBy": "İzleyenler",
+    "watched": "İzlendi",
+    "invitations": {
+      "title_one": "Bir davetiniz var",
+      "title_other": "{{count}} davetiniz var",
+      "invitedBy": "Davet eden: @{{userName}}",
+      "accept": "Kabul Et",
+      "decline": "Reddet",
+      "accepted": "\"{{name}}\" listesine katıldınız.",
+      "declined": "Davet reddedildi.",
+      "acceptFailed": "Davet kabul edilirken bir hata oluştu.",
+      "declineFailed": "Davet reddedilirken bir hata oluştu."
+    },
+    "members": {
+      "button": "Üyeler",
+      "buttonWithPending_one": "Üyeler ({{count}} bekleyen)",
+      "buttonWithPending_other": "Üyeler ({{count}} bekleyen)",
+      "title": "Liste Üyeleri",
+      "owner": "Sahibi",
+      "accepted": "Üye",
+      "pending": "Bekliyor",
+      "remove": "Listeden çıkar",
+      "cancelInvite": "Daveti iptal et",
+      "removed": "@{{userName}} listeden çıkarıldı.",
+      "inviteCancelled": "@{{userName}} için gönderilen davet iptal edildi.",
+      "removeFailed": "Üye çıkarılırken bir hata oluştu.",
+      "inviteLabel": "Birini davet et",
+      "invitePlaceholder": "Kullanıcı adıyla ara",
+      "typeToSearch": "Aramak için bir kullanıcı adı yazın",
+      "noResults": "Kullanıcı bulunamadı",
+      "alreadyMember": "Zaten üye",
+      "alreadyInvited": "Zaten davet edildi",
+      "inviteSent": "@{{userName}} kullanıcısına davet gönderildi.",
+      "inviteFailed": "Davet gönderilirken bir hata oluştu.",
+      "empty": "Bu listede henüz başka kimse yok. Filmlerinizi birlikte planlamak için birini davet edin."
+    },
+    "leave": {
+      "button": "Listeden Ayrıl",
+      "title": "Listeden Ayrıl?",
+      "body": "Artık \"{{name}}\" listesini göremeyecek ve listeye film ekleyemeyeceksiniz. Liste sahibi sizi yeniden davet edebilir.",
+      "done": "\"{{name}}\" listesinden ayrıldınız.",
+      "failed": "Listeden ayrılırken bir hata oluştu."
+    },
+    "filter": {
+      "unwatchedByAll": "Hiçbirimizin izlemediği filmler",
+      "notWatchedYet": "Henüz izlenmemiş olanlar",
+      "noneLeftShared": "Buradaki her filmi en az biriniz izlemiş.",
+      "noneLeftSolo": "Bu listedeki tüm filmleri izlediniz."
+    }
   },
   "messages": {
     "title": "Mesajlar",

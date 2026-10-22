@@ -17,6 +17,7 @@ class DiaryEntrySheet extends StatefulWidget {
     required this.onSubmit,
     this.entry,
     this.initialRating,
+    this.loadMovieEntries,
   });
 
   final String movieTitle;
@@ -28,6 +29,11 @@ class DiaryEntrySheet extends StatefulWidget {
   /// Prefills the rating when adding (the user's current rating).
   final int? initialRating;
 
+  /// When adding: loads my earlier entries for the movie (newest first). If
+  /// there are any, "Rewatch" is pre-selected and the last date is shown.
+  /// A failure is ignored; the sheet works as without it.
+  final Future<List<DiaryEntry>> Function()? loadMovieEntries;
+
   static const noteMaxLength = 500;
 
   /// True once [onSubmit] succeeded; null if dismissed.
@@ -37,6 +43,7 @@ class DiaryEntrySheet extends StatefulWidget {
     required Future<void> Function(DiaryDraft draft) onSubmit,
     DiaryEntry? entry,
     int? initialRating,
+    Future<List<DiaryEntry>> Function()? loadMovieEntries,
   }) {
     return showModalBottomSheet<bool>(
       context: context,
@@ -46,6 +53,7 @@ class DiaryEntrySheet extends StatefulWidget {
         onSubmit: onSubmit,
         entry: entry,
         initialRating: initialRating,
+        loadMovieEntries: loadMovieEntries,
       ),
     );
   }
@@ -62,7 +70,36 @@ class _DiaryEntrySheetState extends State<DiaryEntrySheet> {
   bool _saving = false;
   String? _error;
 
+  /// The user changed "Rewatch" themselves; the pre-selection keeps out.
+  bool _rewatchTouched = false;
+
+  /// When I last logged this movie (adding only; null if never or unknown).
+  DateTime? _lastWatchedOn;
+
   bool get _isEdit => widget.entry != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final load = widget.loadMovieEntries;
+    if (!_isEdit && load != null) _loadPrevious(load);
+  }
+
+  Future<void> _loadPrevious(Future<List<DiaryEntry>> Function() load) async {
+    final List<DiaryEntry> entries;
+    try {
+      entries = await load();
+    } catch (_) {
+      // Only a convenience: the sheet stays as it is.
+      return;
+    }
+    if (!mounted || entries.isEmpty) return;
+    setState(() {
+      _lastWatchedOn = entries.first.watchedOn;
+      // Not while saving: the draft being sent must match the switch.
+      if (!_rewatchTouched && !_saving) _rewatch = true;
+    });
+  }
 
   static DateTime get _today {
     final now = DateTime.now();
@@ -123,6 +160,7 @@ class _DiaryEntrySheetState extends State<DiaryEntrySheet> {
     final l10n = context.l10n;
     final theme = Theme.of(context);
     final rating = _rating;
+    final lastWatchedOn = _lastWatchedOn;
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
@@ -154,11 +192,21 @@ class _DiaryEntrySheetState extends State<DiaryEntrySheet> {
                 contentPadding: EdgeInsets.zero,
                 secondary: const Icon(Icons.replay),
                 title: Text(l10n.diaryRewatch),
-                subtitle: Text(l10n.diaryRewatchHint),
+                subtitle: Text(
+                  lastWatchedOn == null
+                      ? l10n.diaryRewatchHint
+                      : l10n.diaryLastLogged(
+                          DateFormat.yMMMMd(l10n.localeName)
+                              .format(lastWatchedOn),
+                        ),
+                ),
                 value: _rewatch,
                 onChanged: _saving
                     ? null
-                    : (value) => setState(() => _rewatch = value),
+                    : (value) => setState(() {
+                        _rewatch = value;
+                        _rewatchTouched = true;
+                      }),
               ),
               const SizedBox(height: 8),
               TextField(

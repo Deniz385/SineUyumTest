@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -359,6 +361,28 @@ void main() {
       expect(summary.year, 2025);
     });
 
+    test('movie entries: my entries for one movie, newest first; not '
+        'cached for offline use', () async {
+      server.routes['GET /api/v1/diary/movie/550'] = (
+        200,
+        [
+          _entryJson(id: 12, watchedOn: '2026-10-12', rewatch: true),
+          _entryJson(id: 7, watchedOn: '2025-02-01'),
+        ],
+      );
+
+      final entries = await diary.movieEntries(550);
+
+      expect(server.requests, ['GET /api/v1/diary/movie/550']);
+      expect(entries.map((e) => e.id), [12, 7]);
+      expect(entries.first.watchedOn, DateTime(2026, 10, 12));
+      expect(entries.first.movie.id, 550);
+      expect(ResponseCache.isCacheable('/api/v1/diary/movie/550'), isFalse);
+
+      server.routes['GET /api/v1/diary/movie/551'] = (200, <Object>[]);
+      expect(await diary.movieEntries(551), isEmpty);
+    });
+
     test('the duplicate (409) message is passed on as-is', () async {
       server.routes['POST /api/v1/diary'] = (
         409,
@@ -534,6 +558,10 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    /// Body of the last diary POST (refreshes follow it after a save).
+    Object? postedBody() =>
+        server.bodies[server.requests.lastIndexOf('POST /api/v1/diary')];
+
     Finder inSheet(Finder finder) =>
         find.descendant(of: find.byType(DiaryEntrySheet), matching: finder);
 
@@ -604,6 +632,90 @@ void main() {
       );
     });
 
+    bool rewatchInSheet(WidgetTester tester, String label) => tester
+        .widget<SwitchListTile>(
+          inSheet(find.widgetWithText(SwitchListTile, label)),
+        )
+        .value;
+
+    testWidgets('a movie logged before pre-selects "Rewatch" and shows the '
+        'last date (tr)', (tester) async {
+      await pumpMovie(tester);
+      server.routes['GET /api/v1/diary/movie/550'] = (
+        200,
+        [
+          _entryJson(id: 12, watchedOn: '2026-10-12'),
+          _entryJson(id: 7, watchedOn: '2025-02-01'),
+        ],
+      );
+      server.routes['POST /api/v1/diary'] = (201, _entryJson(rewatch: true));
+
+      await tester.ensureVisible(find.text('Günlüğe ekle'));
+      await tester.tap(find.text('Günlüğe ekle'));
+      await tester.pumpAndSettle();
+
+      expect(server.requests, contains('GET /api/v1/diary/movie/550'));
+      expect(
+        inSheet(find.text('En son 12 Ekim 2026 tarihinde kaydettin')),
+        findsOneWidget,
+      );
+      expect(rewatchInSheet(tester, 'Yeniden izleme'), isTrue);
+      await tapInSheet(tester, inSheet(find.text('Günlüğe kaydet')));
+
+      expect(postedBody(), containsPair('rewatch', true));
+      expect(find.text('Günlüğüne eklendi.'), findsOneWidget);
+    });
+
+    testWidgets('the last date is localized; "Rewatch" can still be turned '
+        'off (en)', (tester) async {
+      await pumpMovie(tester, locale: en);
+      server.routes['GET /api/v1/diary/movie/550'] = (
+        200,
+        [_entryJson(id: 12, watchedOn: '2026-10-12')],
+      );
+      server.routes['POST /api/v1/diary'] = (201, _entryJson());
+
+      await tester.ensureVisible(find.text('Add to diary'));
+      await tester.tap(find.text('Add to diary'));
+      await tester.pumpAndSettle();
+
+      expect(
+        inSheet(find.text('Last logged on October 12, 2026')),
+        findsOneWidget,
+      );
+      expect(rewatchInSheet(tester, 'Rewatch'), isTrue);
+      await tapInSheet(tester, inSheet(find.text('Rewatch')));
+      await tapInSheet(tester, inSheet(find.text('Save to diary')));
+
+      expect(postedBody(), containsPair('rewatch', false));
+    });
+
+    testWidgets('if the lookup fails the sheet works as before (tr)', (
+      tester,
+    ) async {
+      await pumpMovie(tester);
+      server.routes['GET /api/v1/diary/movie/550'] = (
+        500,
+        {'title': 'Sunucu hatası'},
+      );
+      server.routes['POST /api/v1/diary'] = (201, _entryJson());
+
+      await tester.ensureVisible(find.text('Günlüğe ekle'));
+      await tester.tap(find.text('Günlüğe ekle'));
+      await tester.pumpAndSettle();
+
+      expect(server.requests, contains('GET /api/v1/diary/movie/550'));
+      expect(rewatchInSheet(tester, 'Yeniden izleme'), isFalse);
+      expect(inSheet(find.text('Daha önce de izlemiştin')), findsOneWidget);
+      expect(inSheet(find.textContaining('En son')), findsNothing);
+      expect(find.text('Sunucu hatası'), findsNothing);
+      await tapInSheet(tester, inSheet(find.text('Günlüğe kaydet')));
+
+      expect(postedBody(), containsPair('rewatch', false));
+      expect(find.byType(DiaryEntrySheet), findsNothing);
+      expect(find.text('Günlüğüne eklendi.'), findsOneWidget);
+    });
+
     testWidgets('the rating can be left out (en)', (tester) async {
       await pumpMovie(tester, locale: en);
       server.routes['POST /api/v1/diary'] = (201, _entryJson());
@@ -622,6 +734,74 @@ void main() {
         'note': null,
       });
       expect(find.text('Added to your diary.'), findsOneWidget);
+    });
+  });
+
+  group('entry sheet', () {
+    Future<void> pumpSheet(
+      WidgetTester tester, {
+      DiaryEntry? entry,
+      Future<List<DiaryEntry>> Function()? loadMovieEntries,
+    }) async {
+      await tester.pumpWidget(
+        localizedApp(
+          locale: en,
+          home: Scaffold(
+            body: DiaryEntrySheet(
+              key: UniqueKey(),
+              movieTitle: 'Fight Club',
+              entry: entry,
+              loadMovieEntries: loadMovieEntries,
+              onSubmit: (_) async {},
+            ),
+          ),
+        ),
+      );
+    }
+
+    bool rewatchValue(WidgetTester tester) => tester
+        .widget<SwitchListTile>(find.widgetWithText(SwitchListTile, 'Rewatch'))
+        .value;
+
+    testWidgets("a choice made before the lookup returns isn't overridden", (
+      tester,
+    ) async {
+      final lookup = Completer<List<DiaryEntry>>();
+      await pumpSheet(tester, loadMovieEntries: () => lookup.future);
+      expect(rewatchValue(tester), isFalse);
+
+      // On, then off again: the user's own choice.
+      await tester.tap(find.text('Rewatch'));
+      await tester.pump();
+      await tester.tap(find.text('Rewatch'));
+      await tester.pump();
+
+      lookup.complete([_entry(1, 'Fight Club', DateTime(2026, 10, 12))]);
+      await tester.pumpAndSettle();
+
+      expect(rewatchValue(tester), isFalse);
+      expect(find.text('Last logged on October 12, 2026'), findsOneWidget);
+    });
+
+    testWidgets('no earlier entries: nothing changes; editing never looks '
+        'up', (tester) async {
+      await pumpSheet(tester, loadMovieEntries: () async => []);
+      await tester.pumpAndSettle();
+      expect(rewatchValue(tester), isFalse);
+      expect(find.text("You've seen it before"), findsOneWidget);
+
+      var lookups = 0;
+      await pumpSheet(
+        tester,
+        entry: _entry(3, 'Fight Club', DateTime(2026, 10, 1)),
+        loadMovieEntries: () async {
+          lookups++;
+          return [_entry(1, 'Fight Club', DateTime(2026, 10, 12))];
+        },
+      );
+      await tester.pumpAndSettle();
+      expect(lookups, 0);
+      expect(find.textContaining('Last logged'), findsNothing);
     });
   });
 

@@ -274,6 +274,7 @@
   "diaryWatchedOn": "İzleme tarihi",
   "diaryRewatch": "Yeniden izleme",
   "diaryRewatchHint": "Daha önce de izlemiştin",
+  "diaryLastLogged": "En son {date} tarihinde kaydettin",
   "diaryNoteLabel": "Not (isteğe bağlı)",
   "diaryNoteHint": "Nerede, kiminle, nasıl hissettirdi...",
   "diaryRateToo": "Puan da ver",

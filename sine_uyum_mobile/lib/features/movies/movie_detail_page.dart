@@ -142,6 +142,8 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
       context,
       movieTitle: _movie.title,
       initialRating: myRating,
+      loadMovieEntries: () =>
+          ref.read(diaryRepositoryProvider).movieEntries(_movie.id),
       onSubmit: (draft) async {
         await ref.read(diaryRepositoryProvider).create(_movie.id, draft);
         // Any open diary (e.g. the one this page was opened from) reloads.

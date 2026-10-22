@@ -61,6 +61,22 @@ class DiaryRepository {
     return DiaryEntriesPage.fromJson(data);
   }
 
+  /// My entries for [movieId], newest first (empty when never logged).
+  ///
+  /// Not in the offline cache: it only pre-selects "Rewatch" in the add
+  /// sheet, whose save needs the network anyway, and a stale copy could
+  /// suggest a wrong rewatch state.
+  Future<List<DiaryEntry>> movieEntries(int movieId) async {
+    final data = await _client.get<List<dynamic>>(
+      '/api/v1/diary/movie/$movieId',
+    );
+    return data
+        .map(
+          (item) => DiaryEntry.fromJson((item as Map).cast<String, dynamic>()),
+        )
+        .toList();
+  }
+
   /// Counts per month for [year] (the server's current year by default).
   Future<DiarySummary> summary(String userId, {int? year}) async {
     final data = await _client.get<Map<String, dynamic>>(

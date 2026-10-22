@@ -694,6 +694,14 @@
   "diaryWatchedOn": "Watched on",
   "diaryRewatch": "Rewatch",
   "diaryRewatchHint": "You've seen it before",
+  "diaryLastLogged": "Last logged on {date}",
+  "@diaryLastLogged": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "diaryNoteLabel": "Note (optional)",
   "diaryNoteHint": "Where, with whom, how it felt...",
   "diaryRateToo": "Rate it too",

@@ -31,4 +31,10 @@
     <InternalsVisibleTo Include="SineUyum.Api.Tests" />
   </ItemGroup>
 
+  <!-- UI strings, one file per language; embedded so they ship with the dll. -->
+  <ItemGroup>
+    <Content Remove="Resources\Locales\*.json" />
+    <EmbeddedResource Include="Resources\Locales\*.json" LogicalName="SineUyum.Api.Locales.%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>

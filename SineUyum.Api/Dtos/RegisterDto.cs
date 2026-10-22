@@ -2,18 +2,19 @@
 
 namespace SineUyum.Api.Dtos
 {
+    // ErrorMessage values are locale keys (localized via AddDataAnnotationsLocalization).
     public class RegisterDto
     {
-        [Required(ErrorMessage = "Kullanıcı adı zorunludur.")]
-        [MinLength(3, ErrorMessage = "Kullanıcı adı en az 3 karakter olmalıdır.")]
+        [Required(ErrorMessage = "validation.usernameRequired")]
+        [MinLength(3, ErrorMessage = "validation.usernameMinLength")]
         public string Username { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Email adresi zorunludur.")]
-        [EmailAddress(ErrorMessage = "Geçerli bir email adresi giriniz.")]
+        [Required(ErrorMessage = "validation.emailRequired")]
+        [EmailAddress(ErrorMessage = "validation.emailInvalid")]
         public string Email { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Şifre zorunludur.")]
-        [MinLength(6, ErrorMessage = "Şifre en az 6 karakter olmalıdır.")]
+        [Required(ErrorMessage = "validation.passwordRequired")]
+        [MinLength(6, ErrorMessage = "validation.passwordMinLength")]
         public string Password { get; set; } = string.Empty;
     }
 }

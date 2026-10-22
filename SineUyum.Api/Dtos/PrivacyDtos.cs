@@ -3,22 +3,22 @@ using SineUyum.Api.Models;
 
 namespace SineUyum.Api.Dtos
 {
-    // GET/PUT /api/v1/account/privacy. Enum'lar metin olarak taşınır
+    // GET/PUT /api/v1/account/privacy. Enums travel as text
     // ("Public" | "Following" | "Private", "Everyone" | "Following" | "Nobody").
     public class PrivacySettingsDto
     {
-        [Required]
+        [Required(ErrorMessage = "validation.required")]
         [EnumDataType(typeof(ProfileVisibility))]
         public ProfileVisibility? ProfileVisibility { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "validation.required")]
         [EnumDataType(typeof(MessagePermission))]
         public MessagePermission? MessagePermission { get; set; }
 
         public bool HiddenFromSearch { get; set; }
 
-        // Okundu bilgisi (M10). PUT'ta verilmezse değişmez: bu alanı bilmeyen
-        // eski istemciler ayarı kazara kapatmasın.
+        // Read receipts (M10). Unchanged when omitted in a PUT: old clients that do
+        // not know this field must not turn the setting off by accident.
         public bool? ShowReadReceipts { get; set; }
     }
 

@@ -9,15 +9,15 @@ namespace SineUyum.Api.Services.Push
         public string ProjectId { get; set; } = string.Empty;
     }
 
-    // FCM HTTP v1 için OAuth2 erişim token'ı. Testlerde sahtesiyle değiştirilir.
+    // OAuth2 access token for FCM HTTP v1. Replaced with a fake in tests.
     public interface IFcmAccessTokenProvider
     {
         Task<string> GetAccessTokenAsync(CancellationToken cancellationToken);
     }
 
-    // Servis hesabı anahtarından (Firebase konsolu → Proje ayarları → Hizmet
-    // hesapları) token üretir. Kütüphane token'ı önbelleğe alır ve süresi
-    // dolmadan yeniler.
+    // Creates tokens from the service account key (Firebase console → Project
+    // settings → Service accounts). The library caches the token and renews it
+    // before it expires.
     public sealed class GoogleFcmAccessTokenProvider : IFcmAccessTokenProvider
     {
         private const string Scope = "https://www.googleapis.com/auth/firebase.messaging";
@@ -25,8 +25,8 @@ namespace SineUyum.Api.Services.Push
 
         public GoogleFcmAccessTokenProvider(string serviceAccountJson)
         {
-            // Yalnızca servis hesabı anahtarı kabul edilir (genel FromJson,
-            // güvenilmeyen kimlik bilgisi türlerini de yüklediği için kullanılmaz).
+            // Only service account keys are accepted (the generic FromJson is not used
+            // because it also loads untrusted credential types).
             _credential = CredentialFactory.FromJson<ServiceAccountCredential>(serviceAccountJson)
                 .ToGoogleCredential()
                 .CreateScoped(Scope);
@@ -37,7 +37,7 @@ namespace SineUyum.Api.Services.Push
     }
 
     // FCM HTTP v1: https://firebase.google.com/docs/cloud-messaging/send-message
-    // iOS da FCM üzerinden gider (APNs anahtarı Firebase konsoluna yüklenir).
+    // iOS also goes through FCM (the APNs key is uploaded to the Firebase console).
     public sealed class FcmPushSender : IPushSender
     {
         public const string HttpClientName = "FCM";
@@ -72,7 +72,7 @@ namespace SineUyum.Api.Services.Push
                     token = deviceToken,
                     notification = new { title = message.Title, body = message.Body },
                     data = message.Data,
-                    // Doze modundaki Android cihazlara da gecikmeden ulaşsın.
+                    // Reaches Android devices in Doze mode without delay too.
                     android = new { priority = "high" },
                     apns = new { payload = new { aps = new { sound = "default" } } },
                 },
@@ -93,17 +93,17 @@ namespace SineUyum.Api.Services.Push
 
             var errorCode = await ReadFcmErrorCodeAsync(response, cancellationToken);
 
-            // Yalnızca UNREGISTERED kesin "token öldü" demektir. INVALID_ARGUMENT
-            // hem bozuk token hem de bizim yük hatamız olabilir; ikincisinde
-            // herkesin kaydını silmemek için kayıt korunup uyarı loglanır.
+            // Only UNREGISTERED reliably means "the token is dead". INVALID_ARGUMENT can
+            // be a broken token or a bug in our payload; in the latter case the row is
+            // kept and a warning logged so we do not delete everyone's registration.
             if (errorCode == "UNREGISTERED") return PushSendResult.InvalidToken;
 
-            _logger.LogWarning("FCM gönderimi başarısız: {Status} {ErrorCode}",
+            _logger.LogWarning("FCM send failed: {Status} {ErrorCode}",
                 (int)response.StatusCode, errorCode ?? "-");
             return PushSendResult.Failed;
         }
 
-        // Hata gövdesi: {"error":{"status":"NOT_FOUND","details":[{"@type":"...FcmError","errorCode":"UNREGISTERED"}]}}
+        // Error body: {"error":{"status":"NOT_FOUND","details":[{"@type":"...FcmError","errorCode":"UNREGISTERED"}]}}
         private static async Task<string?> ReadFcmErrorCodeAsync(HttpResponseMessage response, CancellationToken ct)
         {
             try

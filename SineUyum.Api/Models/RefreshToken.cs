@@ -2,9 +2,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SineUyum.Api.Models
 {
-    // Mobil istemcinin uzun süreli oturumu için kullanılan, sunucu tarafından
-    // iptal edilebilir yenileme anahtarı. Access token kısa ömürlü tutulur,
-    // süresi dolduğunda bu token ile yenisi alınır.
+    // A server-revocable refresh token for the mobile client's long-lived
+    // session. The access token is short-lived; when it expires a new one is
+    // obtained with this token.
     public class RefreshToken
     {
         [Key]
@@ -14,7 +14,7 @@ namespace SineUyum.Api.Models
         public string UserId { get; set; } = string.Empty;
         public AppUser User { get; set; } = null!;
 
-        // Token'ın kendisi veritabanında düz metin tutulmaz; SHA-256 özeti saklanır.
+        // The token itself is never stored in plain text; its SHA-256 hash is.
         [Required]
         [MaxLength(128)]
         public string TokenHash { get; set; } = string.Empty;
@@ -26,7 +26,7 @@ namespace SineUyum.Api.Models
 
         public DateTime? RevokedAt { get; set; }
 
-        // Hangi cihazdan açıldığı (mobil / web ayrımı ve oturum listesi için)
+        // Which device opened it (to tell mobile from web and for a session list)
         [MaxLength(200)]
         public string? DeviceInfo { get; set; }
 

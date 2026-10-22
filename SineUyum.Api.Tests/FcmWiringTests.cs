@@ -14,18 +14,18 @@ using static SineUyum.Api.Tests.PushTestSupport;
 
 namespace SineUyum.Api.Tests;
 
-// B7: gerçek Program.cs kurulumunu uçtan uca sınar — Firebase projesi
-// olmadan. Test için üretilen bir RSA anahtarıyla servis hesabı JSON'u
-// hazırlanır; token_uri yerel bir dinleyiciye işaret eder. Böylece:
-//   * Google kütüphanesinin anahtarla imzaladığı OAuth JWT'si doğrulanır
-//     (imza, kapsam, hedef),
-//   * dönen erişim token'ının FCM isteğinde Bearer olarak kullanıldığı,
-//   * FCM HTTP v1 URL'si ve gövdesi,
-//   * UNREGISTERED yanıtında kaydın silindiği sınanır.
+// B7: exercises the real Program.cs setup end to end — without a Firebase
+// project. A service account JSON is built with an RSA key generated for the
+// test; token_uri points to a local listener. This checks:
+//   * the OAuth JWT signed by Google's library with the key (signature,
+//     scope, audience),
+//   * that the returned access token is used as Bearer in the FCM request,
+//   * the FCM HTTP v1 URL and body,
+//   * that the row is deleted on an UNREGISTERED response.
 public class FcmWiringTests : IClassFixture<FcmWiringTests.Factory>
 {
-    private const string ProjectId = "sineuyum-test-projesi";
-    private const string IssuedAccessToken = "ya29.test-erisim-tokeni";
+    private const string ProjectId = "sineuyum-test-project";
+    private const string IssuedAccessToken = "ya29.test-access-token";
 
     private readonly Factory _factory;
 
@@ -33,7 +33,7 @@ public class FcmWiringTests : IClassFixture<FcmWiringTests.Factory>
 
     public record FcmCall(string Url, string? Authorization, JsonElement Body);
 
-    // FCM'i taklit eder; "dead-" ile başlayan token'lar için UNREGISTERED döner.
+    // Imitates FCM; returns UNREGISTERED for tokens starting with "dead-".
     private sealed class FakeFcm(ConcurrentQueue<FcmCall> calls) : HttpMessageHandler
     {
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
@@ -71,7 +71,7 @@ public class FcmWiringTests : IClassFixture<FcmWiringTests.Factory>
 
         public Factory()
         {
-            // Boş bir port bul ve Google OAuth token ucunu taklit et.
+            // Find a free port and imitate the Google OAuth token endpoint.
             var port = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
             port.Start();
             var p = ((IPEndPoint)port.LocalEndpoint).Port;
@@ -119,8 +119,8 @@ public class FcmWiringTests : IClassFixture<FcmWiringTests.Factory>
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             base.ConfigureWebHost(builder);
-            // Ortam değişkeni yerine host ayarı: paralel koşan diğer test
-            // sınıflarının uygulamasını etkilemesin.
+            // A host setting rather than an environment variable, so the apps of other
+            // test classes running in parallel are not affected.
             builder.UseSetting("FCM_SERVICE_ACCOUNT_JSON", ServiceAccountJson());
             builder.ConfigureServices(services =>
                 services.AddHttpClient(FcmPushSender.HttpClientName)
@@ -131,7 +131,7 @@ public class FcmWiringTests : IClassFixture<FcmWiringTests.Factory>
 
         protected override void Dispose(bool disposing)
         {
-            // WebApplicationFactory, Dispose → DisposeAsync → Dispose zinciriyle iki kez çağırır.
+            // WebApplicationFactory calls it twice through Dispose → DisposeAsync → Dispose.
             if (disposing && !_disposed)
             {
                 _disposed = true;
@@ -144,7 +144,7 @@ public class FcmWiringTests : IClassFixture<FcmWiringTests.Factory>
     }
 
     [Fact]
-    public async Task ServisHesabiyla_OAuthVeFcmIstegiDogru()
+    public async Task WithServiceAccount_OAuthAndFcmRequestAreCorrect()
     {
         var client = _factory.CreateClient();
         var sender = await RegisterAsync(client, "fs_");
@@ -153,39 +153,39 @@ public class FcmWiringTests : IClassFixture<FcmWiringTests.Factory>
         await RegisterDeviceAsync(client, recipient, deviceToken, "ios");
 
         var res = await client.SendAsync(Authed(HttpMethod.Post, "/api/v1/messages", sender.Token,
-            new { recipientId = recipient.UserId, content = "selam" }));
+            new { recipientId = recipient.UserId, content = "hi" }));
         res.EnsureSuccessStatusCode();
 
         await Eventually(() => _factory.FcmCalls.Any(c => c.Body.GetProperty("message").GetProperty("token").GetString() == deviceToken),
-            "FCM'e istek");
+            "request to FCM");
         var call = _factory.FcmCalls.First(c => c.Body.GetProperty("message").GetProperty("token").GetString() == deviceToken);
 
-        // FCM HTTP v1 ucu ve OAuth'tan alınan token.
+        // The FCM HTTP v1 endpoint and the token from OAuth.
         Assert.Equal($"https://fcm.googleapis.com/v1/projects/{ProjectId}/messages:send", call.Url);
         Assert.Equal($"Bearer {IssuedAccessToken}", call.Authorization);
 
         var message = call.Body.GetProperty("message");
         Assert.Equal("SineUyum", message.GetProperty("notification").GetProperty("title").GetString());
-        Assert.Contains("size bir mesaj gönderdi", message.GetProperty("notification").GetProperty("body").GetString());
+        Assert.Contains("sent you a message", message.GetProperty("notification").GetProperty("body").GetString());
         Assert.Equal($"/messages/{sender.UserId}", message.GetProperty("data").GetProperty("relatedUrl").GetString());
         Assert.Equal("high", message.GetProperty("android").GetProperty("priority").GetString());
         Assert.Equal("default", message.GetProperty("apns").GetProperty("payload").GetProperty("aps").GetProperty("sound").GetString());
-        // FCM data değerleri string olmalı.
+        // FCM data values must be strings.
         foreach (var field in message.GetProperty("data").EnumerateObject())
         {
             Assert.Equal(JsonValueKind.String, field.Value.ValueKind);
         }
 
-        // Google kütüphanesinin gönderdiği JWT, servis hesabının anahtarıyla
-        // imzalanmış ve FCM kapsamını istiyor olmalı.
+        // The JWT sent by Google's library must be signed with the service account's
+        // key and ask for the FCM scope.
         var assertion = Assert.Single(_factory.OAuthAssertions);
         var handler = new JwtSecurityTokenHandler();
         handler.ValidateToken(assertion, new TokenValidationParameters
         {
             IssuerSigningKey = new RsaSecurityKey(_factory.Key.ExportParameters(false)),
             ValidIssuer = $"firebase-adminsdk@{ProjectId}.iam.gserviceaccount.com",
-            // Kütüphane, token_uri farklı olsa da aud olarak Google'ın gerçek
-            // token ucunu yazar (Google'ın beklediği budur).
+            // Even with a different token_uri the library writes Google's real token
+            // endpoint as aud (that is what Google expects).
             ValidAudience = "https://oauth2.googleapis.com/token",
         }, out var validated);
         var jwt = (JwtSecurityToken)validated;
@@ -193,7 +193,7 @@ public class FcmWiringTests : IClassFixture<FcmWiringTests.Factory>
     }
 
     [Fact]
-    public async Task FcmUnregistered_KayitSilinir()
+    public async Task FcmUnregistered_RowIsDeleted()
     {
         var client = _factory.CreateClient();
         var sender = await RegisterAsync(client, "fs_");
@@ -202,7 +202,7 @@ public class FcmWiringTests : IClassFixture<FcmWiringTests.Factory>
         await RegisterDeviceAsync(client, recipient, deadToken);
 
         var res = await client.SendAsync(Authed(HttpMethod.Post, "/api/v1/messages", sender.Token,
-            new { recipientId = recipient.UserId, content = "selam" }));
+            new { recipientId = recipient.UserId, content = "hi" }));
         res.EnsureSuccessStatusCode();
 
         async Task<bool> ExistsAsync()
@@ -214,6 +214,6 @@ public class FcmWiringTests : IClassFixture<FcmWiringTests.Factory>
 
         var deadline = DateTime.UtcNow.AddSeconds(5);
         while (await ExistsAsync() && DateTime.UtcNow < deadline) await Task.Delay(25);
-        Assert.False(await ExistsAsync(), "UNREGISTERED dönen token silinmeliydi.");
+        Assert.False(await ExistsAsync(), "The token answered with UNREGISTERED should have been deleted.");
     }
 }

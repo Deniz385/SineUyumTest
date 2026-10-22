@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
 using SineUyum.Api.Exceptions;
@@ -16,10 +17,12 @@ namespace SineUyum.Api.Controllers
     public class EventController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IStringLocalizer _t;
 
-        public EventController(ApplicationDbContext context)
+        public EventController(ApplicationDbContext context, IStringLocalizer localizer)
         {
             _context = context;
+            _t = localizer;
         }
 
         [HttpGet("my-status")]
@@ -68,7 +71,7 @@ namespace SineUyum.Api.Controllers
                     .Select(s => new MovieSummaryDto { Id = s.Movie.Id, Title = s.Movie.Title, PosterPath = s.Movie.PosterPath })
                     .ToListAsync();
 
-                // Geriye dönük uyumluluk: eski istemciler için aynı sırayla "1,2,3".
+                // Backward compatibility: "1,2,3" in the same order for old clients.
                 groupMember.Group.SuggestedMovieIds = string.Join(",", suggestedMovies.Select(m => m.Id));
                 
                 return Ok(new EventStatusDto
@@ -110,7 +113,7 @@ namespace SineUyum.Api.Controllers
                 });
             }
             
-            return Ok(new EventStatusDto { Status = "NONE", Message = "Katılabileceğin yeni bir etkinlik bulunmuyor." });
+            return Ok(new EventStatusDto { Status = "NONE", Message = _t["events.noUpcoming"] });
         }
         
         [HttpPost("vote")]
@@ -123,17 +126,17 @@ namespace SineUyum.Api.Controllers
             var groupMember = await _context.EventGroupMembers.AnyAsync(gm => gm.EventGroupId == voteDto.GroupId && gm.UserId == userId);
             if (!groupMember)
             {
-                // Forbid("...") metni kimlik doğrulama şeması sanıp 500 veriyordu.
-                throw new DomainException("Bu grupta oy kullanma yetkiniz yok.", StatusCodes.Status403Forbidden);
+                // Forbid("...") took the text for an authentication scheme and returned 500.
+                throw new DomainException("events.notGroupMember", StatusCodes.Status403Forbidden);
             }
 
-            // Yalnızca gruba önerilen filmlere oy verilebilir. Önceden herhangi
-            // bir id kabul ediliyordu (olmayan filmde FK hatasıyla 500).
+            // Only the group's suggested movies can be voted for. Any id used to
+            // be accepted (a missing movie gave a 500 via the FK error).
             var isSuggested = await _context.EventGroupSuggestions
                 .AnyAsync(s => s.EventGroupId == voteDto.GroupId && s.MovieId == voteDto.MovieId);
             if (!isSuggested)
             {
-                return BadRequest(new StatusMessageDto("Bu film grubun önerileri arasında değil."));
+                return BadRequest(new StatusMessageDto(_t["events.movieNotSuggested"]));
             }
 
             var existingVote = await _context.EventVotes.FirstOrDefaultAsync(v => v.EventGroupId == voteDto.GroupId && v.UserId == userId);
@@ -161,7 +164,7 @@ namespace SineUyum.Api.Controllers
             }
 
             await _context.SaveChangesAsync();
-            return Ok(new StatusMessageDto("Oyunuz başarıyla kaydedildi."));
+            return Ok(new StatusMessageDto(_t["events.voteSaved"]));
         }
         
         [HttpPost]
@@ -213,20 +216,19 @@ namespace SineUyum.Api.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
 
-            // G13: önceden etkinliğin varlığı ve tarihi kontrol edilmiyordu;
-            // olmayan id yabancı anahtar hatasıyla 500, geçmiş etkinliğe
-            // katılım ise başarılı oluyordu.
+            // G13: the event's existence and date were not checked; a missing id
+            // gave a 500 via the foreign key error and joining a past event succeeded.
             var cinemaEvent = await _context.CinemaEvents.FindAsync(eventId);
-            if (cinemaEvent == null) return NotFound(new StatusMessageDto("Etkinlik bulunamadı."));
+            if (cinemaEvent == null) return NotFound(new StatusMessageDto(_t["errors.eventNotFound"]));
             if (cinemaEvent.EventDate < DateTime.UtcNow)
             {
-                return BadRequest(new StatusMessageDto("Bu etkinliğin tarihi geçmiş."));
+                return BadRequest(new StatusMessageDto(_t["events.eventPassed"]));
             }
 
             var alreadyJoined = await _context.EventParticipants.AnyAsync(p => p.UserId == userId && p.CinemaEvent.EventDate >= DateTime.UtcNow);
             if(alreadyJoined)
             {
-                return BadRequest(new StatusMessageDto("Zaten yaklaşan bir etkinlik için bekleme listesindesiniz."));
+                return BadRequest(new StatusMessageDto(_t["events.alreadyWaiting"]));
             }
 
             var participant = new EventParticipant
@@ -237,7 +239,7 @@ namespace SineUyum.Api.Controllers
             await _context.EventParticipants.AddAsync(participant);
             await _context.SaveChangesAsync();
 
-            return Ok(new StatusMessageDto("Etkinliğe başarıyla katıldınız! Eşleştirme için beklemede kalın."));
+            return Ok(new StatusMessageDto(_t["events.joined"]));
         }
         
         [HttpPut("{eventId}")]
@@ -245,14 +247,14 @@ namespace SineUyum.Api.Controllers
         public async Task<ActionResult<StatusMessageDto>> UpdateEvent(int eventId, [FromBody] CreateEventDto updateDto)
         {
             var cinemaEvent = await _context.CinemaEvents.FindAsync(eventId);
-            if (cinemaEvent == null) return NotFound("Güncellenecek etkinlik bulunamadı.");
+            if (cinemaEvent == null) return NotFound(_t["events.updateNotFound"].Value);
             
             cinemaEvent.LocationName = updateDto.LocationName;
             cinemaEvent.Address = updateDto.Address;
             cinemaEvent.EventDate = updateDto.EventDate;
             cinemaEvent.GroupSize = updateDto.GroupSize;
             await _context.SaveChangesAsync();
-            return Ok(new StatusMessageDto("Etkinlik başarıyla güncellendi."));
+            return Ok(new StatusMessageDto(_t["events.updated"]));
         }
 
         [HttpDelete("{eventId}")]
@@ -260,11 +262,11 @@ namespace SineUyum.Api.Controllers
         public async Task<ActionResult<StatusMessageDto>> DeleteEvent(int eventId)
         {
             var cinemaEvent = await _context.CinemaEvents.FindAsync(eventId);
-            if (cinemaEvent == null) return NotFound("Silinecek etkinlik bulunamadı.");
+            if (cinemaEvent == null) return NotFound(_t["events.deleteNotFound"].Value);
             
             _context.CinemaEvents.Remove(cinemaEvent);
             await _context.SaveChangesAsync();
-            return Ok(new StatusMessageDto("Etkinlik başarıyla silindi."));
+            return Ok(new StatusMessageDto(_t["events.deleted"]));
         }
     }
 }

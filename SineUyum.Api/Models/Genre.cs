@@ -7,13 +7,13 @@ namespace SineUyum.Api.Models
     public class Genre
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.None)] // ID'yi biz vereceğiz (TMDb'den gelen)
+        [DatabaseGenerated(DatabaseGeneratedOption.None)] // We assign the id ourselves (it comes from TMDb)
         public int Id { get; set; }
 
         [Required]
         public string Name { get; set; } = string.Empty;
 
-        // Bir türün birden çok filmi olabilir (MovieGenre ara tablosu üzerinden)
+        // A genre can have many movies (through the MovieGenre join table)
         public ICollection<MovieGenre> MovieGenres { get; set; } = new List<MovieGenre>();
     }
 }

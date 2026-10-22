@@ -8,8 +8,8 @@ using SineUyum.Api.Models;
 
 namespace SineUyum.Api.Tests;
 
-// Ortak izleme listeleri: davet, kabul, birlikte düzenleme, "kim izledi",
-// yetkiler ve engel.
+// Shared watchlists: invitations, accepting, editing together, "who watched",
+// permissions and blocks.
 public class SharedWatchlistTests : IClassFixture<TestWebAppFactory>
 {
     private readonly TestWebAppFactory _factory;
@@ -26,8 +26,8 @@ public class SharedWatchlistTests : IClassFixture<TestWebAppFactory>
     private async Task<Session> RegisterAsync()
     {
         var username = "wl_" + Guid.NewGuid().ToString("N")[..10];
-        await _client.PostAsJsonAsync("/api/v1/account/register", new { username, email = $"{username}@t.com", password = "Sifre123" });
-        var login = await _client.PostAsJsonAsync("/api/v1/account/login", new { username, password = "Sifre123" });
+        await _client.PostAsJsonAsync("/api/v1/account/register", new { username, email = $"{username}@t.com", password = "Password123" });
+        var login = await _client.PostAsJsonAsync("/api/v1/account/login", new { username, password = "Password123" });
         using var doc = JsonDocument.Parse(await login.Content.ReadAsStringAsync());
         return new Session(doc.RootElement.GetProperty("token").GetString()!, doc.RootElement.GetProperty("user").GetProperty("id").GetString()!, username);
     }
@@ -53,12 +53,12 @@ public class SharedWatchlistTests : IClassFixture<TestWebAppFactory>
         var id = Interlocked.Increment(ref _nextMovie);
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        db.Movies.Add(new Movie { Id = id, Title = $"Film {id}" });
+        db.Movies.Add(new Movie { Id = id, Title = $"Movie {id}" });
         await db.SaveChangesAsync();
         return id;
     }
 
-    private async Task<int> CreateListAsync(Session owner, string name = "Hafta sonu")
+    private async Task<int> CreateListAsync(Session owner, string name = "Weekend")
     {
         var res = await SendAsync(HttpMethod.Post, "/api/v1/watchlist", owner, new { name });
         return (await JsonAsync(res)).GetProperty("id").GetInt32();
@@ -75,7 +75,7 @@ public class SharedWatchlistTests : IClassFixture<TestWebAppFactory>
             .EnumerateArray().Select(n => n.GetProperty("message").GetString()!).ToList();
 
     [Fact]
-    public async Task Davet_KabulEdilinceBirlikteDuzenlenir()
+    public async Task Invite_AcceptedMemberCanCoEdit()
     {
         var owner = await RegisterAsync();
         var friend = await RegisterAsync();
@@ -85,9 +85,9 @@ public class SharedWatchlistTests : IClassFixture<TestWebAppFactory>
         Assert.Equal(HttpStatusCode.OK, (await AddMovieAsync(owner, listId, m1)).StatusCode);
 
         Assert.Equal(HttpStatusCode.OK, (await InviteAsync(owner, listId, friend)).StatusCode);
-        Assert.Contains(await NotificationsAsync(friend), n => n.Contains("ortak izleme listesine davet etti"));
+        Assert.Contains(await NotificationsAsync(friend), n => n.Contains("invited you to the shared watchlist"));
 
-        // Kabul etmeden göremez ve düzenleyemez.
+        // Before accepting they can neither see nor edit it.
         Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(HttpMethod.Get, $"/api/v1/watchlist/{listId}", friend)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await AddMovieAsync(friend, listId, m2)).StatusCode);
         Assert.Empty((await JsonAsync(await SendAsync(HttpMethod.Get, "/api/v1/watchlist", friend))).EnumerateArray());
@@ -97,7 +97,7 @@ public class SharedWatchlistTests : IClassFixture<TestWebAppFactory>
         Assert.Equal(owner.UserName, invitation.GetProperty("owner").GetProperty("userName").GetString());
 
         Assert.Equal(HttpStatusCode.OK, (await SendAsync(HttpMethod.Post, $"/api/v1/watchlist/{listId}/accept", friend)).StatusCode);
-        Assert.Contains(await NotificationsAsync(owner), n => n.Contains("listesine katıldı"));
+        Assert.Contains(await NotificationsAsync(owner), n => n.Contains("joined your list"));
         Assert.Empty((await JsonAsync(await SendAsync(HttpMethod.Get, "/api/v1/watchlist/invitations", friend))).EnumerateArray());
 
         var mine = Assert.Single((await JsonAsync(await SendAsync(HttpMethod.Get, "/api/v1/watchlist", friend))).EnumerateArray());
@@ -106,7 +106,7 @@ public class SharedWatchlistTests : IClassFixture<TestWebAppFactory>
         Assert.Equal(2, mine.GetProperty("memberCount").GetInt32());
         Assert.Equal(owner.UserName, mine.GetProperty("ownerUsername").GetString());
 
-        // Üye film ekler; ekleyen görünür. Sahip de listeyi ortak olarak görür.
+        // The member adds a movie; the adder is shown. The owner sees the list as shared too.
         Assert.Equal(HttpStatusCode.OK, (await AddMovieAsync(friend, listId, m2)).StatusCode);
         var detail = await JsonAsync(await SendAsync(HttpMethod.Get, $"/api/v1/watchlist/{listId}", owner));
         var added = detail.GetProperty("items").EnumerateArray().Single(i => i.GetProperty("movieId").GetInt32() == m2);
@@ -114,13 +114,13 @@ public class SharedWatchlistTests : IClassFixture<TestWebAppFactory>
         Assert.Equal(friend.Id, Assert.Single(detail.GetProperty("members").EnumerateArray()).GetProperty("user").GetProperty("id").GetString());
         Assert.True((await JsonAsync(await SendAsync(HttpMethod.Get, "/api/v1/watchlist", owner)))[0].GetProperty("isShared").GetBoolean());
 
-        // Üye film çıkarabilir; aynı film iki kez eklenemez.
+        // A member can remove movies; the same movie cannot be added twice.
         Assert.Equal(HttpStatusCode.BadRequest, (await AddMovieAsync(owner, listId, m2)).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await SendAsync(HttpMethod.Delete, $"/api/v1/watchlist/{listId}/movies/{m1}", friend)).StatusCode);
     }
 
     [Fact]
-    public async Task KimIzledi_ListeKisilerininPuanlarindan()
+    public async Task WhoWatched_FromRatingsOfListPeople()
     {
         var owner = await RegisterAsync();
         var friend = await RegisterAsync();
@@ -145,12 +145,12 @@ public class SharedWatchlistTests : IClassFixture<TestWebAppFactory>
 
         Assert.Equal(new[] { owner.UserName, friend.UserName }.OrderBy(n => n), items[both]);
         Assert.Equal([friend.UserName], items[onlyFriend]);
-        // Liste dışından birinin izlemesi sayılmaz.
+        // Someone outside the list watching it does not count.
         Assert.Empty(items[nobody]);
     }
 
     [Fact]
-    public async Task Yetkiler_SahipYonetir_UyeAyrilabilir()
+    public async Task Permissions_OwnerManages_MemberCanLeave()
     {
         var owner = await RegisterAsync();
         var member = await RegisterAsync();
@@ -161,21 +161,21 @@ public class SharedWatchlistTests : IClassFixture<TestWebAppFactory>
         await SendAsync(HttpMethod.Post, $"/api/v1/watchlist/{listId}/accept", member);
         await InviteAsync(owner, listId, pending);
 
-        // Bekleyen davet yalnızca sahibe görünür.
+        // A pending invitation is only visible to the owner.
         Assert.Equal(2, (await JsonAsync(await SendAsync(HttpMethod.Get, $"/api/v1/watchlist/{listId}", owner))).GetProperty("members").GetArrayLength());
         Assert.Single((await JsonAsync(await SendAsync(HttpMethod.Get, $"/api/v1/watchlist/{listId}", member))).GetProperty("members").EnumerateArray());
 
-        // Üye listeyi yeniden adlandıramaz, silemez, davet edemez.
+        // A member cannot rename, delete or invite.
         Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(HttpMethod.Put, $"/api/v1/watchlist/{listId}", member, new { name = "x" })).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(HttpMethod.Delete, $"/api/v1/watchlist/{listId}", member)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await InviteAsync(member, listId, stranger)).StatusCode);
-        // Başkasını çıkaramaz.
+        // Nor remove someone else.
         Assert.Equal(HttpStatusCode.Forbidden, (await SendAsync(HttpMethod.Delete, $"/api/v1/watchlist/{listId}/members/{pending.Id}", member)).StatusCode);
 
         Assert.Equal(HttpStatusCode.Conflict, (await InviteAsync(owner, listId, member)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await InviteAsync(owner, listId, owner)).StatusCode);
 
-        // Davetli reddeder, üye ayrılır: erişim biter.
+        // The invitee declines, the member leaves: access ends.
         Assert.Equal(HttpStatusCode.OK, (await SendAsync(HttpMethod.Delete, $"/api/v1/watchlist/{listId}/members/{pending.Id}", pending)).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await SendAsync(HttpMethod.Delete, $"/api/v1/watchlist/{listId}/members/{member.Id}", member)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(HttpMethod.Get, $"/api/v1/watchlist/{listId}", member)).StatusCode);
@@ -183,7 +183,7 @@ public class SharedWatchlistTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task Engel_DaveteIzinVermez_UyeligiBitirir()
+    public async Task Block_PreventsInvitation_EndsMembership()
     {
         var owner = await RegisterAsync();
         var member = await RegisterAsync();
@@ -195,7 +195,7 @@ public class SharedWatchlistTests : IClassFixture<TestWebAppFactory>
         await SendAsync(HttpMethod.Post, $"/api/v1/blocks/{owner.Id}", blocker);
         Assert.Equal(HttpStatusCode.NotFound, (await InviteAsync(owner, listId, blocker)).StatusCode);
 
-        // Üye sahibi engelleyince ortak liste biter.
+        // When the member blocks the owner, the shared list ends.
         await SendAsync(HttpMethod.Post, $"/api/v1/blocks/{owner.Id}", member);
         Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(HttpMethod.Get, $"/api/v1/watchlist/{listId}", member)).StatusCode);
     }

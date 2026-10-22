@@ -7,26 +7,26 @@ namespace SineUyum.Api.Dtos
         public bool IsActive { get; set; }
         public DateTime? ExpiresAt { get; set; }
         public string? Provider { get; set; }
-        // false: iptal edildi, ExpiresAt'te sona erecek.
+        // false: canceled, ends at ExpiresAt.
         public bool WillRenew { get; set; }
-        // Sunucuda yapılandırılmış ödeme sağlayıcıları (boşsa satın alınamaz).
+        // Payment providers configured on the server (none: nothing can be bought).
         public List<string> AvailableProviders { get; set; } = new();
     }
 
     public class VerifyPurchaseDto
     {
-        [Required]
-        [MaxLength(32)]
+        [Required(ErrorMessage = "validation.required")]
+        [MaxLength(32, ErrorMessage = "validation.maxLength")]
         public string Provider { get; set; } = string.Empty;
 
-        [Required]
-        [MaxLength(4096)]
+        [Required(ErrorMessage = "validation.required")]
+        [MaxLength(4096, ErrorMessage = "validation.maxLength")]
         public string PurchaseToken { get; set; } = string.Empty;
     }
 
     public class GrantSubscriptionDto
     {
-        [Range(1, 366)]
+        [Range(1, 366, ErrorMessage = "validation.range")]
         public int Days { get; set; }
     }
 }

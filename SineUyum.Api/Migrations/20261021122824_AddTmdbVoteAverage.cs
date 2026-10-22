@@ -16,8 +16,8 @@ namespace SineUyum.Api.Migrations
                 type: "double precision",
                 nullable: true);
 
-            // Ortalama önceden saklanmıyordu: tüm filmler bir kez yeniden
-            // işlensin (GenreBackfillWorker; mevcut türler tekrar eklenmez).
+            // The average was not stored before: process every movie once more
+            // (GenreBackfillWorker; existing genres are not added again).
             migrationBuilder.Sql("UPDATE \"Movies\" SET \"GenresSyncedAt\" = NULL;");
         }
 

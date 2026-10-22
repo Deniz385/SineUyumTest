@@ -7,16 +7,16 @@ namespace SineUyum.Api.Services
     public class GenreBackfillOptions
     {
         public bool Enabled { get; set; } = true;
-        // Açılışta beklenir: sunucu ayağa kalkarken TMDb'ye yüklenilmesin.
+        // Wait at startup so TMDb is not hammered while the server comes up.
         public int InitialDelaySeconds { get; set; } = 60;
         public int IntervalMinutes { get; set; } = 30;
     }
 
-    // TMDb ortalaması da aynı istekten gelir ve saklanır.
-    // Tür bilgisi önceden hiç yazılmadığı için mevcut filmlerin türleri boştu;
-    // uyum açıklaması, film kimliği ve tür bazlı öneriler buna dayanır. Bu iş
-    // türü işlenmemiş filmleri küçük partilerle TMDb'den tamamlar (kota
-    // dostu). TMDb yapılandırılmamışsa hiçbir şey yapmaz.
+    // The TMDb average comes from the same request and is stored too.
+    // Genres were never written before, so existing movies had none; the
+    // compatibility explanation, film identity and genre-based recommendations
+    // depend on them. This job fills in genres of unprocessed movies from TMDb
+    // in small batches (quota friendly). It does nothing without TMDb configured.
     public sealed class GenreBackfillWorker : BackgroundService
     {
         private const int BatchSize = 40;
@@ -55,7 +55,7 @@ namespace SineUyum.Api.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Tür tamamlama partisi başarısız; sonra yeniden denenecek.");
+                    _logger.LogWarning(ex, "Genre backfill batch failed; will retry later.");
                 }
 
                 await Task.Delay(TimeSpan.FromMinutes(Math.Max(1, options.IntervalMinutes)), stoppingToken);
@@ -88,7 +88,7 @@ namespace SineUyum.Api.Services
                 }
                 catch (Exceptions.DomainException ex) when (ex.StatusCode == StatusCodes.Status404NotFound)
                 {
-                    // TMDb'de yok: işlenmiş say, bir daha sorma.
+                    // Not on TMDb: count it as processed and never ask again.
                     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                     await db.Movies.Where(m => m.Id == id)
                         .ExecuteUpdateAsync(s => s.SetProperty(m => m.GenresSyncedAt, DateTime.UtcNow), ct);
@@ -96,7 +96,7 @@ namespace SineUyum.Api.Services
                 await Task.Delay(BetweenCalls, ct);
             }
 
-            if (synced > 0) _logger.LogInformation("{Count} filmin türleri tamamlandı.", synced);
+            if (synced > 0) _logger.LogInformation("Filled in genres for {Count} movies.", synced);
             return synced;
         }
     }

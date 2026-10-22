@@ -7,8 +7,8 @@
     public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<AppUser>(options)
     {
         public DbSet<Movie> Movies { get; set; }
-        public DbSet<Genre> Genres { get; set; } // Yeni eklendi
-        public DbSet<MovieGenre> MovieGenres { get; set; } // Yeni eklendi
+        public DbSet<Genre> Genres { get; set; } // Newly added
+        public DbSet<MovieGenre> MovieGenres { get; set; } // Newly added
         public DbSet<UserRating> UserRatings { get; set; }
         public DbSet<Watchlist> Watchlists { get; set; }
         public DbSet<WatchlistItem> WatchlistItems { get; set; }
@@ -36,8 +36,8 @@
         {
             base.OnModelCreating(builder);
 
-            // Bir FCM token'ı tek kayda karşılık gelir (upsert bununla yapılır);
-            // kullanıcı silinince cihaz kayıtları da düşer.
+            // One FCM token maps to one row (upserts rely on it); a user's devices
+            // are removed when the user is deleted.
             builder.Entity<DeviceToken>()
                 .HasIndex(d => d.Token)
                 .IsUnique();
@@ -45,7 +45,7 @@
             builder.Entity<DeviceToken>()
                 .HasIndex(d => d.UserId);
 
-            // Bir sağlayıcı satın alması tek bir kayda (ve tek bir hesaba) bağlanır.
+            // A provider purchase maps to a single row (and a single account).
             builder.Entity<Subscription>()
                 .HasIndex(s => new { s.Provider, s.ProviderReference })
                 .IsUnique();
@@ -74,7 +74,11 @@
                 .HasConversion<string>()
                 .HasMaxLength(16);
 
-            // Bir çift için tek kayıt; "beni kim engelledi" sorgusu için ters indeks.
+            builder.Entity<AppUser>()
+                .Property(u => u.Language)
+                .HasMaxLength(8);
+
+            // One row per pair; a reverse index for "who blocked me".
             builder.Entity<UserBlock>()
                 .HasKey(b => new { b.BlockerId, b.BlockedId });
 
@@ -99,7 +103,7 @@
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Refresh token'lar hash'leriyle aranır; kullanıcı silinince düşer.
+            // Refresh tokens are looked up by hash; removed when the user is deleted.
             builder.Entity<RefreshToken>()
                 .HasIndex(t => t.TokenHash)
                 .IsUnique();
@@ -110,8 +114,8 @@
                 .HasForeignKey(t => t.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Bir film bir gruba bir kez önerilir; grup silinince öneriler de
-            // düşer. Film silinemez (oy/puan gibi geçmiş ona bağlı).
+            // A movie is suggested to a group once; suggestions go with the group.
+            // Movies cannot be deleted (history such as votes and ratings depends on them).
             builder.Entity<EventGroupSuggestion>()
                 .HasKey(s => new { s.EventGroupId, s.MovieId });
 
@@ -137,10 +141,14 @@
                 .HasMaxLength(500);
 
             builder.Entity<MatchingRun>()
+                .Property(r => r.ErrorKey)
+                .HasMaxLength(100);
+
+            builder.Entity<MatchingRun>()
                 .Property(r => r.RequestedBy)
                 .HasMaxLength(450);
 
-            // İşçi sıradaki işi, uç da etkinliğin son işini bununla bulur.
+            // The worker finds the next job, and the endpoint an event's latest job, with these.
             builder.Entity<MatchingRun>()
                 .HasIndex(r => new { r.Status, r.CreatedAt });
 
@@ -153,12 +161,12 @@
                 .HasForeignKey(r => r.CinemaEventId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Akış: takip edilenlerin etkinliği ActivityAt'e göre sayfalanır.
+            // Feed: followed users' activity is paged by ActivityAt.
             builder.Entity<UserRating>()
                 .HasIndex(r => new { r.UserId, r.ActivityAt });
 
-            // Kullanıcı ve film başına tek puan (önceden yalnızca kodda
-            // denetleniyordu; eşzamanlı iki istek çift kayıt açabiliyordu).
+            // One rating per user and movie (previously only checked in code;
+            // two concurrent requests could create duplicates).
             builder.Entity<UserRating>()
                 .HasIndex(r => new { r.UserId, r.MovieId })
                 .IsUnique();
@@ -236,7 +244,7 @@
             builder.Entity<WatchlistMember>()
                 .HasKey(m => new { m.WatchlistId, m.UserId });
 
-            // "Beni hangi listelere davet ettiler / üyesiyim" sorgusu için.
+            // For "which lists was I invited to / am I a member of".
             builder.Entity<WatchlistMember>()
                 .HasIndex(m => new { m.UserId, m.Accepted });
 
@@ -252,23 +260,23 @@
                 .HasForeignKey(m => m.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Ekleyen silinirse film listede kalır.
+            // If the user who added it is deleted, the movie stays in the list.
             builder.Entity<WatchlistItem>()
                 .HasOne(i => i.AddedBy)
                 .WithMany()
                 .HasForeignKey(i => i.AddedByUserId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Aynı film bir listede bir kez (önceden yalnızca kodda denetleniyordu).
+            // A movie is in a list once (previously only checked in code).
             builder.Entity<WatchlistItem>()
                 .HasIndex(i => new { i.WatchlistId, i.MovieId })
                 .IsUnique();
 
-            // MovieGenre için birleşik birincil anahtar (composite key) tanımlaması
+            // Composite primary key for MovieGenre
             builder.Entity<MovieGenre>()
                 .HasKey(mg => new { mg.MovieId, mg.GenreId });
 
-            // UserFollow ilişkileri için OnDelete davranışını Restrict olarak ayarlama
+            // Restrict OnDelete for the UserFollow relationships
             builder.Entity<UserFollow>()
                 .HasOne(uf => uf.Follower)
                 .WithMany()
@@ -281,7 +289,7 @@
                 .HasForeignKey(uf => uf.FollowingId)
                 .OnDelete(DeleteBehavior.Restrict);
                 
-            // Message ilişkileri için OnDelete davranışını Restrict olarak ayarlama
+            // Restrict OnDelete for the Message relationships
             builder.Entity<Message>()
                 .HasOne(m => m.Sender)
                 .WithMany()
@@ -294,7 +302,7 @@
                 .HasForeignKey(m => m.RecipientId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Bir Watchlist silindiğinde, Message'lardaki referansı null yapma kuralı
+            // When a Watchlist is deleted, the reference in Messages is set to null
             builder.Entity<Message>()
                 .HasOne(m => m.Watchlist)
                 .WithMany()

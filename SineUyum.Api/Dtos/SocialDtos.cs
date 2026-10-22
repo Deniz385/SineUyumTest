@@ -14,7 +14,7 @@ namespace SineUyum.Api.Dtos
         public int Id { get; set; }
         public MovieSummaryDto Movie { get; set; } = new();
         public UserBriefWithImageDto Author { get; set; } = new();
-        // Yazarın bu filme verdiği güncel puan.
+        // The author's current rating of this movie.
         public int? Rating { get; set; }
         public string Text { get; set; } = string.Empty;
         public bool ContainsSpoilers { get; set; }
@@ -24,16 +24,16 @@ namespace SineUyum.Api.Dtos
         public int CommentCount { get; set; }
         public bool LikedByMe { get; set; }
         public bool IsMine { get; set; }
-        // Görüntüleyenle yazarın uyumu (0-100); ortak film yoksa ya da kendi
-        // incelemesiyse null.
+        // Compatibility between the viewer and the author (0-100); null without
+        // common movies or for the viewer's own review.
         public double? AuthorCompatibility { get; set; }
     }
 
     // PUT /api/v1/reviews/movie/{movieId}
     public class UpsertReviewDto
     {
-        [Required(ErrorMessage = "İnceleme metni boş olamaz.")]
-        [StringLength(2000, MinimumLength = 1, ErrorMessage = "İnceleme 1-2000 karakter olmalı.")]
+        [Required(ErrorMessage = "reviews.textRequired")]
+        [StringLength(2000, MinimumLength = 1, ErrorMessage = "reviews.textLength")]
         public string Text { get; set; } = string.Empty;
         public bool ContainsSpoilers { get; set; }
     }
@@ -45,16 +45,16 @@ namespace SineUyum.Api.Dtos
         public ReviewDto? Mine { get; set; }
         public List<ReviewDto> Reviews { get; set; } = new();
         public int TotalCount { get; set; }
-        // Sana uyumlu kişilere göre puan; yeterli veri yoksa null.
+        // Score based on people compatible with you; null without enough data.
         public ForYouScoreDto? ForYou { get; set; }
     }
 
     public class ForYouScoreDto
     {
         public double Score { get; set; }
-        // Hesaba katılan uyumlu kişi sayısı.
+        // Number of compatible people taken into account.
         public int BasedOn { get; set; }
-        // En uyumlu ilk üç kişi ve verdikleri puan.
+        // The three most compatible people and their ratings.
         public List<ForYouRaterDto> TopMatches { get; set; } = new();
     }
 
@@ -71,14 +71,14 @@ namespace SineUyum.Api.Dtos
         public UserBriefWithImageDto Author { get; set; } = new();
         public string Text { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
-        // Yorumun ya da incelemenin sahibi silebilir.
+        // The owner of the comment or of the review can delete it.
         public bool CanDelete { get; set; }
     }
 
     public class CreateCommentDto
     {
-        [Required(ErrorMessage = "Yorum boş olamaz.")]
-        [StringLength(500, MinimumLength = 1, ErrorMessage = "Yorum 1-500 karakter olmalı.")]
+        [Required(ErrorMessage = "reviews.commentRequired")]
+        [StringLength(500, MinimumLength = 1, ErrorMessage = "reviews.commentLength")]
         public string Text { get; set; } = string.Empty;
     }
 
@@ -88,7 +88,7 @@ namespace SineUyum.Api.Dtos
         public int LikeCount { get; set; }
     }
 
-    // GET /api/v1/feed. Type: "Rated" (yalnızca puan) | "Reviewed" (inceleme).
+    // GET /api/v1/feed. Type: "Rated" (rating only) | "Reviewed" (review).
     public class FeedItemDto
     {
         public string Type { get; set; } = string.Empty;
@@ -103,14 +103,14 @@ namespace SineUyum.Api.Dtos
     public class FeedPageDto
     {
         public List<FeedItemDto> Items { get; set; } = new();
-        // Sonraki sayfa için ?cursor= değeri; son sayfada null.
+        // The ?cursor= value for the next page; null on the last page.
         public string? NextCursor { get; set; }
     }
 }
 
 namespace SineUyum.Api.Dtos
 {
-    // GET /api/v1/taste-twin — bu haftanın zevk ikizi (yoksa 204).
+    // GET /api/v1/taste-twin — this week's taste twin (204 if none).
     public class TasteTwinDto
     {
         public UserBriefWithImageDto User { get; set; } = new();

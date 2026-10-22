@@ -3,25 +3,25 @@ using SkiaSharp;
 
 namespace SineUyum.Api.Services.Media
 {
-    // Yüklenen profil fotoğrafını ASLA olduğu gibi saklamaz: çözer, EXIF
-    // yönüne göre döndürür, ortadan kare kırpar, 512x512 JPEG olarak YENİDEN
-    // kodlar. Böylece:
-    //   * EXIF/GPS konumu dahil tüm üst veri silinir (gizlilik),
-    //   * resim kılığındaki dosyalar (poliglot, HTML, betik) elenir; çıkan dosya
-    //     her zaman bizim ürettiğimiz temiz bir JPEG'dir,
-    //   * boyut ve biçim sabittir (istemcilerde tutarlı görünüm, küçük dosya).
+    // NEVER stores an uploaded profile photo as is: decodes it, rotates it by its
+    // EXIF orientation, crops a centered square and RE-ENCODES it as a 512x512
+    // JPEG. This way:
+    //   * all metadata including the EXIF/GPS location is removed (privacy),
+    //   * files disguised as images (polyglots, HTML, scripts) are dropped; the
+    //     output is always a clean JPEG we produced ourselves,
+    //   * size and format are fixed (consistent look in clients, small files).
     public static class AvatarImageProcessor
     {
         public const int OutputSize = 512;
         public const int JpegQuality = 85;
 
-        // Başlıktaki boyuta bakılır (piksel çözülmeden): 50000x50000 bildiren
-        // küçük bir dosya ("decompression bomb") gigabaytlarca bellek istemesin.
+        // The size in the header is checked (before decoding pixels): a small file
+        // declaring 50000x50000 ("decompression bomb") must not ask for gigabytes of memory.
         public const long MaxDeclaredPixels = 100_000_000;
 
-        // Asıl bellek sınırı, ölçekli çözümden SONRAKİ boyut üzerinden. JPEG
-        // 1/2..1/8 ölçekli çözülebildiği için 48 MP telefon fotoğrafları geçer;
-        // ölçeklenemeyen biçimlerde (PNG) çok büyük görseller reddedilir.
+        // The real memory limit applies to the size AFTER scaled decoding. JPEG
+        // can be decoded at 1/2..1/8 scale, so 48 MP phone photos pass; very large
+        // images in formats that cannot be scaled (PNG) are rejected.
         public const long MaxDecodedPixels = 25_000_000;
 
         private static readonly HashSet<SKEncodedImageFormat> Allowed = new()
@@ -35,12 +35,12 @@ namespace SineUyum.Api.Services.Media
         {
             using var data = SKData.CreateCopy(input);
             using var codec = SKCodec.Create(data)
-                ?? throw new DomainException("Dosya bir resim olarak okunamadı.", StatusCodes.Status415UnsupportedMediaType);
+                ?? throw new DomainException("profile.photoNotAnImage", StatusCodes.Status415UnsupportedMediaType);
 
             if (!Allowed.Contains(codec.EncodedFormat))
             {
                 throw new DomainException(
-                    "Desteklenmeyen resim biçimi. JPEG, PNG ya da WebP yükleyin.",
+                    "profile.photoUnsupportedFormat",
                     StatusCodes.Status415UnsupportedMediaType);
             }
 
@@ -48,25 +48,25 @@ namespace SineUyum.Api.Services.Media
             if (declared.Width <= 0 || declared.Height <= 0 ||
                 (long)declared.Width * declared.Height > MaxDeclaredPixels)
             {
-                throw new DomainException("Resmin boyutları çok büyük.");
+                throw new DomainException("profile.photoDimensionsTooLarge");
             }
 
-            // Kısa kenar çıktıya yetecek kadar küçültülerek çözülür (destekleyen
-            // biçimlerde). Codec desteklemediği oranı en yakın desteklenene yuvarlar.
+            // Decoded shrunk just enough for the short side to fit the output (in formats
+            // that support it). The codec rounds an unsupported ratio to the nearest supported one.
             var scale = Math.Min(1f, (float)OutputSize / Math.Min(declared.Width, declared.Height));
             var decodeSize = codec.GetScaledDimensions(scale);
             if ((long)decodeSize.Width * decodeSize.Height > MaxDecodedPixels)
             {
-                throw new DomainException("Resmin boyutları çok büyük.");
+                throw new DomainException("profile.photoDimensionsTooLarge");
             }
 
             var decodeInfo = new SKImageInfo(decodeSize.Width, decodeSize.Height, SKColorType.Rgba8888, SKAlphaType.Premul);
             using var decoded = new SKBitmap(decodeInfo);
             var result = codec.GetPixels(decodeInfo, decoded.GetPixels());
-            // IncompleteInput: kesik ama kısmen okunabilen dosya; okunan kısım kullanılır.
+            // IncompleteInput: a truncated but partly readable file; the part read is used.
             if (result != SKCodecResult.Success && result != SKCodecResult.IncompleteInput)
             {
-                throw new DomainException("Resim çözülemedi.", StatusCodes.Status415UnsupportedMediaType);
+                throw new DomainException("profile.photoDecodeFailed", StatusCodes.Status415UnsupportedMediaType);
             }
 
             using var oriented = ApplyOrigin(decoded, codec.EncodedOrigin);
@@ -82,7 +82,7 @@ namespace SineUyum.Api.Services.Media
             var info = new SKImageInfo(OutputSize, OutputSize, SKColorType.Rgba8888, SKAlphaType.Opaque);
             using var surface = SKSurface.Create(info);
             var canvas = surface.Canvas;
-            // JPEG'de saydamlık yok; saydam PNG'ler beyaz zemine oturur.
+            // JPEG has no transparency; transparent PNGs land on a white background.
             canvas.Clear(SKColors.White);
             using var image = SKImage.FromBitmap(source);
             canvas.DrawImage(image, src, dst, new SKSamplingOptions(SKCubicResampler.Mitchell));
@@ -92,16 +92,16 @@ namespace SineUyum.Api.Services.Media
             return encoded.ToArray();
         }
 
-        // EXIF yönü (telefon kameraları pikselleri döndürmeden yalnızca etiketler).
-        // Her yön, kaynak noktası (x, y) → hedef noktası eşlemesiyle verilir
-        // (w, h: kaynak boyutu):
-        //   TopRight (2)    yatay ayna      (w-x, y)
-        //   BottomRight (3) 180°            (w-x, h-y)
-        //   BottomLeft (4)  dikey ayna      (x, h-y)
-        //   LeftTop (5)     transpoze       (y, x)
-        //   RightTop (6)    saat yönü 90°   (h-y, x)
-        //   RightBottom (7) transvers       (h-y, w-x)
-        //   LeftBottom (8)  saat tersi 90°  (y, w-x)
+        // EXIF orientation (phone cameras only tag it, without rotating the pixels).
+        // Each orientation is given as a source point (x, y) → target point mapping
+        // (w, h: source size):
+        //   TopRight (2)    horizontal flip (w-x, y)
+        //   BottomRight (3) 180 degrees     (w-x, h-y)
+        //   BottomLeft (4)  vertical flip   (x, h-y)
+        //   LeftTop (5)     transpose       (y, x)
+        //   RightTop (6)    90 deg CW       (h-y, x)
+        //   RightBottom (7) transverse      (h-y, w-x)
+        //   LeftBottom (8)  90 deg CCW      (y, w-x)
         // SKMatrix: x' = sx*x + kx*y + tx ;  y' = ky*x + sy*y + ty
         internal static SKBitmap ApplyOrigin(SKBitmap bitmap, SKEncodedOrigin origin)
         {
@@ -115,7 +115,7 @@ namespace SineUyum.Api.Services.Media
                 SKEncodedOrigin.RightTop => Affine(0, -1, h, 1, 0, 0),
                 SKEncodedOrigin.RightBottom => Affine(0, -1, h, -1, 0, w),
                 SKEncodedOrigin.LeftBottom => Affine(0, 1, 0, -1, 0, w),
-                _ => null, // TopLeft: olduğu gibi
+                _ => null, // TopLeft: as is
             };
             if (matrix == null) return bitmap.Copy();
 
@@ -128,7 +128,7 @@ namespace SineUyum.Api.Services.Media
 
             using var canvas = new SKCanvas(result);
             canvas.SetMatrix(matrix.Value);
-            // 90°/ayna dönüşümleri piksel tam; en yakın komşu kayıpsızdır.
+            // 90-degree/flip transforms are pixel exact; nearest neighbour is lossless.
             using var image = SKImage.FromBitmap(bitmap);
             canvas.DrawImage(image, 0, 0, new SKSamplingOptions(SKFilterMode.Nearest));
             return result;

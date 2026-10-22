@@ -15,7 +15,7 @@ namespace SineUyum.Api.Migrations
                 table: "AspNetUsers",
                 type: "boolean",
                 nullable: false,
-                // Mevcut hesaplar bugünkü davranışla (okundu bilgisi açık) başlar.
+                // Existing accounts start with the current behaviour (read receipts on).
                 defaultValue: true);
         }
 

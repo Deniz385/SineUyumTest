@@ -1,7 +1,7 @@
 namespace SineUyum.Api.Services.Payments
 {
-    // Sağlayıcının sunucu tarafında DOĞRULADIĞI satın alma. İstemcinin
-    // "ödedim" demesi yetmez; sağlayıcının kendi API'sinden teyit edilir.
+    // A purchase VERIFIED by the provider on the server side. The client saying
+    // "I paid" is not enough; it is confirmed with the provider's own API.
     public record VerifiedPurchase(
         string Provider,
         string Reference,
@@ -16,27 +16,27 @@ namespace SineUyum.Api.Services.Payments
         Refunded,
     }
 
-    // Sağlayıcının webhook'u ile gelen durum değişikliği (yenileme, iptal, iade).
+    // A state change from the provider's webhook (renewal, cancellation, refund).
     public record SubscriptionEvent(
         string Provider,
         string Reference,
         SubscriptionEventKind Kind,
         DateTime? PeriodEnd);
 
-    // Bir ödeme sağlayıcısı (web: iyzico; mobil: App Store / Google Play).
-    // Gerçek sağlayıcılar bu arayüzle eklenir; hiçbiri yapılandırılmamışsa
-    // abonelik satın alınamaz (ücretsiz aktivasyon kaldırıldı).
+    // A payment provider (web: iyzico; mobile: App Store / Google Play).
+    // Real providers are added through this interface; if none is configured,
+    // subscriptions cannot be bought (free activation was removed).
     public interface IPaymentProvider
     {
-        // URL'de ve kayıtta kullanılan ad, ör. "iyzico".
+        // Name used in the URL and the stored row, e.g. "iyzico".
         string Name { get; }
 
-        // İstemcinin gönderdiği ödeme/makbuz belirtecini sağlayıcıyla doğrular.
-        // Geçersizse DomainException fırlatır.
+        // Verifies the payment/receipt token sent by the client with the provider.
+        // Throws DomainException if it is invalid.
         Task<VerifiedPurchase> VerifyAsync(string purchaseToken, string userId, CancellationToken cancellationToken);
 
-        // Webhook isteğini İMZASINI DOĞRULAYARAK çözer. İmza geçersizse
-        // DomainException(401); ilgilenilmeyen olaysa null.
+        // Parses the webhook request, VERIFYING ITS SIGNATURE. Invalid signature:
+        // DomainException(401); an event of no interest: null.
         Task<SubscriptionEvent?> ParseWebhookAsync(HttpRequest request, CancellationToken cancellationToken);
     }
 }

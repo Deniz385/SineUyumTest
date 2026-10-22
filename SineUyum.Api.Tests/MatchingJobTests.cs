@@ -8,15 +8,16 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SineUyum.Api.Data;
+using SineUyum.Api.Localization;
 using SineUyum.Api.Models;
 using SineUyum.Api.Services;
 
 namespace SineUyum.Api.Tests;
 
-// M7: eşleştirme istek yolunda değil arka plan işinde, tek transaction'da.
+// M7: matching runs in a background job, not in the request path, in a single transaction.
 public class MatchingJobTests : IClassFixture<MatchingJobTests.Factory>
 {
-    // TMDb "popüler filmler" sahtesi; FailFromCall'dan itibaren 500 döner.
+    // A TMDb "popular movies" fake; returns 500 from FailFromCall on.
     public sealed class FakeTmdb : DelegatingHandler
     {
         private int _calls;
@@ -31,9 +32,9 @@ public class MatchingJobTests : IClassFixture<MatchingJobTests.Factory>
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError));
             }
             const string body = "{\"results\":[" +
-                "{\"id\":940001,\"title\":\"Popüler 1\",\"poster_path\":\"/p1.jpg\"}," +
-                "{\"id\":940002,\"title\":\"Popüler 2\",\"poster_path\":\"/p2.jpg\"}," +
-                "{\"id\":940003,\"title\":\"Popüler 3\",\"poster_path\":\"/p3.jpg\"}]}";
+                "{\"id\":940001,\"title\":\"Popular 1\",\"poster_path\":\"/p1.jpg\"}," +
+                "{\"id\":940002,\"title\":\"Popular 2\",\"poster_path\":\"/p2.jpg\"}," +
+                "{\"id\":940003,\"title\":\"Popular 3\",\"poster_path\":\"/p3.jpg\"}]}";
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(body, Encoding.UTF8, "application/json")
@@ -76,19 +77,20 @@ public class MatchingJobTests : IClassFixture<MatchingJobTests.Factory>
         return doc.RootElement.GetProperty("token").GetString()!;
     }
 
-    private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, string token)
+    private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, string token, string? language = null)
     {
         var req = new HttpRequestMessage(method, url);
         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        if (language != null) req.Headers.AcceptLanguage.ParseAdd(language);
         return await _client.SendAsync(req);
     }
 
-    // Puansız katılımcılar: her grubun önerisi TMDb'den gelir.
+    // Participants without ratings: every group's suggestion comes from TMDb.
     private async Task<(int EventId, string Location, List<string> UserIds)> SeedEventAsync(int participants, int groupSize = 2)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var location = "Salon " + Guid.NewGuid().ToString("N")[..8];
+        var location = "Hall " + Guid.NewGuid().ToString("N")[..8];
         var ev = new CinemaEvent { EventDate = DateTime.UtcNow.AddDays(4), LocationName = location, GroupSize = groupSize };
         db.CinemaEvents.Add(ev);
         var userIds = new List<string>();
@@ -117,7 +119,7 @@ public class MatchingJobTests : IClassFixture<MatchingJobTests.Factory>
             }
             await Task.Delay(100);
         }
-        throw new TimeoutException("Eşleştirme işi 15 saniyede bitmedi.");
+        throw new TimeoutException("The matching job did not finish in 15 seconds.");
     }
 
     private async Task<(int Groups, int Notifications)> CountAsync(int eventId, string location)
@@ -130,7 +132,7 @@ public class MatchingJobTests : IClassFixture<MatchingJobTests.Factory>
     }
 
     [Fact]
-    public async Task Istek_HemenKabulEdilir_IsArkaplandaTamamlanir()
+    public async Task Request_AcceptedImmediately_JobCompletesInBackground()
     {
         var admin = await AdminTokenAsync();
         var (eventId, location, users) = await SeedEventAsync(participants: 3);
@@ -147,7 +149,13 @@ public class MatchingJobTests : IClassFixture<MatchingJobTests.Factory>
         Assert.Equal("Succeeded", done.GetProperty("status").GetString());
         Assert.Equal(1, done.GetProperty("groupCount").GetInt32());
         Assert.Equal(1, done.GetProperty("ungroupedCount").GetInt32());
-        Assert.Equal("1 grup oluşturuldu; 1 kişi gruba alınamadı.", done.GetProperty("message").GetString());
+        Assert.Equal("Groups created: 1; participants left without a group: 1.", done.GetProperty("message").GetString());
+
+        // The same run read in Turkish.
+        using (var tr = JsonDocument.Parse(await (await SendAsync(HttpMethod.Get, $"/api/v1/admin/events/{eventId}/matching", admin, "tr")).Content.ReadAsStringAsync()))
+        {
+            Assert.Equal("1 grup oluşturuldu; 1 kişi gruba alınamadı.", tr.RootElement.GetProperty("message").GetString());
+        }
 
         var (groups, notifications) = await CountAsync(eventId, location);
         Assert.Equal(1, groups);
@@ -155,13 +163,13 @@ public class MatchingJobTests : IClassFixture<MatchingJobTests.Factory>
     }
 
     [Fact]
-    public async Task OrtadaHata_HicbirGrupKalmaz_YenidenDenemeCalisir()
+    public async Task FailureMidway_LeavesNoGroups_RetryWorks()
     {
         var admin = await AdminTokenAsync();
         var (eventId, location, _) = await SeedEventAsync(participants: 4);
 
-        // İlk grubun önerisi gelir, ikincisinde TMDb düşer. Eski kodda ilk grup
-        // ve bildirimleri kalıcı oluyor, yeniden deneme de reddediliyordu.
+        // The first group's suggestion arrives, TMDb fails for the second. The
+        // old code kept the first group and its notifications, and rejected a retry.
         _factory.Tmdb.FailFromCall = _factory.Tmdb.Calls + 2;
         try
         {
@@ -170,7 +178,7 @@ public class MatchingJobTests : IClassFixture<MatchingJobTests.Factory>
             var failed = await WaitForFinishAsync(eventId, admin);
 
             Assert.Equal("Failed", failed.GetProperty("status").GetString());
-            Assert.Equal(MatchingWorker.UnexpectedError, failed.GetProperty("error").GetString());
+            Assert.Equal(LocaleCatalog.Shared.Translate("en", MatchingWorker.UnexpectedErrorKey), failed.GetProperty("error").GetString());
             Assert.DoesNotContain("Exception", failed.GetRawText());
             Assert.Equal((0, 0), await CountAsync(eventId, location));
         }
@@ -187,29 +195,39 @@ public class MatchingJobTests : IClassFixture<MatchingJobTests.Factory>
     }
 
     [Fact]
-    public async Task OnKontrolHatalari_HemenDoner_IsOlusmaz()
+    public async Task PreCheckErrors_ReturnImmediately_NoJobCreated()
     {
         var admin = await AdminTokenAsync();
         var (eventId, _, _) = await SeedEventAsync(participants: 1);
 
         var res = await SendAsync(HttpMethod.Post, $"/api/v1/admin/events/{eventId}/create-groups", admin);
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
-        using var problem = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
-        Assert.StartsWith("Yeterli katılımcı olmadığı", problem.RootElement.GetProperty("title").GetString());
+        using (var problem = JsonDocument.Parse(await res.Content.ReadAsStringAsync()))
+        {
+            Assert.StartsWith("Groups could not be created because there are not enough participants",
+                problem.RootElement.GetProperty("title").GetString());
+        }
+
+        var trRes = await SendAsync(HttpMethod.Post, $"/api/v1/admin/events/{eventId}/create-groups", admin, "tr");
+        using (var trProblem = JsonDocument.Parse(await trRes.Content.ReadAsStringAsync()))
+        {
+            Assert.Equal("Yeterli katılımcı olmadığı için gruplar oluşturulamadı. Gerekli: 2, Mevcut: 1",
+                trProblem.RootElement.GetProperty("title").GetString());
+        }
 
         Assert.Equal(HttpStatusCode.NotFound,
             (await SendAsync(HttpMethod.Get, $"/api/v1/admin/events/{eventId}/matching", admin)).StatusCode);
     }
 
     [Fact]
-    public async Task SurenIsVarken_IkinciIstek409()
+    public async Task WhileAJobRuns_SecondRequest409()
     {
         var admin = await AdminTokenAsync();
         var (eventId, _, _) = await SeedEventAsync(participants: 2);
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            // Başka bir sunucu örneğinin az önce aldığı iş.
+            // A job another server instance just took.
             db.MatchingRuns.Add(new MatchingRun { CinemaEventId = eventId, Status = MatchingRunStatus.Running, StartedAt = DateTime.UtcNow });
             await db.SaveChangesAsync();
         }
@@ -219,14 +237,14 @@ public class MatchingJobTests : IClassFixture<MatchingJobTests.Factory>
     }
 
     [Fact]
-    public async Task YarimKalanIs_YenidenAlinirVeTamamlanir()
+    public async Task AbandonedJob_IsPickedUpAgainAndCompletes()
     {
         var admin = await AdminTokenAsync();
         var (eventId, location, _) = await SeedEventAsync(participants: 2);
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            // Onu alan süreç bir saat önce çökmüş.
+            // The process that took it crashed an hour ago.
             db.MatchingRuns.Add(new MatchingRun
             {
                 CinemaEventId = eventId,

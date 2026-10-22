@@ -4,19 +4,19 @@ namespace SineUyum.Api.Dtos
 {
     public class RegisterDeviceDto
     {
-        [Required]
-        [MaxLength(512)]
+        [Required(ErrorMessage = "validation.required")]
+        [MaxLength(512, ErrorMessage = "validation.maxLength")]
         public string Token { get; set; } = string.Empty;
 
-        [Required]
-        [RegularExpression("^(android|ios)$", ErrorMessage = "Platform 'android' ya da 'ios' olmalı.")]
+        [Required(ErrorMessage = "validation.required")]
+        [RegularExpression("^(android|ios)$", ErrorMessage = "validation.platformInvalid")]
         public string Platform { get; set; } = string.Empty;
     }
 
     public class UnregisterDeviceDto
     {
-        [Required]
-        [MaxLength(512)]
+        [Required(ErrorMessage = "validation.required")]
+        [MaxLength(512, ErrorMessage = "validation.maxLength")]
         public string Token { get; set; } = string.Empty;
     }
 }

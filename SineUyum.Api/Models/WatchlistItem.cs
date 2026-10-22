@@ -8,7 +8,7 @@ namespace SineUyum.Api.Models
         [Key]
         public int Id { get; set; }
 
-        // --- DEĞİŞİKLİK: UserId yerine WatchlistId geldi ---
+        // --- CHANGE: WatchlistId replaced UserId ---
         [Required]
         public int WatchlistId { get; set; }
         public Watchlist Watchlist { get; set; } = null!;
@@ -19,7 +19,7 @@ namespace SineUyum.Api.Models
 
         public DateTime AddedAt { get; set; } = DateTime.UtcNow;
 
-        // Ortak listede filmi kimin eklediği (eski kayıtlarda boş: sahip).
+        // Who added the movie to a shared list (empty in older rows: the owner).
         public string? AddedByUserId { get; set; }
         public AppUser? AddedBy { get; set; }
     }

@@ -2,20 +2,20 @@ using System.Text.Json.Serialization;
 
 namespace SineUyum.Api.Models
 {
-    // Profil ayrıntılarını (puanlar, istatistikler, takip listeleri, uyum)
-    // kimin görebileceği. Ad, fotoğraf ve biyografi her zaman görünür ki
-    // kullanıcı kimi engellediğini/kime yazdığını bilsin.
+    // Who can see profile details (ratings, statistics, follow lists,
+    // compatibility). Name, photo and bio are always visible so the user knows
+    // whom they blocked / are writing to.
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum ProfileVisibility
     {
         Public,
-        // Yalnızca profil sahibinin takip ettiği kişiler. Takip onaysız olduğu
-        // için "takipçilerim" seçeneği koruma sağlamazdı; kontrol sahipte kalır.
+        // Only people the profile owner follows. Following needs no approval, so a
+        // "my followers" option would protect nothing; control stays with the owner.
         Following,
         Private
     }
 
-    // Kimin yeni mesaj gönderebileceği.
+    // Who can send new messages.
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum MessagePermission
     {
@@ -24,9 +24,9 @@ namespace SineUyum.Api.Models
         Nobody
     }
 
-    // Engelleme tek yönlü kaydedilir, etkisi iki yönlüdür: taraflar birbirinin
-    // profilini göremez, mesajlaşamaz, takip edemez, aramada ve etkinlik
-    // eşleştirmesinde bir araya gelmez.
+    // A block is stored one way but works both ways: the two cannot see each
+    // other's profiles, message or follow each other, and never meet in search
+    // or event matching.
     public class UserBlock
     {
         public string BlockerId { get; set; } = string.Empty;

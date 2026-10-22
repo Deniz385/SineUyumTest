@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using SineUyum.Api.Data;
 using Microsoft.AspNetCore.RateLimiting;
 using SineUyum.Api.Dtos;
 using SineUyum.Api.Exceptions;
+using SineUyum.Api.Localization;
 using SineUyum.Api.Models;
 using SineUyum.Api.Services;
 using SineUyum.Api.Services.Media;
@@ -19,22 +21,24 @@ namespace SineUyum.Api.Controllers
     [Authorize]
     public class ProfileController : ControllerBase
     {
-        // Telefon fotoğrafları için yeterli; daha büyükleri istemci küçültmeli.
+        // Enough for phone photos; clients should shrink larger ones.
         public const long MaxPhotoBytes = 10 * 1024 * 1024;
-        // Multipart sınırları ve başlıklar için pay.
+        // Headroom for multipart boundaries and headers.
         private const long MaxPhotoRequestBytes = MaxPhotoBytes + 64 * 1024;
 
         private readonly ApplicationDbContext _context;
         private readonly UserManager<AppUser> _userManager;
         private readonly IMediaStorage _media;
         private readonly PrivacyService _privacy;
+        private readonly IStringLocalizer _t;
 
-        public ProfileController(ApplicationDbContext context, UserManager<AppUser> userManager, IMediaStorage media, PrivacyService privacy)
+        public ProfileController(ApplicationDbContext context, UserManager<AppUser> userManager, IMediaStorage media, PrivacyService privacy, IStringLocalizer localizer)
         {
             _context = context;
             _userManager = userManager;
             _media = media;
             _privacy = privacy;
+            _t = localizer;
         }
 
         private static string AvatarDirectory(string userId) => $"avatars/{userId}";
@@ -46,14 +50,14 @@ namespace SineUyum.Api.Controllers
 
             var user = await _userManager.FindByIdAsync(userId);
 
-            // Engelleyen kişi görüntüleyene hiç yokmuş gibi görünür.
+            // To the viewer, a user who blocked them does not exist at all.
             if (user == null || (viewerId != userId && await _privacy.HasBlockedAsync(userId, viewerId)))
             {
-                return NotFound("Kullanıcı bulunamadı.");
+                return NotFound(_t["errors.userNotFound"].Value);
             }
 
-            // Engellediği birinin profilini açan kişi yalnızca kimliği görür
-            // (engeli kaldırabilsin diye); gizli profilde de ayrıntı dönmez.
+            // Someone opening the profile of a person they blocked only sees the
+            // identity (so they can unblock); a private profile returns no details either.
             var isBlockedByMe = viewerId != userId && await _privacy.HasBlockedAsync(viewerId, userId);
             if (isBlockedByMe || !await _privacy.CanViewDetailsAsync(viewerId, user, User.IsInRole("Admin")))
             {
@@ -70,15 +74,15 @@ namespace SineUyum.Api.Controllers
 
             var ratingsQuery = _context.UserRatings.Where(r => r.UserId == userId);
 
-            // İstatistikler veritabanında hesaplanır — tüm puanlar belleğe
-            // çekilmez (M5). Sayı ve ortalama tek sorguyla.
+            // Statistics are computed in the database — the ratings are not all
+            // loaded into memory (M5). Count and average in one query each.
             var totalRatings = await ratingsQuery.CountAsync();
             var averageRating = totalRatings == 0
                 ? 0
                 : Math.Round(await ratingsQuery.AverageAsync(r => (double)r.Rating), 1);
 
-            // Döndürülen liste sınırlı: en yüksek puanlı ilk 100. Bir kullanıcının
-            // binlerce puanı olsa bile yanıt ve bellek sınırlı kalır.
+            // The returned list is capped: the top 100 by rating. Even a user
+            // with thousands of ratings keeps the response and memory bounded.
             const int maxRatingsReturned = 100;
             var userRatings = await ratingsQuery
                 .OrderByDescending(r => r.Rating)
@@ -103,7 +107,7 @@ namespace SineUyum.Api.Controllers
                 TotalRatings = totalRatings,
                 AverageRating = averageRating,
                 TotalMoviesInWatchlists = totalMoviesInWatchlists,
-                // En yüksek puanlı (10) filmlerden ilk 5'i (liste zaten puana göre sıralı).
+                // The first 5 movies rated 10 (the list is already sorted by rating).
                 TopRatedMovies = userRatings.Where(r => r.Rating == 10).Take(5).ToList()
             };
 
@@ -120,8 +124,8 @@ namespace SineUyum.Api.Controllers
             return Ok(profileData);
         }
 
-        // Paylaşılabilir film kimliği (Faz 5). Puanlardan türediği için profil
-        // ayrıntısıyla aynı görünürlük kuralı.
+        // Shareable film identity (Phase 5). Derived from ratings, so the same
+        // visibility rule as profile details.
         [HttpGet("{userId}/identity")]
         public async Task<ActionResult<FilmIdentityDto>> GetIdentity(string userId)
         {
@@ -138,12 +142,15 @@ namespace SineUyum.Api.Controllers
                     r.Movie.PosterPath,
                     r.Rating,
                     r.Movie.TmdbVoteAverage,
-                    Genres = r.Movie.MovieGenres.Select(mg => mg.Genre.Name).ToList()
+                    Genres = r.Movie.MovieGenres.Select(mg => new { mg.Genre.Id, mg.Genre.Name }).ToList()
                 })
                 .ToListAsync();
 
+            // Genre names in the request language (by TMDb id).
             return Ok(FilmIdentity.Build(owner.UserName ?? string.Empty,
-                rows.Select(r => new RatedMovieFacts(r.MovieId, r.Title, r.PosterPath, r.Rating, r.TmdbVoteAverage, r.Genres)).ToList()));
+                rows.Select(r => new RatedMovieFacts(r.MovieId, r.Title, r.PosterPath, r.Rating, r.TmdbVoteAverage,
+                    r.Genres.Select(g => _t.GenreName(g.Id, g.Name)).ToList())).ToList(),
+                _t));
         }
 
         [HttpPut]
@@ -158,14 +165,14 @@ namespace SineUyum.Api.Controllers
             var user = await _userManager.FindByIdAsync(currentUserId);
             if (user == null)
             {
-                return NotFound("Kullanıcı bulunamadı.");
+                return NotFound(_t["errors.userNotFound"].Value);
             }
 
-            // Fotoğraf buradan yalnızca KALDIRILABİLİR; değiştirmek için yükleme
-            // ucu kullanılır. Önceden herhangi bir URL kabul ediliyordu: başka
-            // bir sunucudaki resim, profili görüntüleyen herkesin IP'sini o
-            // sunucuya sızdırıyordu (izleme pikseli) ve içerik denetlenemiyordu.
-            // Mevcut değeri geri gönderen istemciler (değişmedi) etkilenmez.
+            // The photo can only be REMOVED here; changing it goes through the
+            // upload endpoint. Any URL used to be accepted: an image on another
+            // server leaked the IP of everyone viewing the profile to that server
+            // (tracking pixel) and its content could not be moderated.
+            // Clients sending back the current value (unchanged) are unaffected.
             var requestedImage = string.IsNullOrWhiteSpace(updateDto.ProfileImageUrl)
                 ? null
                 : updateDto.ProfileImageUrl.Trim();
@@ -174,8 +181,7 @@ namespace SineUyum.Api.Controllers
             {
                 if (requestedImage != null)
                 {
-                    return BadRequest(new StatusMessageDto(
-                        "Profil fotoğrafı yalnızca yüklenerek değiştirilebilir (POST /api/v1/profile/photo)."));
+                    return BadRequest(new StatusMessageDto(_t["profile.photoUploadOnly"]));
                 }
                 user.ProfileImageUrl = null;
                 removePhoto = true;
@@ -192,15 +198,16 @@ namespace SineUyum.Api.Controllers
 
             if (removePhoto) _media.DeleteAllExcept(AvatarDirectory(user.Id), keepRelativePath: null);
 
-            return Ok(new StatusMessageDto("Profil başarıyla güncellendi."));
+            return Ok(new StatusMessageDto(_t["profile.updated"]));
         }
 
-        // Profil fotoğrafı yükler. Dosya olduğu gibi saklanmaz; doğrulanıp
-        // 512x512 JPEG olarak yeniden kodlanır (EXIF/GPS silinir).
+        // Uploads a profile photo. The file is never stored as is; it is
+        // validated and re-encoded as a 512x512 JPEG (EXIF/GPS removed).
         //
-        // Form, IFormFile bağlamasıyla değil burada okunur: bağlama sırasında
-        // Kestrel'in gövde sınırı aşılırsa MVC bunu genel bir doğrulama hatası
-        // (400) yapıyordu; istemci "dosya çok büyük"ü "dosya yok"tan ayıramıyordu.
+        // The form is read here rather than through IFormFile binding: when
+        // Kestrel's body limit was hit during binding, MVC turned it into a
+        // generic validation error (400) and the client could not tell "file
+        // too large" from "no file".
         [HttpPost("photo")]
         [Consumes("multipart/form-data")]
         [EnableRateLimiting("upload")]
@@ -211,7 +218,7 @@ namespace SineUyum.Api.Controllers
             var user = await CurrentUserAsync();
             if (user == null) return Unauthorized();
 
-            // Content-Length biliniyorsa gövdeyi hiç okumadan reddet.
+            // Reject without reading the body when Content-Length is known.
             if (Request.ContentLength > MaxPhotoRequestBytes) throw PhotoTooLarge();
 
             IFormFile? file;
@@ -222,13 +229,13 @@ namespace SineUyum.Api.Controllers
             catch (Exception ex) when (ex is BadHttpRequestException { StatusCode: StatusCodes.Status413PayloadTooLarge }
                                           or InvalidDataException)
             {
-                // Uzunluğu bildirmeyen (chunked) istekler sınırı okurken aşar.
+                // Requests without a length (chunked) hit the limit while reading.
                 throw PhotoTooLarge();
             }
 
             if (file == null || file.Length == 0)
             {
-                return BadRequest(new StatusMessageDto("Dosya seçilmedi (form alanı: \"file\")."));
+                return BadRequest(new StatusMessageDto(_t["profile.photoMissing"]));
             }
             if (file.Length > MaxPhotoBytes) throw PhotoTooLarge();
 
@@ -241,8 +248,8 @@ namespace SineUyum.Api.Controllers
 
             var jpeg = AvatarImageProcessor.Process(input);
 
-            // Dosya adı her yüklemede yeni ve tahmin edilemez: istemciler eski
-            // fotoğrafı önbellekten göstermez, URL'ler kalıcı önbelleklenebilir.
+            // A new, unguessable file name on every upload: clients never show
+            // the old photo from cache and URLs can be cached forever.
             var relativePath = $"{AvatarDirectory(user.Id)}/{Guid.NewGuid():N}.jpg";
             await _media.SaveAsync(relativePath, jpeg);
 
@@ -254,7 +261,7 @@ namespace SineUyum.Api.Controllers
                 return BadRequest(result.Errors);
             }
 
-            // Eski fotoğraf(lar) ve eşzamanlı yüklemelerden kalan yetimler silinir.
+            // The old photo(s) and orphans left by concurrent uploads are deleted.
             _media.DeleteAllExcept(AvatarDirectory(user.Id), relativePath);
 
             return Ok(new ProfilePhotoDto { ProfileImageUrl = user.ProfileImageUrl });
@@ -275,7 +282,7 @@ namespace SineUyum.Api.Controllers
         }
 
         private static DomainException PhotoTooLarge() =>
-            new("Fotoğraf en fazla 10 MB olabilir.", StatusCodes.Status413PayloadTooLarge);
+            new("profile.photoTooLarge", StatusCodes.Status413PayloadTooLarge);
 
         private async Task<AppUser?> CurrentUserAsync()
         {

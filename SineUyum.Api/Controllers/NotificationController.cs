@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
 using System.Security.Claims;
@@ -13,13 +14,15 @@ namespace SineUyum.Api.Controllers
     public class NotificationController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IStringLocalizer _t;
 
-        public NotificationController(ApplicationDbContext context)
+        public NotificationController(ApplicationDbContext context, IStringLocalizer localizer)
         {
             _context = context;
+            _t = localizer;
         }
 
-        // DÜZELTME 1: Bu metot artık sadece okunmamışları değil, tüm bildirimleri getirir.
+        // All notifications (read and unread), newest first, in the request language.
         [HttpGet]
         public async Task<ActionResult<List<NotificationDto>>> GetNotifications()
         {
@@ -27,23 +30,16 @@ namespace SineUyum.Api.Controllers
             if (userId == null) return Unauthorized();
 
             var notifications = await _context.Notifications
-                .Where(n => n.UserId == userId) // "&& !n.IsRead" kaldırıldı
+                .Where(n => n.UserId == userId)
                 .OrderByDescending(n => n.CreatedAt)
-                .Take(50) // Çok fazla bildirim olmasını önlemek için bir limit eklemek iyi bir pratik.
-                .Select(n => new NotificationDto
-                {
-                    Id = n.Id,
-                    Message = n.Message,
-                    RelatedUrl = n.RelatedUrl,
-                    IsRead = n.IsRead,
-                    CreatedAt = n.CreatedAt
-                })
+                .Take(50) // a limit so the list cannot grow without bound
+                .AsNoTracking()
                 .ToListAsync();
 
-            return Ok(notifications);
+            return Ok(notifications.Select(n => NotificationDto.From(n, _t)).ToList());
         }
 
-        // DÜZELTME 2: Frontend'in beklediği doğru rota ("mark-all-as-read") eklendi.
+        // The route the frontend expects ("mark-all-as-read").
         [HttpPost("mark-all-as-read")]
         public async Task<ActionResult<StatusMessageDto>> MarkAllAsRead()
         {
@@ -63,10 +59,10 @@ namespace SineUyum.Api.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            return Ok(new StatusMessageDto("Tüm bildirimler okundu olarak işaretlendi."));
+            return Ok(new StatusMessageDto(_t["notifications.allMarkedAsRead"]));
         }
 
-        // YENİ EKLENEN METOT: Tek bir bildirimi okundu olarak işaretlemek için.
+        // Marks a single notification as read.
         [HttpPost("{notificationId}/mark-as-read")]
         public async Task<ActionResult<StatusMessageDto>> MarkAsRead(int notificationId)
         {
@@ -78,7 +74,7 @@ namespace SineUyum.Api.Controllers
 
             if (notification == null)
             {
-                return NotFound("Bildirim bulunamadı veya bu bildirime erişim yetkiniz yok.");
+                return NotFound(_t["notifications.notFound"].Value);
             }
 
             if (!notification.IsRead)
@@ -87,7 +83,7 @@ namespace SineUyum.Api.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            return Ok(new StatusMessageDto("Bildirim okundu olarak işaretlendi."));
+            return Ok(new StatusMessageDto(_t["notifications.markedAsRead"]));
         }
     }
 }

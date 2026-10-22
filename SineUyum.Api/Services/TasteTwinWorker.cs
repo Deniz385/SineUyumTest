@@ -8,17 +8,17 @@ namespace SineUyum.Api.Services
     {
         public bool Enabled { get; set; } = true;
         public int IntervalMinutes { get; set; } = 60;
-        // Her turda en fazla bu kadar kullanıcı (yükü yaymak için).
+        // At most this many users per round (to spread the load).
         public int BatchSize { get; set; } = 100;
     }
 
-    // Her hafta, yeterince puanı olan herkese bir zevk ikizi bulup bildirir.
+    // Every week, finds a taste twin for everyone with enough ratings and notifies them.
     public sealed class TasteTwinWorker : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly IOptions<TasteTwinOptions> _options;
         private readonly ILogger<TasteTwinWorker> _logger;
-        // Bu hafta uygun adayı çıkmayanlar her turda yeniden hesaplanmasın.
+        // People without a suitable candidate this week are not recomputed every round.
         private readonly HashSet<(DateOnly, string)> _noMatch = new();
 
         public TasteTwinWorker(IServiceScopeFactory scopeFactory, IOptions<TasteTwinOptions> options, ILogger<TasteTwinWorker> logger)
@@ -43,13 +43,13 @@ namespace SineUyum.Api.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Zevk ikizi turu başarısız; sonra yeniden denenecek.");
+                    _logger.LogWarning(ex, "Taste twin round failed; will retry later.");
                 }
                 await Task.Delay(TimeSpan.FromMinutes(Math.Max(1, _options.Value.IntervalMinutes)), stoppingToken);
             }
         }
 
-        // Bu hafta henüz bildirilmemiş kullanıcıları işler; bildirilen sayısını döner.
+        // Processes users not yet notified this week; returns how many were notified.
         public async Task<int> RunOnceAsync(DateTime nowUtc, CancellationToken ct)
         {
             var week = TasteTwinService.WeekStartOf(nowUtc);
@@ -84,7 +84,7 @@ namespace SineUyum.Api.Services
                 await twins.NotifyAsync(suggestion);
                 count++;
             }
-            if (count > 0) _logger.LogInformation("{Count} kullanıcıya zevk ikizi bildirildi.", count);
+            if (count > 0) _logger.LogInformation("Notified {Count} users of their taste twin.", count);
             return count;
         }
     }

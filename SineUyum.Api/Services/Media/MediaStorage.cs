@@ -1,15 +1,15 @@
 namespace SineUyum.Api.Services.Media
 {
-    // Yüklenen dosyaların saklandığı yer. Şimdilik yerel disk (Docker'da kalıcı
-    // volume); ileride S3/Blob gibi bir nesne deposu bu arayüzle eklenebilir.
+    // Where uploaded files are stored. Local disk for now (a persistent volume in
+    // Docker); an object store such as S3/Blob can be added behind this interface later.
     public interface IMediaStorage
     {
-        // Dosyalar bu kök URL altında sunulur (ör. "/media").
+        // Files are served under this root URL (e.g. "/media").
         string PublicPrefix { get; }
 
         Task SaveAsync(string relativePath, byte[] content, CancellationToken ct = default);
 
-        // Klasördeki "keep" dışındaki tüm dosyaları siler (keep null → hepsi).
+        // Deletes every file in the folder except "keep" (keep null → all of them).
         void DeleteAllExcept(string relativeDirectory, string? keepRelativePath);
     }
 
@@ -31,8 +31,8 @@ namespace SineUyum.Api.Services.Media
             var full = Resolve(relativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(full)!);
 
-            // Önce geçici dosyaya yazıp sonra taşınır: yarım yazılmış dosya
-            // hiçbir zaman sunulmaz.
+            // Written to a temporary file first and then moved: a half-written file is
+            // never served.
             var temp = full + ".tmp";
             await File.WriteAllBytesAsync(temp, content, ct);
             File.Move(temp, full, overwrite: true);
@@ -50,13 +50,13 @@ namespace SineUyum.Api.Services.Media
             }
         }
 
-        // Göreli yolu kök altında çözer; kök dışına çıkan (../) yolları reddeder.
+        // Resolves a relative path under the root; rejects paths leaving the root (../).
         private string Resolve(string relativePath)
         {
             var full = Path.GetFullPath(Path.Combine(_root, relativePath));
             if (!full.StartsWith(_root + Path.DirectorySeparatorChar, StringComparison.Ordinal))
             {
-                throw new InvalidOperationException("Geçersiz medya yolu.");
+                throw new InvalidOperationException("Invalid media path.");
             }
             return full;
         }

@@ -2,11 +2,11 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SineUyum.Api.Models
 {
-    // Push bildirimi (FCM) için cihaz kaydı. Mobil uygulama oturum açınca ve
-    // FCM token'ı yenilenince kaydeder; çıkışta siler. Bir token tek bir
-    // kullanıcıya aittir: aynı cihazda başka hesapla giriş yapılırsa kayıt
-    // yeni kullanıcıya taşınır (önceki kullanıcının bildirimleri o cihaza
-    // gitmeye devam etmesin).
+    // A device registration for push notifications (FCM). The mobile app saves
+    // it after sign-in and whenever the FCM token is refreshed, and deletes it on
+    // logout. A token belongs to one user: if another account signs in on the
+    // same device the row moves to the new user (so the previous user's
+    // notifications stop going to that device).
     public class DeviceToken
     {
         [Key]
@@ -16,8 +16,8 @@ namespace SineUyum.Api.Models
         public string UserId { get; set; } = string.Empty;
         public AppUser User { get; set; } = null!;
 
-        // FCM kayıt token'ı. FCM'e gönderilen değer olduğu için düz tutulur
-        // (refresh token gibi özetlenemez).
+        // The FCM registration token. It is the value sent to FCM, so it is kept as
+        // is (it cannot be hashed like a refresh token).
         [Required]
         [MaxLength(512)]
         public string Token { get; set; } = string.Empty;
@@ -29,8 +29,8 @@ namespace SineUyum.Api.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // Uygulama her açılışta yeniden kaydeder; uzun süre görülmeyen
-        // token'lar ileride bu alana göre temizlenebilir.
+        // The app re-registers on every start; tokens not seen for a long time can
+        // be cleaned up by this field later.
         public DateTime LastSeenAt { get; set; } = DateTime.UtcNow;
     }
 }

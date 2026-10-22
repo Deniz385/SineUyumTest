@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Localization;
 using SineUyum.Api.Dtos;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
+using SineUyum.Api.Localization;
 using SineUyum.Api.RateLimiting;
 using SineUyum.Api.Services;
 using System.Security.Claims;
@@ -21,14 +23,16 @@ namespace SineUyum.Api.Controllers
         private readonly string? _tmdbApiKey;
         private const string TmdbApiBaseUrl = "https://api.themoviedb.org/3/";
         private readonly PrivacyService _privacy;
+        private readonly IStringLocalizer _t;
 
-        public CompatibilityController(ApplicationDbContext context, IHttpClientFactory httpClientFactory, IConfiguration configuration, PrivacyService privacy)
+        public CompatibilityController(ApplicationDbContext context, IHttpClientFactory httpClientFactory, IConfiguration configuration, PrivacyService privacy, IStringLocalizer localizer)
         {
             _context = context;
             _httpClientFactory = httpClientFactory;
             _privacy = privacy;
-            // Boş string de tanımsız sayılmalı; appsettings.json'daki yer tutucu
-            // aksi halde TMDB_API_KEY ortam değişkenini gölgeliyordu.
+            _t = localizer;
+            // An empty string must count as unset too; otherwise the placeholder
+            // in appsettings.json shadowed the TMDB_API_KEY environment variable.
             var apiKey = configuration["TMDb:ApiKey"];
             if (string.IsNullOrWhiteSpace(apiKey))
             {
@@ -43,7 +47,7 @@ namespace SineUyum.Api.Controllers
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (currentUserId == null) return Unauthorized();
 
-            // Uyum, hedefin puanlarından türetilir; profil ayrıntısıyla aynı kural.
+            // Compatibility is derived from the target's ratings; same rule as profile details.
             await _privacy.EnsureCanViewDetailsAsync(currentUserId, targetUserId, User.IsInRole("Admin"));
 
             var commonRatingsQuery = from r1 in _context.UserRatings.Where(r => r.UserId == currentUserId)
@@ -59,8 +63,8 @@ namespace SineUyum.Api.Controllers
                                      };
             var commonMovies = await commonRatingsQuery.ToListAsync();
 
-            // Türlere göre ortalamalar tüm puanlardan (yalnızca ortaklardan değil):
-            // ortak film az olsa da "ikiniz de dram seviyorsunuz" denebilir.
+            // Per-genre averages use all ratings (not only the common ones), so
+            // "you both love drama" can be said even with few common movies.
             var tastes = await (
                 from r in _context.UserRatings
                 where r.UserId == currentUserId || r.UserId == targetUserId
@@ -82,7 +86,7 @@ namespace SineUyum.Api.Controllers
                 CompatibilityScore = commonMovies.Count == 0 ? 0 : Math.Round(CompatibilityCalculator.Score(ratingPairs), 2),
                 CommonMovieCount = commonMovies.Count,
                 CommonMovies = commonMovies,
-                Insights = CompatibilityInsights.Build(commonMovies, TastesOf(currentUserId), TastesOf(targetUserId))
+                Insights = CompatibilityInsights.Build(commonMovies, TastesOf(currentUserId), TastesOf(targetUserId), _t)
             };
 
             return Ok(result);
@@ -95,14 +99,14 @@ namespace SineUyum.Api.Controllers
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (currentUserId == null) return Unauthorized();
 
-            // Uyum, hedefin puanlarından türetilir; profil ayrıntısıyla aynı kural.
+            // Compatibility is derived from the target's ratings; same rule as profile details.
             await _privacy.EnsureCanViewDetailsAsync(currentUserId, targetUserId, User.IsInRole("Admin"));
 
             if (string.IsNullOrEmpty(_tmdbApiKey))
             {
-                return StatusCode(503, "TMDb API anahtarı sunucuda yapılandırılmamış.");
+                return StatusCode(503, _t["errors.tmdbNotConfigured"].Value);
             }
-            
+
             var currentUserFavoriteGenres = await GetFavoriteGenreIds(currentUserId, 3);
             var targetUserFavoriteGenres = await GetFavoriteGenreIds(targetUserId, 3);
 
@@ -111,24 +115,26 @@ namespace SineUyum.Api.Controllers
             {
                 jointFavoriteGenres = currentUserFavoriteGenres.Union(targetUserFavoriteGenres).Distinct().Take(3).ToList();
             }
-            
+
+            // TMDb results (titles, overviews) in the request language.
+            var language = SupportedLanguages.TmdbLanguage(SupportedLanguages.Current);
             var client = _httpClientFactory.CreateClient("TMDb");
             if (jointFavoriteGenres.Count == 0)
             {
-                var popularMoviesResponse = await client.GetAsync($"{TmdbApiBaseUrl}movie/popular?api_key={_tmdbApiKey}&language=tr-TR&page=1");
+                var popularMoviesResponse = await client.GetAsync($"{TmdbApiBaseUrl}movie/popular?api_key={_tmdbApiKey}&language={language}&page=1");
                 if (popularMoviesResponse.IsSuccessStatusCode)
                 {
                      var json = await popularMoviesResponse.Content.ReadAsStringAsync();
                      var popularMovies = JsonDocument.Parse(json).RootElement.GetProperty("results");
                      var ratedMovieIds = await _context.UserRatings.Where(r => r.UserId == currentUserId || r.UserId == targetUserId).Select(r => r.MovieId).ToListAsync();
-                     
+
                      var watchlistMovieIds = await _context.Watchlists
                         .Where(w => w.UserId == currentUserId || w.UserId == targetUserId)
                         .SelectMany(w => w.Items.Select(i => i.MovieId))
                         .ToListAsync();
 
                      var seenMovieIds = ratedMovieIds.Union(watchlistMovieIds).ToHashSet();
-                     
+
                      var filteredPopular = popularMovies.EnumerateArray()
                         .Where(m => !seenMovieIds.Contains(m.GetProperty("id").GetInt32()))
                         .Take(12)
@@ -139,19 +145,19 @@ namespace SineUyum.Api.Controllers
             }
 
             var genresQueryParam = string.Join(",", jointFavoriteGenres);
-            var discoverUrl = $"{TmdbApiBaseUrl}discover/movie?api_key={_tmdbApiKey}&language=tr-TR&sort_by=popularity.desc&with_genres={genresQueryParam}";
-            
+            var discoverUrl = $"{TmdbApiBaseUrl}discover/movie?api_key={_tmdbApiKey}&language={language}&sort_by=popularity.desc&with_genres={genresQueryParam}";
+
             var discoverResponse = await client.GetAsync(discoverUrl);
             if (!discoverResponse.IsSuccessStatusCode)
             {
-                return StatusCode((int)discoverResponse.StatusCode, "TMDb'den öneri alınamadı.");
+                return StatusCode((int)discoverResponse.StatusCode, _t["errors.tmdbRecommendationsFailed"].Value);
             }
 
             var jsonResponse = await discoverResponse.Content.ReadAsStringAsync();
             var discoveredMovies = JsonDocument.Parse(jsonResponse).RootElement.GetProperty("results");
 
             var allRatedMovieIds = await _context.UserRatings.Where(r => r.UserId == currentUserId || r.UserId == targetUserId).Select(r => r.MovieId).ToListAsync();
-            
+
             var allWatchlistMovieIds = await _context.Watchlists
                 .Where(w => w.UserId == currentUserId || w.UserId == targetUserId)
                 .SelectMany(w => w.Items.Select(i => i.MovieId))
@@ -166,7 +172,7 @@ namespace SineUyum.Api.Controllers
 
             return Ok(finalRecommendations);
         }
-        
+
         private async Task<List<int>> GetFavoriteGenreIds(string userId, int count)
         {
             var favoriteMovieIds = await _context.UserRatings

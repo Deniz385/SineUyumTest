@@ -1,7 +1,7 @@
 namespace SineUyum.Api.Services.Push
 {
-    // Bir kullanıcının tüm cihazlarına gidecek tek push bildirimi.
-    // Data değerleri FCM gereği string'dir.
+    // A single push notification for all of a user's devices.
+    // Data values are strings, as FCM requires.
     public record PushMessage(
         string UserId,
         string Title,
@@ -12,16 +12,16 @@ namespace SineUyum.Api.Services.Push
     {
         Sent,
 
-        // FCM token'ı artık geçersiz (uygulama kaldırıldı, token yenilendi...).
-        // Kayıt silinmeli.
+        // The FCM token is no longer valid (app uninstalled, token refreshed...).
+        // The row should be deleted.
         InvalidToken,
 
-        // Geçici ya da bilinmeyen hata; kayıt korunur.
+        // A temporary or unknown error; the row is kept.
         Failed,
     }
 
-    // Tek bir cihaz token'ına gönderim. Gerçek uygulama FCM HTTP v1'dir;
-    // yapılandırılmamışsa NullPushSender kullanılır.
+    // Sending to a single device token. The real implementation is FCM HTTP v1;
+    // NullPushSender is used when it is not configured.
     public interface IPushSender
     {
         bool IsEnabled { get; }
@@ -29,8 +29,8 @@ namespace SineUyum.Api.Services.Push
         Task<PushSendResult> SendAsync(string deviceToken, PushMessage message, CancellationToken cancellationToken);
     }
 
-    // Kimlik bilgisi tanımlı değilse push sessizce devre dışıdır; uygulama
-    // (bildirimler REST + SignalR) aynen çalışmaya devam eder.
+    // Without credentials push is silently disabled; the app (notifications over
+    // REST + SignalR) keeps working as before.
     public sealed class NullPushSender : IPushSender
     {
         public bool IsEnabled => false;

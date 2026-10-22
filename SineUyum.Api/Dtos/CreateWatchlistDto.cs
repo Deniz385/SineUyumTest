@@ -4,11 +4,11 @@ namespace SineUyum.Api.Dtos
 {
     public class CreateWatchlistDto
     {
-        [Required]
-        [MaxLength(100)]
+        [Required(ErrorMessage = "validation.required")]
+        [MaxLength(100, ErrorMessage = "validation.maxLength")]
         public string Name { get; set; } = string.Empty;
 
-        [MaxLength(500)]
+        [MaxLength(500, ErrorMessage = "validation.maxLength")]
         public string? Description { get; set; }
     }
 }

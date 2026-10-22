@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
 using SineUyum.Api.Models;
@@ -8,17 +9,19 @@ using System.Security.Claims;
 
 namespace SineUyum.Api.Controllers
 {
-    // Engelleme (G12). Etkisi iki yönlüdür; kurallar PrivacyService'te.
+    // Blocking (G12). It works both ways; the rules live in PrivacyService.
     [ApiController]
     [Route("api/blocks")]
     [Authorize]
     public class BlocksController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IStringLocalizer _t;
 
-        public BlocksController(ApplicationDbContext context)
+        public BlocksController(ApplicationDbContext context, IStringLocalizer localizer)
         {
             _context = context;
+            _t = localizer;
         }
 
         [HttpGet]
@@ -42,29 +45,29 @@ namespace SineUyum.Api.Controllers
             return Ok(blocked);
         }
 
-        // Tekrarlanabilir: zaten engelliyse yine 200.
+        // Idempotent: blocking again still returns 200.
         [HttpPost("{userId}")]
         public async Task<ActionResult<StatusMessageDto>> Block(string userId)
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (currentUserId == null) return Unauthorized();
 
-            if (currentUserId == userId) return BadRequest(new StatusMessageDto("Kendinizi engelleyemezsiniz."));
-            if (!await _context.Users.AnyAsync(u => u.Id == userId)) return NotFound(new StatusMessageDto("Kullanıcı bulunamadı."));
+            if (currentUserId == userId) return BadRequest(new StatusMessageDto(_t["blocks.cannotBlockSelf"]));
+            if (!await _context.Users.AnyAsync(u => u.Id == userId)) return NotFound(new StatusMessageDto(_t["errors.userNotFound"]));
 
             if (!await _context.UserBlocks.AnyAsync(b => b.BlockerId == currentUserId && b.BlockedId == userId))
             {
                 _context.UserBlocks.Add(new UserBlock { BlockerId = currentUserId, BlockedId = userId });
             }
 
-            // Engel takip ilişkisini iki yönde de bitirir; engel kalkınca geri gelmez.
+            // A block ends following in both directions; it does not come back on unblock.
             var follows = await _context.UserFollows
                 .Where(f => (f.FollowerId == currentUserId && f.FollowingId == userId) ||
                             (f.FollowerId == userId && f.FollowingId == currentUserId))
                 .ToListAsync();
             _context.UserFollows.RemoveRange(follows);
 
-            // Ortak listeler de biter: birinin sahibi olduğu listede diğeri üye kalmaz.
+            // Shared lists end too: neither stays a member of a list the other owns.
             var memberships = await _context.WatchlistMembers
                 .Where(m => (m.UserId == userId && m.Watchlist.UserId == currentUserId) ||
                             (m.UserId == currentUserId && m.Watchlist.UserId == userId))
@@ -77,11 +80,11 @@ namespace SineUyum.Api.Controllers
             }
             catch (DbUpdateException)
             {
-                // Eşzamanlı ikinci istek aynı kaydı eklemişse sonuç aynı; değilse gerçek hata.
+                // A concurrent second request added the same row: same outcome. Otherwise a real error.
                 if (!await IsBlockedAsync(currentUserId, userId)) throw;
             }
 
-            return Ok(new StatusMessageDto("Kullanıcı engellendi."));
+            return Ok(new StatusMessageDto(_t["blocks.blocked"]));
         }
 
         [HttpDelete("{userId}")]
@@ -98,7 +101,7 @@ namespace SineUyum.Api.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            return Ok(new StatusMessageDto("Engel kaldırıldı."));
+            return Ok(new StatusMessageDto(_t["blocks.unblocked"]));
         }
 
         private async Task<bool> IsBlockedAsync(string blockerId, string blockedId)

@@ -13,16 +13,16 @@ using static SineUyum.Api.Tests.PushTestSupport;
 
 namespace SineUyum.Api.Tests;
 
-// G4: ödemesiz abonelik kapatıldı; abonelik yalnızca sağlayıcının doğruladığı
-// ödeme ya da yönetici ile açılır; ücretli özellik sunucuda denetlenir.
+// G4: subscriptions without payment were closed; a subscription only opens via a
+// payment verified by the provider or an admin; paid features are checked on the server.
 public class SubscriptionTests : IClassFixture<SubscriptionTests.Factory>
 {
     private readonly Factory _factory;
 
     public SubscriptionTests(Factory factory) => _factory = factory;
 
-    // Sahte sağlayıcı. Belirteç: "ok:{referans}:{gün}:{yenilenir 1/0}".
-    // Webhook: X-Fake-Signature: gecerli, gövde {reference, kind, periodEnd}.
+    // A fake provider. Token: "ok:{reference}:{days}:{renews 1/0}".
+    // Webhook: X-Fake-Signature: valid, body {reference, kind, periodEnd}.
     public sealed class FakeProvider : IPaymentProvider
     {
         public string Name => "fake";
@@ -30,15 +30,15 @@ public class SubscriptionTests : IClassFixture<SubscriptionTests.Factory>
         public Task<VerifiedPurchase> VerifyAsync(string purchaseToken, string userId, CancellationToken ct)
         {
             var parts = purchaseToken.Split(':');
-            if (parts.Length != 4 || parts[0] != "ok") throw new DomainException("Ödeme doğrulanamadı.");
+            if (parts.Length != 4 || parts[0] != "ok") throw new DomainException("test.paymentNotVerified");
             return Task.FromResult(new VerifiedPurchase(Name, parts[1],
                 DateTime.UtcNow.AddDays(int.Parse(parts[2])), parts[3] == "1"));
         }
 
         public async Task<SubscriptionEvent?> ParseWebhookAsync(HttpRequest request, CancellationToken ct)
         {
-            if (request.Headers["X-Fake-Signature"] != "gecerli")
-                throw new DomainException("Geçersiz imza.", StatusCodes.Status401Unauthorized);
+            if (request.Headers["X-Fake-Signature"] != "valid")
+                throw new DomainException("test.invalidSignature", StatusCodes.Status401Unauthorized);
             var body = await JsonSerializer.DeserializeAsync<JsonElement>(request.Body, cancellationToken: ct);
             var kind = Enum.Parse<SubscriptionEventKind>(body.GetProperty("kind").GetString()!);
             DateTime? end = body.TryGetProperty("periodEnd", out var p) ? p.GetDateTime() : null;
@@ -80,13 +80,13 @@ public class SubscriptionTests : IClassFixture<SubscriptionTests.Factory>
     {
         var admin = await AdminTokenAsync(client);
         var res = await client.SendAsync(Authed(HttpMethod.Post, "/api/v1/event", admin,
-            new { eventDate = DateTime.UtcNow.AddDays(daysAhead), locationName = "Sinema", groupSize = 2 }));
+            new { eventDate = DateTime.UtcNow.AddDays(daysAhead), locationName = "Cinema", groupSize = 2 }));
         res.EnsureSuccessStatusCode();
         using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
         return doc.RootElement.GetProperty("id").GetInt32();
     }
 
-    private Task<HttpResponseMessage> WebhookAsync(HttpClient client, object body, string signature = "gecerli")
+    private Task<HttpResponseMessage> WebhookAsync(HttpClient client, object body, string signature = "valid")
     {
         var req = new HttpRequestMessage(HttpMethod.Post, "/api/v1/subscription/webhooks/fake")
         {
@@ -97,7 +97,7 @@ public class SubscriptionTests : IClassFixture<SubscriptionTests.Factory>
     }
 
     [Fact]
-    public async Task OdemesizAktivasyon_KaldirildiVeAbonelikAcmaz()
+    public async Task ActivationWithoutPayment_IsGoneAndOpensNothing()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "sb_");
@@ -109,7 +109,7 @@ public class SubscriptionTests : IClassFixture<SubscriptionTests.Factory>
     }
 
     [Fact]
-    public async Task UcretliOzellik_SunucudaDenetlenir()
+    public async Task PaidFeature_IsCheckedOnServer()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "sb_");
@@ -127,7 +127,7 @@ public class SubscriptionTests : IClassFixture<SubscriptionTests.Factory>
     }
 
     [Fact]
-    public async Task DogrulananOdeme_AbonelikAcar_TokenVeMeGuncellenir()
+    public async Task VerifiedPayment_OpensSubscription_TokenAndMeUpdated()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "sb_");
@@ -149,7 +149,7 @@ public class SubscriptionTests : IClassFixture<SubscriptionTests.Factory>
     }
 
     [Fact]
-    public async Task AyniOdeme_BaskaHesabiAcamaz_AyniHesaptaTekrarGuvenli()
+    public async Task SamePayment_CannotOpenAnotherAccount_RetryOnSameAccountIsSafe()
     {
         var client = _factory.CreateClient();
         var owner = await RegisterAsync(client, "sb_");
@@ -157,7 +157,7 @@ public class SubscriptionTests : IClassFixture<SubscriptionTests.Factory>
         var purchase = $"ok:{Ref()}:30:1";
 
         (await VerifyAsync(client, owner, purchase)).EnsureSuccessStatusCode();
-        // İstemci yeniden denedi: sorun değil, tek kayıt.
+        // The client retried: fine, a single row.
         (await VerifyAsync(client, owner, purchase)).EnsureSuccessStatusCode();
 
         var replay = await VerifyAsync(client, other, purchase);
@@ -170,9 +170,9 @@ public class SubscriptionTests : IClassFixture<SubscriptionTests.Factory>
     }
 
     [Theory]
-    [InlineData("fake", "sahte-belirtec", HttpStatusCode.BadRequest)]
-    [InlineData("baska", "ok:x:30:1", HttpStatusCode.BadRequest)]
-    public async Task GecersizOdeme_Reddedilir(string provider, string token, HttpStatusCode expected)
+    [InlineData("fake", "fake-token", HttpStatusCode.BadRequest)]
+    [InlineData("other", "ok:x:30:1", HttpStatusCode.BadRequest)]
+    public async Task InvalidPayment_IsRejected(string provider, string token, HttpStatusCode expected)
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "sb_");
@@ -184,7 +184,7 @@ public class SubscriptionTests : IClassFixture<SubscriptionTests.Factory>
     }
 
     [Fact]
-    public async Task Webhook_IptalDonemSonunaKadarGecerli_IadeHemenBitirir()
+    public async Task Webhook_CancelValidUntilPeriodEnd_RefundEndsImmediately()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "sb_");
@@ -201,7 +201,7 @@ public class SubscriptionTests : IClassFixture<SubscriptionTests.Factory>
     }
 
     [Fact]
-    public async Task Webhook_YenilemeSureyiUzatir()
+    public async Task Webhook_RenewalExtendsPeriod()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "sb_");
@@ -216,23 +216,23 @@ public class SubscriptionTests : IClassFixture<SubscriptionTests.Factory>
     }
 
     [Fact]
-    public async Task Webhook_GecersizImza401_BilinmeyenSaglayici404_BilinmeyenOdemeYokSayilir()
+    public async Task Webhook_InvalidSignature401_UnknownProvider404_UnknownPaymentIgnored()
     {
         var client = _factory.CreateClient();
 
         Assert.Equal(HttpStatusCode.Unauthorized,
-            (await WebhookAsync(client, new { reference = "x", kind = "Refunded" }, signature: "sahte")).StatusCode);
+            (await WebhookAsync(client, new { reference = "x", kind = "Refunded" }, signature: "fake")).StatusCode);
 
-        var unknownProvider = await client.PostAsJsonAsync("/api/v1/subscription/webhooks/yok", new { });
+        var unknownProvider = await client.PostAsJsonAsync("/api/v1/subscription/webhooks/missing", new { });
         Assert.Equal(HttpStatusCode.NotFound, unknownProvider.StatusCode);
 
-        // Sağlayıcı aynı olayı tekrar tekrar göndermesin diye 200.
+        // 200 so the provider does not keep resending the same event.
         Assert.Equal(HttpStatusCode.OK,
-            (await WebhookAsync(client, new { reference = "bilinmeyen", kind = "Refunded" })).StatusCode);
+            (await WebhookAsync(client, new { reference = "unknown", kind = "Refunded" })).StatusCode);
     }
 
     [Fact]
-    public async Task SuresiDolanAbonelik_KendiligindenBiter()
+    public async Task ExpiredSubscription_EndsByItself()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "sb_");
@@ -242,7 +242,7 @@ public class SubscriptionTests : IClassFixture<SubscriptionTests.Factory>
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var sub = await db.Subscriptions.SingleAsync(s => s.UserId == me.UserId);
-            sub.CurrentPeriodEnd = DateTime.UtcNow.AddMinutes(-1); // yenileme gelmedi
+            sub.CurrentPeriodEnd = DateTime.UtcNow.AddMinutes(-1); // no renewal arrived
             await db.SaveChangesAsync();
         }
 
@@ -253,7 +253,7 @@ public class SubscriptionTests : IClassFixture<SubscriptionTests.Factory>
     }
 
     [Fact]
-    public async Task YoneticiElleAbonelikTanimlar_KullaniciTanimlayamaz()
+    public async Task AdminGrantsManualSubscription_UserCannot()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "sb_");
@@ -271,9 +271,9 @@ public class SubscriptionTests : IClassFixture<SubscriptionTests.Factory>
         Assert.Equal("manual", status.GetProperty("provider").GetString());
     }
 
-    // G13: etkinlik katılımında varlık ve tarih kontrolü.
+    // G13: existence and date checks when joining an event.
     [Fact]
-    public async Task EtkinlikKatilimi_OlmayanVeGecmisEtkinlikReddedilir()
+    public async Task EventJoin_MissingAndPastEventsRejected()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "sb_");

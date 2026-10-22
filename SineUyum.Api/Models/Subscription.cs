@@ -4,20 +4,20 @@ namespace SineUyum.Api.Models
 {
     public enum SubscriptionStatus
     {
-        // Ödendi, dönem sonunda yenilenecek.
+        // Paid; renews at the end of the period.
         Active,
-        // Kullanıcı iptal etti: dönem sonuna kadar hâlâ kullanabilir.
+        // The user canceled: still usable until the end of the period.
         Canceled,
-        // Dönem bitti ve yenilenmedi.
+        // The period ended and was not renewed.
         Expired,
-        // Ödeme iade edildi: hemen sona erer.
+        // The payment was refunded: ends immediately.
         Refunded,
     }
 
-    // Bir ödeme sağlayıcısında doğrulanmış abonelik. Abonelik durumunun TEK
-    // kaynağı burasıdır; kullanıcının abone olup olmadığı her seferinde buradan
-    // (bitiş tarihine bakılarak) hesaplanır. Önceden AppUser.IsSubscribed bir
-    // bayraktı: ödemesiz tek istekle açılabiliyor ve hiç sona ermiyordu.
+    // A subscription verified with a payment provider. This is the ONLY source
+    // of the subscription state; whether a user is subscribed is computed from
+    // here every time (by the end date). AppUser.IsSubscribed used to be a flag:
+    // it could be turned on with a single request without paying and never expired.
     public class Subscription
     {
         [Key]
@@ -27,13 +27,13 @@ namespace SineUyum.Api.Models
         public string UserId { get; set; } = string.Empty;
         public AppUser User { get; set; } = null!;
 
-        // "iyzico", "app_store", "google_play", "manual" (yönetici tanımladı)...
+        // "iyzico", "app_store", "google_play", "manual" (granted by an admin)...
         [Required]
         [MaxLength(32)]
         public string Provider { get; set; } = string.Empty;
 
-        // Sağlayıcıdaki satın alma/abonelik kimliği. (Provider, Reference)
-        // benzersizdir: aynı ödeme ikinci bir hesabı açamaz.
+        // The purchase/subscription id at the provider. (Provider, Reference) is
+        // unique: the same payment cannot unlock a second account.
         [Required]
         [MaxLength(200)]
         public string ProviderReference { get; set; } = string.Empty;
@@ -42,7 +42,7 @@ namespace SineUyum.Api.Models
 
         public DateTime StartedAt { get; set; }
 
-        // Bu tarihe kadar kullanım hakkı var (iptal edilse bile).
+        // Entitled until this date (even if canceled).
         public DateTime CurrentPeriodEnd { get; set; }
 
         public DateTime? CanceledAt { get; set; }

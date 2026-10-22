@@ -24,7 +24,7 @@ namespace SineUyum.Api.Migrations
                 type: "character varying(16)",
                 maxLength: 16,
                 nullable: false,
-                // Mevcut hesaplar bugünkü davranışla (herkes yazabilir) başlar.
+                // Existing accounts start with the current behaviour (anyone can message).
                 defaultValue: "Everyone");
 
             migrationBuilder.AddColumn<string>(
@@ -33,7 +33,7 @@ namespace SineUyum.Api.Migrations
                 type: "character varying(16)",
                 maxLength: 16,
                 nullable: false,
-                // Mevcut hesaplar bugünkü davranışla (herkese açık) başlar.
+                // Existing accounts start with the current behaviour (public).
                 defaultValue: "Public");
 
             migrationBuilder.CreateTable(

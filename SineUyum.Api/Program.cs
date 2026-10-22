@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using SineUyum.Api.Data;
 using SineUyum.Api.Hubs;
+using SineUyum.Api.Localization;
 using SineUyum.Api.Middleware;
 using SineUyum.Api.Models;
 using SineUyum.Api.Services;
@@ -15,29 +16,29 @@ using SineUyum.Api.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// "Server: Kestrel" başlığı sunucu yazılımını açık ediyordu (G9).
+// The "Server: Kestrel" header disclosed the server software (G9).
 builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 
-// --- LOGLAMA (Serilog) ---
-// Yapılandırma appsettings "Serilog" bölümünden okunur; yoksa makul bir
-// varsayılana düşülür. İstek logları aşağıda UseSerilogRequestLogging ile.
+// --- LOGGING (Serilog) ---
+// Configured from the appsettings "Serilog" section, with a sensible default
+// otherwise. Request logs come from UseSerilogRequestLogging below.
 builder.Host.UseSerilog((context, services, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
     .ReadFrom.Services(services)
-    // ExceptionHandlerMiddleware, işleyiciye vermeden önce HER istisnayı
-    // "An unhandled exception" diye Error + stack trace ile logluyor; beklenen
-    // iş kuralı hataları (404, 413, 415...) da gerçek hata gibi görünüyordu.
-    // GlobalExceptionHandler zaten beklenmeyenleri istisnasıyla Error'da,
-    // beklenenleri Information'da logladığı için bu kopya kapatılır.
+    // ExceptionHandlerMiddleware logs EVERY exception as "An unhandled
+    // exception" (Error + stack trace) before calling the handler, so expected
+    // business errors (404, 413, 415...) looked like real failures.
+    // GlobalExceptionHandler already logs unexpected ones as Error with the
+    // exception and expected ones as Information, so this copy is silenced.
     .MinimumLevel.Override("Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddleware", Serilog.Events.LogEventLevel.Fatal)
     .Enrich.FromLogContext()
     .WriteTo.Console());
 
-// --- CORS POLİTİKASI ---
-// Origin listesi artık koda gömülü değil, konfigürasyondan okunuyor:
-// appsettings "Cors:AllowedOrigins" dizisi veya CORS_ALLOWED_ORIGINS ortam
-// değişkeni (virgülle ayrılmış). Mobil istemci CORS'a tabi değildir, bu
-// politika yalnızca web istemcisi içindir.
+// --- CORS POLICY ---
+// The origin list is not hard-coded but read from configuration: the
+// appsettings "Cors:AllowedOrigins" array or the CORS_ALLOWED_ORIGINS
+// environment variable (comma-separated). The mobile client is not subject
+// to CORS; this policy is only for the web client.
 var corsPolicyName = "AllowWebClients";
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
     ?? builder.Configuration["CORS_ALLOWED_ORIGINS"]?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -52,14 +53,14 @@ builder.Services.AddCors(options =>
             policy.WithOrigins(allowedOrigins)
                 .AllowAnyHeader()
                 .AllowAnyMethod()
-                .AllowCredentials(); // SignalR için bu gerekli
+                .AllowCredentials(); // required by SignalR
         }
     });
 });
 
-// --- DATABASE VE IDENTITY ---
-// Sağlayıcı konfigürasyondan seçilir: "Database:Provider" = Sqlite (varsayılan,
-// geliştirme) veya Postgres (production). Ayrıntı: docs → M2.
+// --- DATABASE AND IDENTITY ---
+// The provider comes from configuration: "Database:Provider" = Sqlite (default,
+// development) or Postgres (production). Details: docs → M2.
 var dbProvider = (builder.Configuration["Database:Provider"] ?? "Sqlite").Trim();
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
@@ -77,36 +78,38 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
 {
-    // Aynı e-posta ile birden fazla hesap açılmasını engelle.
+    // Prevent several accounts with the same email.
     options.User.RequireUniqueEmail = true;
 
-    // RegisterDto "en az 6 karakter" diyordu ama Identity varsayılanı özel
-    // karakter de istiyordu; kullanıcıya gösterilen mesajla kural artık uyumlu.
+    // RegisterDto said "at least 6 characters" but Identity's default also
+    // required a special character; the rule now matches the message shown.
     options.Password.RequiredLength = 6;
     options.Password.RequireNonAlphanumeric = false;
     options.Password.RequireDigit = true;
     options.Password.RequireUppercase = false;
     options.Password.RequireLowercase = true;
 })
-    .AddEntityFrameworkStores<ApplicationDbContext>();
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    // Password rules and duplicate user/email errors in the request language.
+    .AddErrorDescriber<LocalizedIdentityErrorDescriber>();
 
 // --- JWT AUTHENTICATION ---
 var jwtKey = builder.Configuration["JWT_KEY"] ?? builder.Configuration["Jwt:Key"];
 if (string.IsNullOrEmpty(jwtKey))
 {
     throw new InvalidOperationException(
-        "JWT anahtarı yapılandırılmamış. 'JWT_KEY' ortam değişkenini veya 'Jwt:Key' ayarını tanımlayın.");
+        "The JWT key is not configured. Set the 'JWT_KEY' environment variable or the 'Jwt:Key' setting.");
 }
 
-// HMAC-SHA512 kullanıldığı için anahtarın en az 64 byte olması gerekir.
+// HMAC-SHA512 is used, so the key must be at least 64 bytes.
 if (Encoding.UTF8.GetByteCount(jwtKey) < 64)
 {
     throw new InvalidOperationException(
-        "JWT anahtarı HS512 için çok kısa. En az 64 byte (64 ASCII karakter) uzunluğunda bir anahtar kullanın.");
+        "The JWT key is too short for HS512. Use a key of at least 64 bytes (64 ASCII characters).");
 }
 
-// Issuer/Audience konfigüre edilmemişse (yerel geliştirme) doğrulama kapatılır;
-// tanımlıysa zorunlu tutulur. Böylece ortam değiştiğinde API çalışmaya devam eder.
+// If Issuer/Audience are not configured (local development) their validation
+// is off; if they are, it is enforced. The API keeps working across environments.
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
 var jwtAudience = builder.Configuration["Jwt:Audience"];
 
@@ -128,7 +131,7 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
         ClockSkew = TimeSpan.FromSeconds(30)
     };
-     // SignalR'ın kimlik doğrulamasını Hub'a iletmesi için:
+     // Lets SignalR pass authentication on to the hub:
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
@@ -144,15 +147,15 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// --- AUTHORIZATION SERVİSİ ---
+// --- AUTHORIZATION ---
 builder.Services.AddAuthorization();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<MatchingService>();
-// Eşleştirme arka planda (M7): kuyruk veritabanında, işçi tek örnek.
+// Matching runs in the background (M7): the queue is in the database, one worker.
 builder.Services.Configure<MatchingOptions>(builder.Configuration.GetSection("Matching"));
 builder.Services.AddSingleton<MatchingQueue>();
 builder.Services.AddHostedService<MatchingWorker>();
-// Eski filmlerin boş kalan türlerini TMDb'den tamamlar (TMDb anahtarı yoksa boşta).
+// Fills in missing genres of older movies from TMDb (idle without a TMDb key).
 builder.Services.Configure<GenreBackfillOptions>(builder.Configuration.GetSection("GenreBackfill"));
 builder.Services.AddSingleton<GenreBackfillWorker>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<GenreBackfillWorker>());
@@ -163,27 +166,27 @@ builder.Services.AddScoped<SubscriptionService>();
 builder.Services.AddScoped<PrivacyService>();
 builder.Services.AddScoped<SocialService>();
 builder.Services.AddScoped<TasteTwinService>();
-// Haftalık zevk ikizi bildirimleri.
+// Weekly taste twin notifications.
 builder.Services.Configure<TasteTwinOptions>(builder.Configuration.GetSection("TasteTwin"));
 builder.Services.AddSingleton<TasteTwinWorker>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TasteTwinWorker>());
-// Ödeme sağlayıcıları (IPaymentProvider) burada kaydedilir. Henüz gerçek
-// sağlayıcı yok: abonelik yalnızca yönetici tarafından tanımlanabilir,
-// /api/v1/subscription/verify 503 döner. Bkz. yol haritası G4.
+// Payment providers (IPaymentProvider) are registered here. There is no real
+// provider yet: subscriptions can only be granted by an admin and
+// /api/v1/subscription/verify returns 503. See roadmap item G4.
 
-// --- MEDYA (profil fotoğrafları) ---
-// Yerel disk; Docker'da kalıcı volume (/data/media). Storage__MediaRoot ile değişir.
+// --- MEDIA (profile photos) ---
+// Local disk; a persistent volume in Docker (/data/media). Override with Storage__MediaRoot.
 var mediaRoot = builder.Configuration["Storage:MediaRoot"]
     ?? Path.Combine(builder.Environment.ContentRootPath, "media");
 var mediaStorage = new LocalMediaStorage(mediaRoot);
 builder.Services.AddSingleton<IMediaStorage>(mediaStorage);
 
-// --- PUSH BİLDİRİMİ (FCM HTTP v1) ---
-// Firebase servis hesabı anahtarı verilirse açılır; verilmezse push sessizce
-// kapalıdır, bildirimler REST + SignalR ile çalışmaya devam eder.
-//   FCM_SERVICE_ACCOUNT_JSON : anahtarın JSON içeriği (secret olarak), ya da
-//   FCM_SERVICE_ACCOUNT_FILE : anahtar dosyasının yolu.
-//   FCM_PROJECT_ID           : (opsiyonel) varsayılan anahtardaki project_id.
+// --- PUSH NOTIFICATIONS (FCM HTTP v1) ---
+// Enabled when a Firebase service account key is given; otherwise push is
+// silently off and notifications keep working over REST + SignalR.
+//   FCM_SERVICE_ACCOUNT_JSON : the key's JSON content (as a secret), or
+//   FCM_SERVICE_ACCOUNT_FILE : path to the key file.
+//   FCM_PROJECT_ID           : (optional) defaults to the key's project_id.
 var fcmJson = builder.Configuration["FCM_SERVICE_ACCOUNT_JSON"];
 var fcmFile = builder.Configuration["FCM_SERVICE_ACCOUNT_FILE"];
 if (string.IsNullOrWhiteSpace(fcmJson) && !string.IsNullOrWhiteSpace(fcmFile))
@@ -201,13 +204,13 @@ if (!string.IsNullOrWhiteSpace(fcmJson))
         using var keyDoc = System.Text.Json.JsonDocument.Parse(fcmJson);
         projectId = builder.Configuration["FCM_PROJECT_ID"]
             ?? keyDoc.RootElement.GetProperty("project_id").GetString()
-            ?? throw new InvalidOperationException("project_id boş.");
+            ?? throw new InvalidOperationException("project_id is empty.");
     }
     catch (Exception ex) when (ex is System.Text.Json.JsonException or KeyNotFoundException or InvalidOperationException)
     {
-        // Yanlış yapılandırma sessizce "push kapalı"ya dönmesin; açılışta görünsün.
+        // A wrong configuration must not silently become "push off"; fail at startup.
         throw new InvalidOperationException(
-            "FCM servis hesabı anahtarı okunamadı (geçerli JSON ve project_id gerekli).", ex);
+            "The FCM service account key could not be read (valid JSON with a project_id is required).", ex);
     }
 
     builder.Services.AddSingleton(new FcmOptions { ProjectId = projectId });
@@ -222,28 +225,35 @@ else
 }
 
 // --- RATE LIMITING ---
-// Her isteğe genel bir sınır (kullanıcı ya da IP başına) ve pahalı/kötüye
-// kullanılabilir uçlara ayrıca sıkı politikalar. Ayrıntı: RateLimitingSetup.
+// A global limit on every request (per user or IP) plus strict policies for
+// expensive or abusable endpoints. Details: RateLimitingSetup.
 builder.Services.AddSineUyumRateLimiting(builder.Configuration);
-// Ters vekil arkasında gerçek istemci IP'si (yalnızca TRUSTED_PROXIES'ten).
+// The real client IP behind a reverse proxy (only from TRUSTED_PROXIES).
 builder.Services.AddTrustedProxies();
 
-// --- GLOBAL HATA YÖNETİMI ---
-// Yakalanmayan istisnalar tek yerde ProblemDetails'e çevrilir; stack trace
-// istemciye sızmaz, ayrıntı yalnızca log'a yazılır.
+// --- LOCALIZATION ---
+// Request culture from the "lang" query string or Accept-Language (default
+// en); strings come from Resources/Locales/*.json. Details: LocalizationSetup.
+builder.Services.AddSineUyumLocalization(builder.Configuration);
+
+// --- GLOBAL ERROR HANDLING ---
+// Uncaught exceptions are turned into ProblemDetails in one place; stack
+// traces never reach the client, details only go to the log.
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 // --- CACHE ---
-// TMDb yanıtlarını (popüler, vizyondakiler, arama, film detayı) TTL'li
-// önbellekte tutmak için. Kota tüketimini azaltır, yanıtı hızlandırır.
-// SizeLimit, farklı arama sorgularının belleği sınırsız şişirmesini önler.
+// Keeps TMDb responses (popular, now playing, search, movie details) in a
+// TTL cache. Saves quota and speeds up responses. SizeLimit keeps distinct
+// search queries from growing memory without bound.
 builder.Services.AddMemoryCache(options => options.SizeLimit = 2048);
 
 // --- CONTROLLERS & SWAGGER ---
-// Tüm API rotaları "api/v1/..." altına alınır (bkz. ApiV1RouteConvention).
+// All API routes live under "api/v1/..." (see ApiV1RouteConvention).
+// DataAnnotations error messages are locale keys (see JsonStringLocalizerFactory).
 builder.Services.AddControllers(options =>
-    options.Conventions.Add(new SineUyum.Api.Conventions.ApiV1RouteConvention()));
+    options.Conventions.Add(new SineUyum.Api.Conventions.ApiV1RouteConvention()))
+    .AddDataAnnotationsLocalization();
 builder.Services.AddSignalR();
 builder.Services.AddHealthChecks();
 builder.Services.AddEndpointsApiExplorer();
@@ -251,19 +261,23 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// En başta: log, HTTPS yönlendirmesi ve IP başına sınırlar gerçek istemciyi görsün.
+// First: logging, HTTPS redirection and per-IP limits must see the real client.
 app.UseForwardedHeaders();
 
-// Güvenlik başlıkları her yanıta (hata ve 429 dahil); bu yüzden en dışta.
+// Security headers on every response (errors and 429 included), hence outermost.
 app.UseSecurityHeaders();
 
-// İstek başına özet log (yöntem, yol, durum kodu, süre). En dışta olmalı ki
-// exception handler hatayı 404/400/500'e çevirdikten SONRA gerçek dönen durum
-// kodunu loglasın (aksi halde her hata "500" görünür).
+// One summary log line per request (method, path, status code, duration). It
+// must be outside the exception handler so it logs the status code actually
+// returned AFTER the error was mapped to 404/400/500 (otherwise every error
+// would show up as "500").
 app.UseSerilogRequestLogging();
 
-// Hata yöneticisi erken olmalı ki sonraki tüm katmanlardaki istisnaları
-// yakalayabilsin; request logging'in hemen içinde.
+// Before the exception handler, so error titles use the request culture too.
+app.UseRequestLocalization();
+
+// The exception handler must come early to catch exceptions from every later
+// layer; right inside request logging and localization.
 app.UseExceptionHandler();
 
 // --- SWAGGER ---
@@ -278,10 +292,10 @@ else
     app.UseHttpsRedirection();
 }
 
-// --- MEDYA DOSYALARI ---
-// Yalnızca sunucunun ürettiği .jpg dosyaları sunulur; bilinmeyen uzantılar
-// (yanlışlıkla klasöre düşmüş bir dosya dahil) 404 döner. Dosya adları
-// benzersiz olduğu için uzun süre önbelleklenebilir.
+// --- MEDIA FILES ---
+// Only the .jpg files the server produces are served; unknown extensions
+// (including a file that ended up in the folder by mistake) return 404. File
+// names are unique, so they can be cached for a long time.
 var mediaContentTypes = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
 mediaContentTypes.Mappings.Clear();
 mediaContentTypes.Mappings[".jpg"] = "image/jpeg";
@@ -298,11 +312,11 @@ app.UseStaticFiles(new StaticFileOptions
     },
 });
 
-// --- GERİYE DÖNÜK UYUMLULUK (SÜRÜMSÜZ /api/*) ---
-// Eski istemciler (dağıtılmış web/mobil) sürümsüz "/api/..." çağırır.
-// Rotalar artık "/api/v1/..." altında olduğundan, sürümsüz istekleri
-// routing'den önce v1'e yönlendiririz. Böylece sürümleme eski istemcileri
-// kırmaz; yeni istemciler doğrudan "/api/v1/..." kullanır (geçiş/deprecation).
+// --- BACKWARD COMPATIBILITY (UNVERSIONED /api/*) ---
+// Old clients (deployed web/mobile) call the unversioned "/api/...". Routes
+// now live under "/api/v1/...", so unversioned requests are rewritten to v1
+// before routing. Versioning thus does not break old clients; new clients
+// call "/api/v1/..." directly (transition/deprecation).
 app.Use(async (context, next) =>
 {
     var path = context.Request.Path.Value;
@@ -315,27 +329,27 @@ app.Use(async (context, next) =>
     await next();
 });
 
-// --- MIDDLEWARE SIRASI ÖNEMLİ ---
+// --- MIDDLEWARE ORDER MATTERS ---
 app.UseRouting();
 app.UseCors(corsPolicyName);
 app.UseAuthentication();
-// Kimlik doğrulamadan SONRA: sınırlar kullanıcıya göre bölümlenir (öncesinde
-// context.User boş olur ve herkes IP'ye düşerdi). "auth" politikası IP
-// tabanlı olduğu için etkilenmez.
+// AFTER authentication: limits are partitioned per user (before it,
+// context.User would be empty and everyone would fall back to their IP). The
+// "auth" policy is IP-based and unaffected.
 app.UseRateLimiter();
 app.UseAuthorization();
 
-// --- MIGRATION, ROLLER VE ADMİN KULLANICISI ---
+// --- MIGRATIONS, ROLES AND THE ADMIN USER ---
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var logger = services.GetRequiredService<ILogger<Program>>();
 
-    // Şema hazırlığı sağlayıcıya göre:
-    //  - Postgres (production): versiyonlu EF migration'ları uygulanır.
-    //  - SQLite (geliştirme/test): migration tutulmuyor; şema doğrudan modelden
-    //    üretilir (EnsureCreated). Model değişince dev veritabanı dosyası
-    //    silinip yeniden oluşturulur.
+    // Schema setup depends on the provider:
+    //  - Postgres (production): versioned EF migrations are applied.
+    //  - SQLite (development/test): no migrations; the schema is created from
+    //    the model (EnsureCreated). When the model changes, delete the dev
+    //    database file and it is recreated.
     var dbContext = services.GetRequiredService<ApplicationDbContext>();
     if (dbProvider.Equals("Postgres", StringComparison.OrdinalIgnoreCase))
     {
@@ -358,12 +372,12 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
-    // Admin hesabı artık sabit "admin" / "Password123!" ile oluşturulmuyor.
-    // Kullanıcı adı ve parola konfigürasyondan (ya da ADMIN_USERNAME /
-    // ADMIN_PASSWORD ortam değişkenlerinden) okunur; parola verilmezse
-    // hesap hiç oluşturulmaz.
-    // appsettings.json'daki yer tutucular boş string olduğu için `??` yeterli
-    // değil: boş değerler de tanımsız sayılmalı.
+    // The admin account is no longer created with a fixed "admin" /
+    // "Password123!". User name and password come from configuration (or the
+    // ADMIN_USERNAME / ADMIN_PASSWORD environment variables); without a
+    // password no account is created.
+    // The appsettings.json placeholders are empty strings, so `??` is not
+    // enough: empty values must count as unset too.
     static string? FirstNonEmpty(IConfiguration configuration, params string[] keys)
         => keys.Select(key => configuration[key])
                .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
@@ -387,11 +401,11 @@ using (var scope = app.Services.CreateScope())
             if (result.Succeeded)
             {
                 await userManager.AddToRoleAsync(adminUser, "Admin");
-                logger.LogInformation("Admin kullanıcısı '{UserName}' oluşturuldu.", adminUserName);
+                logger.LogInformation("Admin user '{UserName}' created.", adminUserName);
             }
             else
             {
-                logger.LogError("Admin kullanıcısı oluşturulamadı: {Errors}",
+                logger.LogError("Could not create the admin user: {Errors}",
                     string.Join("; ", result.Errors.Select(e => e.Description)));
             }
         }
@@ -399,7 +413,7 @@ using (var scope = app.Services.CreateScope())
     else
     {
         logger.LogInformation(
-            "Admin hesabı tohumlanmadı. Oluşturmak için ADMIN_USERNAME ve ADMIN_PASSWORD tanımlayın.");
+            "Admin account not seeded. Set ADMIN_USERNAME and ADMIN_PASSWORD to create it.");
     }
 }
 

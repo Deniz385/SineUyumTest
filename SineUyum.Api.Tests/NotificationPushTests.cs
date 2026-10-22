@@ -10,10 +10,10 @@ using SineUyum.Api.Hubs;
 
 namespace SineUyum.Api.Tests;
 
-// SignalR ile itilen bildirim yükü, REST'teki bildirimle aynı sözleşmeyi
-// taşımalı ve asla kullanıcı varlığını (PasswordHash, SecurityStamp, e-posta...)
-// içermemeli. Hub bağlamı yakalayıcı bir sahteyle değiştirilir; yük, SignalR
-// JSON protokolünün kullandığı web varsayılanlarıyla serileştirilir.
+// The notification payload pushed over SignalR must carry the same contract as
+// the REST notification and never the user entity (PasswordHash, SecurityStamp,
+// email...). The hub context is replaced with a capturing fake; the payload is
+// serialized with the web defaults the SignalR JSON protocol uses.
 public class NotificationPushTests : IClassFixture<NotificationPushTests.CapturingFactory>
 {
     private readonly CapturingFactory _factory;
@@ -43,7 +43,7 @@ public class NotificationPushTests : IClassFixture<NotificationPushTests.Capturi
         public IClientProxy Group(string groupName) => throw new NotSupportedException();
         public IClientProxy GroupExcept(string groupName, IReadOnlyList<string> excludedConnectionIds) => throw new NotSupportedException();
         public IClientProxy Groups(IReadOnlyList<string> groupNames) => throw new NotSupportedException();
-        // Canlı sohbet mesajı birden çok kullanıcıya (gönderen + alıcı) itilir.
+        // A live chat message is pushed to several users (sender + recipient).
         public IClientProxy Users(IReadOnlyList<string> userIds) => new MultiProxy(userIds.Select(id => new Proxy(sent, id)).ToList());
 
         private sealed class MultiProxy(List<Proxy> proxies) : IClientProxy
@@ -58,7 +58,7 @@ public class NotificationPushTests : IClassFixture<NotificationPushTests.Capturi
         {
             public Task SendCoreAsync(string method, object?[] args, CancellationToken cancellationToken = default)
             {
-                // Gerçek protokol gibi: çalışma zamanı tipine göre serileştir.
+                // Like the real protocol: serialize by the runtime type.
                 var json = JsonSerializer.Serialize(args[0], args[0]?.GetType() ?? typeof(object), Web);
                 sent.Enqueue(new Pushed(userId, method, json));
                 return Task.CompletedTask;
@@ -85,9 +85,9 @@ public class NotificationPushTests : IClassFixture<NotificationPushTests.Capturi
     {
         var username = "push_" + Guid.NewGuid().ToString("N")[..10];
         await client.PostAsJsonAsync("/api/v1/account/register",
-            new { username, email = $"{username}@test.com", password = "Sifre123" });
+            new { username, email = $"{username}@test.com", password = "Password123" });
         var login = await client.PostAsJsonAsync("/api/v1/account/login",
-            new { username, password = "Sifre123" });
+            new { username, password = "Password123" });
         login.EnsureSuccessStatusCode();
         using var doc = JsonDocument.Parse(await login.Content.ReadAsStringAsync());
         return (doc.RootElement.GetProperty("token").GetString()!,
@@ -107,26 +107,26 @@ public class NotificationPushTests : IClassFixture<NotificationPushTests.Capturi
         using var doc = JsonDocument.Parse(json);
         var keys = doc.RootElement.EnumerateObject().Select(p => p.Name).OrderBy(k => k).ToArray();
         Assert.Equal(new[] { "createdAt", "id", "isRead", "message", "relatedUrl" }, keys);
-        Assert.True(doc.RootElement.GetProperty("id").GetInt32() > 0, "Bildirim kaydedilmeden itildi (id=0).");
+        Assert.True(doc.RootElement.GetProperty("id").GetInt32() > 0, "The notification was pushed before being saved (id=0).");
         Assert.DoesNotContain("passwordHash", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("securityStamp", json, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task MesajBildirimi_KullaniciVarligiSizdirmaz()
+    public async Task MessageNotification_DoesNotLeakUserEntity()
     {
         var client = _factory.CreateClient();
         var sender = await RegisterAsync(client);
         var recipient = await RegisterAsync(client);
 
         var res = await client.SendAsync(Authed(HttpMethod.Post, "/api/v1/messages", sender.Token,
-            new { recipientId = recipient.Id, content = "merhaba" }));
+            new { recipientId = recipient.Id, content = "hello" }));
         res.EnsureSuccessStatusCode();
 
         var pushed = Assert.Single(_factory.Hub.Sent, p => p.UserId == recipient.Id && p.Method == "ReceiveNotification");
         AssertNotificationContract(pushed.Json);
 
-        // Canlı sohbet mesajı da (M11) iki tarafa gider ve kullanıcı varlığı sızdırmaz.
+        // The live chat message (M11) also goes to both sides and leaks no user entity.
         Assert.Contains(_factory.Hub.Sent, p => p.UserId == recipient.Id && p.Method == "ReceiveMessage");
         Assert.Contains(_factory.Hub.Sent, p => p.UserId == sender.Id && p.Method == "ReceiveMessage");
         foreach (var p in _factory.Hub.Sent)
@@ -137,7 +137,7 @@ public class NotificationPushTests : IClassFixture<NotificationPushTests.Capturi
     }
 
     [Fact]
-    public async Task TakipBildirimi_SozlesmeyeUyar()
+    public async Task FollowNotification_MatchesContract()
     {
         var client = _factory.CreateClient();
         var follower = await RegisterAsync(client);

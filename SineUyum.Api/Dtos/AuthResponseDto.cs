@@ -1,8 +1,10 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace SineUyum.Api.Dtos
 {
-    // Mobil istemcinin tip güvenli şekilde okuyabilmesi için tanımlanmış
-    // kimlik doğrulama yanıtı. Anonim obje yerine bu DTO kullanılır ki
-    // Swagger/OpenAPI şeması da doğru üretilsin.
+    // A typed authentication response the mobile client can read safely. This
+    // DTO is used instead of an anonymous object so the Swagger/OpenAPI schema
+    // is generated correctly.
     public class AuthResponseDto
     {
         public string Token { get; set; } = string.Empty;
@@ -21,5 +23,15 @@ namespace SineUyum.Api.Dtos
         public bool IsSubscribed { get; set; }
         public DateTime? SubscriptionExpires { get; set; }
         public List<string> Roles { get; set; } = new();
+        // The user's stored language ("en", "tr"); notifications use it.
+        public string Language { get; set; } = string.Empty;
+    }
+
+    // PUT /api/v1/account/language request and response.
+    public class LanguageDto
+    {
+        [Required(ErrorMessage = "validation.required")]
+        [MaxLength(16, ErrorMessage = "validation.maxLength")]
+        public string Language { get; set; } = string.Empty;
     }
 }

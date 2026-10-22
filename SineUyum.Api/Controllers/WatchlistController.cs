@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
 using SineUyum.Api.Exceptions;
@@ -17,23 +18,25 @@ namespace SineUyum.Api.Controllers
     [Authorize]
     public class WatchlistController : ControllerBase
     {
-        // Sahip hariç, davetler dahil.
+        // Excluding the owner, invitations included.
         public const int MaxMembers = 20;
 
         private readonly ApplicationDbContext _context;
         private readonly MovieCatalogService _movieCatalog;
         private readonly PrivacyService _privacy;
         private readonly NotificationService _notifications;
+        private readonly IStringLocalizer _t;
 
-        public WatchlistController(ApplicationDbContext context, MovieCatalogService movieCatalog, PrivacyService privacy, NotificationService notifications)
+        public WatchlistController(ApplicationDbContext context, MovieCatalogService movieCatalog, PrivacyService privacy, NotificationService notifications, IStringLocalizer localizer)
         {
             _context = context;
             _movieCatalog = movieCatalog;
             _privacy = privacy;
             _notifications = notifications;
+            _t = localizer;
         }
 
-        // Kendi listelerim ve üyesi olduğum ortak listeler.
+        // My own lists and the shared lists I am a member of.
         [HttpGet]
         public async Task<ActionResult<List<WatchlistSummaryDto>>> GetUserWatchlists()
         {
@@ -84,12 +87,12 @@ namespace SineUyum.Api.Controllers
 
             if (watchlist == null)
             {
-                return NotFound("İstenen liste bulunamadı.");
+                return NotFound(_t["watchlists.notFound"].Value);
             }
 
             return Ok(watchlist);
         }
-        
+
         [HttpGet("{listId}")]
         public async Task<ActionResult<WatchlistDetailDto>> GetWatchlistDetails(int listId)
         {
@@ -99,7 +102,7 @@ namespace SineUyum.Api.Controllers
             var access = await AccessAsync(listId, userId);
             if (access == null)
             {
-                return NotFound("Liste bulunamadı veya bu listeye erişim yetkiniz yok.");
+                return NotFound(_t["watchlists.notFoundOrNoAccess"].Value);
             }
             var (list, isOwner) = access.Value;
 
@@ -113,8 +116,8 @@ namespace SineUyum.Api.Controllers
                 })
                 .ToListAsync();
 
-            // "Kim izledi": liste kişilerinden (sahip + kabul etmiş üyeler)
-            // filmi puanlamış olanlar. Birlikte ne izleneceğini seçmeye yarar.
+            // "Who watched": the list's people (owner + accepted members) who
+            // rated the movie. Helps pick what to watch together.
             var people = _context.WatchlistMembers
                 .Where(m => m.WatchlistId == listId && m.Accepted)
                 .Select(m => m.UserId)
@@ -170,7 +173,7 @@ namespace SineUyum.Api.Controllers
             _context.Watchlists.Add(watchlist);
             await _context.SaveChangesAsync();
 
-            // Varlık doğrudan dönülmez (UserId ve boş User navigasyonu sızıyordu).
+            // The entity is not returned directly (UserId and the empty User navigation leaked).
             return CreatedAtAction(nameof(GetWatchlistDetails), new { listId = watchlist.Id }, new WatchlistDetailDto
             {
                 Id = watchlist.Id,
@@ -178,7 +181,7 @@ namespace SineUyum.Api.Controllers
                 Description = watchlist.Description
             });
         }
-        
+
         [HttpPut("{listId}")]
         public async Task<ActionResult<StatusMessageDto>> UpdateWatchlist(int listId, [FromBody] CreateWatchlistDto dto)
         {
@@ -189,7 +192,7 @@ namespace SineUyum.Api.Controllers
 
             if (watchlist == null)
             {
-                return NotFound("Liste bulunamadı veya bu listeye erişim yetkiniz yok.");
+                return NotFound(_t["watchlists.notFoundOrNoAccess"].Value);
             }
 
             watchlist.Name = dto.Name;
@@ -198,7 +201,7 @@ namespace SineUyum.Api.Controllers
             _context.Watchlists.Update(watchlist);
             await _context.SaveChangesAsync();
 
-            return Ok(new StatusMessageDto("Liste başarıyla güncellendi."));
+            return Ok(new StatusMessageDto(_t["watchlists.updated"]));
         }
 
         [HttpDelete("{listId}")]
@@ -211,13 +214,13 @@ namespace SineUyum.Api.Controllers
 
             if (watchlist == null)
             {
-                return NotFound("Liste bulunamadı veya bu listeye erişim yetkiniz yok.");
+                return NotFound(_t["watchlists.notFoundOrNoAccess"].Value);
             }
 
             _context.Watchlists.Remove(watchlist);
             await _context.SaveChangesAsync();
-            
-            return Ok(new StatusMessageDto("Liste başarıyla silindi."));
+
+            return Ok(new StatusMessageDto(_t["watchlists.deleted"]));
         }
 
         [HttpPost("{listId}/movies")]
@@ -227,16 +230,16 @@ namespace SineUyum.Api.Controllers
             if (userId == null) return Unauthorized();
             if (await AccessAsync(listId, userId) == null)
             {
-                return NotFound("Liste bulunamadı veya bu listeye erişim yetkiniz yok.");
+                return NotFound(_t["watchlists.notFoundOrNoAccess"].Value);
             }
             var alreadyInList = await _context.WatchlistItems.AnyAsync(i => i.WatchlistId == listId && i.MovieId == dto.MovieId);
             if (alreadyInList)
             {
-                return BadRequest(new StatusMessageDto("Bu film zaten bu listede mevcut."));
+                return BadRequest(new StatusMessageDto(_t["watchlists.movieAlreadyInList"]));
             }
-            // Film yerelde yoksa başlık/poster TMDb'den çekilir; istemcinin
-            // gönderdiği Title/PosterPath paylaşılan Movies tablosuna yazılmaz
-            // (G7'deki over-posting açığının izleme listesi tarafı).
+            // A movie missing locally gets its title/poster from TMDb; the
+            // client's Title/PosterPath are never written to the shared Movies
+            // table (the watchlist side of the G7 over-posting hole).
             await _movieCatalog.EnsureMovieAsync(dto.MovieId);
             var watchlistItem = new WatchlistItem
             {
@@ -251,12 +254,12 @@ namespace SineUyum.Api.Controllers
             }
             catch (DbUpdateException)
             {
-                // Ortak listede iki kişi aynı anda aynı filmi ekledi (benzersiz indeks).
+                // Two people added the same movie to a shared list at once (unique index).
                 _context.ChangeTracker.Clear();
                 if (!await _context.WatchlistItems.AnyAsync(i => i.WatchlistId == listId && i.MovieId == dto.MovieId)) throw;
-                return BadRequest(new StatusMessageDto("Bu film zaten bu listede mevcut."));
+                return BadRequest(new StatusMessageDto(_t["watchlists.movieAlreadyInList"]));
             }
-            return Ok(new StatusMessageDto("Film listeye eklendi."));
+            return Ok(new StatusMessageDto(_t["watchlists.movieAdded"]));
         }
 
         [HttpDelete("{listId}/movies/{movieId}")]
@@ -269,44 +272,44 @@ namespace SineUyum.Api.Controllers
                     (i.Watchlist.UserId == userId || i.Watchlist.Members.Any(m => m.UserId == userId && m.Accepted)));
             if (watchlistItem == null)
             {
-                return NotFound("Film bu listede bulunamadı veya listeye erişim yetkiniz yok.");
+                return NotFound(_t["watchlists.movieNotInList"].Value);
             }
             _context.WatchlistItems.Remove(watchlistItem);
             await _context.SaveChangesAsync();
-            return Ok(new StatusMessageDto("Film listeden kaldırıldı."));
+            return Ok(new StatusMessageDto(_t["watchlists.movieRemoved"]));
         }
-    
-        // --- Ortak liste: davet, kabul, ayrılma ---
 
-        // Sahip bir kullanıcıyı davet eder; davetli kabul edene kadar listeyi göremez.
+        // --- Shared lists: invite, accept, leave ---
+
+        // The owner invites a user; the invitee cannot see the list until they accept.
         [HttpPost("{listId}/members")]
         [EnableRateLimiting(RateLimitPolicies.SocialWrite)]
         public async Task<ActionResult<WatchlistMemberDto>> Invite(int listId, [FromBody] InviteToWatchlistDto dto)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var list = await _context.Watchlists.FirstOrDefaultAsync(w => w.Id == listId && w.UserId == userId);
-            if (list == null) throw DomainException.NotFound("Liste bulunamadı ya da sahibi değilsiniz.");
-            if (dto.UserId == userId) throw new DomainException("Kendinizi davet edemezsiniz.");
+            if (list == null) throw DomainException.NotFound("watchlists.notFoundOrNotOwner");
+            if (dto.UserId == userId) throw new DomainException("watchlists.cannotInviteSelf");
 
             var invitee = await _context.Users.FindAsync(dto.UserId);
             if (invitee == null || await _privacy.IsBlockedEitherWayAsync(userId, dto.UserId))
             {
-                throw DomainException.NotFound("Kullanıcı bulunamadı.");
+                throw DomainException.NotFound("errors.userNotFound");
             }
             if (await _context.WatchlistMembers.AnyAsync(m => m.WatchlistId == listId && m.UserId == dto.UserId))
             {
-                throw new DomainException("Bu kişi zaten listede ya da davet edilmiş.", StatusCodes.Status409Conflict);
+                throw new DomainException("watchlists.alreadyMemberOrInvited", StatusCodes.Status409Conflict);
             }
             if (await _context.WatchlistMembers.CountAsync(m => m.WatchlistId == listId) >= MaxMembers)
             {
-                throw new DomainException($"Bir listeye en fazla {MaxMembers} kişi davet edilebilir.");
+                throw new DomainException("watchlists.tooManyMembers", [MaxMembers]);
             }
 
             _context.WatchlistMembers.Add(new WatchlistMember { WatchlistId = listId, UserId = dto.UserId });
             var me = await _context.Users.Where(u => u.Id == userId).Select(u => u.UserName).SingleAsync();
             await _notifications.NotifyAsync(dto.UserId,
-                $"{me} seni '{list.Name}' ortak izleme listesine davet etti.",
-                "/watchlist");
+                "/watchlist",
+                "notifications.watchlistInvite", me, list.Name);
 
             return Ok(new WatchlistMemberDto
             {
@@ -341,21 +344,21 @@ namespace SineUyum.Api.Controllers
             var membership = await _context.WatchlistMembers
                 .Include(m => m.Watchlist)
                 .FirstOrDefaultAsync(m => m.WatchlistId == listId && m.UserId == userId);
-            if (membership == null) throw DomainException.NotFound("Davet bulunamadı.");
+            if (membership == null) throw DomainException.NotFound("watchlists.invitationNotFound");
             if (!membership.Accepted)
             {
                 membership.Accepted = true;
                 membership.AcceptedAt = DateTime.UtcNow;
                 var me = await _context.Users.Where(u => u.Id == userId).Select(u => u.UserName).SingleAsync();
                 await _notifications.NotifyAsync(membership.Watchlist.UserId,
-                    $"{me} '{membership.Watchlist.Name}' listesine katıldı.",
-                    $"/watchlist/{listId}");
+                    $"/watchlist/{listId}",
+                    "notifications.watchlistJoined", me, membership.Watchlist.Name);
             }
-            return Ok(new StatusMessageDto("Listeye katıldınız."));
+            return Ok(new StatusMessageDto(_t["watchlists.joined"]));
         }
 
-        // Sahip bir üyeyi (ya da daveti) çıkarır; üye kendisi ayrılır ya da
-        // daveti reddeder.
+        // The owner removes a member (or an invitation); a member leaves or
+        // declines the invitation themselves.
         [HttpDelete("{listId}/members/{memberId}")]
         public async Task<ActionResult<StatusMessageDto>> RemoveMember(int listId, string memberId)
         {
@@ -363,17 +366,17 @@ namespace SineUyum.Api.Controllers
             var membership = await _context.WatchlistMembers
                 .Include(m => m.Watchlist)
                 .FirstOrDefaultAsync(m => m.WatchlistId == listId && m.UserId == memberId);
-            if (membership == null) throw DomainException.NotFound("Üye bulunamadı.");
+            if (membership == null) throw DomainException.NotFound("watchlists.memberNotFound");
             if (memberId != userId && membership.Watchlist.UserId != userId)
             {
-                throw new DomainException("Yalnızca liste sahibi üye çıkarabilir.", StatusCodes.Status403Forbidden);
+                throw new DomainException("watchlists.onlyOwnerCanRemove", StatusCodes.Status403Forbidden);
             }
             _context.WatchlistMembers.Remove(membership);
             await _context.SaveChangesAsync();
-            return Ok(new StatusMessageDto(memberId == userId ? "Listeden ayrıldınız." : "Üye listeden çıkarıldı."));
+            return Ok(new StatusMessageDto(memberId == userId ? _t["watchlists.left"] : _t["watchlists.memberRemoved"]));
         }
 
-        // Sahip ya da kabul etmiş üye; değilse null.
+        // The owner or an accepted member; otherwise null.
         private async Task<(Watchlist List, bool IsOwner)?> AccessAsync(int listId, string userId)
         {
             var list = await _context.Watchlists

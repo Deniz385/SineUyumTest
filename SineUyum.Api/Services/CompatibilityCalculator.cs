@@ -1,12 +1,12 @@
 namespace SineUyum.Api.Services
 {
-    // Ağırlıklı uyumluluk skoru daha önce AccountController, CompatibilityController
-    // ve MatchingService içinde üç ayrı kopya halindeydi. Tek kaynağa alındı ki
-    // algoritma değiştiğinde üç yer birbirinden sapmasın.
+    // The weighted compatibility score used to exist as three separate copies
+    // in AccountController, CompatibilityController and MatchingService. It now
+    // has a single source so the three places cannot drift when the algorithm changes.
     public static class CompatibilityCalculator
     {
-        // Ortak puan çiftlerinden 0-100 arası uyumluluk skoru üretir.
-        // Ortak film yoksa 0 döner.
+        // Computes a 0-100 compatibility score from pairs of common ratings.
+        // Returns 0 when there are no common movies.
         public static double Score(IReadOnlyCollection<(int First, int Second)> commonRatings)
         {
             if (commonRatings.Count == 0) return 0;
@@ -16,8 +16,8 @@ namespace SineUyum.Api.Services
             {
                 double difference = Math.Abs(first - second);
 
-                // İki taraf da çok sevdiyse ya da çok sevmediyse uyum daha anlamlı;
-                // biri çok sevip diğeri nefret ettiyse uyumsuzluk daha ağır tartılır.
+                // Agreement means more when both loved or both disliked a movie;
+                // one loving and the other hating it weighs heavier as a mismatch.
                 double weight = 1.0;
                 if ((first <= 3 && second <= 3) || (first >= 8 && second >= 8))
                 {
@@ -38,7 +38,7 @@ namespace SineUyum.Api.Services
             return Math.Max(0, Math.Min(100, score));
         }
 
-        // Film id -> puan sözlüklerinden ortak filmleri bulup skoru hesaplar.
+        // Finds the common movies in two movie id -> rating dictionaries and computes the score.
         public static double Score(IReadOnlyDictionary<int, int> ratings1, IReadOnlyDictionary<int, int> ratings2)
         {
             var pairs = ratings1.Keys

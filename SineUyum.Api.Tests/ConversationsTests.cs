@@ -4,8 +4,9 @@ using System.Text.Json;
 
 namespace SineUyum.Api.Tests;
 
-// M5/M6: GetConversations son mesajı veritabanında hesaplar ve sayfalar.
-// Doğruluğu (her sohbette doğru son mesaj, doğru sıra) ve sayfalamayı sabitler.
+// M5/M6: GetConversations computes the last message in the database and pages.
+// Pins down correctness (the right last message per conversation, the right
+// order) and pagination.
 public class ConversationsTests : IClassFixture<TestWebAppFactory>
 {
     private readonly TestWebAppFactory _factory;
@@ -21,9 +22,9 @@ public class ConversationsTests : IClassFixture<TestWebAppFactory>
     {
         var username = "conv_" + Guid.NewGuid().ToString("N")[..10];
         await client.PostAsJsonAsync("/api/v1/account/register",
-            new { username, email = $"{username}@test.com", password = "Sifre123" });
+            new { username, email = $"{username}@test.com", password = "Password123" });
         var login = await client.PostAsJsonAsync("/api/v1/account/login",
-            new { username, password = "Sifre123" });
+            new { username, password = "Password123" });
         login.EnsureSuccessStatusCode();
         using var doc = JsonDocument.Parse(await login.Content.ReadAsStringAsync());
         var root = doc.RootElement;
@@ -50,17 +51,17 @@ public class ConversationsTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task SonMesaj_VeSira_Dogru()
+    public async Task LastMessage_AndOrder_AreCorrect()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client);
-        var ali = await RegisterAsync(client);
-        var ayse = await RegisterAsync(client);
+        var bob = await RegisterAsync(client);
+        var alice = await RegisterAsync(client);
 
-        // me -> ali, sonra me -> ayse (ayse ile sohbet daha yeni)
-        await SendMessageAsync(client, me.Token, ali.User.Id, "ali ilk");
-        await SendMessageAsync(client, me.Token, ali.User.Id, "ali son");
-        await SendMessageAsync(client, me.Token, ayse.User.Id, "ayse son");
+        // me -> bob, then me -> alice (the conversation with alice is newer)
+        await SendMessageAsync(client, me.Token, bob.User.Id, "bob first");
+        await SendMessageAsync(client, me.Token, bob.User.Id, "bob last");
+        await SendMessageAsync(client, me.Token, alice.User.Id, "alice last");
 
         var res = await client.SendAsync(Authed(HttpMethod.Get, "/api/v1/messages", me.Token));
         res.EnsureSuccessStatusCode();
@@ -68,25 +69,25 @@ public class ConversationsTests : IClassFixture<TestWebAppFactory>
             await res.Content.ReadAsStringAsync(), Json)!;
 
         Assert.Equal(2, list.Count);
-        // En yeni sohbet (ayse) başta olmalı.
-        Assert.Equal(ayse.User.Id, list[0].GetProperty("otherUserId").GetString());
-        Assert.Equal("ayse son", list[0].GetProperty("lastMessageContent").GetString());
-        // ali sohbetinde son mesaj "ali son" olmalı (ilk değil).
-        Assert.Equal(ali.User.Id, list[1].GetProperty("otherUserId").GetString());
-        Assert.Equal("ali son", list[1].GetProperty("lastMessageContent").GetString());
+        // The newest conversation (alice) comes first.
+        Assert.Equal(alice.User.Id, list[0].GetProperty("otherUserId").GetString());
+        Assert.Equal("alice last", list[0].GetProperty("lastMessageContent").GetString());
+        // In the conversation with bob the last message is "bob last" (not the first).
+        Assert.Equal(bob.User.Id, list[1].GetProperty("otherUserId").GetString());
+        Assert.Equal("bob last", list[1].GetProperty("lastMessageContent").GetString());
     }
 
     [Fact]
-    public async Task Sayfalama_SayfaBasinaSinirlar()
+    public async Task Pagination_LimitsPerPage()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client);
 
-        // 3 farklı kişiyle sohbet.
+        // Conversations with 3 different people.
         for (var i = 0; i < 3; i++)
         {
             var partner = await RegisterAsync(client);
-            await SendMessageAsync(client, me.Token, partner.User.Id, $"selam {i}");
+            await SendMessageAsync(client, me.Token, partner.User.Id, $"hi {i}");
         }
 
         var page1 = await client.SendAsync(
@@ -103,7 +104,7 @@ public class ConversationsTests : IClassFixture<TestWebAppFactory>
             await page2.Content.ReadAsStringAsync(), Json)!;
         Assert.Single(list2);
 
-        // Sayfalar çakışmamalı.
+        // Pages must not overlap.
         var id1 = list1.Select(x => x.GetProperty("otherUserId").GetString()).ToHashSet();
         var id2 = list2.Select(x => x.GetProperty("otherUserId").GetString()).ToHashSet();
         Assert.Empty(id1.Intersect(id2));

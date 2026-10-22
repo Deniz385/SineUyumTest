@@ -7,7 +7,7 @@ using static SineUyum.Api.Tests.PushTestSupport;
 
 namespace SineUyum.Api.Tests;
 
-// B7: cihaz (FCM token) kaydı.
+// B7: device (FCM token) registration.
 public class DevicesTests : IClassFixture<FakePushFactory>
 {
     private readonly FakePushFactory _factory;
@@ -25,7 +25,7 @@ public class DevicesTests : IClassFixture<FakePushFactory>
     private static string NewToken() => "fcm-" + Guid.NewGuid().ToString("N");
 
     [Fact]
-    public async Task Kayit_Tekrarlaninca_TekSatirKalir()
+    public async Task RepeatedRegistration_KeepsASingleRow()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "dev_");
@@ -41,7 +41,7 @@ public class DevicesTests : IClassFixture<FakePushFactory>
     }
 
     [Fact]
-    public async Task AyniCihazdaBaskaHesap_KayitYeniKullaniciyaTasinir()
+    public async Task OtherAccountOnSameDevice_MovesRowToNewUser()
     {
         var client = _factory.CreateClient();
         var first = await RegisterAsync(client, "dev_");
@@ -59,7 +59,7 @@ public class DevicesTests : IClassFixture<FakePushFactory>
     [InlineData("", "android")]
     [InlineData("tok", "windows")]
     [InlineData("tok", "")]
-    public async Task GecersizIstek_400(string token, string platform)
+    public async Task InvalidRequest_400(string token, string platform)
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "dev_");
@@ -71,7 +71,7 @@ public class DevicesTests : IClassFixture<FakePushFactory>
     }
 
     [Fact]
-    public async Task KimlikDogrulamasizKayit_401()
+    public async Task UnauthenticatedRegistration_401()
     {
         var client = _factory.CreateClient();
         var res = await client.SendAsync(Authed(HttpMethod.Post, "/api/v1/devices", null,
@@ -79,9 +79,9 @@ public class DevicesTests : IClassFixture<FakePushFactory>
         Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
     }
 
-    // Oturumu düşmüş cihaz da kaydını silebilmeli.
+    // A device whose session is gone must still be able to delete its registration.
     [Fact]
-    public async Task KayitSilme_KimlikDogrulamaGerektirmez()
+    public async Task Unregister_RequiresNoAuthentication()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "dev_");
@@ -96,7 +96,7 @@ public class DevicesTests : IClassFixture<FakePushFactory>
     }
 
     [Fact]
-    public async Task CihazSiniriAsilinca_EnEskiSilinir()
+    public async Task DeviceLimitExceeded_OldestIsRemoved()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "dev_");
@@ -106,7 +106,7 @@ public class DevicesTests : IClassFixture<FakePushFactory>
 
         var remaining = (await DevicesAsync(tokens)).Select(r => r.Token).ToHashSet();
         Assert.Equal(DevicesController.MaxDevicesPerUser, remaining.Count);
-        // İlk kaydedilen ikisi en uzun süredir görülmeyenler.
+        // The first two registered are the ones not seen for the longest time.
         Assert.DoesNotContain(tokens[0], remaining);
         Assert.DoesNotContain(tokens[1], remaining);
         Assert.Contains(tokens[^1], remaining);

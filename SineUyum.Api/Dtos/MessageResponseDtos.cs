@@ -1,6 +1,6 @@
 namespace SineUyum.Api.Dtos
 {
-    // Sohbet içindeki tek mesaj.
+    // A single message in a conversation.
     public class MessageThreadItemDto
     {
         public int Id { get; set; }
@@ -10,15 +10,15 @@ namespace SineUyum.Api.Dtos
         public string? RecipientUsername { get; set; }
         public string? Content { get; set; }
         public DateTime MessageSent { get; set; }
-        // Alıcının okuduğu an. İki taraftan biri okundu bilgisini kapattıysa
-        // her zaman null.
+        // When the recipient read it. Always null if either side turned read
+        // receipts off.
         public DateTime? DateRead { get; set; }
         public MovieSummaryDto? Movie { get; set; }
         public SharedWatchlistDto? Watchlist { get; set; }
     }
 
-    // SignalR "MessagesRead": ReaderId, OtherUserId'nin LastReadMessageId'ye
-    // kadarki mesajlarını ReadAt'te okudu.
+    // SignalR "MessagesRead": ReaderId read OtherUserId's messages up to
+    // LastReadMessageId at ReadAt.
     public class MessagesReadDto
     {
         public string ReaderId { get; set; } = string.Empty;
@@ -27,7 +27,7 @@ namespace SineUyum.Api.Dtos
         public DateTime ReadAt { get; set; }
     }
 
-    // Mesajla paylaşılan liste.
+    // A list shared in a message.
     public class SharedWatchlistDto
     {
         public int Id { get; set; }
@@ -35,7 +35,7 @@ namespace SineUyum.Api.Dtos
         public string? OwnerUsername { get; set; }
     }
 
-    // Sohbet listesindeki satır (karşı taraf + son mesaj).
+    // A row in the conversation list (the other side + the last message).
     public class ConversationDto
     {
         public string OtherUserId { get; set; } = string.Empty;

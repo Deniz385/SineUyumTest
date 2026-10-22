@@ -1,21 +1,24 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using SineUyum.Api.Exceptions;
 
 namespace SineUyum.Api.Middleware
 {
-    // Yakalanmayan tüm istisnaları tek yerde ele alır. Önceden beklenmeyen bir
-    // hata stack trace'i istemciye sızdırabiliyordu (ör. AdminController ex.Message'ı
-    // doğrudan döndürüyordu). Artık:
-    //   - DomainException → kendi durum kodu + güvenli mesaj
-    //   - diğer her şey → 500 + genel mesaj (detay yalnızca log'a yazılır)
+    // Handles every uncaught exception in one place. Previously an unexpected
+    // error could leak a stack trace to the client (e.g. AdminController
+    // returned ex.Message directly). Now:
+    //   - DomainException → its own status code + its message in the request language
+    //   - anything else → 500 + a generic message (details only go to the log)
     public class GlobalExceptionHandler : IExceptionHandler
     {
         private readonly ILogger<GlobalExceptionHandler> _logger;
+        private readonly IStringLocalizer _t;
 
-        public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger)
+        public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger, IStringLocalizer localizer)
         {
             _logger = logger;
+            _t = localizer;
         }
 
         public async ValueTask<bool> TryHandleAsync(
@@ -23,53 +26,53 @@ namespace SineUyum.Api.Middleware
             Exception exception,
             CancellationToken cancellationToken)
         {
-            // İstek izlemek için correlation id — hem log'da hem yanıtta.
+            // Correlation id for tracing a request — in the log and the response.
             var traceId = httpContext.TraceIdentifier;
 
             ProblemDetails problem;
             if (exception is DomainException domain)
             {
-                // Beklenen iş kuralı hatası: bilgi amaçlı logla, mesajı göster.
+                // Expected business error: log as information, show the message.
                 _logger.LogInformation(
-                    "Domain hatası ({StatusCode}) {TraceId}: {Message}",
-                    domain.StatusCode, traceId, domain.Message);
+                    "Domain error ({StatusCode}) {TraceId}: {MessageKey}",
+                    domain.StatusCode, traceId, domain.MessageKey);
 
                 problem = new ProblemDetails
                 {
                     Status = domain.StatusCode,
-                    Title = domain.Message,
+                    Title = _t[domain.MessageKey, domain.MessageArgs.Select(a => a ?? string.Empty).ToArray()],
                 };
             }
             else if (exception is BadHttpRequestException badRequest)
             {
-                // Kestrel'in istemci kaynaklı reddi (ör. gövde sınırı aşıldı → 413,
-                // bozuk istek → 400). Önceden bunlar da "sunucu hatası" 500'üne
-                // düşüyordu. Kestrel'in mesajı iç ayrıntı içerebileceği için
-                // istemciye genel bir başlık gider.
+                // Kestrel rejected the client's request (e.g. body limit exceeded
+                // → 413, malformed request → 400). These used to fall through to
+                // a "server error" 500. Kestrel's message may contain internal
+                // details, so the client gets a generic title.
                 _logger.LogInformation(
-                    "İstemci isteği reddedildi ({StatusCode}) {TraceId}: {Message}",
+                    "Client request rejected ({StatusCode}) {TraceId}: {Message}",
                     badRequest.StatusCode, traceId, badRequest.Message);
 
                 problem = new ProblemDetails
                 {
                     Status = badRequest.StatusCode,
                     Title = badRequest.StatusCode == StatusCodes.Status413PayloadTooLarge
-                        ? "İstek gövdesi izin verilen boyutu aşıyor."
-                        : "Geçersiz istek.",
+                        ? _t["errors.requestTooLarge"]
+                        : _t["errors.invalidRequest"],
                 };
             }
             else
             {
-                // Beklenmeyen hata: tüm ayrıntı log'a, istemciye genel mesaj.
+                // Unexpected error: full details to the log, a generic message to the client.
                 _logger.LogError(
                     exception,
-                    "İşlenmeyen hata {TraceId} — {Path}",
+                    "Unhandled error {TraceId} — {Path}",
                     traceId, httpContext.Request.Path);
 
                 problem = new ProblemDetails
                 {
                     Status = StatusCodes.Status500InternalServerError,
-                    Title = "Sunucuda beklenmeyen bir hata oluştu.",
+                    Title = _t["errors.unexpected"],
                 };
             }
 
@@ -79,7 +82,7 @@ namespace SineUyum.Api.Middleware
             await httpContext.Response
                 .WriteAsJsonAsync(problem, cancellationToken);
 
-            return true; // hata ele alındı
+            return true; // handled
         }
     }
 }

@@ -3,23 +3,24 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using SineUyum.Api.Data;
 using SineUyum.Api.Exceptions;
+using SineUyum.Api.Localization;
 using SineUyum.Api.Models;
 
 namespace SineUyum.Api.Services
 {
     public class MatchingOptions
     {
-        // Sinyal kaçsa (ör. başka sunucu örneği kuyruğa ekledi) bile işler bu
-        // aralıkla yoklanır.
+        // Jobs are polled at this interval even if a signal is missed (e.g.
+        // another server instance queued the job).
         public int PollSeconds { get; set; } = 15;
 
-        // Bu kadar süredir "Running" kalan iş, onu alan süreç çöktü sayılıp
-        // yeniden kuyruğa alınır. Bir eşleştirme normalde saniyeler sürer.
+        // A job "Running" for this long is considered abandoned by a crashed
+        // process and is queued again. A matching normally takes seconds.
         public int StaleRunMinutes { get; set; } = 10;
     }
 
-    // İşçiyi uyandırmak için hafif sinyal. Asıl kuyruk veritabanıdır
-    // (MatchingRuns): yeniden başlatmada kaybolmaz.
+    // A lightweight signal to wake the worker. The real queue is the database
+    // (MatchingRuns): it is not lost on restart.
     public sealed class MatchingQueue
     {
         private readonly Channel<int> _signals = Channel.CreateBounded<int>(
@@ -37,27 +38,30 @@ namespace SineUyum.Api.Services
             }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             {
-                // Zaman aşımı: yoklama zamanı.
+                // Timeout: time to poll.
             }
         }
     }
 
-    // Eşleştirme işlerini (M7) istek yolunun dışında, sırayla işler.
+    // Processes matching jobs (M7) one by one, outside the request path.
     public sealed class MatchingWorker : BackgroundService
     {
-        public const string UnexpectedError = "Eşleştirme sırasında beklenmeyen bir hata oluştu. Tekrar deneyebilirsiniz.";
+        // Locale key stored for unexpected failures (details only go to the log).
+        public const string UnexpectedErrorKey = "matching.unexpectedError";
 
         private readonly MatchingQueue _queue;
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly IOptions<MatchingOptions> _options;
         private readonly ILogger<MatchingWorker> _logger;
+        private readonly LocaleCatalog _catalog;
 
-        public MatchingWorker(MatchingQueue queue, IServiceScopeFactory scopeFactory, IOptions<MatchingOptions> options, ILogger<MatchingWorker> logger)
+        public MatchingWorker(MatchingQueue queue, IServiceScopeFactory scopeFactory, IOptions<MatchingOptions> options, ILogger<MatchingWorker> logger, LocaleCatalog catalog)
         {
             _queue = queue;
             _scopeFactory = scopeFactory;
             _options = options;
             _logger = logger;
+            _catalog = catalog;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -77,9 +81,10 @@ namespace SineUyum.Api.Services
                 }
                 catch (Exception ex)
                 {
-                    // Veritabanı geçici olarak yoksa servis durmasın (.NET 8'de
-                    // BackgroundService'ten kaçan istisna uygulamayı kapatır).
-                    _logger.LogError(ex, "Eşleştirme kuyruğu işlenemedi; yeniden denenecek.");
+                    // If the database is temporarily unavailable the service must
+                    // not stop (in .NET 8 an exception escaping a BackgroundService
+                    // shuts the application down).
+                    _logger.LogError(ex, "Could not process the matching queue; will retry.");
                 }
 
                 await _queue.WaitAsync(TimeSpan.FromSeconds(Math.Max(1, _options.Value.PollSeconds)), stoppingToken);
@@ -99,11 +104,11 @@ namespace SineUyum.Api.Services
                     .SetProperty(r => r.StartedAt, (DateTime?)null), ct);
             if (requeued > 0)
             {
-                _logger.LogWarning("{Count} yarım kalmış eşleştirme işi yeniden kuyruğa alındı.", requeued);
+                _logger.LogWarning("Requeued {Count} abandoned matching jobs.", requeued);
             }
         }
 
-        // Sıradaki işi alır ve işler; iş yoksa false.
+        // Takes the next job and processes it; false when there is none.
         private async Task<bool> TryProcessNextAsync(CancellationToken ct)
         {
             using var scope = _scopeFactory.CreateScope();
@@ -116,17 +121,18 @@ namespace SineUyum.Api.Services
                 .FirstOrDefaultAsync(ct);
             if (candidate == null) return false;
 
-            // Atomik sahiplenme: birden çok sunucu örneği aynı işi almaz.
+            // Atomic claim: several server instances never take the same job.
             var claimed = await db.MatchingRuns
                 .Where(r => r.Id == candidate.Id && r.Status == MatchingRunStatus.Queued)
                 .ExecuteUpdateAsync(set => set
                     .SetProperty(r => r.Status, MatchingRunStatus.Running)
                     .SetProperty(r => r.StartedAt, DateTime.UtcNow), ct);
-            if (claimed == 0) return true; // başkası aldı; sıradakine bak
+            if (claimed == 0) return true; // someone else took it; look at the next one
 
             MatchingRunStatus status;
             int? groupCount = null, ungroupedCount = null;
-            string? error = null;
+            string? errorKey = null;
+            object?[] errorArgs = Array.Empty<object?>();
             try
             {
                 var result = await scope.ServiceProvider.GetRequiredService<MatchingService>()
@@ -134,27 +140,33 @@ namespace SineUyum.Api.Services
                 status = MatchingRunStatus.Succeeded;
                 groupCount = result.GroupCount;
                 ungroupedCount = result.UngroupedCount;
-                _logger.LogInformation("Etkinlik {EventId} eşleştirildi: {Groups} grup, {Ungrouped} kişi grupsuz.",
+                _logger.LogInformation("Event {EventId} matched: {Groups} groups, {Ungrouped} people without a group.",
                     candidate.CinemaEventId, result.GroupCount, result.UngroupedCount);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
-                // Kapanış: iş "Running" kalır ve süre aşımında yeniden alınır;
-                // yazma tek transaction olduğu için yarım grup kalmaz.
+                // Shutdown: the job stays "Running" and is picked up again after
+                // the timeout; writing is a single transaction, so no half groups remain.
                 throw;
             }
             catch (DomainException ex)
             {
                 status = MatchingRunStatus.Failed;
-                error = ex.Message;
+                errorKey = ex.MessageKey;
+                errorArgs = ex.MessageArgs;
             }
             catch (Exception ex)
             {
-                // İç ayrıntı yalnızca log'a; kayıtta genel mesaj.
-                _logger.LogError(ex, "Etkinlik {EventId} eşleştirilemedi.", candidate.CinemaEventId);
+                // Internal details only go to the log; the row gets a generic message.
+                _logger.LogError(ex, "Could not match event {EventId}.", candidate.CinemaEventId);
                 status = MatchingRunStatus.Failed;
-                error = UnexpectedError;
+                errorKey = UnexpectedErrorKey;
             }
+
+            // The key is rendered in each reader's language; Error keeps the English text.
+            var error = errorKey == null ? null : _catalog.Translate(LocaleCatalog.DefaultLanguage, errorKey, errorArgs);
+            if (error is { Length: > 500 }) error = error[..500];
+            var errorArgsJson = errorKey == null ? null : MessageArgs.Serialize(errorArgs);
 
             await db.MatchingRuns
                 .Where(r => r.Id == candidate.Id)
@@ -163,7 +175,9 @@ namespace SineUyum.Api.Services
                     .SetProperty(r => r.FinishedAt, DateTime.UtcNow)
                     .SetProperty(r => r.GroupCount, groupCount)
                     .SetProperty(r => r.UngroupedCount, ungroupedCount)
-                    .SetProperty(r => r.Error, error), CancellationToken.None);
+                    .SetProperty(r => r.Error, error)
+                    .SetProperty(r => r.ErrorKey, errorKey)
+                    .SetProperty(r => r.ErrorArgs, errorArgsJson), CancellationToken.None);
             return true;
         }
     }

@@ -5,21 +5,24 @@
 
     public class AppUser : IdentityUser
     {
-        public string? ProfileImageUrl { get; set; } // Profil fotoğrafının URL'si (boş olabilir)
-        public string? Bio { get; set; } 
-        // Abonelik durumu burada TUTULMAZ: Subscriptions tablosundan bitiş
-        // tarihine bakılarak hesaplanır (SubscriptionService).
-        // Gizlilik ayarları (G12); varsayılanlar mevcut davranışla aynı.
+        public string? ProfileImageUrl { get; set; } // Profile photo URL (may be empty)
+        public string? Bio { get; set; }
+        // The subscription state is NOT stored here: it is computed from the
+        // end dates in the Subscriptions table (SubscriptionService).
+        // Privacy settings (G12); the defaults match the previous behaviour.
         public ProfileVisibility ProfileVisibility { get; set; } = ProfileVisibility.Public;
         public MessagePermission MessagePermission { get; set; } = MessagePermission.Everyone;
         public bool HiddenFromSearch { get; set; }
-        // Okundu bilgisi karşılıklıdır: kapatan, kendi okumasını göstermez ve
-        // başkalarınınkini de görmez (M10).
+        // Read receipts are mutual: whoever turns them off neither shows their
+        // own reads nor sees anyone else's (M10).
         public bool ShowReadReceipts { get; set; } = true;
+        // Two-letter language code ("en", "tr"). Notifications and pushes are
+        // rendered in it. New accounts take the request language; accounts
+        // created before localization were migrated to "tr".
+        public string Language { get; set; } = Localization.SupportedLanguages.Default;
         public ICollection<UserRating> Ratings { get; set; } = new List<UserRating>();
-        // IdentityUser sınıfı zaten Id, UserName, Email, PasswordHash gibi
-        // birçok özelliği kendisi içeriyor.
-        // Buraya daha sonra profil resmi, doğum tarihi gibi
-        // ekstra özellikler ekleyebiliriz.
+        // IdentityUser already provides Id, UserName, Email, PasswordHash and
+        // many other properties. Extra profile fields such as a birth date
+        // can be added here later.
     }
 }

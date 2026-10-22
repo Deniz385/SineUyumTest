@@ -1,7 +1,7 @@
 namespace SineUyum.Api.Models
 {
-    // Ortak izleme listesinin üyesi. Sahip Watchlist.UserId'dir ve burada
-    // tutulmaz; davet kabul edilene kadar üye listeyi göremez/düzenleyemez.
+    // A member of a shared watchlist. The owner is Watchlist.UserId and is not
+    // stored here; until the invitation is accepted the member cannot see/edit the list.
     public class WatchlistMember
     {
         public int WatchlistId { get; set; }

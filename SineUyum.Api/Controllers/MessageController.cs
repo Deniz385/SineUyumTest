@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
 using SineUyum.Api.Exceptions;
@@ -23,26 +24,30 @@ namespace SineUyum.Api.Controllers
         private readonly NotificationService _notifications;
         private readonly IHubContext<NotificationHub> _hubContext;
         private readonly PrivacyService _privacy;
+        private readonly IStringLocalizer _t;
 
         public MessageController(
             ApplicationDbContext context,
             NotificationService notifications,
             IHubContext<NotificationHub> hubContext,
-            PrivacyService privacy)
+            PrivacyService privacy,
+            IStringLocalizer localizer)
         {
             _context = context;
             _notifications = notifications;
             _hubContext = hubContext;
             _privacy = privacy;
+            _t = localizer;
         }
 
-        // SignalR "ReceiveMessage" olayının adı; istemciler bunu dinler.
+        // Name of the SignalR "ReceiveMessage" event clients listen to.
         public const string ReceiveMessageEvent = "ReceiveMessage";
-        // Okundu bilgisi (M10): gönderenin ekranında "Görüldü".
+        // Read receipts (M10): "Seen" on the sender's screen.
         public const string MessagesReadEvent = "MessagesRead";
 
-        // Sohbetteki mesajın tek şekli: thread listesi, gönderme yanıtı ve canlı
-        // olay aynı projeksiyonu kullanır (istemci üçünü de aynı modelle okur).
+        // The single shape of a chat message: the thread list, the send
+        // response and the live event share this projection (the client reads
+        // all three with the same model).
         private static readonly System.Linq.Expressions.Expression<Func<Message, MessageThreadItemDto>> ToThreadItem =
             m => new MessageThreadItemDto
             {
@@ -69,36 +74,36 @@ namespace SineUyum.Api.Controllers
             };
 
         [HttpPost]
-        // Her mesaj alıcıya bildirim + push üretir; spam'e karşı sıkı sınır.
+        // Every message creates a notification + push for the recipient; a strict limit against spam.
         [EnableRateLimiting(RateLimitPolicies.SocialWrite)]
         public async Task<ActionResult<MessageThreadItemDto>> CreateMessage(CreateMessageDto createMessageDto)
         {
             var senderId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (senderId == null) return Unauthorized();
-            
+
             var sender = await _context.Users.FindAsync(senderId);
             if (sender == null) return Unauthorized();
 
             if (senderId == createMessageDto.RecipientId)
-                return BadRequest("Kendinize mesaj gönderemezsiniz.");
+                return BadRequest(_t["messages.cannotMessageSelf"].Value);
 
             if (string.IsNullOrWhiteSpace(createMessageDto.Content) && !createMessageDto.MovieId.HasValue && !createMessageDto.WatchlistId.HasValue)
-                return BadRequest("Mesaj içeriği boş olamaz.");
+                return BadRequest(_t["messages.contentRequired"].Value);
 
             if (createMessageDto.WatchlistId.HasValue)
             {
                 var listExists = await _context.Watchlists.AnyAsync(w => w.Id == createMessageDto.WatchlistId.Value && w.UserId == senderId);
                 if (!listExists)
                 {
-                    // Forbid("...") metni kimlik doğrulama şeması sanıp 500 veriyordu.
-                    throw new DomainException("Kendinize ait olmayan bir listeyi paylaşamazsınız.", StatusCodes.Status403Forbidden);
+                    // Forbid("...") took the text for an authentication scheme and returned 500.
+                    throw new DomainException("messages.cannotShareOthersList", StatusCodes.Status403Forbidden);
                 }
             }
 
             var recipient = await _context.Users.FindAsync(createMessageDto.RecipientId);
-            if (recipient == null) return NotFound("Alıcı kullanıcı bulunamadı.");
+            if (recipient == null) return NotFound(_t["messages.recipientNotFound"].Value);
 
-            // Engel ve alıcının mesaj izni (G12); ihlalde 403.
+            // Blocks and the recipient's message permission (G12); 403 on violation.
             await _privacy.EnsureCanMessageAsync(senderId, recipient);
 
             var message = new Message
@@ -111,16 +116,16 @@ namespace SineUyum.Api.Controllers
             };
             await _context.Messages.AddAsync(message);
 
-            // Mesaj ve alıcının bildirimi tek kayıtta; ardından SignalR + push.
-            // Tıklayınca gönderenle olan sohbete gider.
+            // The message and the recipient's notification are saved together;
+            // then SignalR + push. Tapping it opens the chat with the sender.
             await _notifications.NotifyAsync(
                 createMessageDto.RecipientId,
-                $"{sender.UserName} size bir mesaj gönderdi.",
-                $"/messages/{senderId}");
+                $"/messages/{senderId}",
+                "notifications.newMessage", sender.UserName);
 
-            // Canlı sohbet (M11): mesaj iki tarafa da itilir. Gönderen de alır ki
-            // aynı hesabın açık diğer sekme/cihazları güncellensin; isteği yapan
-            // istemci yanıttaki mesajla id üzerinden tekilleştirir.
+            // Live chat (M11): the message goes to both sides. The sender gets
+            // it too so the same account's other open tabs/devices update; the
+            // requesting client de-duplicates it by id against the response.
             var created = await _context.Messages
                 .Where(m => m.Id == message.Id)
                 .Select(ToThreadItem)
@@ -132,8 +137,8 @@ namespace SineUyum.Api.Controllers
             return Ok(created);
         }
 
-        // Mobil istemcinin sınırsız veri indirmemesi için sayfalama eklendi.
-        // page/pageSize verilmezse en güncel sayfa döner (varsayılan 100 mesaj).
+        // Paginated so the mobile client does not download without limit.
+        // Without page/pageSize the latest page is returned (100 messages by default).
         [HttpGet("thread/{otherUserId}")]
         public async Task<ActionResult<List<MessageThreadItemDto>>> GetMessageThread(
             string otherUserId,
@@ -155,7 +160,7 @@ namespace SineUyum.Api.Controllers
                 .Select(ToThreadItem)
                 .ToListAsync();
 
-            // Sorgu en yeniden eskiye çekiliyor; istemci eskiden yeniye bekliyor.
+            // Queried newest first; the client expects oldest first.
             messages.Reverse();
 
             if (!await ReadReceiptsVisibleAsync(currentUserId, otherUserId))
@@ -166,9 +171,8 @@ namespace SineUyum.Api.Controllers
             return Ok(messages);
         }
 
-        // Sohbeti okundu olarak işaretler. Message.DateRead alanı tanımlıydı ama
-        // hiçbir yerde set edilmiyordu, bu yüzden "okundu" göstergesi her zaman
-        // yanlış çalışıyordu.
+        // Marks the conversation as read. Message.DateRead existed but was never
+        // set anywhere, so the "read" indicator was always wrong.
         [HttpPost("thread/{otherUserId}/mark-as-read")]
         public async Task<ActionResult<MarkedAsReadDto>> MarkThreadAsRead(string otherUserId)
         {
@@ -188,8 +192,8 @@ namespace SineUyum.Api.Controllers
                 }
                 await _context.SaveChangesAsync();
 
-                // Okuyanın diğer sekme/cihazları her zaman; gönderen ise yalnızca
-                // iki taraf da okundu bilgisini açık tuttuysa haberdar olur.
+                // The reader's other tabs/devices are always told; the sender
+                // only if both sides keep read receipts on.
                 var receivers = await ReadReceiptsVisibleAsync(currentUserId, otherUserId)
                     ? new[] { currentUserId, otherUserId }
                     : new[] { currentUserId };
@@ -224,8 +228,9 @@ namespace SineUyum.Api.Controllers
             var mine = _context.Messages
                 .Where(m => m.SenderId == currentUserId || m.RecipientId == currentUserId);
 
-            // Sohbet başına son mesaj zamanı veritabanında hesaplanır; kullanıcının
-            // tüm mesajları belleğe çekilmez. Sayfalama da DB tarafında.
+            // The last message time per conversation is computed in the
+            // database; the user's messages are not all loaded into memory.
+            // Pagination happens in the database too.
             var pagedPartners = await mine
                 .GroupBy(m => m.SenderId == currentUserId ? m.RecipientId : m.SenderId)
                 .Select(g => new { PartnerId = g.Key, LastSent = g.Max(m => m.MessageSent) })
@@ -239,7 +244,7 @@ namespace SineUyum.Api.Controllers
                 return Ok(new List<ConversationDto>());
             }
 
-            // Yalnızca bu sayfadaki sohbetlerin son mesajlarını çek (ilişkileriyle).
+            // Load only the last messages of this page's conversations (with their relations).
             var partnerIds = pagedPartners.Select(p => p.PartnerId).ToList();
             var lastSents = pagedPartners.Select(p => p.LastSent).ToList();
 
@@ -255,7 +260,7 @@ namespace SineUyum.Api.Controllers
             var conversations = new List<ConversationDto>(pagedPartners.Count);
             foreach (var partner in pagedPartners)
             {
-                // Bu partnerle, son gönderim zamanına denk gelen mesaj.
+                // The message with this partner that matches the last send time.
                 var lastMessage = candidates.FirstOrDefault(m =>
                     m.MessageSent == partner.LastSent &&
                     (m.SenderId == partner.PartnerId || m.RecipientId == partner.PartnerId));
@@ -265,10 +270,10 @@ namespace SineUyum.Api.Controllers
                     ? lastMessage.Recipient
                     : lastMessage.Sender;
 
-                string lastMessageContent = "Bir film önerdi.";
+                string lastMessageContent = _t["messages.previewMovie"];
                 if (lastMessage.WatchlistId.HasValue)
                 {
-                    lastMessageContent = $"'{lastMessage.Watchlist?.Name}' listesini paylaştı.";
+                    lastMessageContent = _t["messages.previewWatchlist", lastMessage.Watchlist?.Name ?? string.Empty];
                 }
                 else if (!string.IsNullOrEmpty(lastMessage.Content))
                 {

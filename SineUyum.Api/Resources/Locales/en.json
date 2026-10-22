@@ -1,0 +1,252 @@
+{
+  "account": {
+    "registered": "User created successfully.",
+    "invalidCredentials": "Incorrect username or password.",
+    "invalidRefreshToken": "The refresh token is invalid or has expired.",
+    "loggedOut": "Logged out.",
+    "unsupportedLanguage": "The language '{0}' is not supported. Supported languages: {1}."
+  },
+  "blocks": {
+    "cannotBlockSelf": "You cannot block yourself.",
+    "blocked": "User blocked.",
+    "unblocked": "User unblocked."
+  },
+  "common": {
+    "someone": "Someone"
+  },
+  "errors": {
+    "eventNotFound": "Event not found.",
+    "userNotFound": "User not found.",
+    "invalidRequest": "Invalid request.",
+    "requestTooLarge": "The request body exceeds the allowed size.",
+    "unexpected": "An unexpected error occurred on the server.",
+    "validationFailed": "One or more validation errors occurred.",
+    "tooManyRequests": "Too many requests. Please try again a little later.",
+    "tmdbNotConfigured": "The TMDb API key is not configured on the server.",
+    "tmdbRecommendationsFailed": "Could not get recommendations from TMDb.",
+    "tmdbRequestFailed": "Could not get data from the TMDb API.",
+    "serviceUnreachable": "The service is unreachable: {0}"
+  },
+  "events": {
+    "noUpcoming": "There is no new event you can join.",
+    "notGroupMember": "You are not allowed to vote in this group.",
+    "movieNotSuggested": "This movie is not among the group's suggestions.",
+    "voteSaved": "Your vote has been saved.",
+    "eventPassed": "This event has already taken place.",
+    "alreadyWaiting": "You are already on the waiting list for an upcoming event.",
+    "joined": "You have joined the event! Stand by for matching.",
+    "updateNotFound": "The event to update was not found.",
+    "updated": "Event updated successfully.",
+    "deleteNotFound": "The event to delete was not found.",
+    "deleted": "Event deleted successfully."
+  },
+  "feed": {
+    "invalidCursor": "Invalid page cursor."
+  },
+  "filmIdentity": {
+    "newExplorer": {
+      "title": "New Explorer",
+      "description": "Just getting started with {0} rated so far; your taste is taking shape."
+    },
+    "contrarian": {
+      "title": "Contrarian Critic",
+      "description": "Your ratings differ from the consensus by {0:0.0} points on average."
+    },
+    "generous": {
+      "title": "Generous Viewer",
+      "description": "Your average is {0:0.0}: you don't hold back when a film is good."
+    },
+    "hardToPlease": {
+      "title": "Hard to Please",
+      "description": "Your average is {0:0.0}: earning a 10 from you isn't easy."
+    },
+    "genreFan": {
+      "title": "{0} Fan",
+      "description": "{1}% of the movies you've rated are {0}."
+    },
+    "eclectic": {
+      "title": "Eclectic Viewer",
+      "description": "You regularly watch movies from {0} different genres."
+    },
+    "explorer": {
+      "title": "Film Explorer",
+      "description": "You have a balanced taste and are open to every genre."
+    }
+  },
+  "follows": {
+    "cannotFollowSelf": "You cannot follow yourself.",
+    "notAllowed": "You cannot follow this user.",
+    "alreadyFollowing": "You are already following this user.",
+    "followed": "User followed successfully.",
+    "notFound": "Follow relationship not found.",
+    "unfollowed": "User unfollowed."
+  },
+  "genres": {
+    "12": "Adventure",
+    "14": "Fantasy",
+    "16": "Animation",
+    "18": "Drama",
+    "27": "Horror",
+    "28": "Action",
+    "35": "Comedy",
+    "36": "History",
+    "37": "Western",
+    "53": "Thriller",
+    "80": "Crime",
+    "99": "Documentary",
+    "878": "Science Fiction",
+    "9648": "Mystery",
+    "10402": "Music",
+    "10749": "Romance",
+    "10751": "Family",
+    "10752": "War",
+    "10770": "TV Movie"
+  },
+  "identity": {
+    "defaultError": "An unknown failure has occurred.",
+    "concurrencyFailure": "Optimistic concurrency failure, object has been modified.",
+    "passwordMismatch": "Incorrect password.",
+    "invalidToken": "Invalid token.",
+    "recoveryCodeRedemptionFailed": "Recovery code redemption failed.",
+    "loginAlreadyAssociated": "A user with this login already exists.",
+    "invalidUserName": "Username '{0}' is invalid, can only contain letters or digits.",
+    "invalidEmail": "Email '{0}' is invalid.",
+    "duplicateUserName": "Username '{0}' is already taken.",
+    "duplicateEmail": "Email '{0}' is already taken.",
+    "invalidRoleName": "Role name '{0}' is invalid.",
+    "duplicateRoleName": "Role name '{0}' is already taken.",
+    "userAlreadyHasPassword": "User already has a password set.",
+    "userLockoutNotEnabled": "Lockout is not enabled for this user.",
+    "userAlreadyInRole": "User already in role '{0}'.",
+    "userNotInRole": "User is not in role '{0}'.",
+    "passwordTooShort": "Passwords must be at least {0} characters.",
+    "passwordRequiresUniqueChars": "Passwords must use at least {0} different characters.",
+    "passwordRequiresNonAlphanumeric": "Passwords must have at least one non alphanumeric character.",
+    "passwordRequiresDigit": "Passwords must have at least one digit ('0'-'9').",
+    "passwordRequiresLower": "Passwords must have at least one lowercase ('a'-'z').",
+    "passwordRequiresUpper": "Passwords must have at least one uppercase ('A'-'Z')."
+  },
+  "insights": {
+    "summaryBoth": "You both love {0} movies, but you differ on {1} movies.",
+    "summaryShared": "You both love {0} movies.",
+    "summaryDivergent": "You differ on {0} movies.",
+    "genrePair": "{0} and {1}"
+  },
+  "matching": {
+    "alreadyRunning": "Matching is already running for this event.",
+    "notStarted": "Matching has not been started for this event.",
+    "groupsAlreadyCreated": "Groups have already been created for this event.",
+    "notEnoughParticipants": "Groups could not be created because there are not enough participants. Required: {0}, current: {1}",
+    "unexpectedError": "An unexpected error occurred during matching. You can try again.",
+    "queued": "Matching has been queued.",
+    "running": "Matching is in progress.",
+    "succeeded": "Groups created: {0}.",
+    "succeededWithUngrouped": "Groups created: {0}; participants left without a group: {1}.",
+    "failed": "Matching failed."
+  },
+  "messages": {
+    "cannotMessageSelf": "You cannot send a message to yourself.",
+    "contentRequired": "The message cannot be empty.",
+    "cannotShareOthersList": "You cannot share a list that is not yours.",
+    "recipientNotFound": "Recipient not found.",
+    "previewMovie": "Suggested a movie.",
+    "previewWatchlist": "Shared the list '{0}'."
+  },
+  "movies": {
+    "searchQueryRequired": "The search text cannot be empty.",
+    "tmdbNotConfigured": "Movie details are unavailable: the TMDb service is not configured.",
+    "tmdbUnreachable": "Movie details are unavailable: the TMDb service could not be reached.",
+    "notFoundOnTmdb": "Movie {0} was not found on TMDb.",
+    "fetchFailed": "Could not get the movie details.",
+    "untitled": "Untitled"
+  },
+  "notifications": {
+    "newFollower": "{0} started following you.",
+    "newMessage": "{0} sent you a message.",
+    "reviewLiked": "{0} liked your review of '{1}'.",
+    "reviewCommented": "{0} commented on your review of '{1}'.",
+    "watchlistInvite": "{0} invited you to the shared watchlist '{1}'.",
+    "watchlistJoined": "{0} joined your list '{1}'.",
+    "groupAssigned": "You've been assigned to a group for the event '{0}'!",
+    "tasteTwin": "Your taste twin this week: {0} ({1:0}% compatible, {2} movies in common).",
+    "allMarkedAsRead": "All notifications marked as read.",
+    "markedAsRead": "Notification marked as read.",
+    "notFound": "Notification not found or you do not have access to it."
+  },
+  "privacy": {
+    "profileDetailsHidden": "This user's profile details are private.",
+    "cannotMessageUser": "You cannot send messages to this user.",
+    "messagesFromFollowingOnly": "This user only accepts messages from people they follow.",
+    "messagesDisabled": "This user does not accept messages."
+  },
+  "profile": {
+    "updated": "Profile updated successfully.",
+    "photoUploadOnly": "The profile photo can only be changed by uploading one (POST /api/v1/profile/photo).",
+    "photoMissing": "No file selected (form field: \"file\").",
+    "photoTooLarge": "The photo can be at most 10 MB.",
+    "photoNotAnImage": "The file could not be read as an image.",
+    "photoUnsupportedFormat": "Unsupported image format. Upload a JPEG, PNG or WebP.",
+    "photoDimensionsTooLarge": "The image dimensions are too large.",
+    "photoDecodeFailed": "The image could not be decoded."
+  },
+  "ratings": {
+    "saved": "Rating saved successfully."
+  },
+  "reviews": {
+    "ratingRequired": "Rate the movie before writing a review.",
+    "textRequired": "The review text cannot be empty.",
+    "textLength": "A review must be 1-2000 characters long.",
+    "deleted": "Review deleted.",
+    "notFound": "Review not found.",
+    "commentRequired": "The comment cannot be empty.",
+    "commentLength": "A comment must be 1-500 characters long.",
+    "commentNotFound": "Comment not found.",
+    "cannotDeleteComment": "Only the comment's author or the review's owner can delete this comment.",
+    "commentDeleted": "Comment deleted."
+  },
+  "subscriptions": {
+    "granted": "Subscription granted for {0} days.",
+    "required": "An active subscription is required for this feature.",
+    "freeActivationRemoved": "Activation without payment has been removed. Subscriptions start with a payment.",
+    "paymentsNotConfigured": "Payments are not configured yet; subscriptions cannot be purchased right now.",
+    "unknownProvider": "Unknown payment provider.",
+    "purchaseExpired": "This purchase has expired.",
+    "purchaseLinkedToOtherAccount": "This purchase is linked to another account.",
+    "invalidDays": "The number of days must be between 1 and 366."
+  },
+  "validation": {
+    "required": "The {0} field is required.",
+    "maxLength": "The field {0} must be a string or array type with a maximum length of '{1}'.",
+    "range": "The field {0} must be between {1} and {2}.",
+    "usernameRequired": "Username is required.",
+    "usernameMinLength": "Username must be at least 3 characters long.",
+    "emailRequired": "Email address is required.",
+    "emailInvalid": "Enter a valid email address.",
+    "passwordRequired": "Password is required.",
+    "passwordMinLength": "Password must be at least 6 characters long.",
+    "currentPasswordRequired": "Current password is required.",
+    "newPasswordRequired": "New password is required.",
+    "newPasswordMinLength": "New password must be at least 6 characters long.",
+    "platformInvalid": "Platform must be 'android' or 'ios'."
+  },
+  "watchlists": {
+    "notFound": "The requested list was not found.",
+    "notFoundOrNoAccess": "List not found or you do not have access to it.",
+    "notFoundOrNotOwner": "List not found or you are not its owner.",
+    "updated": "List updated successfully.",
+    "deleted": "List deleted successfully.",
+    "movieAlreadyInList": "This movie is already in this list.",
+    "movieAdded": "Movie added to the list.",
+    "movieNotInList": "Movie not found in this list or you do not have access to the list.",
+    "movieRemoved": "Movie removed from the list.",
+    "cannotInviteSelf": "You cannot invite yourself.",
+    "alreadyMemberOrInvited": "This person is already in the list or has been invited.",
+    "tooManyMembers": "At most {0} people can be invited to a list.",
+    "invitationNotFound": "Invitation not found.",
+    "joined": "You joined the list.",
+    "memberNotFound": "Member not found.",
+    "onlyOwnerCanRemove": "Only the list's owner can remove members.",
+    "left": "You left the list.",
+    "memberRemoved": "Member removed from the list."
+  }
+}

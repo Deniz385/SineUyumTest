@@ -7,8 +7,8 @@ using static SineUyum.Api.Tests.PushTestSupport;
 
 namespace SineUyum.Api.Tests;
 
-// M10: "Görüldü". Okununca gönderene canlı haber gider, thread'de dateRead
-// döner. Okundu bilgisi karşılıklıdır: biri kapatırsa iki taraf da görmez.
+// M10: "Seen". On read the sender is told live and the thread returns dateRead.
+// Read receipts are mutual: if either side turns them off, neither sees them.
 public class ReadReceiptTests : IClassFixture<TestWebAppFactory>, IAsyncDisposable
 {
     private readonly TestWebAppFactory _factory;
@@ -76,65 +76,65 @@ public class ReadReceiptTests : IClassFixture<TestWebAppFactory>, IAsyncDisposab
     }
 
     [Fact]
-    public async Task Okununca_GonderenCanliGorur_ThreadDateReadDoner()
+    public async Task OnRead_SenderSeesItLive_ThreadReturnsDateRead()
     {
-        var ali = await RegisterAsync(_client, "rr_");
-        var ayse = await RegisterAsync(_client, "rr_");
-        var aliReads = await ListenForReadsAsync(ali);
-        var ayseReads = await ListenForReadsAsync(ayse);
+        var bob = await RegisterAsync(_client, "rr_");
+        var alice = await RegisterAsync(_client, "rr_");
+        var bobReads = await ListenForReadsAsync(bob);
+        var aliceReads = await ListenForReadsAsync(alice);
 
-        await SendAsync(ali, ayse, "bir");
-        var last = await SendAsync(ali, ayse, "iki");
-        Assert.All(await ThreadAsync(ali, ayse), m => Assert.Equal(JsonValueKind.Null, m.GetProperty("dateRead").ValueKind));
+        await SendAsync(bob, alice, "one");
+        var last = await SendAsync(bob, alice, "two");
+        Assert.All(await ThreadAsync(bob, alice), m => Assert.Equal(JsonValueKind.Null, m.GetProperty("dateRead").ValueKind));
 
-        await MarkReadAsync(ayse, ali);
+        await MarkReadAsync(alice, bob);
 
-        await Eventually(() => aliReads.Any() && ayseReads.Any(), "gönderene ve okuyanın diğer sekmelerine olay");
-        var evt = aliReads.Single();
-        Assert.Equal(ayse.UserId, evt.GetProperty("readerId").GetString());
-        Assert.Equal(ali.UserId, evt.GetProperty("otherUserId").GetString());
+        await Eventually(() => bobReads.Any() && aliceReads.Any(), "event to the sender and the reader's other tabs");
+        var evt = bobReads.Single();
+        Assert.Equal(alice.UserId, evt.GetProperty("readerId").GetString());
+        Assert.Equal(bob.UserId, evt.GetProperty("otherUserId").GetString());
         Assert.Equal(last, evt.GetProperty("lastReadMessageId").GetInt32());
 
-        var thread = await ThreadAsync(ali, ayse);
+        var thread = await ThreadAsync(bob, alice);
         Assert.All(thread, m => Assert.NotEqual(JsonValueKind.Null, m.GetProperty("dateRead").ValueKind));
 
-        // Yeni okunacak bir şey yokken olay tekrarlanmaz.
-        await MarkReadAsync(ayse, ali);
+        // The event is not repeated when there is nothing new to read.
+        await MarkReadAsync(alice, bob);
         await Task.Delay(300);
-        Assert.Single(aliReads);
+        Assert.Single(bobReads);
     }
 
     [Theory]
-    [InlineData(true)]  // okuyan kapattı: okumasını göstermez
-    [InlineData(false)] // gönderen kapattı: başkasınınkini de görmez
-    public async Task OkunduBilgisi_Karsilikli_BiriKapatirsaGorunmez(bool readerTurnsOff)
+    [InlineData(true)]  // the reader turned it off: does not show their reads
+    [InlineData(false)] // the sender turned it off: does not see anyone else's either
+    public async Task ReadReceipts_Mutual_HiddenIfEitherTurnsOff(bool readerTurnsOff)
     {
-        var ali = await RegisterAsync(_client, "rr_");
-        var ayse = await RegisterAsync(_client, "rr_");
-        await SetReceiptsAsync(readerTurnsOff ? ayse : ali, false);
-        var aliReads = await ListenForReadsAsync(ali);
-        var ayseReads = await ListenForReadsAsync(ayse);
+        var bob = await RegisterAsync(_client, "rr_");
+        var alice = await RegisterAsync(_client, "rr_");
+        await SetReceiptsAsync(readerTurnsOff ? alice : bob, false);
+        var bobReads = await ListenForReadsAsync(bob);
+        var aliceReads = await ListenForReadsAsync(alice);
 
-        await SendAsync(ali, ayse, "selam");
-        await MarkReadAsync(ayse, ali);
+        await SendAsync(bob, alice, "hi");
+        await MarkReadAsync(alice, bob);
 
-        // Okuyanın kendi sekmeleri yine haberdar olur (okunmamış sayısı için).
-        await Eventually(() => ayseReads.Any(), "okuyanın diğer sekmesine olay");
+        // The reader's own tabs are still told (for the unread count).
+        await Eventually(() => aliceReads.Any(), "event to the reader's other tab");
         await Task.Delay(300);
-        Assert.Empty(aliReads);
-        Assert.All(await ThreadAsync(ali, ayse), m => Assert.Equal(JsonValueKind.Null, m.GetProperty("dateRead").ValueKind));
+        Assert.Empty(bobReads);
+        Assert.All(await ThreadAsync(bob, alice), m => Assert.Equal(JsonValueKind.Null, m.GetProperty("dateRead").ValueKind));
 
-        // Tekrar açılınca geçmiş okumalar da görünür (okuma kaydı tutulmaya devam eder).
-        await SetReceiptsAsync(readerTurnsOff ? ayse : ali, true);
-        Assert.All(await ThreadAsync(ali, ayse), m => Assert.NotEqual(JsonValueKind.Null, m.GetProperty("dateRead").ValueKind));
+        // Turning it back on shows past reads too (reads keep being recorded).
+        await SetReceiptsAsync(readerTurnsOff ? alice : bob, true);
+        Assert.All(await ThreadAsync(bob, alice), m => Assert.NotEqual(JsonValueKind.Null, m.GetProperty("dateRead").ValueKind));
     }
 
     [Fact]
-    public async Task AyarVarsayilaniAcik_AlanGonderilmezseDegismez()
+    public async Task SettingDefaultsOn_UnchangedWhenFieldOmitted()
     {
         var me = await RegisterAsync(_client, "rr_");
         await SetReceiptsAsync(me, false);
-        // Bu alanı bilmeyen eski istemci kaydederse ayar korunur.
+        // An old client that does not know this field saves: the setting is kept.
         await SetReceiptsAsync(me, null);
 
         var res = await _client.SendAsync(Authed(HttpMethod.Get, "/api/v1/account/privacy", me.Token));

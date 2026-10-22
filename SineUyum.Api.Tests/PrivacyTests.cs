@@ -10,8 +10,8 @@ using SineUyum.Api.Services;
 
 namespace SineUyum.Api.Tests;
 
-// G12: profil görünürlüğü, mesaj izni, aramada görünmeme ve engelleme. Her
-// ayar bağımsız açılıp kapatılabilmeli ve kurallar sunucuda uygulanmalı.
+// G12: profile visibility, message permission, hiding from search and blocking.
+// Each setting can be switched on and off independently and the rules are enforced on the server.
 public class PrivacyTests : IClassFixture<TestWebAppFactory>
 {
     private readonly TestWebAppFactory _factory;
@@ -25,12 +25,12 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
 
     private record Session(string Token, string Id, string UserName);
 
-    private async Task<Session> RegisterAsync(string prefix = "gz")
+    private async Task<Session> RegisterAsync(string prefix = "pv")
     {
         var username = prefix + "_" + Guid.NewGuid().ToString("N")[..10];
         await _client.PostAsJsonAsync("/api/v1/account/register",
-            new { username, email = $"{username}@test.com", password = "Sifre123" });
-        return await LoginAsync(username, "Sifre123");
+            new { username, email = $"{username}@test.com", password = "Password123" });
+        return await LoginAsync(username, "Password123");
     }
 
     private async Task<Session> LoginAsync(string username, string password)
@@ -67,7 +67,7 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
     }
 
     private Task<HttpResponseMessage> MessageAsync(Session from, Session to) =>
-        SendAsync(HttpMethod.Post, "/api/v1/messages", from, new { recipientId = to.Id, content = "merhaba" });
+        SendAsync(HttpMethod.Post, "/api/v1/messages", from, new { recipientId = to.Id, content = "hello" });
 
     private Task<HttpResponseMessage> FollowAsync(Session from, Session to) =>
         SendAsync(HttpMethod.Post, $"/api/v1/follow/{to.Id}", from);
@@ -82,14 +82,14 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
     private async Task<string?> ProblemTitleAsync(HttpResponseMessage res) =>
         (await JsonAsync(res)).GetProperty("title").GetString();
 
-    // Puanlar TMDb'siz, doğrudan veritabanına yazılır.
+    // Ratings are written directly to the database, without TMDb.
     private async Task SeedRatingAsync(string userId, int movieId, int rating)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         if (!await db.Movies.AnyAsync(m => m.Id == movieId))
         {
-            db.Movies.Add(new Movie { Id = movieId, Title = $"Film {movieId}" });
+            db.Movies.Add(new Movie { Id = movieId, Title = $"Movie {movieId}" });
         }
         db.UserRatings.Add(new UserRating { UserId = userId, MovieId = movieId, Rating = rating });
         await db.SaveChangesAsync();
@@ -103,7 +103,7 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task Varsayilanlar_MevcutDavranisla_Ayni()
+    public async Task Defaults_MatchPreviousBehaviour()
     {
         var me = await RegisterAsync();
         var res = await SendAsync(HttpMethod.Get, "/api/v1/account/privacy", me);
@@ -115,7 +115,7 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task Ayarlar_KaydedilirVe_GeriOkunur()
+    public async Task Settings_AreSavedAndReadBack()
     {
         var me = await RegisterAsync();
         await SetPrivacyAsync(me, "Following", "Nobody", hidden: true);
@@ -127,11 +127,11 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
     }
 
     [Theory]
-    [InlineData("{\"profileVisibility\":\"Herkes\",\"messagePermission\":\"Everyone\"}")]
+    [InlineData("{\"profileVisibility\":\"Everybody\",\"messagePermission\":\"Everyone\"}")]
     [InlineData("{\"profileVisibility\":7,\"messagePermission\":\"Everyone\"}")]
     [InlineData("{\"messagePermission\":\"Everyone\"}")]
     [InlineData("{\"profileVisibility\":\"Public\"}")]
-    public async Task GecersizAyar_400(string body)
+    public async Task InvalidSetting_400(string body)
     {
         var me = await RegisterAsync();
         var req = new HttpRequestMessage(HttpMethod.Put, "/api/v1/account/privacy")
@@ -145,7 +145,7 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task GizliProfil_AyrintilarSadeceSahibine()
+    public async Task PrivateProfile_DetailsOnlyForOwner()
     {
         var owner = await RegisterAsync();
         var viewer = await RegisterAsync();
@@ -160,7 +160,7 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
         Assert.Empty(seen.GetProperty("ratings").EnumerateArray());
         Assert.Equal(0, seen.GetProperty("statistics").GetProperty("totalRatings").GetInt32());
 
-        // Puanlardan türeyen her şey de kapalı.
+        // Everything derived from ratings is closed too.
         Assert.Equal(HttpStatusCode.Forbidden,
             (await SendAsync(HttpMethod.Get, $"/api/v1/compatibility/{owner.Id}", viewer)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden,
@@ -168,7 +168,7 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
         Assert.Equal(HttpStatusCode.Forbidden,
             (await SendAsync(HttpMethod.Get, $"/api/v1/follow/{owner.Id}/following", viewer)).StatusCode);
 
-        // Sahibi ve yönetici her şeyi görür.
+        // The owner and an admin see everything.
         var own = await ProfileAsync(owner, owner);
         Assert.False(own.GetProperty("isRestricted").GetBoolean());
         Assert.Equal(1, own.GetProperty("statistics").GetProperty("totalRatings").GetInt32());
@@ -176,7 +176,7 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
         var admin = await LoginAsync(TestWebAppFactory.AdminUserName, TestWebAppFactory.AdminPassword);
         Assert.False((await ProfileAsync(admin, owner)).GetProperty("isRestricted").GetBoolean());
 
-        // Kapatınca yeniden açık.
+        // Switching it off opens it again.
         await SetPrivacyAsync(owner, "Public");
         var again = await ProfileAsync(viewer, owner);
         Assert.False(again.GetProperty("isRestricted").GetBoolean());
@@ -186,7 +186,7 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task TakipEttiklerim_SahibinTakibiBelirler()
+    public async Task FollowingOnly_OwnersFollowDecides()
     {
         var owner = await RegisterAsync();
         var viewer = await RegisterAsync();
@@ -194,11 +194,11 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
 
         Assert.True((await ProfileAsync(viewer, owner)).GetProperty("isRestricted").GetBoolean());
 
-        // Görüntüleyenin sahibi takip etmesi yetmez (takip onaysız).
+        // The viewer following the owner is not enough (following needs no approval).
         Assert.Equal(HttpStatusCode.OK, (await FollowAsync(viewer, owner)).StatusCode);
         Assert.True((await ProfileAsync(viewer, owner)).GetProperty("isRestricted").GetBoolean());
 
-        // Sahip görüntüleyeni takip edince açılır.
+        // It opens once the owner follows the viewer.
         Assert.Equal(HttpStatusCode.OK, (await FollowAsync(owner, viewer)).StatusCode);
         Assert.False((await ProfileAsync(viewer, owner)).GetProperty("isRestricted").GetBoolean());
         Assert.Equal(HttpStatusCode.OK,
@@ -206,7 +206,7 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task MesajIzni_HerSecenek()
+    public async Task MessagePermission_EveryOption()
     {
         var recipient = await RegisterAsync();
         var sender = await RegisterAsync();
@@ -214,21 +214,21 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
         await SetPrivacyAsync(recipient, messages: "Nobody");
         var nobody = await MessageAsync(sender, recipient);
         Assert.Equal(HttpStatusCode.Forbidden, nobody.StatusCode);
-        Assert.Equal("Bu kullanıcı mesaj kabul etmiyor.", await ProblemTitleAsync(nobody));
+        Assert.Equal("This user does not accept messages.", await ProblemTitleAsync(nobody));
 
         await SetPrivacyAsync(recipient, messages: "Following");
         var notFollowed = await MessageAsync(sender, recipient);
         Assert.Equal(HttpStatusCode.Forbidden, notFollowed.StatusCode);
-        Assert.Equal("Bu kullanıcı yalnızca takip ettiği kişilerden mesaj kabul ediyor.",
+        Assert.Equal("This user only accepts messages from people they follow.",
             await ProblemTitleAsync(notFollowed));
 
-        // Göndericinin alıcıyı takip etmesi yetmez; alıcı göndericiyi takip etmeli.
+        // The sender following the recipient is not enough; the recipient must follow the sender.
         await FollowAsync(sender, recipient);
         Assert.Equal(HttpStatusCode.Forbidden, (await MessageAsync(sender, recipient)).StatusCode);
         await FollowAsync(recipient, sender);
         Assert.Equal(HttpStatusCode.OK, (await MessageAsync(sender, recipient)).StatusCode);
 
-        // Kısıt yalnızca alıcıya gelen mesajlar için: alıcı istediğine yazabilir.
+        // The restriction only covers messages to the recipient: they can write to anyone.
         await SetPrivacyAsync(recipient, messages: "Nobody");
         Assert.Equal(HttpStatusCode.OK, (await MessageAsync(recipient, sender)).StatusCode);
 
@@ -238,15 +238,15 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task AramadaGorunmeme_AcilipKapanir()
+    public async Task HiddenFromSearch_SwitchesOnAndOff()
     {
-        var target = await RegisterAsync("arama");
+        var target = await RegisterAsync("search");
         var searcher = await RegisterAsync();
         Assert.True(await FindsInSearchAsync(searcher, target));
 
         await SetPrivacyAsync(target, hidden: true);
         Assert.False(await FindsInSearchAsync(searcher, target));
-        // Yalnızca aramadan gizler; profil bağlantısı çalışmaya devam eder.
+        // It only hides from search; the profile link keeps working.
         Assert.False((await ProfileAsync(searcher, target)).GetProperty("isRestricted").GetBoolean());
 
         await SetPrivacyAsync(target, hidden: false);
@@ -254,33 +254,33 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task Engel_IkiYondeEtkili_KaldirilincaBiter()
+    public async Task Block_WorksBothWays_EndsWhenRemoved()
     {
-        var a = await RegisterAsync("engel");
-        var b = await RegisterAsync("engel");
+        var a = await RegisterAsync("block");
+        var b = await RegisterAsync("block");
         await FollowAsync(a, b);
         await FollowAsync(b, a);
         await MessageAsync(b, a);
 
         Assert.Equal(HttpStatusCode.OK, (await SendAsync(HttpMethod.Post, $"/api/v1/blocks/{b.Id}", a)).StatusCode);
-        // Tekrarlanabilir.
+        // Idempotent.
         Assert.Equal(HttpStatusCode.OK, (await SendAsync(HttpMethod.Post, $"/api/v1/blocks/{b.Id}", a)).StatusCode);
 
         var list = await JsonAsync(await SendAsync(HttpMethod.Get, "/api/v1/blocks", a));
         Assert.Equal(b.Id, Assert.Single(list.EnumerateArray()).GetProperty("id").GetString());
         Assert.Empty((await JsonAsync(await SendAsync(HttpMethod.Get, "/api/v1/blocks", b))).EnumerateArray());
 
-        // Engellenen, engelleyeni hiç göremez.
+        // The blocked user cannot see the blocker at all.
         Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(HttpMethod.Get, $"/api/v1/profile/{a.Id}", b)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(HttpMethod.Get, $"/api/v1/follow/{a.Id}/status", b)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(HttpMethod.Get, $"/api/v1/compatibility/{a.Id}", b)).StatusCode);
-        // Engelleyen yalnızca kimliği görür (engeli kaldırabilsin).
+        // The blocker only sees the identity (so they can unblock).
         var blockedView = await ProfileAsync(a, b);
         Assert.True(blockedView.GetProperty("isRestricted").GetBoolean());
         Assert.True(blockedView.GetProperty("isBlockedByMe").GetBoolean());
         Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(HttpMethod.Get, $"/api/v1/compatibility/{b.Id}", a)).StatusCode);
 
-        // Mesaj, takip ve arama iki yönde kapalı; takipler silinmiş.
+        // Messaging, following and search are closed both ways; follows were deleted.
         Assert.Equal(HttpStatusCode.Forbidden, (await MessageAsync(a, b)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await MessageAsync(b, a)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await FollowAsync(a, b)).StatusCode);
@@ -292,11 +292,11 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
         Assert.Equal(0, status.GetProperty("followerCount").GetInt32());
         Assert.Equal(0, status.GetProperty("followingCount").GetInt32());
 
-        // Geçmiş sohbet okunabilir kalır.
+        // The past conversation stays readable.
         var thread = await JsonAsync(await SendAsync(HttpMethod.Get, $"/api/v1/messages/thread/{b.Id}", a));
         Assert.Single(thread.EnumerateArray());
 
-        // Engelleyen olmayan taraf engeli kaldıramaz; sahibi kaldırır.
+        // The side that did not block cannot remove the block; its owner can.
         await SendAsync(HttpMethod.Delete, $"/api/v1/blocks/{a.Id}", b);
         Assert.Equal(HttpStatusCode.Forbidden, (await MessageAsync(b, a)).StatusCode);
 
@@ -304,32 +304,32 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
         Assert.False((await ProfileAsync(b, a)).GetProperty("isRestricted").GetBoolean());
         Assert.Equal(HttpStatusCode.OK, (await MessageAsync(b, a)).StatusCode);
         Assert.True(await FindsInSearchAsync(a, b));
-        // Takipler kendiliğinden geri gelmez.
+        // Follows do not come back by themselves.
         var after = await JsonAsync(await SendAsync(HttpMethod.Get, $"/api/v1/follow/{b.Id}/status", a));
         Assert.False(after.GetProperty("isFollowing").GetBoolean());
     }
 
     [Fact]
-    public async Task Engel_GecersizHedefler()
+    public async Task Block_InvalidTargets()
     {
         var me = await RegisterAsync();
         Assert.Equal(HttpStatusCode.BadRequest, (await SendAsync(HttpMethod.Post, $"/api/v1/blocks/{me.Id}", me)).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(HttpMethod.Post, "/api/v1/blocks/olmayan-kullanici", me)).StatusCode);
-        // Olmayan kullanıcıyı takip etmek önceden FK hatasıyla 500 veriyordu.
-        Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(HttpMethod.Post, "/api/v1/follow/olmayan-kullanici", me)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(HttpMethod.Post, "/api/v1/blocks/missing-user", me)).StatusCode);
+        // Following a missing user used to give a 500 via the FK error.
+        Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(HttpMethod.Post, "/api/v1/follow/missing-user", me)).StatusCode);
     }
 
     [Fact]
-    public async Task Eslestirme_EngelliKisileriAyniGrubaKoymaz()
+    public async Task Matching_NeverPutsBlockedPeopleInOneGroup()
     {
-        // a ve b birebir aynı zevkte (en uyumlu çift), c ve d de öyle; a, b'yi
-        // engelliyor. Başlangıç kişisi rastgele: engel dikkate alınmasaydı her
-        // etkinlikte 1/2 ihtimalle a+b aynı gruba düşerdi.
-        var a = await RegisterAsync("es");
-        var b = await RegisterAsync("es");
-        var c = await RegisterAsync("es");
-        var d = await RegisterAsync("es");
-        var outsider = await RegisterAsync("es");
+        // a and b have identical taste (the most compatible pair), so do c and d; a
+        // blocks b. The starting person is random: if the block were ignored, a+b
+        // would land in the same group with 1/2 probability at every event.
+        var a = await RegisterAsync("match");
+        var b = await RegisterAsync("match");
+        var c = await RegisterAsync("match");
+        var d = await RegisterAsync("match");
+        var outsider = await RegisterAsync("match");
         foreach (var u in new[] { a, b })
         {
             await SeedRatingAsync(u.Id, 920001, 9);
@@ -342,7 +342,7 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
             await SeedRatingAsync(u.Id, 920003, 1);
             await SeedRatingAsync(u.Id, 920004, 10);
         }
-        // Öneriler TMDb'siz üretilsin: grup dışından benzer bir kullanıcı.
+        // Suggestions without TMDb: a similar user outside the group.
         await SeedRatingAsync(outsider.Id, 920001, 9);
         await SeedRatingAsync(outsider.Id, 920002, 10);
 
@@ -352,7 +352,7 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
         {
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var ev = new CinemaEvent { EventDate = DateTime.UtcNow.AddDays(3), LocationName = $"Salon {i}", GroupSize = 2 };
+            var ev = new CinemaEvent { EventDate = DateTime.UtcNow.AddDays(3), LocationName = $"Hall {i}", GroupSize = 2 };
             db.CinemaEvents.Add(ev);
             await db.SaveChangesAsync();
             foreach (var u in new[] { a, b, c, d })
@@ -368,7 +368,7 @@ public class PrivacyTests : IClassFixture<TestWebAppFactory>
                 .Select(g => g.Members.Select(m => m.UserId).ToList())
                 .ToListAsync();
             Assert.DoesNotContain(groups, g => g.Contains(a.Id) && g.Contains(b.Id));
-            // Engel kimseyi gruptan etmiyor: a ve b ayrı gruplarda yer bulur.
+            // The block leaves nobody out: a and b each find a place in separate groups.
             Assert.Equal(2, groups.Count);
         }
     }

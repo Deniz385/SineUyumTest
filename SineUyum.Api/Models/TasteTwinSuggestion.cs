@@ -1,7 +1,7 @@
 namespace SineUyum.Api.Models
 {
-    // Haftalık zevk ikizi önerisi: kullanıcı başına haftada bir; aynı kişi
-    // bir daha önerilmez.
+    // A weekly taste twin suggestion: once a week per user; the same person is
+    // never suggested again.
     public class TasteTwinSuggestion
     {
         public int Id { get; set; }
@@ -12,7 +12,7 @@ namespace SineUyum.Api.Models
         public string SuggestedUserId { get; set; } = string.Empty;
         public AppUser SuggestedUser { get; set; } = null!;
 
-        // Haftanın pazartesisi (UTC).
+        // Monday of the week (UTC).
         public DateOnly WeekStart { get; set; }
 
         public double Compatibility { get; set; }

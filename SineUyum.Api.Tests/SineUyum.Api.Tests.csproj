@@ -21,7 +21,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <!-- Integration testleri için: WebApplicationFactory + in-memory SQLite -->
+    <!-- For integration tests: WebApplicationFactory + SQLite -->
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.8" />
   </ItemGroup>
@@ -30,7 +30,7 @@
     <ProjectReference Include="../SineUyum.Api/SineUyum.Api.csproj" />
   </ItemGroup>
 
-  <!-- API sözleşme testinin altın dosyası (ResponseContractTests) çıktıya kopyalanır. -->
+  <!-- The API contract test golden file (ResponseContractTests) is copied to the output. -->
   <ItemGroup>
     <None Include="Contracts\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

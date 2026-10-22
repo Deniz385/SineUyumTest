@@ -2,91 +2,92 @@ using SineUyum.Api.Services;
 
 namespace SineUyum.Api.Tests;
 
-// Uyumluluk algoritması uygulamanın en kritik iş mantığı ve üç yerde
-// kullanılıyor; davranışını bu testler sabitliyor.
+// The compatibility algorithm is the app's most critical business logic and is
+// used in three places; these tests pin down its behaviour.
 public class CompatibilityCalculatorTests
 {
     [Fact]
-    public void OrtakFilmYoksa_SifirDoner()
+    public void NoCommonMovies_ReturnsZero()
     {
-        var sonuc = CompatibilityCalculator.Score(Array.Empty<(int, int)>());
-        Assert.Equal(0, sonuc);
+        var result = CompatibilityCalculator.Score(Array.Empty<(int, int)>());
+        Assert.Equal(0, result);
     }
 
     [Fact]
-    public void BirebirAyniPuanlar_YuzuzeyakinDoner()
+    public void IdenticalRatings_ReturnNearlyOneHundred()
     {
-        // Fark 0 → her film tam puan. Ağırlık, her ikisi de >=8 olduğu için 1.5.
-        // totalWeighted = (10 * 1.5) * 2 = 30, maxPossible = 2 * 10 * 1.5 = 30 → %100
+        // Difference 0 → full marks per movie. Weight is 1.5 since both are >= 8.
+        // totalWeighted = (10 * 1.5) * 2 = 30, maxPossible = 2 * 10 * 1.5 = 30 → 100%
         var pairs = new (int, int)[] { (9, 9), (8, 8) };
-        var sonuc = CompatibilityCalculator.Score(pairs);
-        Assert.Equal(100, sonuc);
+        var result = CompatibilityCalculator.Score(pairs);
+        Assert.Equal(100, result);
     }
 
     [Fact]
-    public void TamZitPuanlar_DusukSkorVerir()
+    public void OppositeRatings_GiveALowScore()
     {
-        // (10,1) ve (1,10): biri çok sevmiş diğeri nefret etmiş → ağırlık 2.0,
-        // fark 9 → film skoru (10-9)=1. İki çift için totalWeighted = 1*2 + 1*2 = 4,
+        // (10,1) and (1,10): one loved it, the other hated it → weight 2.0,
+        // difference 9 → movie score (10-9)=1. For two pairs totalWeighted = 1*2 + 1*2 = 4,
         // maxPossible = 2 * 10 * 1.5 = 30 → 4/30*100 ≈ 13.3
         var pairs = new (int, int)[] { (10, 1), (1, 10) };
-        var sonuc = CompatibilityCalculator.Score(pairs);
-        Assert.True(sonuc < 20, $"Zıt puanlarda skor düşük olmalı, bulundu: {sonuc}");
+        var result = CompatibilityCalculator.Score(pairs);
+        Assert.True(result < 20, $"The score should be low for opposite ratings, got: {result}");
     }
 
     [Fact]
-    public void Skor_HerZaman_SifirYuzArasinda()
+    public void Score_IsAlwaysBetweenZeroAndOneHundred()
     {
-        // Uç değerlerin bile 0-100 dışına taşmadığını doğrula.
+        // Even extreme values must not go outside 0-100.
         var pairs = new (int, int)[] { (1, 10), (1, 10), (2, 9), (1, 10) };
-        var sonuc = CompatibilityCalculator.Score(pairs);
-        Assert.InRange(sonuc, 0, 100);
+        var result = CompatibilityCalculator.Score(pairs);
+        Assert.InRange(result, 0, 100);
     }
 
     [Fact]
-    public void YuksekUyum_DusukUyumdan_BuyukOlmali()
+    public void HighCompatibility_IsGreaterThanLowCompatibility()
     {
-        var yuksek = CompatibilityCalculator.Score(new (int, int)[] { (9, 9), (8, 9) });
-        var dusuk = CompatibilityCalculator.Score(new (int, int)[] { (9, 2), (8, 3) });
-        Assert.True(yuksek > dusuk);
+        var high = CompatibilityCalculator.Score(new (int, int)[] { (9, 9), (8, 9) });
+        var low = CompatibilityCalculator.Score(new (int, int)[] { (9, 2), (8, 3) });
+        Assert.True(high > low);
     }
 
     [Fact]
-    public void SozlukAsiriYuku_YalnizcaOrtakFilmleriHesaplar()
+    public void DictionaryOverload_OnlyCountsCommonMovies()
     {
-        // Kullanıcı1: 1,2,3 — Kullanıcı2: 2,3,4 — ortak: 2 ve 3
+        // User 1: 1,2,3 — User 2: 2,3,4 — common: 2 and 3
         var r1 = new Dictionary<int, int> { [1] = 5, [2] = 9, [3] = 9 };
         var r2 = new Dictionary<int, int> { [2] = 9, [3] = 9, [4] = 1 };
 
-        var sozlukSkoru = CompatibilityCalculator.Score(r1, r2);
-        // Ortak filmler (9,9) ve (9,9) → birebir aynı, %100 beklenir.
-        var beklenen = CompatibilityCalculator.Score(new (int, int)[] { (9, 9), (9, 9) });
+        var dictionaryScore = CompatibilityCalculator.Score(r1, r2);
+        // Common movies (9,9) and (9,9) → identical, 100% expected.
+        var expected = CompatibilityCalculator.Score(new (int, int)[] { (9, 9), (9, 9) });
 
-        Assert.Equal(beklenen, sozlukSkoru);
+        Assert.Equal(expected, dictionaryScore);
     }
 
     [Fact]
-    public void HicOrtakFilmYokSozlukte_SifirDoner()
+    public void NoCommonMoviesInDictionaries_ReturnsZero()
     {
         var r1 = new Dictionary<int, int> { [1] = 8 };
         var r2 = new Dictionary<int, int> { [2] = 8 };
         Assert.Equal(0, CompatibilityCalculator.Score(r1, r2));
     }
 
-    // ÖNEMLİ ALGORİTMA ÖZELLİĞİ: skor, maksimum ağırlık olan 1.5'e göre
-    // normalize ediliyor. Ağırlık yalnızca iki taraf da çok sevdiğinde (≥8) ya
-    // da çok sevmediğinde (≤3) 1.5 oluyor; orta bantta (4-7) 1.0 kalıyor. Sonuç:
-    // birebir aynı puan ancak uç bantlarda %100 verir; ortada tam anlaşan iki
-    // kullanıcı %66.7'yi geçemez. Bu, kodun mevcut ve bilinçli olmayabilecek
-    // davranışı — testler sabitliyor (bkz. yol haritası, iyileştirme adayı).
+    // IMPORTANT ALGORITHM PROPERTY: the score is normalized by the maximum
+    // weight of 1.5. The weight is 1.5 only when both loved (>=8) or both
+    // disliked (<=3) a movie; in the middle band (4-7) it stays 1.0. As a result
+    // identical ratings give 100% only in the extreme bands; two users agreeing
+    // perfectly in the middle cannot exceed 66.7%. This is the code's current,
+    // possibly unintended behaviour — the tests pin it down (see roadmap,
+    // improvement candidate).
     [Theory]
-    [InlineData(10, 10, 100)]  // ikisi de ≥8 → ağırlık 1.5 → tam puan
-    [InlineData(1, 1, 100)]    // ikisi de ≤3 → ağırlık 1.5 → tam puan
-    [InlineData(5, 5, 66.66666666666667)]  // orta bant → ağırlık 1.0
+    [InlineData(10, 10, 100)]  // both >=8 → weight 1.5 → full marks
+    [InlineData(1, 1, 100)]    // both <=3 → weight 1.5 → full marks
+    [InlineData(5, 5, 66.66666666666667)]  // middle band → weight 1.0
     [InlineData(7, 7, 66.66666666666667)]
-    public void AyniPuan_BandaGoreSkorVerir(int a, int b, double beklenen)
+    public void SameRating_ScoresByBand(int a, int b, double expected)
     {
-        var sonuc = CompatibilityCalculator.Score(new (int, int)[] { (a, b) });
-        Assert.Equal(beklenen, sonuc, precision: 10);
+        var result = CompatibilityCalculator.Score(new (int, int)[] { (a, b) });
+        Assert.Equal(expected, result, precision: 10);
     }
 }

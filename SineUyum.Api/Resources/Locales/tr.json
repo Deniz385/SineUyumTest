@@ -1,0 +1,252 @@
+{
+  "account": {
+    "registered": "Kullanıcı başarıyla oluşturuldu.",
+    "invalidCredentials": "Kullanıcı adı veya şifre hatalı.",
+    "invalidRefreshToken": "Yenileme anahtarı geçersiz veya süresi dolmuş.",
+    "loggedOut": "Çıkış yapıldı.",
+    "unsupportedLanguage": "'{0}' dili desteklenmiyor. Desteklenen diller: {1}."
+  },
+  "blocks": {
+    "cannotBlockSelf": "Kendinizi engelleyemezsiniz.",
+    "blocked": "Kullanıcı engellendi.",
+    "unblocked": "Engel kaldırıldı."
+  },
+  "common": {
+    "someone": "Biri"
+  },
+  "errors": {
+    "eventNotFound": "Etkinlik bulunamadı.",
+    "userNotFound": "Kullanıcı bulunamadı.",
+    "invalidRequest": "Geçersiz istek.",
+    "requestTooLarge": "İstek gövdesi izin verilen boyutu aşıyor.",
+    "unexpected": "Sunucuda beklenmeyen bir hata oluştu.",
+    "validationFailed": "Bir veya daha fazla doğrulama hatası oluştu.",
+    "tooManyRequests": "Çok fazla istek. Lütfen biraz sonra tekrar deneyin.",
+    "tmdbNotConfigured": "TMDb API anahtarı sunucuda yapılandırılmamış.",
+    "tmdbRecommendationsFailed": "TMDb'den öneri alınamadı.",
+    "tmdbRequestFailed": "TMDb API'sinden veri alınamadı.",
+    "serviceUnreachable": "Servise erişilemiyor: {0}"
+  },
+  "events": {
+    "noUpcoming": "Katılabileceğin yeni bir etkinlik bulunmuyor.",
+    "notGroupMember": "Bu grupta oy kullanma yetkiniz yok.",
+    "movieNotSuggested": "Bu film grubun önerileri arasında değil.",
+    "voteSaved": "Oyunuz başarıyla kaydedildi.",
+    "eventPassed": "Bu etkinliğin tarihi geçmiş.",
+    "alreadyWaiting": "Zaten yaklaşan bir etkinlik için bekleme listesindesiniz.",
+    "joined": "Etkinliğe başarıyla katıldınız! Eşleştirme için beklemede kalın.",
+    "updateNotFound": "Güncellenecek etkinlik bulunamadı.",
+    "updated": "Etkinlik başarıyla güncellendi.",
+    "deleteNotFound": "Silinecek etkinlik bulunamadı.",
+    "deleted": "Etkinlik başarıyla silindi."
+  },
+  "feed": {
+    "invalidCursor": "Geçersiz sayfa imleci."
+  },
+  "filmIdentity": {
+    "newExplorer": {
+      "title": "Yeni Keşifçi",
+      "description": "Henüz {0} film puanladın; zevkin şekilleniyor."
+    },
+    "contrarian": {
+      "title": "Aykırı Eleştirmen",
+      "description": "Puanların genel kanıdan ortalama {0:0.0} puan sapıyor."
+    },
+    "generous": {
+      "title": "Cömert Seyirci",
+      "description": "Ortalaman {0:0.0}: iyi filmi görünce saklamıyorsun."
+    },
+    "hardToPlease": {
+      "title": "Zor Beğenen",
+      "description": "Ortalaman {0:0.0}: senden 10 almak kolay değil."
+    },
+    "genreFan": {
+      "title": "{0} Tutkunu",
+      "description": "Puanladığın filmlerde {0} oranı: %{1}."
+    },
+    "eclectic": {
+      "title": "Her Telden",
+      "description": "{0} farklı türde düzenli film izliyorsun."
+    },
+    "explorer": {
+      "title": "Film Kâşifi",
+      "description": "Dengeli bir zevkin var; her türe açıksın."
+    }
+  },
+  "follows": {
+    "cannotFollowSelf": "Kullanıcı kendini takip edemez.",
+    "notAllowed": "Bu kullanıcıyı takip edemezsiniz.",
+    "alreadyFollowing": "Bu kullanıcıyı zaten takip ediyorsunuz.",
+    "followed": "Kullanıcı başarıyla takip edildi.",
+    "notFound": "Takip ilişkisi bulunamadı.",
+    "unfollowed": "Kullanıcı takipten çıkarıldı."
+  },
+  "genres": {
+    "12": "Macera",
+    "14": "Fantastik",
+    "16": "Animasyon",
+    "18": "Dram",
+    "27": "Korku",
+    "28": "Aksiyon",
+    "35": "Komedi",
+    "36": "Tarih",
+    "37": "Vahşi Batı",
+    "53": "Gerilim",
+    "80": "Suç",
+    "99": "Belgesel",
+    "878": "Bilim-Kurgu",
+    "9648": "Gizem",
+    "10402": "Müzik",
+    "10749": "Romantik",
+    "10751": "Aile",
+    "10752": "Savaş",
+    "10770": "TV filmi"
+  },
+  "identity": {
+    "defaultError": "Bilinmeyen bir hata oluştu.",
+    "concurrencyFailure": "Eşzamanlılık hatası: kayıt başka bir işlem tarafından değiştirildi.",
+    "passwordMismatch": "Şifre hatalı.",
+    "invalidToken": "Geçersiz belirteç.",
+    "recoveryCodeRedemptionFailed": "Kurtarma kodu kullanılamadı.",
+    "loginAlreadyAssociated": "Bu girişle ilişkili bir kullanıcı zaten var.",
+    "invalidUserName": "'{0}' kullanıcı adı geçersiz; yalnızca harf ve rakam içerebilir.",
+    "invalidEmail": "'{0}' e-posta adresi geçersiz.",
+    "duplicateUserName": "'{0}' kullanıcı adı zaten alınmış.",
+    "duplicateEmail": "'{0}' e-posta adresi zaten kullanılıyor.",
+    "invalidRoleName": "'{0}' rol adı geçersiz.",
+    "duplicateRoleName": "'{0}' rol adı zaten alınmış.",
+    "userAlreadyHasPassword": "Kullanıcının zaten bir şifresi var.",
+    "userLockoutNotEnabled": "Bu kullanıcı için hesap kilitleme etkin değil.",
+    "userAlreadyInRole": "Kullanıcı zaten '{0}' rolünde.",
+    "userNotInRole": "Kullanıcı '{0}' rolünde değil.",
+    "passwordTooShort": "Şifre en az {0} karakter olmalıdır.",
+    "passwordRequiresUniqueChars": "Şifre en az {0} farklı karakter içermelidir.",
+    "passwordRequiresNonAlphanumeric": "Şifre en az bir harf ve rakam dışı karakter içermelidir.",
+    "passwordRequiresDigit": "Şifre en az bir rakam ('0'-'9') içermelidir.",
+    "passwordRequiresLower": "Şifre en az bir küçük harf ('a'-'z') içermelidir.",
+    "passwordRequiresUpper": "Şifre en az bir büyük harf ('A'-'Z') içermelidir."
+  },
+  "insights": {
+    "summaryBoth": "İkiniz de {0} filmlerini seviyorsunuz; {1} filmlerinde ayrışıyorsunuz.",
+    "summaryShared": "İkiniz de {0} filmlerini seviyorsunuz.",
+    "summaryDivergent": "{0} filmlerinde ayrışıyorsunuz.",
+    "genrePair": "{0} ve {1}"
+  },
+  "matching": {
+    "alreadyRunning": "Bu etkinlik için eşleştirme zaten sürüyor.",
+    "notStarted": "Bu etkinlik için eşleştirme başlatılmamış.",
+    "groupsAlreadyCreated": "Bu etkinlik için gruplar zaten oluşturulmuş.",
+    "notEnoughParticipants": "Yeterli katılımcı olmadığı için gruplar oluşturulamadı. Gerekli: {0}, Mevcut: {1}",
+    "unexpectedError": "Eşleştirme sırasında beklenmeyen bir hata oluştu. Tekrar deneyebilirsiniz.",
+    "queued": "Eşleştirme sıraya alındı.",
+    "running": "Eşleştirme sürüyor.",
+    "succeeded": "{0} grup oluşturuldu.",
+    "succeededWithUngrouped": "{0} grup oluşturuldu; {1} kişi gruba alınamadı.",
+    "failed": "Eşleştirme başarısız oldu."
+  },
+  "messages": {
+    "cannotMessageSelf": "Kendinize mesaj gönderemezsiniz.",
+    "contentRequired": "Mesaj içeriği boş olamaz.",
+    "cannotShareOthersList": "Kendinize ait olmayan bir listeyi paylaşamazsınız.",
+    "recipientNotFound": "Alıcı kullanıcı bulunamadı.",
+    "previewMovie": "Bir film önerdi.",
+    "previewWatchlist": "'{0}' listesini paylaştı."
+  },
+  "movies": {
+    "searchQueryRequired": "Arama metni boş olamaz.",
+    "tmdbNotConfigured": "Film bilgisi alınamıyor: TMDb servisi yapılandırılmamış.",
+    "tmdbUnreachable": "Film bilgisi alınamıyor: TMDb servisine ulaşılamadı.",
+    "notFoundOnTmdb": "TMDb'de {0} numaralı film bulunamadı.",
+    "fetchFailed": "Film bilgisi alınamadı.",
+    "untitled": "Başlıksız"
+  },
+  "notifications": {
+    "newFollower": "{0} sizi takip etmeye başladı.",
+    "newMessage": "{0} size bir mesaj gönderdi.",
+    "reviewLiked": "{0} '{1}' incelemeni beğendi.",
+    "reviewCommented": "{0} '{1}' incelemene yorum yaptı.",
+    "watchlistInvite": "{0} seni '{1}' ortak izleme listesine davet etti.",
+    "watchlistJoined": "{0} '{1}' listesine katıldı.",
+    "groupAssigned": "'{0}' etkinliği için bir gruba atandın!",
+    "tasteTwin": "Bu haftanın zevk ikizi: {0} (%{1:0} uyumlu, {2} ortak film).",
+    "allMarkedAsRead": "Tüm bildirimler okundu olarak işaretlendi.",
+    "markedAsRead": "Bildirim okundu olarak işaretlendi.",
+    "notFound": "Bildirim bulunamadı veya bu bildirime erişim yetkiniz yok."
+  },
+  "privacy": {
+    "profileDetailsHidden": "Bu kullanıcının profil ayrıntıları gizli.",
+    "cannotMessageUser": "Bu kullanıcıya mesaj gönderemezsiniz.",
+    "messagesFromFollowingOnly": "Bu kullanıcı yalnızca takip ettiği kişilerden mesaj kabul ediyor.",
+    "messagesDisabled": "Bu kullanıcı mesaj kabul etmiyor."
+  },
+  "profile": {
+    "updated": "Profil başarıyla güncellendi.",
+    "photoUploadOnly": "Profil fotoğrafı yalnızca yüklenerek değiştirilebilir (POST /api/v1/profile/photo).",
+    "photoMissing": "Dosya seçilmedi (form alanı: \"file\").",
+    "photoTooLarge": "Fotoğraf en fazla 10 MB olabilir.",
+    "photoNotAnImage": "Dosya bir resim olarak okunamadı.",
+    "photoUnsupportedFormat": "Desteklenmeyen resim biçimi. JPEG, PNG ya da WebP yükleyin.",
+    "photoDimensionsTooLarge": "Resmin boyutları çok büyük.",
+    "photoDecodeFailed": "Resim çözülemedi."
+  },
+  "ratings": {
+    "saved": "Puan başarıyla kaydedildi."
+  },
+  "reviews": {
+    "ratingRequired": "İnceleme yazmadan önce filmi puanla.",
+    "textRequired": "İnceleme metni boş olamaz.",
+    "textLength": "İnceleme 1-2000 karakter olmalı.",
+    "deleted": "İnceleme silindi.",
+    "notFound": "İnceleme bulunamadı.",
+    "commentRequired": "Yorum boş olamaz.",
+    "commentLength": "Yorum 1-500 karakter olmalı.",
+    "commentNotFound": "Yorum bulunamadı.",
+    "cannotDeleteComment": "Bu yorumu yalnızca yazarı ya da inceleme sahibi silebilir.",
+    "commentDeleted": "Yorum silindi."
+  },
+  "subscriptions": {
+    "granted": "{0} günlük abonelik tanımlandı.",
+    "required": "Bu özellik için aktif abonelik gerekli.",
+    "freeActivationRemoved": "Ödemesiz abonelik kaldırıldı. Abonelik ödeme ile başlatılır.",
+    "paymentsNotConfigured": "Ödeme henüz yapılandırılmadı; şu an abonelik satın alınamıyor.",
+    "unknownProvider": "Bilinmeyen ödeme sağlayıcısı.",
+    "purchaseExpired": "Bu satın almanın süresi dolmuş.",
+    "purchaseLinkedToOtherAccount": "Bu satın alma başka bir hesaba bağlı.",
+    "invalidDays": "Gün sayısı 1 ile 366 arasında olmalı."
+  },
+  "validation": {
+    "required": "{0} alanı zorunludur.",
+    "maxLength": "{0} alanı en fazla {1} karakter olabilir.",
+    "range": "{0} alanı {1} ile {2} arasında olmalıdır.",
+    "usernameRequired": "Kullanıcı adı zorunludur.",
+    "usernameMinLength": "Kullanıcı adı en az 3 karakter olmalıdır.",
+    "emailRequired": "Email adresi zorunludur.",
+    "emailInvalid": "Geçerli bir email adresi giriniz.",
+    "passwordRequired": "Şifre zorunludur.",
+    "passwordMinLength": "Şifre en az 6 karakter olmalıdır.",
+    "currentPasswordRequired": "Mevcut şifre zorunludur.",
+    "newPasswordRequired": "Yeni şifre zorunludur.",
+    "newPasswordMinLength": "Yeni şifre en az 6 karakter olmalıdır.",
+    "platformInvalid": "Platform 'android' ya da 'ios' olmalı."
+  },
+  "watchlists": {
+    "notFound": "İstenen liste bulunamadı.",
+    "notFoundOrNoAccess": "Liste bulunamadı veya bu listeye erişim yetkiniz yok.",
+    "notFoundOrNotOwner": "Liste bulunamadı ya da sahibi değilsiniz.",
+    "updated": "Liste başarıyla güncellendi.",
+    "deleted": "Liste başarıyla silindi.",
+    "movieAlreadyInList": "Bu film zaten bu listede mevcut.",
+    "movieAdded": "Film listeye eklendi.",
+    "movieNotInList": "Film bu listede bulunamadı veya listeye erişim yetkiniz yok.",
+    "movieRemoved": "Film listeden kaldırıldı.",
+    "cannotInviteSelf": "Kendinizi davet edemezsiniz.",
+    "alreadyMemberOrInvited": "Bu kişi zaten listede ya da davet edilmiş.",
+    "tooManyMembers": "Bir listeye en fazla {0} kişi davet edilebilir.",
+    "invitationNotFound": "Davet bulunamadı.",
+    "joined": "Listeye katıldınız.",
+    "memberNotFound": "Üye bulunamadı.",
+    "onlyOwnerCanRemove": "Yalnızca liste sahibi üye çıkarabilir.",
+    "left": "Listeden ayrıldınız.",
+    "memberRemoved": "Üye listeden çıkarıldı."
+  }
+}

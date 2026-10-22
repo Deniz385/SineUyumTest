@@ -8,10 +8,10 @@ namespace SineUyum.Api.Services
 {
     public record SubscriptionState(bool IsActive, DateTime? ExpiresAt, string? Provider, bool WillRenew);
 
-    // Abonelik durumunun tek karar noktası. "Abone mi?" sorusu her zaman
-    // veritabanından ve bitiş tarihine bakılarak cevaplanır (JWT'deki claim
-    // yalnızca istemcinin gösterimi içindir; en fazla access token ömrü kadar
-    // eski olabilir).
+    // The single decision point for the subscription state. "Is subscribed?" is
+    // always answered from the database by the end date (the JWT claim is only
+    // for the client to display; it can be at most one access token lifetime
+    // out of date).
     public class SubscriptionService
     {
         public const string ManualProvider = "manual";
@@ -28,7 +28,7 @@ namespace SineUyum.Api.Services
         public async Task<SubscriptionState> GetStateAsync(string userId)
         {
             var now = DateTime.UtcNow;
-            // Hak veren en geç biten abonelik esas alınır.
+            // The entitling subscription that ends last wins.
             var current = await _context.Subscriptions
                 .Where(s => s.UserId == userId
                             && (s.Status == SubscriptionStatus.Active || s.Status == SubscriptionStatus.Canceled)
@@ -44,15 +44,15 @@ namespace SineUyum.Api.Services
 
         public async Task<bool> IsActiveAsync(string userId) => (await GetStateAsync(userId)).IsActive;
 
-        // Sağlayıcının doğruladığı satın almayı kullanıcıya bağlar. Aynı satın
-        // alma tekrar gönderilirse (istemci yeniden denedi) güncellenir; başka
-        // bir hesaba bağlıysa reddedilir — bir ödeme iki hesabı açamaz.
+        // Links a purchase verified by the provider to the user. The same purchase
+        // sent again (client retried) is updated; if it belongs to another account it
+        // is rejected — one payment cannot unlock two accounts.
         public async Task ApplyVerifiedPurchaseAsync(string userId, VerifiedPurchase purchase)
         {
             var now = DateTime.UtcNow;
             if (purchase.PeriodEnd <= now)
             {
-                throw new DomainException("Bu satın almanın süresi dolmuş.");
+                throw new DomainException("subscriptions.purchaseExpired");
             }
 
             var existing = await _context.Subscriptions.FirstOrDefaultAsync(s =>
@@ -61,9 +61,9 @@ namespace SineUyum.Api.Services
             if (existing != null && existing.UserId != userId)
             {
                 _logger.LogWarning(
-                    "Satın alma başka hesaba bağlı: {Provider}/{Reference} (istenen {UserId})",
+                    "Purchase belongs to another account: {Provider}/{Reference} (requested by {UserId})",
                     purchase.Provider, purchase.Reference, userId);
-                throw new DomainException("Bu satın alma başka bir hesaba bağlı.", StatusCodes.Status409Conflict);
+                throw new DomainException("subscriptions.purchaseLinkedToOtherAccount", StatusCodes.Status409Conflict);
             }
 
             if (existing == null)
@@ -86,16 +86,16 @@ namespace SineUyum.Api.Services
             await _context.SaveChangesAsync();
         }
 
-        // Sağlayıcının webhook'u (yenileme, iptal, süre bitimi, iade).
-        // Bilinmeyen bir satın alma için gelen olay yok sayılır (true döner ki
-        // sağlayıcı tekrar tekrar göndermesin).
+        // The provider's webhook (renewal, cancellation, expiry, refund).
+        // Events for an unknown purchase are ignored (returning normally so the
+        // provider does not keep resending them).
         public async Task ApplyProviderEventAsync(SubscriptionEvent change)
         {
             var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
                 s.Provider == change.Provider && s.ProviderReference == change.Reference);
             if (subscription == null)
             {
-                _logger.LogWarning("Bilinmeyen abonelik için olay: {Provider}/{Reference} {Kind}",
+                _logger.LogWarning("Event for an unknown subscription: {Provider}/{Reference} {Kind}",
                     change.Provider, change.Reference, change.Kind);
                 return;
             }
@@ -109,7 +109,7 @@ namespace SineUyum.Api.Services
                     if (change.PeriodEnd is { } renewedUntil) subscription.CurrentPeriodEnd = renewedUntil;
                     break;
                 case SubscriptionEventKind.Canceled:
-                    // Ödenen dönem sonuna kadar kullanılabilir.
+                    // Usable until the end of the paid period.
                     subscription.Status = SubscriptionStatus.Canceled;
                     subscription.CanceledAt ??= now;
                     break;
@@ -117,7 +117,7 @@ namespace SineUyum.Api.Services
                     subscription.Status = SubscriptionStatus.Expired;
                     break;
                 case SubscriptionEventKind.Refunded:
-                    // İade: hak hemen biter.
+                    // Refund: the entitlement ends immediately.
                     subscription.Status = SubscriptionStatus.Refunded;
                     subscription.CurrentPeriodEnd = now;
                     break;
@@ -126,12 +126,12 @@ namespace SineUyum.Api.Services
             await _context.SaveChangesAsync();
         }
 
-        // Yönetici tanımlı abonelik (promosyon, destek, ödeme entegrasyonundan
-        // önce premium özellikleri denemek).
+        // Admin-granted subscription (promotions, support, trying premium features
+        // before payment integration).
         public async Task GrantManualAsync(string userId, int days, string grantedBy)
         {
-            if (days is < 1 or > 366) throw new DomainException("Gün sayısı 1 ile 366 arasında olmalı.");
-            if (!await _context.Users.AnyAsync(u => u.Id == userId)) throw DomainException.NotFound("Kullanıcı bulunamadı.");
+            if (days is < 1 or > 366) throw new DomainException("subscriptions.invalidDays");
+            if (!await _context.Users.AnyAsync(u => u.Id == userId)) throw DomainException.NotFound("errors.userNotFound");
 
             var now = DateTime.UtcNow;
             _context.Subscriptions.Add(new Subscription
@@ -139,7 +139,7 @@ namespace SineUyum.Api.Services
                 UserId = userId,
                 Provider = ManualProvider,
                 ProviderReference = $"{grantedBy}:{Guid.NewGuid():N}",
-                Status = SubscriptionStatus.Canceled, // yenilenmez
+                Status = SubscriptionStatus.Canceled, // does not renew
                 StartedAt = now,
                 CurrentPeriodEnd = now.AddDays(days),
                 CanceledAt = now,
@@ -147,7 +147,7 @@ namespace SineUyum.Api.Services
                 UpdatedAt = now,
             });
             await _context.SaveChangesAsync();
-            _logger.LogInformation("Elle abonelik: {UserId} {Days} gün (veren {AdminId})", userId, days, grantedBy);
+            _logger.LogInformation("Manual subscription: {UserId} {Days} days (granted by {AdminId})", userId, days, grantedBy);
         }
     }
 }

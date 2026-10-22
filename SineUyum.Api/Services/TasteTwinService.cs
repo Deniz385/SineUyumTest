@@ -5,9 +5,9 @@ using SineUyum.Api.Models;
 
 namespace SineUyum.Api.Services
 {
-    // Haftalık zevk ikizi: sana en uyumlu, henüz takip etmediğin ve daha önce
-    // önerilmemiş biri. Yalnızca keşfedilmeye açık kişiler aday olur: profili
-    // herkese açık, aramada görünmeyi kapatmamış ve aranızda engel olmayan.
+    // Weekly taste twin: the most compatible person you do not follow yet and
+    // who was never suggested before. Only people open to discovery qualify: a
+    // public profile, not hidden from search, and no block between you.
     public class TasteTwinService
     {
         public const int MinRatings = 5;
@@ -35,7 +35,7 @@ namespace SineUyum.Api.Services
             return date.AddDays(-sinceMonday);
         }
 
-        // Bu haftanın önerisi; yoksa hesaplanıp kaydedilir. Uygun aday yoksa null.
+        // This week's suggestion; computed and saved if missing. Null if no candidate fits.
         public async Task<TasteTwinSuggestion?> ForThisWeekAsync(string userId, DateTime nowUtc)
         {
             var week = WeekStartOf(nowUtc);
@@ -60,28 +60,28 @@ namespace SineUyum.Api.Services
             }
             catch (DbUpdateException)
             {
-                // Eşzamanlı istek bu haftanın önerisini zaten yazdı.
+                // A concurrent request already wrote this week's suggestion.
                 _context.ChangeTracker.Clear();
                 return await _context.TasteTwinSuggestions.FirstOrDefaultAsync(t => t.UserId == userId && t.WeekStart == week);
             }
             return suggestion;
         }
 
-        // Öneriyi bildirir (haftalık iş). Bir kez.
+        // Sends the suggestion as a notification (weekly job). Only once.
         public async Task NotifyAsync(TasteTwinSuggestion suggestion)
         {
             if (suggestion.Notified) return;
             var name = await _context.Users.Where(u => u.Id == suggestion.SuggestedUserId).Select(u => u.UserName).SingleAsync();
             suggestion.Notified = true;
             await _notifications.NotifyAsync(suggestion.UserId,
-                $"Bu haftanın zevk ikizi: {name} (%{suggestion.Compatibility:0} uyumlu, {suggestion.CommonMovieCount} ortak film).",
-                $"/profile/{suggestion.SuggestedUserId}");
+                $"/profile/{suggestion.SuggestedUserId}",
+                "notifications.tasteTwin", name, suggestion.Compatibility, suggestion.CommonMovieCount);
         }
 
         public async Task<TasteTwinDto?> ToDtoAsync(TasteTwinSuggestion? suggestion, string viewerId)
         {
             if (suggestion == null) return null;
-            // Öneriden sonra engellenmiş ya da gizlenmiş olabilir.
+            // The person may have been blocked or hidden since the suggestion.
             if (!await _social.CanSeeAuthorAsync(viewerId, suggestion.SuggestedUserId)) return null;
 
             var user = await _context.Users
@@ -108,7 +108,7 @@ namespace SineUyum.Api.Services
             var following = _context.UserFollows.Where(f => f.FollowerId == userId).Select(f => f.FollowingId);
             var suggestedBefore = _context.TasteTwinSuggestions.Where(t => t.UserId == userId).Select(t => t.SuggestedUserId);
 
-            // En çok ortak filmi olan adaylar (uyum bunların arasında hesaplanır).
+            // Candidates with the most common movies (compatibility is computed among them).
             var candidates = await _context.UserRatings
                 .Where(r => myMovies.Contains(r.MovieId) && r.UserId != userId)
                 .Where(r => r.User.ProfileVisibility == ProfileVisibility.Public && !r.User.HiddenFromSearch)

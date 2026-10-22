@@ -4,10 +4,10 @@ using SineUyum.Api.Data;
 
 namespace SineUyum.Api.Services.Push
 {
-    // İstek yolunda FCM'i beklememek için push'lar kuyruğa atılır ve arka
-    // planda gönderilir. Kuyruk bellek içidir: sunucu yeniden başlarsa
-    // bekleyenler düşer. Bu kabul edilebilir çünkü bildirim zaten veritabanında
-    // ve uygulama içinde (REST/SignalR) görünür; push yalnızca "haber verme"dir.
+    // Pushes are queued and sent in the background so the request path does not
+    // wait for FCM. The queue is in memory: pending pushes are lost on restart.
+    // That is acceptable because the notification is already in the database and
+    // visible in the app (REST/SignalR); a push is only a "heads-up".
     public sealed class PushQueue
     {
         private readonly Channel<PushMessage> _channel = Channel.CreateBounded<PushMessage>(
@@ -25,7 +25,7 @@ namespace SineUyum.Api.Services.Push
         {
             if (!_channel.Writer.TryWrite(message))
             {
-                _logger.LogWarning("Push kuyruğu dolu; {UserId} için bildirim atlandı.", message.UserId);
+                _logger.LogWarning("Push queue is full; skipped a notification for {UserId}.", message.UserId);
             }
         }
 
@@ -65,9 +65,9 @@ namespace SineUyum.Api.Services.Push
                 }
                 catch (Exception ex)
                 {
-                    // Tek bir bildirimin hatası servisi durdurmamalı (.NET 8'de
-                    // BackgroundService'ten kaçan istisna uygulamayı kapatır).
-                    _logger.LogError(ex, "{UserId} için push gönderilemedi.", message.UserId);
+                    // One failed notification must not stop the service (in .NET 8 an
+                    // exception escaping a BackgroundService shuts the application down).
+                    _logger.LogError(ex, "Could not send a push to {UserId}.", message.UserId);
                 }
             }
         }
@@ -94,7 +94,7 @@ namespace SineUyum.Api.Services.Push
             if (invalid.Count > 0)
             {
                 await db.DeviceTokens.Where(d => invalid.Contains(d.Token)).ExecuteDeleteAsync(ct);
-                _logger.LogInformation("{Count} geçersiz cihaz token'ı silindi.", invalid.Count);
+                _logger.LogInformation("Deleted {Count} invalid device tokens.", invalid.Count);
             }
         }
     }

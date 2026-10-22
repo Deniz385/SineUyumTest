@@ -19,10 +19,10 @@ namespace SineUyum.Api.Models
         public string UserId { get; set; } = string.Empty;
         public AppUser User { get; set; } = null!;
 
-        // Bir listenin içinde birden çok film olabilir
+        // A list can contain many movies
         public ICollection<WatchlistItem> Items { get; set; } = new List<WatchlistItem>();
 
-        // Ortak liste üyeleri (davet edilen ve kabul edenler).
+        // Shared list members (invited and accepted).
         public ICollection<WatchlistMember> Members { get; set; } = new List<WatchlistMember>();
     }
 }

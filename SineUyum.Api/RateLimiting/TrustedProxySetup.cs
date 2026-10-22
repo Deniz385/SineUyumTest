@@ -4,11 +4,11 @@ using Microsoft.Extensions.Options;
 
 namespace SineUyum.Api.RateLimiting
 {
-    // API bir ters vekil (nginx, yük dengeleyici) arkasındaysa istemcinin IP'si
-    // X-Forwarded-For'dadır; aksi halde herkes vekilin IP'sini paylaşır ve IP
-    // başına sınırlar (giriş, kimliksiz istekler) tüm kullanıcıları birlikte
-    // keser. Başlığa yalnızca TRUSTED_PROXIES'te listelenen vekillerden gelince
-    // güvenilir; tanımsızsa yok sayılır (istemci sahte IP yazıp sınırı aşamasın).
+    // Behind a reverse proxy (nginx, load balancer) the client's IP is in
+    // X-Forwarded-For; otherwise everyone shares the proxy's IP and per-IP
+    // limits (login, anonymous requests) cut off all users together. The header
+    // is only trusted when it comes from a proxy listed in TRUSTED_PROXIES; if
+    // none is set it is ignored (so a client cannot fake an IP to dodge limits).
     //
     //   TRUSTED_PROXIES="10.0.0.5,172.18.0.0/16"
     public static class TrustedProxySetup
@@ -19,7 +19,7 @@ namespace SineUyum.Api.RateLimiting
                 .Configure<IConfiguration>((options, configuration) =>
                 {
                     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-                    // Varsayılan olarak loopback güvenilir sayılır; yalnızca açıkça verilenler kalsın.
+                    // Loopback is trusted by default; keep only the explicitly given ones.
                     options.KnownProxies.Clear();
                     options.KnownNetworks.Clear();
 
@@ -30,14 +30,14 @@ namespace SineUyum.Api.RateLimiting
                         AddEntry(options, entry);
                     }
 
-                    // Dikkat: iki liste de boşsa ara katman başlığa HERKESTEN
-                    // güvenir. Vekil tanımlı değilse başlık hiç işlenmez.
+                    // Careful: with both lists empty the middleware trusts the
+                    // header from ANYONE. Without a configured proxy the header is not processed at all.
                     if (options.KnownProxies.Count == 0 && options.KnownNetworks.Count == 0)
                     {
                         options.ForwardedHeaders = ForwardedHeaders.None;
                     }
                 })
-                // Hatalı değer ilk istekte değil açılışta fark edilsin.
+                // A bad value is caught at startup, not on the first request.
                 .ValidateOnStart();
 
             return services;
@@ -49,7 +49,7 @@ namespace SineUyum.Api.RateLimiting
             if (!IPAddress.TryParse(parts[0], out var address))
             {
                 throw new OptionsValidationException(nameof(ForwardedHeadersOptions), typeof(ForwardedHeadersOptions),
-                    [$"TRUSTED_PROXIES geçersiz: '{entry}' bir IP adresi ya da CIDR (ör. 10.0.0.0/8) değil."]);
+                    [$"TRUSTED_PROXIES is invalid: '{entry}' is not an IP address or CIDR (e.g. 10.0.0.0/8)."]);
             }
 
             if (parts.Length == 1)
@@ -62,7 +62,7 @@ namespace SineUyum.Api.RateLimiting
             if (parts.Length != 2 || !int.TryParse(parts[1], out var prefix) || prefix < 0 || prefix > maxPrefix)
             {
                 throw new OptionsValidationException(nameof(ForwardedHeadersOptions), typeof(ForwardedHeadersOptions),
-                    [$"TRUSTED_PROXIES geçersiz: '{entry}' bir IP adresi ya da CIDR (ör. 10.0.0.0/8) değil."]);
+                    [$"TRUSTED_PROXIES is invalid: '{entry}' is not an IP address or CIDR (e.g. 10.0.0.0/8)."]);
             }
             options.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(address, prefix));
         }

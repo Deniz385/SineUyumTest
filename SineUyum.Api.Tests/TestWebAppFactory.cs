@@ -9,17 +9,17 @@ using SineUyum.Api.Data;
 
 namespace SineUyum.Api.Tests;
 
-// API'yi bellekte ayağa kaldırır; her fabrika kendi geçici SQLite dosyasını
-// kullanır, böylece her test sınıfı izole çalışır.
+// Runs the API in memory; every factory uses its own temporary SQLite file,
+// so every test class runs isolated.
 public class TestWebAppFactory : WebApplicationFactory<Program>
 {
-    // Tek bir paylaşılan :memory: bağlantısı yerine dosya: arka plan servisleri
-    // (ör. PushDispatchService) istekle eşzamanlı kendi DbContext'ini açtığında
-    // her context kendi bağlantısını alır ve SQLite'ın normal kilit/bekleme
-    // davranışı geçerli olur — üretimdeki gibi.
+    // A file instead of a single shared :memory: connection: when background
+    // services (e.g. PushDispatchService) open their own DbContext concurrently
+    // with a request, every context gets its own connection and SQLite's normal
+    // locking/waiting applies — as in production.
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), "sineuyum-test-" + Guid.NewGuid().ToString("N") + ".db");
 
-    // Her fabrika kendi medya klasörünü kullanır (yüklenen fotoğraflar).
+    // Every factory uses its own media folder (uploaded photos).
     public string MediaRoot { get; } = Path.Combine(Path.GetTempPath(), "sineuyum-media-" + Guid.NewGuid().ToString("N"));
 
     public const string AdminUserName = "testadmin";
@@ -29,33 +29,33 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Testing");
 
-        // Program.cs üst seviye kodu JWT_KEY'i builder aşamasında okuyor; bu,
-        // fabrikanın ConfigureAppConfiguration geri çağrısından önce çalışıyor.
-        // Bu yüzden değerleri ortam değişkeni olarak veriyoruz — WebApplicationBuilder
-        // bunları varsayılan olarak ve erkenden okur. (Hiyerarşi için "__".)
+        // Program.cs top-level code reads JWT_KEY while building, which runs
+        // before the factory's ConfigureAppConfiguration callback. So the values
+        // are given as environment variables — WebApplicationBuilder reads those
+        // by default and early. ("__" for hierarchy.)
         Environment.SetEnvironmentVariable("JWT_KEY",
-            "test-ortami-icin-sabit-bir-anahtar-en-az-64-byte-olmali-xxxxxxxxxxxx");
+            "a-fixed-key-for-the-test-environment-at-least-64-bytes-long-xxxxxxxx");
         Environment.SetEnvironmentVariable("Jwt__AccessTokenMinutes", "60");
         Environment.SetEnvironmentVariable("Jwt__RefreshTokenDays", "60");
         Environment.SetEnvironmentVariable("ADMIN_USERNAME", AdminUserName);
         Environment.SetEnvironmentVariable("ADMIN_PASSWORD", AdminPassword);
         Environment.SetEnvironmentVariable("ADMIN_EMAIL", "testadmin@sineuyum.local");
-        // Testler tek IP'den/kullanıcıdan çok sayıda istek atıyor; sınırlar
-        // açılsın (sınırların kendisi RateLimitTests'te düşük değerlerle).
+        // Tests send many requests from a single IP/user; lift the limits (the
+        // limits themselves are tested with low values in RateLimitTests).
         foreach (var limit in new[] { "Global", "Auth", "Upload", "Tmdb", "SocialWrite" })
         {
             Environment.SetEnvironmentVariable($"RateLimit__{limit}PermitLimit", "100000");
         }
-        // Arka plan tür tamamlaması testlerde kendiliğinden çalışmasın (TMDb
-        // sahtelerindeki çağrı sayılarını bozar); gereken test doğrudan çağırır.
+        // The background genre backfill must not run on its own in tests (it
+        // would disturb the call counts of the TMDb fakes); tests that need it call it directly.
         Environment.SetEnvironmentVariable("GenreBackfill__Enabled", "false");
         Environment.SetEnvironmentVariable("TasteTwin__Enabled", "false");
         builder.UseSetting("Storage:MediaRoot", MediaRoot);
 
-        // İsteğe bağlı: tüm paketi gerçek PostgreSQL'e karşı (migration'larla)
-        // koşmak için TEST_POSTGRES_CONNECTION verin, ör.
+        // Optional: to run the whole suite against a real PostgreSQL (with the
+        // migrations), set TEST_POSTGRES_CONNECTION, e.g.
         //   TEST_POSTGRES_CONNECTION="Host=localhost;Username=postgres;Password=..." dotnet test
-        // Her fabrika kendi veritabanını oluşturur. Verilmezse geçici SQLite dosyası.
+        // Every factory creates its own database. Without it, a temporary SQLite file.
         var postgres = Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNECTION");
         if (!string.IsNullOrWhiteSpace(postgres))
         {
@@ -64,7 +64,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
 
         builder.ConfigureServices(services =>
         {
-            // Gerçek veritabanı kaydını kaldırıp test veritabanını koy.
+            // Replace the real database registration with the test database.
             services.RemoveAll<DbContextOptions<ApplicationDbContext>>();
             services.RemoveAll<ApplicationDbContext>();
 

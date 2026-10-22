@@ -14,7 +14,7 @@ namespace SineUyum.Api.Models
         [ForeignKey("UserId")]
         public AppUser User { get; set; } = null!;
 
-        // Hangi etkinliğe katılmak istediği
+        // The event the user wants to join
         [Required]
         public int CinemaEventId { get; set; }
         [ForeignKey("CinemaEventId")]

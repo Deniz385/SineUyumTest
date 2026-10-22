@@ -27,8 +27,8 @@ namespace SineUyum.Api.Services
             _httpClientFactory = httpClientFactory;
             _notifications = notifications;
             _userManager = userManager;
-            // Boş string de tanımsız sayılmalı; appsettings.json'daki yer tutucu
-            // aksi halde TMDB_API_KEY ortam değişkenini gölgeliyordu.
+            // An empty string must count as unset too; otherwise the placeholder
+            // in appsettings.json shadowed the TMDB_API_KEY environment variable.
             var apiKey = configuration["TMDb:ApiKey"];
             if (string.IsNullOrWhiteSpace(apiKey))
             {
@@ -37,32 +37,32 @@ namespace SineUyum.Api.Services
             _tmdbApiKey = apiKey;
         }
 
-        // İstek yolunda hızlı ön kontrol: yönetici hatayı (etkinlik yok, gruplar
-        // zaten var, katılımcı az) iş kuyruğa girmeden görsün. İş de aynı
-        // kontrolle başlar.
+        // Fast pre-check in the request path: the admin sees errors (no event,
+        // groups already exist, too few participants) before the job is
+        // queued. The job starts with the same check.
         public async Task<CinemaEvent> ValidateAsync(int eventId)
         {
             var cinemaEvent = await _context.CinemaEvents.FindAsync(eventId);
-            if (cinemaEvent == null) throw DomainException.NotFound("Etkinlik bulunamadı.");
-            if (await _context.EventGroups.AnyAsync(g => g.CinemaEventId == eventId)) throw new DomainException("Bu etkinlik için gruplar zaten oluşturulmuş.");
+            if (cinemaEvent == null) throw DomainException.NotFound("errors.eventNotFound");
+            if (await _context.EventGroups.AnyAsync(g => g.CinemaEventId == eventId)) throw new DomainException("matching.groupsAlreadyCreated");
 
             var participantCount = await _context.EventParticipants.CountAsync(p => p.CinemaEventId == eventId);
             if (participantCount < cinemaEvent.GroupSize)
             {
-                throw new DomainException($"Yeterli katılımcı olmadığı için gruplar oluşturulamadı. Gerekli: {cinemaEvent.GroupSize}, Mevcut: {participantCount}");
+                throw new DomainException("matching.notEnoughParticipants", [cinemaEvent.GroupSize, participantCount]);
             }
             return cinemaEvent;
         }
 
-        // Arka plan işinden çağrılır (MatchingWorker). Üç aşama:
-        //  1) gruplar bellekte kurulur (veritabanına yazmadan),
-        //  2) öneriler hesaplanır — TMDb çağrısı olabilir, transaction dışında
-        //     ki dış çağrı süresince kilit tutulmasın,
-        //  3) tüm gruplar, öneriler ve bildirimler TEK transaction'da yazılır.
-        // Önceden her grup ayrı kaydediliyordu: ortada bir hata (ör. TMDb)
-        // yarım grupları kalıcı bırakıyor, yeniden deneme de "gruplar zaten
-        // oluşturulmuş" diye reddediliyordu. Canlı bildirim/push commit'ten
-        // sonra gider; geri alınan iş için kimseye bildirim gitmez.
+        // Called from the background job (MatchingWorker). Three stages:
+        //  1) groups are built in memory (without writing to the database),
+        //  2) suggestions are computed — this may call TMDb, outside the
+        //     transaction so no lock is held during the external call,
+        //  3) all groups, suggestions and notifications are written in ONE transaction.
+        // Each group used to be saved separately: an error midway (e.g. TMDb)
+        // left half the groups behind, and a retry was then rejected with
+        // "groups already created". Live notifications/pushes go out after the
+        // commit; nobody is notified about rolled-back work.
         public async Task<MatchingResult> CreateGroupsForEventAsync(int eventId, CancellationToken cancellationToken = default)
         {
             var cinemaEvent = await ValidateAsync(eventId);
@@ -76,7 +76,7 @@ namespace SineUyum.Api.Services
 
             var userRatingsDict = participants.ToDictionary(p => p.UserId, p => p.User.Ratings.ToDictionary(r => r.MovieId, r => r.Rating));
             var userPool = participants.Select(p => p.UserId).ToList();
-            // Birbirini engelleyen (herhangi yönde) iki kişi aynı gruba düşmez.
+            // Two people who blocked each other (either way) never land in the same group.
             var blockedPairs = await _privacy.BlockedPairsAmongAsync(userPool);
             var random = new Random();
 
@@ -91,7 +91,7 @@ namespace SineUyum.Api.Services
                     Score = CalculateCompatibility(userRatingsDict[starterUserId], userRatingsDict.ContainsKey(otherUserId) ? userRatingsDict[otherUserId] : new Dictionary<int, int>())
                 }).ToList();
 
-                // En uyumludan başlayarak, gruptaki hiç kimseyle engeli olmayanlar alınır.
+                // Starting from the most compatible, take people with no block against anyone in the group.
                 var groupMemberIds = new List<string> { starterUserId };
                 foreach (var candidate in compatibilities.OrderByDescending(x => x.Score))
                 {
@@ -100,8 +100,8 @@ namespace SineUyum.Api.Services
                     groupMemberIds.Add(candidate.UserId);
                 }
 
-                // Engeller yüzünden bu kişiyle tam grup kurulamıyor; o gruba
-                // alınmadan kalır (havuzdan çıktı), diğerleriyle devam edilir.
+                // Blocks make a full group with this person impossible; they
+                // stay ungrouped (already out of the pool) and we go on with the rest.
                 if (groupMemberIds.Count < cinemaEvent.GroupSize) continue;
 
                 foreach (var memberId in groupMemberIds) userPool.Remove(memberId);
@@ -118,10 +118,10 @@ namespace SineUyum.Api.Services
             var staged = new List<Notification>();
             await using (var transaction = await _context.Database.BeginTransactionAsync(cancellationToken))
             {
-                // Ön kontrolden bu yana başka bir iş grupları yazmış olabilir.
+                // Another job may have written the groups since the pre-check.
                 if (await _context.EventGroups.AnyAsync(g => g.CinemaEventId == eventId, cancellationToken))
                 {
-                    throw new DomainException("Bu etkinlik için gruplar zaten oluşturulmuş.");
+                    throw new DomainException("matching.groupsAlreadyCreated");
                 }
 
                 for (var i = 0; i < plannedGroups.Count; i++)
@@ -137,14 +137,14 @@ namespace SineUyum.Api.Services
                     }
                     _context.EventGroups.Add(group);
 
-                    staged.AddRange(_notifications.Stage(
+                    staged.AddRange(await _notifications.StageAsync(
                         plannedGroups[i],
-                        $"'{cinemaEvent.LocationName}' etkinliği için bir gruba atandın!",
-                        "/my-event"));
+                        "/my-event",
+                        "notifications.groupAssigned", cinemaEvent.LocationName));
                 }
 
-                // Bilinçli olarak iptal belirteci verilmez: yazma başladıysa
-                // yarıda kesilmesin (commit ya olur ya olmaz).
+                // Deliberately no cancellation token: once writing has started it
+                // must not be cut off halfway (the commit either happens or not).
                 await _context.SaveChangesAsync(CancellationToken.None);
                 await transaction.CommitAsync(CancellationToken.None);
             }
@@ -155,7 +155,6 @@ namespace SineUyum.Api.Services
             return new MatchingResult(plannedGroups.Count, participants.Count - groupedCount);
         }
 
-        // ... (diğer metodlar aynı kalacak) ...
         private async Task<List<int>> GetGroupMovieSuggestions(List<string> groupMemberIds, Dictionary<string, Dictionary<int, int>> allRatings)
         {
             var allSeenMovies = groupMemberIds.SelectMany(id => allRatings.ContainsKey(id) ? allRatings[id].Keys : Enumerable.Empty<int>()).ToHashSet();
@@ -196,24 +195,25 @@ namespace SineUyum.Api.Services
 
             if (!suggestions.Any())
             {
-                if (string.IsNullOrEmpty(_tmdbApiKey)) throw new InvalidOperationException("TMDb API anahtarı yapılandırılmamış.");
+                if (string.IsNullOrEmpty(_tmdbApiKey)) throw new InvalidOperationException("The TMDb API key is not configured.");
 
                 var client = _httpClientFactory.CreateClient("TMDb");
-                var popularMoviesUrl = $"{TmdbApiBaseUrl}movie/popular?api_key={_tmdbApiKey}&language=tr-TR&page=1";
-                
+                // The titles go into the shared Movies catalog, which is kept in one language.
+                var popularMoviesUrl = $"{TmdbApiBaseUrl}movie/popular?api_key={_tmdbApiKey}&language={MovieCatalogService.CatalogTmdbLanguage}&page=1";
+
                 var response = await client.GetAsync(popularMoviesUrl);
-                if (!response.IsSuccessStatusCode) throw new HttpRequestException($"TMDb API'sinden popüler filmler alınamadı. Durum Kodu: {response.StatusCode}");
+                if (!response.IsSuccessStatusCode) throw new HttpRequestException($"Could not fetch popular movies from the TMDb API. Status code: {response.StatusCode}");
 
                 var jsonResponse = await response.Content.ReadAsStringAsync();
                 var popularMoviesDoc = JsonDocument.Parse(jsonResponse);
                 var popularMovies = popularMoviesDoc.RootElement.GetProperty("results").EnumerateArray().ToList();
-                
+
                 var fallbackSuggestions = popularMovies
                     .Where(movie => !allSeenMovies.Contains(movie.GetProperty("id").GetInt32()))
                     .Take(3)
                     .Select(movie => movie.GetProperty("id").GetInt32())
                     .ToList();
-                
+
                 if (!fallbackSuggestions.Any() && popularMovies.Any())
                 {
                     fallbackSuggestions = popularMovies.Take(3).Select(movie => movie.GetProperty("id").GetInt32()).ToList();
@@ -229,7 +229,7 @@ namespace SineUyum.Api.Services
                         moviesToAdd.Add(new Movie
                         {
                             Id = movieId,
-                            Title = movieElement.GetProperty("title").GetString() ?? "Başlıksız",
+                            Title = movieElement.GetProperty("title").GetString() ?? MovieCatalogService.UntitledTitle,
                             PosterPath = movieElement.GetProperty("poster_path").GetString()
                         });
                     }
@@ -247,9 +247,10 @@ namespace SineUyum.Api.Services
             return suggestions;
         }
 
-        // Engel yoksa eskisi gibi rastgele. Varsa en çok çakışması olan önce
-        // yerleştirilir (en kısıtlı önce): aksi halde birbirini engelleyenler
-        // havuzda sona kalıp, geçerli bir dağılım varken gruptan dışarıda kalıyordu.
+        // Without blocks, random as before. With blocks, the person with the
+        // most conflicts is placed first (most constrained first): otherwise
+        // people who blocked each other were left for last in the pool and ended
+        // up ungrouped even though a valid split existed.
         private static string PickStarter(List<string> pool, HashSet<(string, string)> blockedPairs, Random random)
         {
             if (blockedPairs.Count == 0) return pool[random.Next(pool.Count)];

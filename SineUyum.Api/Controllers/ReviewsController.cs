@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
 using SineUyum.Api.Exceptions;
@@ -12,9 +13,9 @@ using System.Security.Claims;
 
 namespace SineUyum.Api.Controllers
 {
-    // İncelemeler, beğeniler ve yorumlar. Görünürlük profil ayrıntılarıyla
-    // aynı kuraldır (SocialService.VisibleAuthors): gizli/engelli yazarın
-    // incelemesi yokmuş gibi davranılır (404).
+    // Reviews, likes and comments. Visibility follows the same rule as profile
+    // details (SocialService.VisibleAuthors): a review by a private or blocked
+    // author is treated as if it did not exist (404).
     [ApiController]
     [Route("api/reviews")]
     [Authorize]
@@ -24,13 +25,15 @@ namespace SineUyum.Api.Controllers
         private readonly SocialService _social;
         private readonly PrivacyService _privacy;
         private readonly NotificationService _notifications;
+        private readonly IStringLocalizer _t;
 
-        public ReviewsController(ApplicationDbContext context, SocialService social, PrivacyService privacy, NotificationService notifications)
+        public ReviewsController(ApplicationDbContext context, SocialService social, PrivacyService privacy, NotificationService notifications, IStringLocalizer localizer)
         {
             _context = context;
             _social = social;
             _privacy = privacy;
             _notifications = notifications;
+            _t = localizer;
         }
 
         private string Me => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -58,29 +61,29 @@ namespace SineUyum.Api.Controllers
                 Mine = mine.SingleOrDefault(),
                 Reviews = reviews,
                 TotalCount = await others.CountAsync(),
-                // Yalnızca ilk sayfada (sayfalar arasında değişmez).
+                // Only on the first page (it does not change between pages).
                 ForYou = page == 1 ? await _social.ForYouScoreAsync(Me, movieId) : null
             });
         }
 
-        // Kendi incelemesini yazar ya da günceller. İnceleme bir puanın yazılı
-        // hâlidir: önce puan gerekir.
+        // Writes or updates one's own review. A review is the written form of
+        // a rating: the rating comes first.
         [HttpPut("movie/{movieId:int}")]
         [EnableRateLimiting(RateLimitPolicies.SocialWrite)]
         public async Task<ActionResult<ReviewDto>> Upsert(int movieId, [FromBody] UpsertReviewDto dto)
         {
             var rating = await _context.UserRatings.FirstOrDefaultAsync(r => r.UserId == Me && r.MovieId == movieId);
-            if (rating == null) throw new DomainException("İnceleme yazmadan önce filmi puanla.");
+            if (rating == null) throw new DomainException("reviews.ratingRequired");
 
             var text = dto.Text.Trim();
-            if (text.Length == 0) throw new DomainException("İnceleme metni boş olamaz.");
+            if (text.Length == 0) throw new DomainException("reviews.textRequired");
 
             var review = await _context.Reviews.FirstOrDefaultAsync(r => r.UserId == Me && r.MovieId == movieId);
             if (review == null)
             {
                 review = new Review { UserId = Me, MovieId = movieId, Text = text, ContainsSpoilers = dto.ContainsSpoilers };
                 _context.Reviews.Add(review);
-                // İlk inceleme akışta öne çıkar; düzenleme çıkarmaz.
+                // The first review moves the activity up in the feed; edits do not.
                 rating.ActivityAt = review.CreatedAt;
             }
             else
@@ -103,7 +106,7 @@ namespace SineUyum.Api.Controllers
                 _context.Reviews.Remove(review);
                 await _context.SaveChangesAsync();
             }
-            return Ok(new StatusMessageDto("İnceleme silindi."));
+            return Ok(new StatusMessageDto(_t["reviews.deleted"]));
         }
 
         [HttpPost("{reviewId:int}/like")]
@@ -118,10 +121,10 @@ namespace SineUyum.Api.Controllers
                 {
                     if (review.UserId != Me)
                     {
-                        // Beğeni ve bildirimi tek kayıtta.
+                        // The like and its notification are saved together.
                         await _notifications.NotifyAsync(review.UserId,
-                            $"{await MyNameAsync()} '{review.Movie.Title}' incelemeni beğendi.",
-                            $"/movie/{review.MovieId}");
+                            $"/movie/{review.MovieId}",
+                            "notifications.reviewLiked", await MyNameAsync(), review.Movie.Title);
                     }
                     else
                     {
@@ -130,7 +133,7 @@ namespace SineUyum.Api.Controllers
                 }
                 catch (DbUpdateException)
                 {
-                    // Eşzamanlı ikinci istek zaten beğenmişse sonuç aynı; değilse gerçek hata.
+                    // A concurrent second request already liked it: same outcome. Otherwise a real error.
                     if (!await LikeExistsAsync(reviewId)) throw;
                 }
             }
@@ -172,16 +175,16 @@ namespace SineUyum.Api.Controllers
         {
             var review = await VisibleReviewAsync(reviewId);
             var text = dto.Text.Trim();
-            if (text.Length == 0) throw new DomainException("Yorum boş olamaz.");
+            if (text.Length == 0) throw new DomainException("reviews.commentRequired");
 
             var comment = new ReviewComment { ReviewId = reviewId, UserId = Me, Text = text };
             _context.ReviewComments.Add(comment);
             if (review.UserId != Me)
             {
-                // Bildirimde yorum metni yok (push gövdesine içerik koymuyoruz).
+                // The notification has no comment text (we keep content out of push bodies).
                 await _notifications.NotifyAsync(review.UserId,
-                    $"{await MyNameAsync()} '{review.Movie.Title}' incelemene yorum yaptı.",
-                    $"/movie/{review.MovieId}");
+                    $"/movie/{review.MovieId}",
+                    "notifications.reviewCommented", await MyNameAsync(), review.Movie.Title);
             }
             else
             {
@@ -203,14 +206,14 @@ namespace SineUyum.Api.Controllers
         public async Task<ActionResult<StatusMessageDto>> DeleteComment(int commentId)
         {
             var comment = await _context.ReviewComments.Include(c => c.Review).FirstOrDefaultAsync(c => c.Id == commentId);
-            if (comment == null) throw DomainException.NotFound("Yorum bulunamadı.");
+            if (comment == null) throw DomainException.NotFound("reviews.commentNotFound");
             if (comment.UserId != Me && comment.Review.UserId != Me)
             {
-                throw new DomainException("Bu yorumu yalnızca yazarı ya da inceleme sahibi silebilir.", StatusCodes.Status403Forbidden);
+                throw new DomainException("reviews.cannotDeleteComment", StatusCodes.Status403Forbidden);
             }
             _context.ReviewComments.Remove(comment);
             await _context.SaveChangesAsync();
-            return Ok(new StatusMessageDto("Yorum silindi."));
+            return Ok(new StatusMessageDto(_t["reviews.commentDeleted"]));
         }
 
         private async Task<Review> VisibleReviewAsync(int reviewId)
@@ -218,11 +221,11 @@ namespace SineUyum.Api.Controllers
             var visible = _social.VisibleAuthors(Me).Select(u => u.Id);
             var review = await _context.Reviews.Include(r => r.Movie)
                 .FirstOrDefaultAsync(r => r.Id == reviewId && visible.Contains(r.UserId));
-            return review ?? throw DomainException.NotFound("İnceleme bulunamadı.");
+            return review ?? throw DomainException.NotFound("reviews.notFound");
         }
 
         private async Task<string> MyNameAsync() =>
-            await _context.Users.Where(u => u.Id == Me).Select(u => u.UserName).SingleAsync() ?? "Biri";
+            await _context.Users.Where(u => u.Id == Me).Select(u => u.UserName).SingleAsync() ?? _t["common.someone"];
 
         private async Task<bool> LikeExistsAsync(int reviewId)
         {

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
 using SineUyum.Api.Models;
@@ -12,10 +13,11 @@ namespace SineUyum.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class RatingsController(ApplicationDbContext context, MovieCatalogService movieCatalog) : ControllerBase
+    public class RatingsController(ApplicationDbContext context, MovieCatalogService movieCatalog, IStringLocalizer localizer) : ControllerBase
     {
         private readonly ApplicationDbContext _context = context;
         private readonly MovieCatalogService _movieCatalog = movieCatalog;
+        private readonly IStringLocalizer _t = localizer;
 
         [HttpPost]
         public async Task<ActionResult<StatusMessageDto>> AddRating(CreateRatingDto createRatingDto)
@@ -27,8 +29,8 @@ namespace SineUyum.Api.Controllers
                 return Unauthorized();
             }
 
-            // Film yerelde yoksa TMDb'den çekilip eklenir (meta veri sunucudan,
-            // istemciden değil). Ayrı bir "önce ekle" çağrısı gerekmez.
+            // A movie missing locally is fetched from TMDb and added (metadata
+            // comes from the server, not the client). No separate "add first" call needed.
             await _movieCatalog.EnsureMovieAsync(createRatingDto.MovieId);
 
             var existingRating = await _context.UserRatings
@@ -36,7 +38,7 @@ namespace SineUyum.Api.Controllers
 
             if (existingRating != null)
             {
-                // Puanı değiştirmek akışta öne taşımaz.
+                // Changing a rating does not move it up in the feed.
                 existingRating.Rating = createRatingDto.Rating;
                 await _context.SaveChangesAsync();
             }
@@ -57,7 +59,7 @@ namespace SineUyum.Api.Controllers
                 }
                 catch (DbUpdateException)
                 {
-                    // Eşzamanlı ikinci istek aynı puanı açtı (benzersiz indeks): onu güncelle.
+                    // A concurrent second request created the same rating (unique index): update it.
                     _context.ChangeTracker.Clear();
                     var raced = await _context.UserRatings
                         .FirstOrDefaultAsync(r => r.UserId == userId && r.MovieId == createRatingDto.MovieId);
@@ -67,13 +69,13 @@ namespace SineUyum.Api.Controllers
                 }
             }
 
-            return Ok(new StatusMessageDto("Puan başarıyla kaydedildi."));
+            return Ok(new StatusMessageDto(_t["ratings.saved"]));
         }
-        
-        // Geriye dönük uyumluluk: istemciler puanlamadan önce bu ucu çağırıyor.
-        // Artık istemciden gelen başlık/poster YOK SAYILIR; yalnızca id okunur ve
-        // film TMDb'den çekilip eklenir (over-posting kapatıldı). AddRating zaten
-        // aynı işi yaptığı için bu çağrı opsiyoneldir.
+
+        // Backward compatibility: clients call this before rating. The title/
+        // poster sent by the client are now IGNORED; only the id is read and the
+        // movie is fetched from TMDb (over-posting closed). AddRating does the
+        // same, so this call is optional.
         [HttpPost("addmovie")]
         public async Task<ActionResult<MovieSummaryDto>> AddMovie([FromBody] AddMovieDto dto)
         {

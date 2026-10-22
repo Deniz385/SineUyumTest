@@ -15,7 +15,7 @@ namespace SineUyum.Api.Models
         public EventGroup EventGroup { get; set; } = null!;
         
         [Required]
-        public string UserId { get; set; } = string.Empty; // <-- DEĞİŞİKLİK BURADA
+        public string UserId { get; set; } = string.Empty;
         [ForeignKey("UserId")]
         public AppUser User { get; set; } = null!;
     }

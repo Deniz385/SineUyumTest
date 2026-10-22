@@ -15,8 +15,8 @@ namespace SineUyum.Api.Controllers
 
         public TasteTwinController(TasteTwinService twins) => _twins = twins;
 
-        // Bu haftanın zevk ikizi; henüz yoksa şimdi hesaplanır (yeni kullanıcı
-        // haftalık işi beklemesin). Uygun aday yoksa 204.
+        // This week's taste twin; computed now if there is none yet (a new
+        // user should not wait for the weekly job). 204 if no candidate fits.
         [HttpGet]
         public async Task<ActionResult<TasteTwinDto>> Get()
         {

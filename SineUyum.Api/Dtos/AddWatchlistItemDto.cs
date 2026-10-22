@@ -8,9 +8,9 @@ namespace SineUyum.Api.Dtos
         [Required]
         public int MovieId { get; set; }
 
-        // Geriye dönük uyumluluk için kabul edilir ama YOK SAYILIR: film meta
-        // verisi sunucuda TMDb'den çekilir (MovieCatalogService). Eski
-        // istemciler göndermeye devam edebilir.
+        // Accepted for backward compatibility but IGNORED: movie metadata is
+        // fetched from TMDb on the server (MovieCatalogService). Old clients
+        // may keep sending it.
         public string? Title { get; set; }
 
         public string? PosterPath { get; set; }

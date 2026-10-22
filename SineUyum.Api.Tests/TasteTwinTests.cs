@@ -10,8 +10,8 @@ using SineUyum.Api.Services;
 
 namespace SineUyum.Api.Tests;
 
-// Haftalık zevk ikizi: en uyumlu, keşfedilmeye açık, takip edilmeyen ve daha
-// önce önerilmemiş kişi; haftada bir ve bir kez bildirilir.
+// Weekly taste twin: the most compatible person, open to discovery, not followed and
+// never suggested before; notified once a week.
 public class TasteTwinTests : IClassFixture<TestWebAppFactory>
 {
     private readonly TestWebAppFactory _factory;
@@ -28,8 +28,8 @@ public class TasteTwinTests : IClassFixture<TestWebAppFactory>
     private async Task<Session> RegisterAsync()
     {
         var username = "tw_" + Guid.NewGuid().ToString("N")[..10];
-        await _client.PostAsJsonAsync("/api/v1/account/register", new { username, email = $"{username}@t.com", password = "Sifre123" });
-        var login = await _client.PostAsJsonAsync("/api/v1/account/login", new { username, password = "Sifre123" });
+        await _client.PostAsJsonAsync("/api/v1/account/register", new { username, email = $"{username}@t.com", password = "Password123" });
+        var login = await _client.PostAsJsonAsync("/api/v1/account/login", new { username, password = "Password123" });
         using var doc = JsonDocument.Parse(await login.Content.ReadAsStringAsync());
         return new Session(doc.RootElement.GetProperty("token").GetString()!, doc.RootElement.GetProperty("user").GetProperty("id").GetString()!);
     }
@@ -44,13 +44,13 @@ public class TasteTwinTests : IClassFixture<TestWebAppFactory>
 
     private static int _nextMovie = 999000;
 
-    // Her test kendi filmleriyle: başka testlerin kullanıcıları aday olmaz.
+    // Every test uses its own movies: users from other tests do not become candidates.
     private async Task<int[]> MoviesAsync(int count)
     {
         var ids = Enumerable.Range(0, count).Select(_ => Interlocked.Increment(ref _nextMovie)).ToArray();
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        db.Movies.AddRange(ids.Select(id => new Movie { Id = id, Title = $"Film {id}" }));
+        db.Movies.AddRange(ids.Select(id => new Movie { Id = id, Title = $"Movie {id}" }));
         await db.SaveChangesAsync();
         return ids;
     }
@@ -79,7 +79,7 @@ public class TasteTwinTests : IClassFixture<TestWebAppFactory>
             new { profileVisibility = visibility, messagePermission = "Everyone", hiddenFromSearch = hidden });
 
     [Fact]
-    public async Task EnUyumlu_KesfedilmeyeAcik_Kisi_HaftaBoyuncaAyni()
+    public async Task MostCompatibleDiscoverablePerson_SameAllWeek()
     {
         var movies = await MoviesAsync(6);
         int[] taste6 = [.. Taste, 1];
@@ -91,14 +91,14 @@ public class TasteTwinTests : IClassFixture<TestWebAppFactory>
         var blocked = await RegisterAsync();
         var lukewarm = await RegisterAsync();
         await RateAllAsync(me, movies, taste6);
-        // Uygun aday 5 ortak filmde; dışlanması gerekenler 6'da: kural
-        // işlemeseydi eşit uyumda daha çok ortak film onları öne çıkarırdı.
+        // The right candidate has 5 common movies; the ones to exclude have 6: without
+        // the rules, more common movies at equal compatibility would put them first.
         await RateAllAsync(twin, movies[..5], Taste);
         foreach (var u in new[] { hidden, privateTwin, followed, blocked })
         {
             await RateAllAsync(u, movies, taste6);
         }
-        await RateAllAsync(lukewarm, movies[..5], [1, 10, 1, 10, 1]); // zıt zevk
+        await RateAllAsync(lukewarm, movies[..5], [1, 10, 1, 10, 1]); // opposite taste
         await SetPrivacyAsync(hidden, "Public", hidden: true);
         await SetPrivacyAsync(privateTwin, "Private", hidden: false);
         await SendAsync(HttpMethod.Post, $"/api/v1/follow/{followed.Id}", me);
@@ -114,13 +114,13 @@ public class TasteTwinTests : IClassFixture<TestWebAppFactory>
 
         Assert.Equal(twin.Id, await TwinIdAsync(me));
 
-        // Öneriden sonra engellenirse gösterilmez.
+        // Not shown if blocked after the suggestion.
         await SendAsync(HttpMethod.Post, $"/api/v1/blocks/{twin.Id}", me);
         Assert.Null(await TwinIdAsync(me));
     }
 
     [Fact]
-    public async Task AzPuanVeyaUygunAdayYok_204()
+    public async Task FewRatingsOrNoCandidate_204()
     {
         var movies = await MoviesAsync(5);
         var newbie = await RegisterAsync();
@@ -135,7 +135,7 @@ public class TasteTwinTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task YeniHafta_BaskaKisi_IsBirKezBildirir()
+    public async Task NewWeek_OtherPerson_JobNotifiesOnce()
     {
         var movies = await MoviesAsync(5);
         var me = await RegisterAsync();
@@ -156,14 +156,14 @@ public class TasteTwinTests : IClassFixture<TestWebAppFactory>
             first = Assert.Single(mine).SuggestedUserId;
             Assert.True(mine[0].Notified);
             Assert.Contains(first, new[] { a.Id, b.Id });
-            Assert.Equal(1, await db.Notifications.CountAsync(n => n.UserId == me.Id && n.Message.StartsWith("Bu haftanın zevk ikizi")));
+            Assert.Equal(1, await db.Notifications.CountAsync(n => n.UserId == me.Id && n.MessageKey == "notifications.tasteTwin"));
 
-            // Aynı öneri ikinci kez bildirilmez.
+            // The same suggestion is not notified twice.
             await scope.ServiceProvider.GetRequiredService<TasteTwinService>().NotifyAsync(mine[0]);
-            Assert.Equal(1, await db.Notifications.CountAsync(n => n.UserId == me.Id && n.Message.StartsWith("Bu haftanın zevk ikizi")));
+            Assert.Equal(1, await db.Notifications.CountAsync(n => n.UserId == me.Id && n.MessageKey == "notifications.tasteTwin"));
         }
 
-        // Gelecek hafta aynı kişi tekrar önerilmez.
+        // Next week the same person is not suggested again.
         await worker.RunOnceAsync(now.AddDays(7), CancellationToken.None);
         using (var scope = _factory.Services.CreateScope())
         {
@@ -176,9 +176,9 @@ public class TasteTwinTests : IClassFixture<TestWebAppFactory>
     }
 
     [Theory]
-    [InlineData("2026-10-19", "2026-10-19")] // pazartesi
-    [InlineData("2026-10-25", "2026-10-19")] // pazar
+    [InlineData("2026-10-19", "2026-10-19")] // Monday
+    [InlineData("2026-10-25", "2026-10-19")] // Sunday
     [InlineData("2026-10-21", "2026-10-19")]
-    public void HaftaPazartesiBaslar(string day, string monday) =>
+    public void WeekStartsOnMonday(string day, string monday) =>
         Assert.Equal(DateOnly.Parse(monday), TasteTwinService.WeekStartOf(DateTime.Parse(day)));
 }

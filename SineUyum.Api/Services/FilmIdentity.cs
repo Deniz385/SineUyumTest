@@ -1,10 +1,13 @@
+using Microsoft.Extensions.Localization;
 using SineUyum.Api.Dtos;
 
 namespace SineUyum.Api.Services
 {
+    // Genres are display names, already localized by the caller.
     public record RatedMovieFacts(int MovieId, string Title, string? PosterPath, int Rating, double? TmdbAverage, IReadOnlyList<string> Genres);
 
-    // Film kimliği kartı: puanlardan çıkan zevk profili ve bir unvan. Saf hesap.
+    // The film identity card: the taste profile derived from ratings and a
+    // title. Pure computation; texts come from the given localizer.
     public static class FilmIdentity
     {
         public const int MinForTitle = 5;
@@ -13,7 +16,7 @@ namespace SineUyum.Api.Services
         public const double ContrarianThreshold = 2.0;
         public const int TakeThreshold = 3;
 
-        public static FilmIdentityDto Build(string userName, IReadOnlyCollection<RatedMovieFacts> ratings)
+        public static FilmIdentityDto Build(string userName, IReadOnlyCollection<RatedMovieFacts> ratings, IStringLocalizer t)
         {
             var total = ratings.Count;
             var average = total == 0 ? 0 : Math.Round(ratings.Average(r => r.Rating), 1);
@@ -46,7 +49,7 @@ namespace SineUyum.Api.Services
 
             var favorite = ratings.OrderByDescending(r => r.Rating).ThenByDescending(r => r.MovieId).FirstOrDefault();
 
-            var (title, description) = Archetype(total, average, deviation, genres);
+            var (title, description) = Archetype(total, average, deviation, genres, t);
             return new FilmIdentityDto
             {
                 UserName = userName,
@@ -69,23 +72,22 @@ namespace SineUyum.Api.Services
             };
         }
 
-        private static (string Title, string Description) Archetype(int total, double average, double? deviation, List<GenreShareDto> genres)
+        // Numbers are formatted by the templates ({0:0.0}) in the language's culture.
+        private static (string Title, string Description) Archetype(int total, double average, double? deviation, List<GenreShareDto> genres, IStringLocalizer t)
         {
             if (total < MinForTitle)
-                return ("Yeni Keşifçi", $"Henüz {total} film puanladın; zevkin şekilleniyor.");
+                return (t["filmIdentity.newExplorer.title"], t["filmIdentity.newExplorer.description", total]);
             if (deviation >= ContrarianThreshold)
-                return ("Aykırı Eleştirmen", $"Puanların genel kanıdan ortalama {Format(deviation.Value)} puan sapıyor.");
+                return (t["filmIdentity.contrarian.title"], t["filmIdentity.contrarian.description", deviation.Value]);
             if (average >= 8.0)
-                return ("Cömert Seyirci", $"Ortalaman {Format(average)}: iyi filmi görünce saklamıyorsun.");
+                return (t["filmIdentity.generous.title"], t["filmIdentity.generous.description", average]);
             if (average <= 5.5)
-                return ("Zor Beğenen", $"Ortalaman {Format(average)}: senden 10 almak kolay değil.");
+                return (t["filmIdentity.hardToPlease.title"], t["filmIdentity.hardToPlease.description", average]);
             if (genres.Count > 0 && genres[0].Share >= 40)
-                return ($"{genres[0].Name} Tutkunu", $"Puanladığın filmlerin %{genres[0].Share}'i {genres[0].Name}.");
+                return (t["filmIdentity.genreFan.title", genres[0].Name], t["filmIdentity.genreFan.description", genres[0].Name, genres[0].Share]);
             if (genres.Count >= 6)
-                return ("Her Telden", $"{genres.Count} farklı türde düzenli film izliyorsun.");
-            return ("Film Kâşifi", "Dengeli bir zevkin var; her türe açıksın.");
+                return (t["filmIdentity.eclectic.title"], t["filmIdentity.eclectic.description", genres.Count]);
+            return (t["filmIdentity.explorer.title"], t["filmIdentity.explorer.description"]);
         }
-
-        private static string Format(double value) => value.ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("tr-TR"));
     }
 }

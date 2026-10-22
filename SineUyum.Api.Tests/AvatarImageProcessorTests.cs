@@ -6,14 +6,15 @@ using static SineUyum.Api.Tests.TestImages;
 
 namespace SineUyum.Api.Tests;
 
-// B8: profil fotoğrafı işleme — doğrulama, EXIF yönü, üst veri temizliği,
-// bellek güvenliği.
+// B8: profile photo processing — validation, EXIF orientation, metadata
+// removal, memory safety.
 public class AvatarImageProcessorTests
 {
     private static SKBitmap Decode(byte[] jpeg) => SKBitmap.Decode(jpeg);
 
-    // Beklenen düzen EXIF tanımından bağımsız türetildi: "satır 0 / sütun 0
-    // görüntülenen resimde nereye düşer". Sıra: sol üst, sağ üst, sol alt, sağ alt.
+    // The expected layout was derived independently of the EXIF definition:
+    // "where do row 0 / column 0 land in the displayed image". Order: top left,
+    // top right, bottom left, bottom right.
     public static IEnumerable<object[]> Orientations() => new[]
     {
         new object[] { SKEncodedOrigin.TopLeft,     "R", "G", "B", "Y" },
@@ -33,7 +34,7 @@ public class AvatarImageProcessorTests
 
     [Theory]
     [MemberData(nameof(Orientations))]
-    public void TumExifYonleri_DogruUygulanir(SKEncodedOrigin origin, string tl, string tr, string bl, string br)
+    public void AllExifOrientations_AreAppliedCorrectly(SKEncodedOrigin origin, string tl, string tr, string bl, string br)
     {
         using var source = Quadrants(200, 100);
         using var result = AvatarImageProcessor.ApplyOrigin(source, origin);
@@ -51,10 +52,10 @@ public class AvatarImageProcessorTests
     }
 
     [Fact]
-    public void Cikti_512KareJpeg_OrtadanKirpilir()
+    public void Output_Is512SquareJpeg_CroppedFromTheCenter()
     {
-        // 900x300 yatay: sol yarı kırmızı, sağ yarı mavi → ortadan 300x300 kırpılınca
-        // sol yarı kırmızı, sağ yarı mavi kalmalı.
+        // 900x300 landscape: left half red, right half blue → after cropping the
+        // central 300x300 the left half must stay red and the right half blue.
         var output = AvatarImageProcessor.Process(Jpeg(900, 300));
 
         using var codec = SKCodec.Create(SKData.CreateCopy(output));
@@ -67,13 +68,13 @@ public class AvatarImageProcessorTests
     }
 
     [Fact]
-    public void ExifYonuUygulanir_VeTumUstVeriSilinir()
+    public void ExifOrientationIsApplied_AndAllMetadataRemoved()
     {
-        const string secret = "GIZLI-KONUM-41.0082N-28.9784E";
-        // Sol kırmızı / sağ mavi, yön 6 (saat yönünde 90°) → görüntülenen
-        // resimde üst kırmızı, alt mavi.
+        const string secret = "SECRET-LOCATION-41.0082N-28.9784E";
+        // Left red / right blue, orientation 6 (90 degrees clockwise) → in the
+        // displayed image the top is red and the bottom blue.
         var input = WithExif(Jpeg(600, 400), orientation: 6, description: secret);
-        Assert.Contains(secret, Encoding.ASCII.GetString(input)); // girdi gerçekten içeriyor
+        Assert.Contains(secret, Encoding.ASCII.GetString(input)); // the input really contains it
 
         var output = AvatarImageProcessor.Process(input);
 
@@ -82,12 +83,12 @@ public class AvatarImageProcessorTests
         Assert.DoesNotContain("Exif", text);
 
         using var bitmap = Decode(output);
-        Assert.True(Near(bitmap.GetPixel(256, 100), Red), "üst kırmızı olmalı (yön uygulanmadı)");
-        Assert.True(Near(bitmap.GetPixel(256, 412), Blue), "alt mavi olmalı");
+        Assert.True(Near(bitmap.GetPixel(256, 100), Red), "the top should be red (orientation not applied)");
+        Assert.True(Near(bitmap.GetPixel(256, 412), Blue), "the bottom should be blue");
     }
 
     [Fact]
-    public void SaydamPng_BeyazZemineOturur()
+    public void TransparentPng_LandsOnWhiteBackground()
     {
         using var bitmap = new SKBitmap(new SKImageInfo(300, 300, SKColorType.Rgba8888, SKAlphaType.Premul));
         bitmap.Erase(SKColors.Transparent);
@@ -98,50 +99,50 @@ public class AvatarImageProcessorTests
     }
 
     [Fact]
-    public void Webp_KabulEdilir()
+    public void Webp_IsAccepted()
     {
         using var source = LeftRedRightBlue(400, 400);
         var output = AvatarImageProcessor.Process(Encode(source, SKEncodedImageFormat.Webp));
         Assert.Equal(512, Decode(output).Width);
     }
 
-    // Büyük telefon fotoğrafları (JPEG) ölçekli çözüldüğü için kabul edilmeli.
+    // Large phone photos (JPEG) must be accepted because they are decoded scaled.
     [Fact]
-    public void Buyuk28MpJpeg_OlcekliCozulupKabulEdilir()
+    public void Large28MpJpeg_IsDecodedScaledAndAccepted()
     {
         var output = AvatarImageProcessor.Process(Jpeg(7000, 4000));
         Assert.Equal(512, Decode(output).Width);
     }
 
     [Fact]
-    public void BoyutBildirenBomba_PikselCozulmedenReddedilir()
+    public void BombDeclaringItsSize_IsRejectedWithoutDecodingPixels()
     {
-        var bomb = PngHeaderOnly(50_000, 50_000); // 2.5 milyar piksel, ~10 GB
+        var bomb = PngHeaderOnly(50_000, 50_000); // 2.5 billion pixels, ~10 GB
         Assert.True(bomb.Length < 200);
 
         var ex = Assert.Throws<DomainException>(() => AvatarImageProcessor.Process(bomb));
         Assert.Equal(400, ex.StatusCode);
-        Assert.Contains("boyut", ex.Message);
+        Assert.Equal("profile.photoDimensionsTooLarge", ex.MessageKey);
     }
 
-    // PNG ölçekli çözülemez: bildirilen boyut sınırın altında olsa da
-    // çözülecek boyut 25 MP'yi aşıyorsa reddedilir.
+    // PNG cannot be decoded scaled: even if the declared size is below the
+    // limit, it is rejected when the size to decode exceeds 25 MP.
     [Fact]
-    public void OlceklenemeyenBuyukPng_Reddedilir()
+    public void LargePngThatCannotBeScaled_IsRejected()
     {
         var ex = Assert.Throws<DomainException>(() => AvatarImageProcessor.Process(PngHeaderOnly(6000, 5000)));
         Assert.Equal(400, ex.StatusCode);
     }
 
     [Theory]
-    [InlineData("metin")]
+    [InlineData("text")]
     [InlineData("gif")]
     [InlineData("html")]
-    public void ResimOlmayanVeyaDesteklenmeyen_415(string kind)
+    public void NotAnImageOrUnsupported_415(string kind)
     {
         byte[] input = kind switch
         {
-            "metin" => Encoding.UTF8.GetBytes("bu bir resim değil"),
+            "text" => Encoding.UTF8.GetBytes("this is not an image"),
             "html" => Encoding.UTF8.GetBytes("<html><script>alert(1)</script></html>"),
             _ => Gif1x1,
         };
@@ -150,7 +151,7 @@ public class AvatarImageProcessorTests
         Assert.Equal(415, ex.StatusCode);
     }
 
-    // En küçük geçerli GIF (1x1); GIF desteklenmez (animasyon, eski biçim).
+    // The smallest valid GIF (1x1); GIF is not supported (animation, old format).
     private static readonly byte[] Gif1x1 = Convert.FromBase64String(
         "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7");
 }

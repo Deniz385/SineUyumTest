@@ -4,11 +4,11 @@ namespace SineUyum.Api.Dtos
 {
     public class ChangePasswordDto
     {
-        [Required(ErrorMessage = "Mevcut şifre zorunludur.")]
+        [Required(ErrorMessage = "validation.currentPasswordRequired")]
         public string CurrentPassword { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Yeni şifre zorunludur.")]
-        [MinLength(6, ErrorMessage = "Yeni şifre en az 6 karakter olmalıdır.")]
+        [Required(ErrorMessage = "validation.newPasswordRequired")]
+        [MinLength(6, ErrorMessage = "validation.newPasswordMinLength")]
         public string NewPassword { get; set; } = string.Empty;
     }
 }

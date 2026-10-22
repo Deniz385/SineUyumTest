@@ -9,7 +9,7 @@
         public int MovieId { get; set; }
 
         [Required]
-        [Range(1, 10)] // Puanın 1 ile 10 arasında olmasını zorunlu kılar
+        [Range(1, 10, ErrorMessage = "validation.range")] // the rating must be between 1 and 10
         public int Rating { get; set; }
     }
 }

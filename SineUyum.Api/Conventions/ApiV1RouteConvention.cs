@@ -2,11 +2,10 @@ using Microsoft.AspNetCore.Mvc.ApplicationModels;
 
 namespace SineUyum.Api.Conventions
 {
-    // Tüm "api/..." ile başlayan controller rotalarını tek noktadan "api/v1/..."
-    // altına taşır. Böylece her controller'ın [Route] özniteliğini tek tek
-    // düzenlemeye gerek kalmaz ve sürüm bilgisi tek yerde durur. İleride v2
-    // gerektiğinde controller bazında sürümleme (Asp.Versioning) eklenebilir;
-    // şimdilik tüm API tek sürüm (v1) altında.
+    // Moves every controller route starting with "api/..." under "api/v1/..."
+    // in one place, so no controller's [Route] attribute needs editing and the
+    // version lives in one spot. When a v2 is needed, per-controller
+    // versioning (Asp.Versioning) can be added; for now the whole API is v1.
     public class ApiV1RouteConvention : IApplicationModelConvention
     {
         private const string OldPrefix = "api/";

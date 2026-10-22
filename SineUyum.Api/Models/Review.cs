@@ -1,7 +1,7 @@
 namespace SineUyum.Api.Models
 {
-    // Bir filme yazılan inceleme. Puan UserRatings'te kalır; inceleme o puanın
-    // yazılı hâlidir (kullanıcı ve film başına tek).
+    // A review written for a movie. The rating stays in UserRatings; the review
+    // is its written form (one per user and movie).
     public class Review
     {
         public int Id { get; set; }

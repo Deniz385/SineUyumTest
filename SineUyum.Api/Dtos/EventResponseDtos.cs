@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Localization;
 using SineUyum.Api.Models;
 
 namespace SineUyum.Api.Dtos
@@ -33,9 +34,9 @@ namespace SineUyum.Api.Dtos
         public int ParticipantCount { get; set; }
     }
 
-    // GET /api/v1/event/my-status. Şekil duruma göre değişir; o durumda
-    // anlamı olmayan alanlar yanıta hiç yazılmaz (istemciler alanın
-    // varlığına bakıyor):
+    // GET /api/v1/event/my-status. The shape depends on the status; fields
+    // that mean nothing in that status are left out entirely (clients check
+    // whether a field exists):
     //   NONE      -> status, message
     //   AVAILABLE -> status, event
     //   PENDING   -> status, event
@@ -63,7 +64,7 @@ namespace SineUyum.Api.Dtos
     public class EventGroupDto
     {
         public int Id { get; set; }
-        // Eski istemciler için; öneriler artık EventStatusDto.SuggestedMovies'te.
+        // For old clients; suggestions now live in EventStatusDto.SuggestedMovies.
         public string? SuggestedMovieIds { get; set; }
         public List<EventGroupMemberDto> Members { get; set; } = new();
     }
@@ -81,7 +82,7 @@ namespace SineUyum.Api.Dtos
         public int MovieId { get; set; }
     }
 
-    // POST /api/v1/event/vote isteği.
+    // POST /api/v1/event/vote request.
     public class EventVoteDto
     {
         public int GroupId { get; set; }
@@ -91,9 +92,9 @@ namespace SineUyum.Api.Dtos
 
 namespace SineUyum.Api.Dtos
 {
-    // POST /api/v1/admin/events/{id}/create-groups (202) ve
-    // GET /api/v1/admin/events/{id}/matching. Durum: Queued | Running |
-    // Succeeded | Failed. İstemci Succeeded/Failed olana dek yoklar.
+    // POST /api/v1/admin/events/{id}/create-groups (202) and
+    // GET /api/v1/admin/events/{id}/matching. Status: Queued | Running |
+    // Succeeded | Failed. The client polls until Succeeded/Failed.
     public class MatchingRunDto
     {
         public int Id { get; set; }
@@ -106,29 +107,37 @@ namespace SineUyum.Api.Dtos
         public int? UngroupedCount { get; set; }
         public string? Error { get; set; }
 
-        // Gösterilebilir özet (eski yanıttaki "message" alanıyla uyumlu).
+        // A displayable summary (compatible with the old response's "message" field).
         public string Message { get; set; } = string.Empty;
 
-        public static MatchingRunDto From(Models.MatchingRun run) => new()
+        // Texts in the language of the given localizer; rows from before
+        // localization only have the stored Error text.
+        public static MatchingRunDto From(Models.MatchingRun run, IStringLocalizer t)
         {
-            Message = run.Status switch
+            var error = run.ErrorKey != null
+                ? t[run.ErrorKey, Localization.MessageArgs.Deserialize(run.ErrorArgs)]
+                : run.Error;
+            return new()
             {
-                Models.MatchingRunStatus.Queued => "Eşleştirme sıraya alındı.",
-                Models.MatchingRunStatus.Running => "Eşleştirme sürüyor.",
-                Models.MatchingRunStatus.Succeeded => run.UngroupedCount > 0
-                    ? $"{run.GroupCount} grup oluşturuldu; {run.UngroupedCount} kişi gruba alınamadı."
-                    : $"{run.GroupCount} grup oluşturuldu.",
-                _ => run.Error ?? "Eşleştirme başarısız oldu."
-            },
-            Id = run.Id,
-            EventId = run.CinemaEventId,
-            Status = run.Status.ToString(),
-            CreatedAt = run.CreatedAt,
-            StartedAt = run.StartedAt,
-            FinishedAt = run.FinishedAt,
-            GroupCount = run.GroupCount,
-            UngroupedCount = run.UngroupedCount,
-            Error = run.Error
-        };
+                Message = run.Status switch
+                {
+                    Models.MatchingRunStatus.Queued => t["matching.queued"],
+                    Models.MatchingRunStatus.Running => t["matching.running"],
+                    Models.MatchingRunStatus.Succeeded => run.UngroupedCount > 0
+                        ? t["matching.succeededWithUngrouped", run.GroupCount ?? 0, run.UngroupedCount ?? 0]
+                        : t["matching.succeeded", run.GroupCount ?? 0],
+                    _ => error ?? t["matching.failed"]
+                },
+                Id = run.Id,
+                EventId = run.CinemaEventId,
+                Status = run.Status.ToString(),
+                CreatedAt = run.CreatedAt,
+                StartedAt = run.StartedAt,
+                FinishedAt = run.FinishedAt,
+                GroupCount = run.GroupCount,
+                UngroupedCount = run.UngroupedCount,
+                Error = error
+            };
+        }
     }
 }

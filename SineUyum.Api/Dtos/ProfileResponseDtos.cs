@@ -7,10 +7,10 @@ namespace SineUyum.Api.Dtos
         public string? UserName { get; set; }
         public string? Bio { get; set; }
         public string? ProfileImageUrl { get; set; }
-        // true: görüntüleyen ayrıntıları göremez (gizlilik ayarı ya da kendisi
-        // engellemiş); puanlar ve istatistikler boş döner.
+        // true: the viewer cannot see the details (privacy setting, or the viewer
+        // blocked them); ratings and statistics are empty.
         public bool IsRestricted { get; set; }
-        // Görüntüleyen bu kullanıcıyı engellemiş (engeli kaldırma düğmesi için).
+        // The viewer has blocked this user (for the unblock button).
         public bool IsBlockedByMe { get; set; }
         public List<ProfileRatingDto> Ratings { get; set; } = new();
         public ProfileStatisticsDto Statistics { get; set; } = new();
@@ -32,8 +32,8 @@ namespace SineUyum.Api.Dtos
         public List<ProfileRatingDto> TopRatedMovies { get; set; } = new();
     }
 
-    // POST/DELETE /api/v1/profile/photo. Yüklenen fotoğraflar sunucuya göreli
-    // yoldur ("/media/avatars/..."); istemci API adresiyle birleştirir.
+    // POST/DELETE /api/v1/profile/photo. Uploaded photos are server-relative
+    // paths ("/media/avatars/..."); the client joins them with the API address.
     public class ProfilePhotoDto
     {
         public string? ProfileImageUrl { get; set; }
@@ -45,19 +45,19 @@ namespace SineUyum.Api.Dtos
         public double CompatibilityScore { get; set; }
         public int CommonMovieCount { get; set; }
         public List<CommonMovieDto> CommonMovies { get; set; } = new();
-        // Puanın açıklaması (ortak/ayrışan türler, ortak favori, tartışma filmi).
+        // Explains the score (shared/divergent genres, shared favorite, debate movie).
         public CompatibilityInsightsDto Insights { get; set; } = new();
     }
 
     public class CompatibilityInsightsDto
     {
-        // Tek cümlelik özet; söylenecek bir şey yoksa null.
+        // A one-sentence summary in the request language; null when there is nothing to say.
         public string? Summary { get; set; }
         public List<string> SharedGenres { get; set; } = new();
         public List<string> DivergentGenres { get; set; } = new();
-        // İkisinin de çok sevdiği ortak film.
+        // A common movie both of them loved.
         public CommonMovieDto? SharedFavorite { get; set; }
-        // En çok ayrıştıkları ortak film: sohbet başlatıcı.
+        // The common movie they disagree on most: a conversation starter.
         public CommonMovieDto? DebateMovie { get; set; }
     }
 
@@ -73,7 +73,7 @@ namespace SineUyum.Api.Dtos
 
 namespace SineUyum.Api.Dtos
 {
-    // GET /api/v1/profile/{userId}/identity — paylaşılabilir film kimliği.
+    // GET /api/v1/profile/{userId}/identity — the shareable film identity (texts in the request language).
     public class FilmIdentityDto
     {
         public string UserName { get; set; } = string.Empty;
@@ -82,9 +82,9 @@ namespace SineUyum.Api.Dtos
         public string Title { get; set; } = string.Empty;
         public string TitleDescription { get; set; } = string.Empty;
         public List<GenreShareDto> TopGenres { get; set; } = new();
-        // Puanların TMDb ortalamasından ortalama sapması (en az 8 film).
+        // Average distance of the ratings from the TMDb average (at least 8 movies).
         public double? Deviation { get; set; }
-        // Genel kanıdan en çok ayrışılan film (en az 3 puan fark).
+        // The movie that departs most from the consensus (at least 3 points apart).
         public IdentityMovieDto? ContrarianTake { get; set; }
         public IdentityMovieDto? Favorite { get; set; }
     }
@@ -94,7 +94,7 @@ namespace SineUyum.Api.Dtos
         public string Name { get; set; } = string.Empty;
         public int Count { get; set; }
         public double Average { get; set; }
-        // Türü belli filmler içindeki yüzde.
+        // Percentage among the movies with a known genre.
         public int Share { get; set; }
     }
 

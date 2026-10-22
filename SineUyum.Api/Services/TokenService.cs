@@ -11,9 +11,9 @@ using System.Text;
 
 namespace SineUyum.Api.Services
 {
-    // Token üretimi daha önce AccountController ve SubscriptionController içinde
-    // iki kez kopyalanmıştı (ve SubscriptionController JWT_KEY ortam değişkenini
-    // okumadığı için çöküyordu). Tek kaynağa taşındı.
+    // Token creation used to be copied twice, in AccountController and
+    // SubscriptionController (and SubscriptionController crashed because it did
+    // not read the JWT_KEY environment variable). Moved to a single source.
     public class TokenService
     {
         private readonly ApplicationDbContext _context;
@@ -39,10 +39,18 @@ namespace SineUyum.Api.Services
         private TimeSpan RefreshTokenLifetime =>
             TimeSpan.FromDays(_configuration.GetValue("Jwt:RefreshTokenDays", 60));
 
-        // Access token + yeni bir refresh token üretir ve eski oturum kaydını
-        // temizler. Mobil istemci bu yanıtı doğrudan secure storage'a yazar.
-        public async Task<AuthResponseDto> CreateAuthResponseAsync(AppUser user, string? deviceInfo = null)
+        // Creates an access token + a new refresh token and cleans up old
+        // session rows. The mobile client writes this response straight to secure storage.
+        // A language the client asked for explicitly becomes the user's stored
+        // language (saved together with the refresh token), keeping push
+        // notifications in the language the user currently uses.
+        public async Task<AuthResponseDto> CreateAuthResponseAsync(AppUser user, string? deviceInfo = null, string? language = null)
         {
+            if (language != null && user.Language != language)
+            {
+                user.Language = language;
+            }
+
             var roles = await _userManager.GetRolesAsync(user);
             var expiresAt = DateTime.UtcNow.Add(AccessTokenLifetime);
             var subscription = await _subscriptions.GetStateAsync(user.Id);
@@ -63,14 +71,15 @@ namespace SineUyum.Api.Services
                     ProfileImageUrl = user.ProfileImageUrl,
                     IsSubscribed = subscription.IsActive,
                     SubscriptionExpires = subscription.ExpiresAt,
-                    Roles = roles.ToList()
+                    Roles = roles.ToList(),
+                    Language = user.Language
                 }
             };
         }
 
-        // Sunulan refresh token'ı doğrular, iptal eder ve yerine yenisini verir
-        // (refresh token rotation). Geçersizse null döner.
-        public async Task<AuthResponseDto?> RefreshAsync(string refreshToken, string? deviceInfo = null)
+        // Validates the given refresh token, revokes it and issues a new one
+        // (refresh token rotation). Returns null if it is invalid.
+        public async Task<AuthResponseDto?> RefreshAsync(string refreshToken, string? deviceInfo = null, string? language = null)
         {
             if (string.IsNullOrWhiteSpace(refreshToken)) return null;
 
@@ -84,11 +93,11 @@ namespace SineUyum.Api.Services
             stored.RevokedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            return await CreateAuthResponseAsync(stored.User, deviceInfo ?? stored.DeviceInfo);
+            return await CreateAuthResponseAsync(stored.User, deviceInfo ?? stored.DeviceInfo, language);
         }
 
-        // Parola değişikliği gibi durumlarda çağrılır: kullanıcının tüm aktif
-        // oturumları iptal edilir, böylece çalınmış bir refresh token geçersiz olur.
+        // Called e.g. after a password change: all of the user's active sessions are
+        // revoked, so a stolen refresh token stops working.
         public async Task RevokeAllForUserAsync(string userId)
         {
             var active = await _context.RefreshTokens
@@ -105,7 +114,7 @@ namespace SineUyum.Api.Services
             await _context.SaveChangesAsync();
         }
 
-        // Çıkışta çağrılır: verilen refresh token iptal edilir.
+        // Called on logout: the given refresh token is revoked.
         public async Task RevokeAsync(string refreshToken)
         {
             if (string.IsNullOrWhiteSpace(refreshToken)) return;
@@ -119,8 +128,8 @@ namespace SineUyum.Api.Services
             }
         }
 
-        // IsSubscribed claim'i yalnızca istemcinin arayüzü içindir; ücretli
-        // özellikler sunucuda veritabanından denetlenir ([RequiresSubscription]).
+        // The IsSubscribed claim is only for the client's UI; paid features are
+        // checked on the server against the database ([RequiresSubscription]).
         private string CreateAccessToken(AppUser user, IEnumerable<string> roles, DateTime expiresAt, bool isSubscribed)
         {
             var claims = new List<Claim>
@@ -138,7 +147,7 @@ namespace SineUyum.Api.Services
             var jwtKey = _configuration["JWT_KEY"] ?? _configuration["Jwt:Key"];
             if (string.IsNullOrEmpty(jwtKey))
             {
-                throw new InvalidOperationException("JWT anahtarı yapılandırılmamış.");
+                throw new InvalidOperationException("The JWT key is not configured.");
             }
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
@@ -159,7 +168,7 @@ namespace SineUyum.Api.Services
         {
             var raw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 
-            // Süresi geçmiş veya iptal edilmiş kayıtları biriktirmemek için temizle.
+            // Remove expired or revoked rows so they do not pile up.
             var stale = await _context.RefreshTokens
                 .Where(t => t.UserId == user.Id && (t.RevokedAt != null || t.ExpiresAt <= DateTime.UtcNow))
                 .ToListAsync();

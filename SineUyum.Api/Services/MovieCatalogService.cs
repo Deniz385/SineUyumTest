@@ -2,19 +2,33 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using SineUyum.Api.Data;
 using SineUyum.Api.Exceptions;
+using SineUyum.Api.Localization;
 using SineUyum.Api.Models;
 using System.Text.Json;
 
 namespace SineUyum.Api.Services
 {
-    // Movies tablosu, TMDb meta verisinin (başlık, poster) yerel bir
-    // önbelleğidir ve tüm kullanıcılar arasında paylaşılır. Önceden istemci bu
-    // satırları doğrudan oluşturabiliyordu (over-posting): gerçek bir TMDb
-    // id'si ile sahte başlık göndererek diğer kullanıcıların gördüğü veriyi
-    // bozabilirdi. Artık bir filmin yerel kaydı YALNIZCA burada, başlık/poster
-    // TMDb'den çekilerek oluşturulur; istemci yalnızca movieId verir.
+    // The Movies table is a local cache of TMDb metadata (title, poster) shared
+    // by all users. The client used to be able to create these rows directly
+    // (over-posting): sending a real TMDb id with a fake title corrupted what
+    // other users saw. Now a movie's local row is created ONLY here, with the
+    // title/poster fetched from TMDb; the client only sends a movieId.
+    //
+    // The catalog stores ONE title per movie, fetched in a fixed language
+    // (CatalogLanguage, Turkish as before). Known follow-up: per-language
+    // titles for the stored catalog (e.g. a MovieTranslations table, or
+    // fetching titles per request language) so English users see English
+    // titles in lists, reviews, the feed and identity cards. The TMDb proxy
+    // endpoints (MoviesController) already follow the request language.
     public class MovieCatalogService
     {
+        // Language of the titles stored in the shared catalog.
+        public const string CatalogLanguage = "tr";
+        public static readonly string CatalogTmdbLanguage = SupportedLanguages.TmdbLanguage(CatalogLanguage);
+
+        // Fallback title for movies without one, in the catalog's language.
+        public static string UntitledTitle => LocaleCatalog.Shared.Translate(CatalogLanguage, "movies.untitled");
+
         private readonly ApplicationDbContext _context;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IMemoryCache _cache;
@@ -37,8 +51,9 @@ namespace SineUyum.Api.Services
             }
         }
 
-        // Film yerelde yoksa TMDb'den çekip ekler; her durumda kaydı döndürür.
-        // Başlık/poster güvenilir kaynaktan (TMDb) gelir, istemciden değil.
+        // Fetches and adds the movie from TMDb if it is not stored locally;
+        // returns the row either way. Title/poster come from the trusted
+        // source (TMDb), not from the client.
         public async Task<Movie> EnsureMovieAsync(int movieId)
         {
             var existing = await _context.Movies.FindAsync(movieId);
@@ -46,8 +61,8 @@ namespace SineUyum.Api.Services
 
             var details = await FetchFromTmdbAsync(movieId);
 
-            // İki deneme: eşzamanlı başka bir istek aynı filmi ya da aynı yeni
-            // türü eklemiş olabilir; ikinci denemede tür artık veritabanındadır.
+            // Two attempts: a concurrent request may have added the same movie
+            // or the same new genre; on the second attempt the genre is in the database.
             for (var attempt = 1; ; attempt++)
             {
                 var movie = new Movie { Id = movieId, Title = details.Title, PosterPath = details.PosterPath, TmdbVoteAverage = details.VoteAverage };
@@ -60,8 +75,8 @@ namespace SineUyum.Api.Services
                 }
                 catch (DbUpdateException) when (attempt < 2)
                 {
-                    // Yalnızca bu denemenin eklediklerini bırak; çağıranın bağlamdaki
-                    // diğer bekleyen değişiklikleri korunur.
+                    // Detach only what this attempt added; the caller's other
+                    // pending changes in the context are kept.
                     var genreIds = details.Genres.Select(g => g.Id).ToHashSet();
                     foreach (var entry in _context.ChangeTracker.Entries().Where(e => e.State == EntityState.Added).ToList())
                     {
@@ -78,8 +93,8 @@ namespace SineUyum.Api.Services
             }
         }
 
-        // Türleri eksik bir filmin türlerini TMDb'den tamamlar (GenreBackfillWorker).
-        // TMDb'de türü olmayan film de işlenmiş sayılır; tekrar sorulmaz.
+        // Fills in the genres of a movie that has none from TMDb (GenreBackfillWorker).
+        // A movie without genres on TMDb also counts as processed; it is not asked again.
         public async Task SyncGenresAsync(int movieId)
         {
             var movie = await _context.Movies.Include(m => m.MovieGenres).FirstOrDefaultAsync(m => m.Id == movieId);
@@ -112,15 +127,16 @@ namespace SineUyum.Api.Services
             if (string.IsNullOrEmpty(_tmdbApiKey))
             {
                 throw new DomainException(
-                    "Film bilgisi alınamıyor: TMDb servisi yapılandırılmamış.",
+                    "movies.tmdbNotConfigured",
                     StatusCodes.Status503ServiceUnavailable);
             }
 
-            // Film detayı 24 saat önbelleklenir (MoviesController ile aynı anahtar).
-            if (!_cache.TryGetValue($"movie:{movieId}", out string? json) || json == null)
+            // Movie details are cached for 24 hours (same key as MoviesController in this language).
+            var cacheKey = $"movie:{CatalogTmdbLanguage}:{movieId}";
+            if (!_cache.TryGetValue(cacheKey, out string? json) || json == null)
             {
                 var client = _httpClientFactory.CreateClient("TMDb");
-                var url = $"{TmdbApiBaseUrl}movie/{movieId}?api_key={_tmdbApiKey}&language=tr-TR";
+                var url = $"{TmdbApiBaseUrl}movie/{movieId}?api_key={_tmdbApiKey}&language={CatalogTmdbLanguage}";
                 HttpResponseMessage response;
                 try
                 {
@@ -129,23 +145,23 @@ namespace SineUyum.Api.Services
                 catch (HttpRequestException)
                 {
                     throw new DomainException(
-                        "Film bilgisi alınamıyor: TMDb servisine ulaşılamadı.",
+                        "movies.tmdbUnreachable",
                         StatusCodes.Status503ServiceUnavailable);
                 }
 
                 if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    throw DomainException.NotFound($"TMDb'de {movieId} numaralı film bulunamadı.");
+                    throw DomainException.NotFound("movies.notFoundOnTmdb", movieId);
                 }
                 if (!response.IsSuccessStatusCode)
                 {
                     throw new DomainException(
-                        "Film bilgisi alınamadı.",
+                        "movies.fetchFailed",
                         StatusCodes.Status502BadGateway);
                 }
 
                 json = await response.Content.ReadAsStringAsync();
-                _cache.Set($"movie:{movieId}", json, new MemoryCacheEntryOptions
+                _cache.Set(cacheKey, json, new MemoryCacheEntryOptions
                 {
                     AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24),
                     Size = 1,
@@ -170,12 +186,12 @@ namespace SineUyum.Api.Services
                 }
             }
 
-            // Oy yoksa TMDb 0 döner; "ortalama yok" sayılır.
+            // TMDb returns 0 when there are no votes; that counts as "no average".
             double? voteAverage = root.TryGetProperty("vote_average", out var va) && va.TryGetDouble(out var avg) && avg > 0
                 ? Math.Round(avg, 1)
                 : null;
 
-            return (title ?? "Başlıksız", posterPath, genres, voteAverage);
+            return (title ?? UntitledTitle, posterPath, genres, voteAverage);
         }
     }
 }

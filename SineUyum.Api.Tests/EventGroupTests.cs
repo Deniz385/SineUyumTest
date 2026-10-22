@@ -10,8 +10,8 @@ using SineUyum.Api.Services;
 
 namespace SineUyum.Api.Tests;
 
-// M8: grup önerileri virgüllü metin yerine EventGroupSuggestions tablosunda.
-// Sıra korunur, oy yalnızca önerilen filmlere verilir.
+// M8: group suggestions live in the EventGroupSuggestions table instead of
+// comma-separated text. The order is kept; votes are only for suggested movies.
 public class EventGroupTests : IClassFixture<TestWebAppFactory>
 {
     private readonly TestWebAppFactory _factory;
@@ -39,8 +39,8 @@ public class EventGroupTests : IClassFixture<TestWebAppFactory>
     {
         var username = "grp_" + Guid.NewGuid().ToString("N")[..10];
         await _client.PostAsJsonAsync("/api/v1/account/register",
-            new { username, email = $"{username}@test.com", password = "Sifre123" });
-        return await LoginAsync(username, "Sifre123");
+            new { username, email = $"{username}@test.com", password = "Password123" });
+        return await LoginAsync(username, "Password123");
     }
 
     private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, Session s, object? body = null)
@@ -58,16 +58,16 @@ public class EventGroupTests : IClassFixture<TestWebAppFactory>
         res.EnsureSuccessStatusCode();
     }
 
-    // Grubu doğrudan veritabanına kurar; öneri sırası id sırasından farklı.
+    // Builds the group directly in the database; the suggestion order differs from the id order.
     private async Task<int> SeedGroupAsync(IEnumerable<Session> members, params int[] suggestionsInOrder)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         foreach (var id in suggestionsInOrder)
         {
-            if (!await db.Movies.AnyAsync(m => m.Id == id)) db.Movies.Add(new Movie { Id = id, Title = $"Film {id}" });
+            if (!await db.Movies.AnyAsync(m => m.Id == id)) db.Movies.Add(new Movie { Id = id, Title = $"Movie {id}" });
         }
-        var ev = new CinemaEvent { EventDate = DateTime.UtcNow.AddDays(5), LocationName = "Salon", GroupSize = 2 };
+        var ev = new CinemaEvent { EventDate = DateTime.UtcNow.AddDays(5), LocationName = "Hall", GroupSize = 2 };
         db.CinemaEvents.Add(ev);
         var group = new EventGroup { CinemaEvent = ev };
         foreach (var m in members) group.Members.Add(new EventGroupMember { UserId = m.Id });
@@ -81,7 +81,7 @@ public class EventGroupTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task Durum_OnerileriSirasiylaDoner_EskiAlanUyumlu()
+    public async Task Status_ReturnsSuggestionsInOrder_LegacyFieldCompatible()
     {
         var me = await RegisterAsync();
         await SeedGroupAsync([me], 930003, 930001, 930002);
@@ -97,7 +97,7 @@ public class EventGroupTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task Oy_YalnizcaOnerilenFilmlere()
+    public async Task Vote_OnlyForSuggestedMovies()
     {
         var me = await RegisterAsync();
         var other = await RegisterAsync();
@@ -107,32 +107,32 @@ public class EventGroupTests : IClassFixture<TestWebAppFactory>
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            db.Movies.Add(new Movie { Id = 930019, Title = "Önerilmeyen" });
+            db.Movies.Add(new Movie { Id = 930019, Title = "Not suggested" });
             await db.SaveChangesAsync();
         }
 
         var notSuggested = await SendAsync(HttpMethod.Post, "/api/v1/event/vote", me, new { groupId, movieId = 930019 });
         Assert.Equal(HttpStatusCode.BadRequest, notSuggested.StatusCode);
-        // Olmayan film önceden FK hatasıyla 500 veriyordu.
+        // A missing movie used to give a 500 via the FK error.
         Assert.Equal(HttpStatusCode.BadRequest,
             (await SendAsync(HttpMethod.Post, "/api/v1/event/vote", me, new { groupId, movieId = 1 })).StatusCode);
 
         Assert.Equal(HttpStatusCode.OK,
             (await SendAsync(HttpMethod.Post, "/api/v1/event/vote", me, new { groupId, movieId = 930012 })).StatusCode);
 
-        // Grupta olmayan: önceden Forbid("...") şema sanılıp 500 dönüyordu.
+        // Not in the group: Forbid("...") used to be taken for a scheme and returned 500.
         var outsider = await SendAsync(HttpMethod.Post, "/api/v1/event/vote", other, new { groupId, movieId = 930012 });
         Assert.Equal(HttpStatusCode.Forbidden, outsider.StatusCode);
         using var problem = JsonDocument.Parse(await outsider.Content.ReadAsStringAsync());
-        Assert.Equal("Bu grupta oy kullanma yetkiniz yok.", problem.RootElement.GetProperty("title").GetString());
+        Assert.Equal("You are not allowed to vote in this group.", problem.RootElement.GetProperty("title").GetString());
     }
 
     [Fact]
-    public async Task BaskasininListesi_Paylasilamaz_403()
+    public async Task SomeoneElsesList_CannotBeShared_403()
     {
         var owner = await RegisterAsync();
         var me = await RegisterAsync();
-        var list = await SendAsync(HttpMethod.Post, "/api/v1/watchlist", owner, new { name = "Onun listesi" });
+        var list = await SendAsync(HttpMethod.Post, "/api/v1/watchlist", owner, new { name = "Their list" });
         list.EnsureSuccessStatusCode();
         using var doc = JsonDocument.Parse(await list.Content.ReadAsStringAsync());
         var listId = doc.RootElement.GetProperty("id").GetInt32();
@@ -142,7 +142,7 @@ public class EventGroupTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task Eslestirme_OnerileriTabloyaSirayla_Yazar()
+    public async Task Matching_WritesSuggestionsToTableInOrder()
     {
         var a = await RegisterAsync();
         var b = await RegisterAsync();
@@ -153,18 +153,18 @@ public class EventGroupTests : IClassFixture<TestWebAppFactory>
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             foreach (var id in new[] { 930021, 930022, 930024 })
             {
-                if (!await db.Movies.AnyAsync(m => m.Id == id)) db.Movies.Add(new Movie { Id = id, Title = $"Film {id}" });
+                if (!await db.Movies.AnyAsync(m => m.Id == id)) db.Movies.Add(new Movie { Id = id, Title = $"Movie {id}" });
             }
             await db.SaveChangesAsync();
             foreach (var u in new[] { a, b })
             {
                 db.UserRatings.Add(new UserRating { UserId = u.Id, MovieId = 930021, Rating = 9 });
             }
-            // Grup dışı benzer kullanıcı: grubun sevdiği filmi sever, ayrıca 930022 ve 930024'ü.
+            // A similar user outside the group: loves the group's favorite, and also 930022 and 930024.
             db.UserRatings.Add(new UserRating { UserId = outsider.Id, MovieId = 930021, Rating = 9 });
             db.UserRatings.Add(new UserRating { UserId = outsider.Id, MovieId = 930022, Rating = 10 });
             db.UserRatings.Add(new UserRating { UserId = outsider.Id, MovieId = 930024, Rating = 9 });
-            var ev = new CinemaEvent { EventDate = DateTime.UtcNow.AddDays(5), LocationName = "Salon", GroupSize = 2 };
+            var ev = new CinemaEvent { EventDate = DateTime.UtcNow.AddDays(5), LocationName = "Hall", GroupSize = 2 };
             db.CinemaEvents.Add(ev);
             await db.SaveChangesAsync();
             db.EventParticipants.Add(new EventParticipant { CinemaEventId = ev.Id, UserId = a.Id });

@@ -53,8 +53,8 @@ namespace SineUyum.Api.Migrations
                 table: "WatchlistItems",
                 column: "AddedByUserId");
 
-            // Benzersiz indeksten önce: "listede bir kez" kuralı yalnızca kodda
-            // denetleniyordu; olası çiftlerde en eski kayıt kalır.
+            // Before the unique index: the "once per list" rule was only checked in
+            // code; among possible duplicates the oldest row is kept.
             migrationBuilder.Sql("""
                 DELETE FROM "WatchlistItems" i
                 USING "WatchlistItems" older

@@ -3,23 +3,24 @@ using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 
 namespace SineUyum.Api.RateLimiting
 {
-    // "RateLimit" bölümü (dakikadaki istek sayısı). Ortam değişkeniyle de
-    // verilebilir: RateLimit__GlobalPermitLimit=600 gibi.
+    // The "RateLimit" section (requests per minute). Can also be given as
+    // environment variables, e.g. RateLimit__GlobalPermitLimit=600.
     public class RateLimitSettings
     {
-        // Her istek: giriş yapmışsa kullanıcı, yapmamışsa IP başına.
+        // Every request: per user when signed in, otherwise per IP.
         public int GlobalPermitLimit { get; set; } = 300;
-        // Giriş/kayıt/yenileme/parola: IP başına (brute force).
+        // Login/register/refresh/password: per IP (brute force).
         public int AuthPermitLimit { get; set; } = 10;
-        // Fotoğraf yükleme ve ödeme doğrulama: kullanıcı başına.
+        // Photo upload and payment verification: per user.
         public int UploadPermitLimit { get; set; } = 10;
-        // TMDb'ye giden uçlar (film arama/detay/listeler, ortak öneri): kotayı korur.
+        // Endpoints that call TMDb (movie search/details/lists, joint recommendations): protects the quota.
         public int TmdbPermitLimit { get; set; } = 60;
-        // Bildirim üreten yazmalar (mesaj, takip): spam'e karşı.
+        // Writes that create notifications (message, follow): against spam.
         public int SocialWritePermitLimit { get; set; } = 30;
     }
 
@@ -32,14 +33,15 @@ namespace SineUyum.Api.RateLimiting
         public const string SocialWrite = "social-write";
     }
 
-    // G5: önceden yalnızca giriş uçları sınırlıydı; geri kalan her uç (TMDb
-    // vekilleri dahil) sınırsız çağrılabiliyordu. Artık her isteğe genel bir
-    // sınır, pahalı/kötüye kullanılabilir uçlara ayrıca sıkı bir sınır uygulanır
-    // (ikisi birlikte geçerli). Sınırlar istekte okunur; testler kendi
-    // değerlerini verebilir.
+    // G5: only the login endpoints used to be limited; every other endpoint
+    // (TMDb proxies included) could be called without limit. Now a global
+    // limit applies to every request and a strict one to expensive/abusable
+    // endpoints (both at once). Limits are read per request, so tests can
+    // supply their own values.
     public static class RateLimitingSetup
     {
-        public const string RejectedTitle = "Çok fazla istek. Lütfen biraz sonra tekrar deneyin.";
+        // Locale key of the 429 title.
+        public const string RejectedTitleKey = "errors.tooManyRequests";
 
         public static IServiceCollection AddSineUyumRateLimiting(this IServiceCollection services, IConfiguration configuration)
         {
@@ -49,7 +51,7 @@ namespace SineUyum.Api.RateLimiting
             {
                 options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
                     IsExempt(context.Request.Path)
-                        ? RateLimitPartition.GetNoLimiter("muaf")
+                        ? RateLimitPartition.GetNoLimiter("exempt")
                         : PerMinute(UserOrIp(context), Settings(context).GlobalPermitLimit));
 
                 options.AddPolicy(RateLimitPolicies.Auth, context =>
@@ -70,7 +72,7 @@ namespace SineUyum.Api.RateLimiting
             return services;
         }
 
-        // Orkestratör sağlık yoklamaları ve geliştirici araçları sınırlanmaz.
+        // Orchestrator health probes and developer tools are not limited.
         private static bool IsExempt(PathString path) =>
             path.StartsWithSegments("/health") || path.StartsWithSegments("/swagger");
 
@@ -78,10 +80,10 @@ namespace SineUyum.Api.RateLimiting
             context.RequestServices.GetRequiredService<IOptions<RateLimitSettings>>().Value;
 
         private static string Ip(HttpContext context) =>
-            "ip:" + (context.Connection.RemoteIpAddress?.ToString() ?? "bilinmiyor");
+            "ip:" + (context.Connection.RemoteIpAddress?.ToString() ?? "unknown");
 
-        // Kimliği doğrulanmış istekler kullanıcıya göre bölünür: aynı ağdaki
-        // (NAT) kullanıcılar birbirinin hakkını tüketmez.
+        // Authenticated requests are partitioned per user: users on the same
+        // network (NAT) do not use up each other's allowance.
         private static string UserOrIp(HttpContext context) =>
             context.User.FindFirstValue(ClaimTypes.NameIdentifier) is { } userId
                 ? "u:" + userId
@@ -95,8 +97,8 @@ namespace SineUyum.Api.RateLimiting
                 QueueLimit = 0
             });
 
-        // Diğer hatalarla aynı biçim (ProblemDetails) + ne zaman tekrar
-        // denenebileceği (Retry-After, saniye).
+        // Same format as other errors (ProblemDetails, in the request language)
+        // + when to retry (Retry-After, seconds).
         private static async ValueTask WriteRejectionAsync(OnRejectedContext context, CancellationToken cancellationToken)
         {
             var http = context.HttpContext;
@@ -107,13 +109,14 @@ namespace SineUyum.Api.RateLimiting
             }
 
             var problems = http.RequestServices.GetRequiredService<IProblemDetailsService>();
+            var t = http.RequestServices.GetRequiredService<IStringLocalizer>();
             await problems.WriteAsync(new ProblemDetailsContext
             {
                 HttpContext = http,
                 ProblemDetails = new ProblemDetails
                 {
                     Status = StatusCodes.Status429TooManyRequests,
-                    Title = RejectedTitle
+                    Title = t[RejectedTitleKey]
                 }
             });
         }

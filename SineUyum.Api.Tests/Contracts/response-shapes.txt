@@ -23,6 +23,7 @@
   user.email: string
   user.id: string
   user.isSubscribed: bool
+  user.language: string
   user.profileImageUrl: null
   user.roles: array
   user.roles[]: string
@@ -39,6 +40,7 @@
   user.email: string
   user.id: string
   user.isSubscribed: bool
+  user.language: string
   user.profileImageUrl: null
   user.roles: array
   user.roles[]: string
@@ -55,6 +57,7 @@
   user.email: string
   user.id: string
   user.isSubscribed: bool
+  user.language: string
   user.profileImageUrl: null
   user.roles: array
   user.roles[]: string
@@ -68,11 +71,16 @@
   email: string
   id: string
   isSubscribed: bool
+  language: string
   profileImageUrl: null
   roles: array
   roles[]: string
   subscriptionExpires: null
   userName: string
+
+## account.language  PUT /api/v1/account/language -> 200
+  $: object
+  language: string
 
 ## devices.register  POST /api/v1/devices -> 204
 
@@ -500,6 +508,7 @@
   user.email: string
   user.id: string
   user.isSubscribed: bool
+  user.language: string
   user.profileImageUrl: null
   user.roles: array
   user.roles[]: string
@@ -752,6 +761,7 @@
   user.email: string
   user.id: string
   user.isSubscribed: bool
+  user.language: string
   user.profileImageUrl: string
   user.roles: array
   user.roles[]: string

@@ -11,12 +11,12 @@ namespace SineUyum.Api.Models
         public string UserId { get; set; } = string.Empty;
         public AppUser User { get; set; } = null!;
 
-        // İlk puanlama anı. Bu alanlar akışla birlikte eklendi; önceki
-        // puanlarda boştur ve akışta görünmezler.
+        // When it was first rated. These fields came with the feed; older ratings
+        // have them empty and do not appear in the feed.
         public DateTime? CreatedAt { get; set; }
 
-        // Akıştaki sıralama anı: ilk puanlama ya da ilk inceleme. Puanı
-        // değiştirmek ya da incelemeyi düzenlemek öne taşımaz.
+        // Ordering time in the feed: the first rating or the first review. Changing
+        // the rating or editing the review does not move it up.
         public DateTime? ActivityAt { get; set; }
     }
 }

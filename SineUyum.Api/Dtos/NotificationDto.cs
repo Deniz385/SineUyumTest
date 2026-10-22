@@ -1,11 +1,13 @@
+using Microsoft.Extensions.Localization;
+using SineUyum.Api.Localization;
 using SineUyum.Api.Models;
 
 namespace SineUyum.Api.Dtos
 {
-    // REST (/api/v1/notification) ve SignalR ("ReceiveNotification") aynı
-    // sözleşmeyi kullanır. Önceden varlık doğrudan itiliyordu; EF ilişki
-    // düzeltmesi Notification.User'ı doldurduğunda alıcının PasswordHash,
-    // SecurityStamp ve e-postası istemciye gidiyordu.
+    // REST (/api/v1/notification) and SignalR ("ReceiveNotification") share
+    // this contract. The entity used to be pushed directly; once EF relationship
+    // fix-up filled Notification.User, the recipient's PasswordHash,
+    // SecurityStamp and email went to the client.
     public class NotificationDto
     {
         public int Id { get; set; }
@@ -14,10 +16,18 @@ namespace SineUyum.Api.Dtos
         public bool IsRead { get; set; }
         public DateTime CreatedAt { get; set; }
 
-        public static NotificationDto From(Notification n) => new()
+        // With the stored text (rendered in the recipient's language).
+        public static NotificationDto From(Notification n) => From(n, n.Message);
+
+        // Rendered with the given localizer; rows from before localization
+        // have no key and keep their stored text.
+        public static NotificationDto From(Notification n, IStringLocalizer t) =>
+            From(n, n.MessageKey == null ? n.Message : t[n.MessageKey, MessageArgs.Deserialize(n.MessageArgs)]);
+
+        private static NotificationDto From(Notification n, string message) => new()
         {
             Id = n.Id,
-            Message = n.Message,
+            Message = message,
             RelatedUrl = n.RelatedUrl,
             IsRead = n.IsRead,
             CreatedAt = n.CreatedAt

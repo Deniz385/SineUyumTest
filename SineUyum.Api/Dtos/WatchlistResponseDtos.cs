@@ -1,22 +1,22 @@
 namespace SineUyum.Api.Dtos
 {
-    // GET /api/v1/watchlist listesindeki özet.
+    // A summary in the GET /api/v1/watchlist list.
     public class WatchlistSummaryDto
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
         public int ItemCount { get; set; }
-        // Ortak liste: kabul etmiş en az bir üyesi var ya da ben üyeyim.
+        // Shared list: it has at least one accepted member, or I am a member.
         public bool IsShared { get; set; }
         public bool IsOwner { get; set; } = true;
         public string? OwnerUsername { get; set; }
-        // Sahip dahil kabul etmiş kişi sayısı.
+        // Number of accepted people, owner included.
         public int MemberCount { get; set; } = 1;
     }
 
-    // Kendi listemizin detayı; oluşturma yanıtı da bu şekildedir (Location
-    // başlığı zaten bu uca işaret eder).
+    // Details of one of our lists; the create response has this shape too (the
+    // Location header already points to this endpoint).
     public class WatchlistDetailDto
     {
         public int Id { get; set; }
@@ -25,12 +25,12 @@ namespace SineUyum.Api.Dtos
         public List<WatchlistItemDto> Items { get; set; } = new();
         public bool IsOwner { get; set; } = true;
         public UserBriefWithImageDto? Owner { get; set; }
-        // Sahip hariç üyeler; bekleyen davetler yalnızca sahibe görünür.
+        // Members excluding the owner; pending invitations are visible only to the owner.
         public List<WatchlistMemberDto> Members { get; set; } = new();
     }
 
-    // Mesajla paylaşılan (başkasının) liste: sahibinin adı da gösterilir.
-    // Üyelik alanları bilerek yok (ayrı sınıf, kalıtım değil).
+    // A (someone else's) list shared in a message: the owner's name is shown too.
+    // Membership fields are deliberately absent (a separate class, not inheritance).
     public class PublicWatchlistDto
     {
         public int Id { get; set; }
@@ -46,9 +46,9 @@ namespace SineUyum.Api.Dtos
         public string Title { get; set; } = string.Empty;
         public string? PosterPath { get; set; }
         public DateTime AddedAt { get; set; }
-        // Ortak listede ekleyen (eski kayıtlarda null).
+        // Who added it to a shared list (null in older rows).
         public string? AddedByUsername { get; set; }
-        // Liste kişilerinden (sahip + üyeler) bu filmi puanlamış olanlar.
+        // The list's people (owner + members) who rated this movie.
         public List<string> WatchedBy { get; set; } = new();
     }
 
@@ -70,7 +70,7 @@ namespace SineUyum.Api.Dtos
 
     public class InviteToWatchlistDto
     {
-        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "validation.required")]
         public string UserId { get; set; } = string.Empty;
     }
 }

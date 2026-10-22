@@ -19,7 +19,7 @@ namespace SineUyum.Api.Models
 
         public ICollection<EventGroupMember> Members { get; set; } = new List<EventGroupMember>();
 
-        // Gruba önerilen filmler (Rank sırasıyla).
+        // Movies suggested to the group (in Rank order).
         public ICollection<EventGroupSuggestion> Suggestions { get; set; } = new List<EventGroupSuggestion>();
     }
 }

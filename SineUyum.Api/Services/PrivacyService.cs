@@ -5,8 +5,8 @@ using SineUyum.Api.Models;
 
 namespace SineUyum.Api.Services
 {
-    // Gizlilik kurallarının (G12) tek yeri: profil, takip, mesaj, arama ve
-    // eşleştirme aynı kararları buradan alır.
+    // The single home of the privacy rules (G12): profile, follow, message,
+    // search and matching all take their decisions from here.
     public class PrivacyService
     {
         private readonly ApplicationDbContext _context;
@@ -16,7 +16,7 @@ namespace SineUyum.Api.Services
             _context = context;
         }
 
-        // İki kullanıcı arasında herhangi yönde engel var mı?
+        // Is there a block between the two users in either direction?
         public Task<bool> IsBlockedEitherWayAsync(string userId, string otherUserId) =>
             _context.UserBlocks.AnyAsync(b =>
                 (b.BlockerId == userId && b.BlockedId == otherUserId) ||
@@ -25,13 +25,13 @@ namespace SineUyum.Api.Services
         public Task<bool> HasBlockedAsync(string blockerId, string blockedId) =>
             _context.UserBlocks.AnyAsync(b => b.BlockerId == blockerId && b.BlockedId == blockedId);
 
-        // Kullanıcının engellediği ve onu engelleyen herkes (sorgularda filtre için).
+        // Everyone the user blocked and everyone who blocked them (to filter queries).
         public IQueryable<string> BlockedPartnerIds(string userId) =>
             _context.UserBlocks.Where(b => b.BlockerId == userId).Select(b => b.BlockedId)
                 .Concat(_context.UserBlocks.Where(b => b.BlockedId == userId).Select(b => b.BlockerId));
 
-        // Profil ayrıntılarını (puanlar, istatistikler, takip listeleri, uyum)
-        // görebilir mi? Engel bu metodun konusu değildir; çağıran önce bakar.
+        // Can the viewer see profile details (ratings, statistics, follow lists,
+        // compatibility)? Blocks are not this method's concern; the caller checks them first.
         public async Task<bool> CanViewDetailsAsync(string viewerId, AppUser owner, bool viewerIsAdmin)
         {
             if (viewerId == owner.Id || viewerIsAdmin) return true;
@@ -43,28 +43,28 @@ namespace SineUyum.Api.Services
             };
         }
 
-        // Profil ayrıntısı gerektiren uçlar için: engelde 404 (varlığı bile
-        // sızmasın), gizlide 403.
+        // For endpoints that need profile details: 404 on a block (not even the
+        // existence leaks), 403 on a private profile.
         public async Task<AppUser> EnsureCanViewDetailsAsync(string viewerId, string ownerId, bool viewerIsAdmin)
         {
             var owner = await _context.Users.FindAsync(ownerId);
             if (owner == null || (viewerId != ownerId && await IsBlockedEitherWayAsync(viewerId, ownerId)))
             {
-                throw DomainException.NotFound("Kullanıcı bulunamadı.");
+                throw DomainException.NotFound("errors.userNotFound");
             }
             if (!await CanViewDetailsAsync(viewerId, owner, viewerIsAdmin))
             {
-                throw new DomainException("Bu kullanıcının profil ayrıntıları gizli.", StatusCodes.Status403Forbidden);
+                throw new DomainException("privacy.profileDetailsHidden", StatusCodes.Status403Forbidden);
             }
             return owner;
         }
 
-        // Yeni mesaj gönderilebilir mi? Geçmiş sohbet okunabilir kalır.
+        // Can a new message be sent? The past conversation stays readable.
         public async Task EnsureCanMessageAsync(string senderId, AppUser recipient)
         {
             if (await IsBlockedEitherWayAsync(senderId, recipient.Id))
             {
-                throw new DomainException("Bu kullanıcıya mesaj gönderemezsiniz.", StatusCodes.Status403Forbidden);
+                throw new DomainException("privacy.cannotMessageUser", StatusCodes.Status403Forbidden);
             }
 
             var allowed = recipient.MessagePermission switch
@@ -77,14 +77,13 @@ namespace SineUyum.Api.Services
             {
                 throw new DomainException(
                     recipient.MessagePermission == MessagePermission.Following
-                        ? "Bu kullanıcı yalnızca takip ettiği kişilerden mesaj kabul ediyor."
-                        : "Bu kullanıcı mesaj kabul etmiyor.",
+                        ? "privacy.messagesFromFollowingOnly"
+                        : "privacy.messagesDisabled",
                     StatusCodes.Status403Forbidden);
             }
         }
 
-        // Verilen kullanıcılar arasındaki engel çiftleri (eşleştirme için),
-        // her iki yönde de eklenir.
+        // Block pairs among the given users (for matching), added in both directions.
         public async Task<HashSet<(string, string)>> BlockedPairsAmongAsync(IReadOnlyCollection<string> userIds)
         {
             var blocks = await _context.UserBlocks

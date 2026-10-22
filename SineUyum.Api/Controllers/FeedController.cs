@@ -10,8 +10,8 @@ using SineUyum.Api.Services;
 
 namespace SineUyum.Api.Controllers
 {
-    // Takip edilenlerin (ve kendinin) puanları ve incelemeleri, en yeniden
-    // eskiye. Sayfalama imleçle: yeni etkinlik geldikçe sayfalar kaymaz.
+    // Ratings and reviews of followed users (and one's own), newest first.
+    // Cursor pagination: pages do not shift as new activity arrives.
     [ApiController]
     [Route("api/feed")]
     [Authorize]
@@ -103,7 +103,7 @@ namespace SineUyum.Api.Controllers
             {
                 return (new DateTime(ticks, DateTimeKind.Utc), id);
             }
-            throw new DomainException("Geçersiz sayfa imleci.");
+            throw new DomainException("feed.invalidCursor");
         }
     }
 }

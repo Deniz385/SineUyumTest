@@ -8,15 +8,15 @@ namespace SineUyum.Api.Dtos
         [Required]
         public DateTime EventDate { get; set; }
 
-        [Required]
-        [MaxLength(200)]
+        [Required(ErrorMessage = "validation.required")]
+        [MaxLength(200, ErrorMessage = "validation.maxLength")]
         public string LocationName { get; set; } = string.Empty;
 
-        [MaxLength(500)]
+        [MaxLength(500, ErrorMessage = "validation.maxLength")]
         public string? Address { get; set; }
 
         [Required]
-        [Range(2, 10)] // Grup boyutu en az 2, en fazla 10 olabilir
+        [Range(2, 10, ErrorMessage = "validation.range")] // a group has 2 to 10 people
         public int GroupSize { get; set; }
     }
 }

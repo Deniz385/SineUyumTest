@@ -3,8 +3,8 @@ using System.Text.Json.Serialization;
 
 namespace SineUyum.Api.Dtos
 {
-    // İstemciler bu uca tarihsel olarak {id, title, posterPath} gönderiyor.
-    // Yalnızca id okunur; başlık/poster TMDb'den çekildiği için yok sayılır.
+    // Clients have historically sent {id, title, posterPath} to this endpoint.
+    // Only the id is read; title/poster are ignored because they come from TMDb.
     public class AddMovieDto
     {
         [Required]

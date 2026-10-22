@@ -179,6 +179,11 @@ namespace SineUyum.Api.Migrations
                     b.Property<bool>("HiddenFromSearch")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
 
@@ -462,6 +467,13 @@ namespace SineUyum.Api.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<string>("ErrorArgs")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ErrorKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<DateTime?>("FinishedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -591,6 +603,13 @@ namespace SineUyum.Api.Migrations
                     b.Property<string>("Message")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("MessageArgs")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MessageKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("RelatedUrl")
                         .HasColumnType("text");

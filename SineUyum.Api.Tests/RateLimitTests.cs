@@ -6,20 +6,21 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SineUyum.Api.Localization;
 using SineUyum.Api.RateLimiting;
 
 namespace SineUyum.Api.Tests;
 
-// G5: önceden yalnızca giriş uçları sınırlıydı. Artık her isteğe genel bir
-// sınır, TMDb vekillerine ve bildirim üreten yazmalara ayrıca sıkı sınır.
-// Her test kendi fabrikasıyla başlar: sınır sayaçları testler arasında taşmaz.
+// G5: only the login endpoints used to be limited. Now a global limit applies to
+// every request, plus a strict limit on TMDb proxies and notification-creating writes.
+// Every test starts with its own factory: limit counters do not leak between tests.
 public class RateLimitTests
 {
     private const int Global = 20;
     private const int Tmdb = 3;
     private const int SocialWrite = 3;
 
-    // remoteIp verilirse tüm istekler o adresten (ör. bir ters vekilden) gelmiş sayılır.
+    // With remoteIp, all requests count as coming from that address (e.g. a reverse proxy).
     private sealed class LimitedFactory(string? trustedProxies = null, string? remoteIp = null) : TestWebAppFactory
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -40,7 +41,7 @@ public class RateLimitTests
         }
     }
 
-    // Uygulamanın tüm ara katmanlarından önce bağlantının uzak adresini ayarlar.
+    // Sets the connection's remote address before all of the app's middleware.
     private sealed class RemoteIpFilter(IPAddress address) : IStartupFilter
     {
         public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
@@ -67,8 +68,8 @@ public class RateLimitTests
     {
         var username = "rl_" + Guid.NewGuid().ToString("N")[..10];
         await client.PostAsJsonAsync("/api/v1/account/register",
-            new { username, email = $"{username}@test.com", password = "Sifre123" });
-        var login = await client.PostAsJsonAsync("/api/v1/account/login", new { username, password = "Sifre123" });
+            new { username, email = $"{username}@test.com", password = "Password123" });
+        var login = await client.PostAsJsonAsync("/api/v1/account/login", new { username, password = "Password123" });
         login.EnsureSuccessStatusCode();
         using var doc = JsonDocument.Parse(await login.Content.ReadAsStringAsync());
         return new Session(
@@ -89,41 +90,41 @@ public class RateLimitTests
         Assert.Equal(HttpStatusCode.TooManyRequests, res.StatusCode);
         Assert.Equal("application/problem+json", res.Content.Headers.ContentType?.MediaType);
         using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
-        Assert.Equal(RateLimitingSetup.RejectedTitle, doc.RootElement.GetProperty("title").GetString());
+        Assert.Equal(LocaleCatalog.Shared.Translate("en", RateLimitingSetup.RejectedTitleKey), doc.RootElement.GetProperty("title").GetString());
         Assert.Equal(429, doc.RootElement.GetProperty("status").GetInt32());
-        // Ne zaman tekrar denenebileceği (saniye, pencere 1 dk).
+        // When it can be retried (seconds; the window is 1 minute).
         var retryAfter = int.Parse(Assert.Single(res.Headers.GetValues("Retry-After")));
         Assert.InRange(retryAfter, 1, 60);
     }
 
     [Fact]
-    public async Task GenelSinir_KullaniciBasina_DigerKullaniciEtkilenmez()
+    public async Task GlobalLimit_PerUser_OtherUserUnaffected()
     {
         using var factory = new LimitedFactory();
         var client = factory.CreateClient();
-        var ali = await RegisterAsync(client);
-        var ayse = await RegisterAsync(client);
+        var bob = await RegisterAsync(client);
+        var alice = await RegisterAsync(client);
 
         for (var i = 0; i < Global; i++)
         {
-            var ok = await SendAsync(client, HttpMethod.Get, "/api/v1/notification", ali);
+            var ok = await SendAsync(client, HttpMethod.Get, "/api/v1/notification", bob);
             Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
         }
-        await AssertRejectedAsync(await SendAsync(client, HttpMethod.Get, "/api/v1/notification", ali));
-        // Herhangi bir uç: sınır tüm API için.
+        await AssertRejectedAsync(await SendAsync(client, HttpMethod.Get, "/api/v1/notification", bob));
+        // Any endpoint: the limit covers the whole API.
         Assert.Equal(HttpStatusCode.TooManyRequests,
-            (await SendAsync(client, HttpMethod.Get, "/api/v1/watchlist", ali)).StatusCode);
+            (await SendAsync(client, HttpMethod.Get, "/api/v1/watchlist", bob)).StatusCode);
 
-        // Aynı IP'deki başka kullanıcı kendi hakkını kullanır.
-        Assert.Equal(HttpStatusCode.OK, (await SendAsync(client, HttpMethod.Get, "/api/v1/notification", ayse)).StatusCode);
+        // Another user on the same IP uses their own allowance.
+        Assert.Equal(HttpStatusCode.OK, (await SendAsync(client, HttpMethod.Get, "/api/v1/notification", alice)).StatusCode);
     }
 
     [Fact]
-    public async Task GenelSinir_KimliksizIstekler_IpBasina()
+    public async Task GlobalLimit_AnonymousRequests_PerIp()
     {
         using var factory = new LimitedFactory();
         var client = factory.CreateClient();
-        var ali = await RegisterAsync(client); // kimliksiz 2 istek (kayıt + giriş)
+        var bob = await RegisterAsync(client); // 2 anonymous requests (register + login)
 
         for (var i = 0; i < Global - 2; i++)
         {
@@ -131,16 +132,16 @@ public class RateLimitTests
                 (await SendAsync(client, HttpMethod.Get, "/api/v1/notification", null)).StatusCode);
         }
         await AssertRejectedAsync(await SendAsync(client, HttpMethod.Get, "/api/v1/notification", null));
-        // Giriş de kimliksiz: aynı IP kotasından düşer (brute force'a ek koruma).
+        // Login is anonymous too: it uses the same IP quota (extra brute force protection).
         Assert.Equal(HttpStatusCode.TooManyRequests,
             (await client.PostAsJsonAsync("/api/v1/account/login", new { username = "x", password = "y" })).StatusCode);
 
-        // Giriş yapmış kullanıcı IP kotasından bağımsız.
-        Assert.Equal(HttpStatusCode.OK, (await SendAsync(client, HttpMethod.Get, "/api/v1/notification", ali)).StatusCode);
+        // A signed-in user is independent of the IP quota.
+        Assert.Equal(HttpStatusCode.OK, (await SendAsync(client, HttpMethod.Get, "/api/v1/notification", bob)).StatusCode);
     }
 
     [Fact]
-    public async Task SaglikYoklamasi_Sinirlanmaz()
+    public async Task HealthProbe_IsNotLimited()
     {
         using var factory = new LimitedFactory();
         var client = factory.CreateClient();
@@ -151,63 +152,63 @@ public class RateLimitTests
     }
 
     [Fact]
-    public async Task TmdbUclari_SikiSinir()
+    public async Task TmdbEndpoints_StrictLimit()
     {
         using var factory = new LimitedFactory();
         var client = factory.CreateClient();
-        var ali = await RegisterAsync(client);
+        var bob = await RegisterAsync(client);
 
-        // TMDb anahtarı yok: yanıt hata olabilir, önemli olan 429 olmaması.
+        // No TMDb key: the response may be an error, what matters is that it is not 429.
         for (var i = 0; i < Tmdb; i++)
         {
             Assert.NotEqual(HttpStatusCode.TooManyRequests,
-                (await SendAsync(client, HttpMethod.Get, "/api/v1/movies/popular", ali)).StatusCode);
+                (await SendAsync(client, HttpMethod.Get, "/api/v1/movies/popular", bob)).StatusCode);
         }
-        await AssertRejectedAsync(await SendAsync(client, HttpMethod.Get, "/api/v1/movies/search?query=a", ali));
-        // Ortak öneri de TMDb'ye gider ve aynı kotayı paylaşır.
+        await AssertRejectedAsync(await SendAsync(client, HttpMethod.Get, "/api/v1/movies/search?query=a", bob));
+        // Joint recommendations call TMDb too and share the same quota.
         await AssertRejectedAsync(
-            await SendAsync(client, HttpMethod.Get, $"/api/v1/compatibility/{ali.Id}/recommendations", ali));
+            await SendAsync(client, HttpMethod.Get, $"/api/v1/compatibility/{bob.Id}/recommendations", bob));
 
-        // TMDb dışındaki uçlar genel sınırla çalışmaya devam eder.
-        Assert.Equal(HttpStatusCode.OK, (await SendAsync(client, HttpMethod.Get, "/api/v1/notification", ali)).StatusCode);
+        // Endpoints other than TMDb keep working under the global limit.
+        Assert.Equal(HttpStatusCode.OK, (await SendAsync(client, HttpMethod.Get, "/api/v1/notification", bob)).StatusCode);
     }
 
     [Fact]
-    public async Task MesajVeTakip_SikiSinir_OkumalarEtkilenmez()
+    public async Task MessagesAndFollows_StrictLimit_ReadsUnaffected()
     {
         using var factory = new LimitedFactory();
         var client = factory.CreateClient();
-        var ali = await RegisterAsync(client);
-        var ayse = await RegisterAsync(client);
+        var bob = await RegisterAsync(client);
+        var alice = await RegisterAsync(client);
 
         for (var i = 0; i < SocialWrite; i++)
         {
-            Assert.Equal(HttpStatusCode.OK, (await SendAsync(client, HttpMethod.Post, "/api/v1/messages", ali,
-                new { recipientId = ayse.Id, content = $"mesaj {i}" })).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await SendAsync(client, HttpMethod.Post, "/api/v1/messages", bob,
+                new { recipientId = alice.Id, content = $"message {i}" })).StatusCode);
         }
-        await AssertRejectedAsync(await SendAsync(client, HttpMethod.Post, "/api/v1/messages", ali,
-            new { recipientId = ayse.Id, content = "fazla" }));
+        await AssertRejectedAsync(await SendAsync(client, HttpMethod.Post, "/api/v1/messages", bob,
+            new { recipientId = alice.Id, content = "too many" }));
 
-        // Okuma ve karşı taraf etkilenmez.
-        Assert.Equal(HttpStatusCode.OK, (await SendAsync(client, HttpMethod.Get, $"/api/v1/messages/thread/{ayse.Id}", ali)).StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await SendAsync(client, HttpMethod.Post, "/api/v1/messages", ayse,
-            new { recipientId = ali.Id, content = "cevap" })).StatusCode);
+        // Reads and the other side are unaffected.
+        Assert.Equal(HttpStatusCode.OK, (await SendAsync(client, HttpMethod.Get, $"/api/v1/messages/thread/{alice.Id}", bob)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await SendAsync(client, HttpMethod.Post, "/api/v1/messages", alice,
+            new { recipientId = bob.Id, content = "reply" })).StatusCode);
 
-        // Takip: takip/bırak döngüsüyle bildirim spam'i. Mesajla aynı kota
-        // (ikisi de bildirim üretir); bu yüzden henüz yazmamış bir kullanıcı.
-        var can = await RegisterAsync(client);
+        // Following: notification spam via follow/unfollow loops. Same quota as
+        // messages (both create notifications), hence a user who has not written yet.
+        var carol = await RegisterAsync(client);
         for (var i = 0; i < SocialWrite; i++)
         {
-            Assert.Equal(HttpStatusCode.OK, (await SendAsync(client, HttpMethod.Post, $"/api/v1/follow/{ali.Id}", can)).StatusCode);
-            await SendAsync(client, HttpMethod.Delete, $"/api/v1/follow/{ali.Id}", can);
+            Assert.Equal(HttpStatusCode.OK, (await SendAsync(client, HttpMethod.Post, $"/api/v1/follow/{bob.Id}", carol)).StatusCode);
+            await SendAsync(client, HttpMethod.Delete, $"/api/v1/follow/{bob.Id}", carol);
         }
-        await AssertRejectedAsync(await SendAsync(client, HttpMethod.Post, $"/api/v1/follow/{ali.Id}", can));
-        await AssertRejectedAsync(await SendAsync(client, HttpMethod.Post, "/api/v1/messages", can,
-            new { recipientId = ali.Id, content = "takip kotası mesajı da kapsar" }));
+        await AssertRejectedAsync(await SendAsync(client, HttpMethod.Post, $"/api/v1/follow/{bob.Id}", carol));
+        await AssertRejectedAsync(await SendAsync(client, HttpMethod.Post, "/api/v1/messages", carol,
+            new { recipientId = bob.Id, content = "the follow quota also covers messages" }));
     }
 
     [Fact]
-    public async Task GuvenilenVekil_GercekIstemciIpsiyleSinirlar()
+    public async Task TrustedProxy_LimitsByRealClientIp()
     {
         using var factory = new LimitedFactory(trustedProxies: "10.0.0.0/24", remoteIp: "10.0.0.5");
         var client = factory.CreateClient();
@@ -217,14 +218,14 @@ public class RateLimitTests
             Assert.Equal(HttpStatusCode.Unauthorized, (await AnonymousFromAsync(client, "203.0.113.7")).StatusCode);
         }
         await AssertRejectedAsync(await AnonymousFromAsync(client, "203.0.113.7"));
-        // Aynı vekilin arkasındaki başka istemci etkilenmez.
+        // Another client behind the same proxy is unaffected.
         Assert.Equal(HttpStatusCode.Unauthorized, (await AnonymousFromAsync(client, "198.51.100.9")).StatusCode);
     }
 
     [Fact]
-    public async Task GuvenilmeyenKaynak_XForwardedForYokSayilir()
+    public async Task UntrustedSource_XForwardedForIgnored()
     {
-        // TRUSTED_PROXIES yok: istemci başlığa her seferinde başka IP yazarak sınırı aşamaz.
+        // No TRUSTED_PROXIES: the client cannot dodge the limit by writing a new IP into the header each time.
         using var factory = new LimitedFactory(remoteIp: "10.0.0.5");
         var client = factory.CreateClient();
 
@@ -236,10 +237,10 @@ public class RateLimitTests
     }
 
     [Fact]
-    public void GecersizVekilAyari_AcilistaHata()
+    public void InvalidProxySetting_FailsAtStartup()
     {
         using var factory = new LimitedFactory(trustedProxies: "10.0.0.0/99");
         var error = Assert.ThrowsAny<Exception>(() => factory.CreateClient());
-        Assert.Contains("TRUSTED_PROXIES geçersiz", error.ToString());
+        Assert.Contains("TRUSTED_PROXIES is invalid", error.ToString());
     }
 }

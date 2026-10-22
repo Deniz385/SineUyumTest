@@ -4,7 +4,7 @@ using SkiaSharp;
 
 namespace SineUyum.Api.Tests;
 
-// Testlerde kullanılan resimler kodla üretilir (bayt düzeyinde kesin içerik).
+// Images used in tests are generated in code (exact byte-level content).
 public static class TestImages
 {
     public static readonly SKColor Red = new(255, 0, 0);
@@ -12,8 +12,8 @@ public static class TestImages
     public static readonly SKColor Blue = new(0, 0, 255);
     public static readonly SKColor Yellow = new(255, 255, 0);
 
-    // Dört çeyreği farklı renkli resim: sol üst kırmızı, sağ üst yeşil,
-    // sol alt mavi, sağ alt sarı. Yön dönüşümlerini ayırt etmek için.
+    // An image with four differently colored quarters: top left red, top right
+    // green, bottom left blue, bottom right yellow. Tells orientations apart.
     public static SKBitmap Quadrants(int width, int height)
     {
         var bitmap = new SKBitmap(new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul));
@@ -27,7 +27,7 @@ public static class TestImages
         return bitmap;
     }
 
-    // Sol yarısı kırmızı, sağ yarısı mavi.
+    // Left half red, right half blue.
     public static SKBitmap LeftRedRightBlue(int width, int height)
     {
         var bitmap = new SKBitmap(new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul));
@@ -48,8 +48,8 @@ public static class TestImages
 
     public static byte[] Jpeg(int width, int height) { using var b = LeftRedRightBlue(width, height); return Encode(b, SKEncodedImageFormat.Jpeg); }
 
-    // Bir JPEG'in SOI'sinden hemen sonra EXIF (APP1) bölümü ekler: yön etiketi
-    // ve gizli kalması gereken bir açıklama (konum bilgisinin yerine).
+    // Inserts an EXIF (APP1) segment right after the SOI of a JPEG: an
+    // orientation tag and a description that must stay private (standing in for a location).
     public static byte[] WithExif(byte[] jpeg, ushort orientation, string description)
     {
         var desc = Encoding.ASCII.GetBytes(description + "\0");
@@ -58,13 +58,13 @@ public static class TestImages
         "II"u8.CopyTo(span);
         BinaryPrimitives.WriteUInt16LittleEndian(span[2..], 42);
         BinaryPrimitives.WriteUInt32LittleEndian(span[4..], 8);
-        BinaryPrimitives.WriteUInt16LittleEndian(span[8..], 2); // giriş sayısı
+        BinaryPrimitives.WriteUInt16LittleEndian(span[8..], 2); // number of entries
         var dataOffset = (uint)(8 + 2 + 2 * 12 + 4);
         // 0x010E ImageDescription, ASCII
         WriteEntry(span[10..], 0x010E, 2, (uint)desc.Length, dataOffset);
-        // 0x0112 Orientation, SHORT (değer alanın ilk 2 baytında)
+        // 0x0112 Orientation, SHORT (value in the first 2 bytes of the field)
         WriteEntry(span[22..], 0x0112, 3, 1, orientation);
-        BinaryPrimitives.WriteUInt32LittleEndian(span[34..], 0); // sonraki IFD yok
+        BinaryPrimitives.WriteUInt32LittleEndian(span[34..], 0); // no next IFD
         desc.CopyTo(span[(int)dataOffset..]);
 
         var payload = Encoding.ASCII.GetBytes("Exif\0\0").Concat(tiff).ToArray();
@@ -84,9 +84,9 @@ public static class TestImages
         }
     }
 
-    // Yalnızca başlığı geçerli bir PNG: istenen boyutu BİLDİRİR ama piksel
-    // verisi neredeyse yoktur ("decompression bomb" taklidi). Gerçekten
-    // çözülmeye çalışılsaydı gigabaytlarca bellek gerekirdi.
+    // A PNG with only a valid header: it DECLARES the requested size but has
+    // almost no pixel data (imitating a "decompression bomb"). Actually decoding
+    // it would need gigabytes of memory.
     public static byte[] PngHeaderOnly(int width, int height)
     {
         var ihdr = new byte[13];
@@ -120,7 +120,7 @@ public static class TestImages
         return ~crc;
     }
 
-    // JPEG kayıpsız değil; rengi toleransla karşılaştır.
+    // JPEG is lossy; compare colors with a tolerance.
     public static bool Near(SKColor actual, SKColor expected, int tolerance = 40) =>
         Math.Abs(actual.Red - expected.Red) <= tolerance &&
         Math.Abs(actual.Green - expected.Green) <= tolerance &&

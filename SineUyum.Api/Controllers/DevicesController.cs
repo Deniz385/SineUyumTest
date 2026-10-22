@@ -8,14 +8,15 @@ using System.Security.Claims;
 
 namespace SineUyum.Api.Controllers
 {
-    // Push bildirimi için cihaz (FCM token) kaydı.
+    // Device (FCM token) registration for push notifications.
     [ApiController]
     [Route("api/devices")]
     [Authorize]
     public class DevicesController : ControllerBase
     {
-        // Bir hesabın kayıtlı cihaz sınırı; aşılınca en uzun süredir görülmeyen
-        // kayıt silinir. Sınırsız sahte kayıtla tablonun şişmesini önler.
+        // Registered device limit per account; beyond it the device not seen
+        // for the longest time is removed. Keeps endless fake registrations
+        // from bloating the table.
         public const int MaxDevicesPerUser = 20;
 
         private readonly ApplicationDbContext _context;
@@ -25,8 +26,8 @@ namespace SineUyum.Api.Controllers
             _context = context;
         }
 
-        // Uygulama oturum açınca ve FCM token'ı yenilenince çağırır; tekrar
-        // çağrılması güvenlidir (aynı token güncellenir).
+        // Called by the app after sign-in and whenever the FCM token is
+        // refreshed; calling it again is safe (the same token is updated).
         [HttpPost]
         public async Task<IActionResult> Register([FromBody] RegisterDeviceDto dto)
         {
@@ -39,8 +40,8 @@ namespace SineUyum.Api.Controllers
             }
             catch (DbUpdateException)
             {
-                // Aynı token için eşzamanlı iki kayıt: benzersiz indeks ikincisini
-                // reddeder. Kazanan kaydı bu kullanıcıya güncellemek yeterli.
+                // Two concurrent registrations of the same token: the unique
+                // index rejects the second one. Moving the winner to this user is enough.
                 _context.ChangeTracker.Clear();
                 await UpsertAsync(userId, dto);
             }
@@ -48,9 +49,9 @@ namespace SineUyum.Api.Controllers
             return NoContent();
         }
 
-        // Çıkışta (ve oturum süresi dolduğunda) çağrılır. Kimlik doğrulama
-        // istemez: oturumu düşmüş bir cihaz da önceki kullanıcının bildirimlerini
-        // almayı durdurabilmeli. Token'ı yalnızca cihazın kendisi bilir.
+        // Called on logout (and when the session expires). No authentication
+        // required: a device whose session is gone must still be able to stop
+        // receiving the previous user's notifications. Only the device knows the token.
         [HttpPost("unregister")]
         [AllowAnonymous]
         public async Task<IActionResult> Unregister([FromBody] UnregisterDeviceDto dto)
@@ -66,8 +67,8 @@ namespace SineUyum.Api.Controllers
 
             if (device != null)
             {
-                // Aynı cihazda başka hesapla giriş yapılmış olabilir: kayıt yeni
-                // kullanıcıya taşınır, önceki kullanıcının bildirimleri buraya gitmez.
+                // Another account may have signed in on the same device: the
+                // row moves to the new user, the previous user's notifications stop going here.
                 device.UserId = userId;
                 device.Platform = dto.Platform;
                 device.LastSeenAt = now;

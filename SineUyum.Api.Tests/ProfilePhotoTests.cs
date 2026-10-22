@@ -7,7 +7,7 @@ using static SineUyum.Api.Tests.TestImages;
 
 namespace SineUyum.Api.Tests;
 
-// B8: profil fotoğrafı yükleme, sunma, değiştirme, silme.
+// B8: profile photo upload, serving, replacing, deleting.
 public class ProfilePhotoTests : IClassFixture<TestWebAppFactory>
 {
     private readonly TestWebAppFactory _factory;
@@ -15,7 +15,7 @@ public class ProfilePhotoTests : IClassFixture<TestWebAppFactory>
     public ProfilePhotoTests(TestWebAppFactory factory) => _factory = factory;
 
     private static async Task<HttpResponseMessage> UploadAsync(HttpClient client, string? token, byte[] bytes,
-        string fileName = "foto.jpg", string contentType = "image/jpeg", string field = "file")
+        string fileName = "photo.jpg", string contentType = "image/jpeg", string field = "file")
     {
         var form = new MultipartFormDataContent();
         var file = new ByteArrayContent(bytes);
@@ -50,16 +50,16 @@ public class ProfilePhotoTests : IClassFixture<TestWebAppFactory>
             : 0;
 
     [Fact]
-    public async Task Yukleme_YenidenKodlanmisJpegSunulur()
+    public async Task Upload_ServesReencodedJpeg()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "ph_");
 
-        var res = await UploadAsync(client, me.Token, WithExif(Jpeg(800, 600), 1, "GIZLI-ETIKET"), "tatil.png", "image/png");
+        var res = await UploadAsync(client, me.Token, WithExif(Jpeg(800, 600), 1, "SECRET-TAG"), "holiday.png", "image/png");
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
         var url = await UrlFromAsync(res);
 
-        // Sunucu seçer: istemcinin dosya adı/uzantısı/türü kullanılmaz.
+        // The server decides: the client's file name/extension/type are not used.
         Assert.Matches($"^/media/avatars/{me.UserId}/[0-9a-f]{{32}}\\.jpg$", url);
         Assert.Equal(url, await ProfileImageAsync(client, me));
 
@@ -70,14 +70,14 @@ public class ProfilePhotoTests : IClassFixture<TestWebAppFactory>
         Assert.Contains("immutable", served.Headers.CacheControl?.ToString());
 
         var bytes = await served.Content.ReadAsByteArrayAsync();
-        Assert.DoesNotContain("GIZLI-ETIKET", System.Text.Encoding.ASCII.GetString(bytes));
+        Assert.DoesNotContain("SECRET-TAG", System.Text.Encoding.ASCII.GetString(bytes));
         using var bitmap = SKBitmap.Decode(bytes);
         Assert.Equal(512, bitmap.Width);
         Assert.Equal(512, bitmap.Height);
     }
 
     [Fact]
-    public async Task YenidenYukleme_EskiDosyayiSiler()
+    public async Task Reupload_DeletesOldFile()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "ph_");
@@ -92,7 +92,7 @@ public class ProfilePhotoTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task Silme_DosyayiVeAlaniTemizler()
+    public async Task Delete_ClearsFileAndField()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "ph_");
@@ -108,44 +108,44 @@ public class ProfilePhotoTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task ProfilGuncelleme_YeniHariciUrlReddedilir_MevcutDegerKabul()
+    public async Task ProfileUpdate_RejectsNewExternalUrl_AcceptsCurrentValue()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "ph_");
         var url = await UrlFromAsync(await UploadAsync(client, me.Token, Jpeg(300, 300)));
 
-        // Başka sunucudaki resim (izleme pikseli) — reddedilir.
+        // An image on another server (tracking pixel) — rejected.
         var external = await client.SendAsync(Authed(HttpMethod.Put, "/api/v1/profile", me.Token,
-            new { bio = "x", profileImageUrl = "https://kotu.example/piksel.png" }));
+            new { bio = "x", profileImageUrl = "https://evil.example/pixel.png" }));
         Assert.Equal(HttpStatusCode.BadRequest, external.StatusCode);
 
-        // Başka bir kullanıcının dosyası da gösterilemez.
+        // Another user's file cannot be shown either.
         var other = await client.SendAsync(Authed(HttpMethod.Put, "/api/v1/profile", me.Token,
-            new { bio = "x", profileImageUrl = "/media/avatars/baskasi/abc.jpg" }));
+            new { bio = "x", profileImageUrl = "/media/avatars/someone-else/abc.jpg" }));
         Assert.Equal(HttpStatusCode.BadRequest, other.StatusCode);
 
-        // İstemciler bio güncellerken mevcut değeri geri yollar: kabul edilir.
+        // Clients send the current value back when updating the bio: accepted.
         var unchanged = await client.SendAsync(Authed(HttpMethod.Put, "/api/v1/profile", me.Token,
-            new { bio = "yeni bio", profileImageUrl = url }));
+            new { bio = "new bio", profileImageUrl = url }));
         Assert.Equal(HttpStatusCode.OK, unchanged.StatusCode);
         Assert.Equal(url, await ProfileImageAsync(client, me));
 
-        // Boş = kaldır (dosya da silinir).
+        // Empty = remove (the file is deleted too).
         var cleared = await client.SendAsync(Authed(HttpMethod.Put, "/api/v1/profile", me.Token,
-            new { bio = "yeni bio", profileImageUrl = "" }));
+            new { bio = "new bio", profileImageUrl = "" }));
         Assert.Equal(HttpStatusCode.OK, cleared.StatusCode);
         Assert.Null(await ProfileImageAsync(client, me));
         Assert.Equal(0, FilesFor(me));
     }
 
     [Fact]
-    public async Task ResimOlmayanDosya_415_HicbirSeyKaydedilmez()
+    public async Task NonImageFile_415_NothingSaved()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "ph_");
 
         var res = await UploadAsync(client, me.Token,
-            System.Text.Encoding.UTF8.GetBytes("<script>alert(1)</script>"), "foto.jpg", "image/jpeg");
+            System.Text.Encoding.UTF8.GetBytes("<script>alert(1)</script>"), "photo.jpg", "image/jpeg");
 
         Assert.Equal(HttpStatusCode.UnsupportedMediaType, res.StatusCode);
         Assert.Null(await ProfileImageAsync(client, me));
@@ -153,7 +153,7 @@ public class ProfilePhotoTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task CokBuyukDosya_413()
+    public async Task TooLargeFile_413()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "ph_");
@@ -164,13 +164,13 @@ public class ProfilePhotoTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task DosyaYok_400_KimlikYok_401()
+    public async Task NoFile_400_NoIdentity_401()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "ph_");
 
         Assert.Equal(HttpStatusCode.BadRequest,
-            (await UploadAsync(client, me.Token, Jpeg(10, 10), field: "baska")).StatusCode);
+            (await UploadAsync(client, me.Token, Jpeg(10, 10), field: "other")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized,
             (await UploadAsync(client, null, Jpeg(10, 10))).StatusCode);
     }
@@ -179,7 +179,7 @@ public class ProfilePhotoTests : IClassFixture<TestWebAppFactory>
     [InlineData("/media/../appsettings.json")]
     [InlineData("/media/%2e%2e/appsettings.json")]
     [InlineData("/media/..%2fappsettings.json")]
-    public async Task MedyaKlasoruDisinaCikilamaz(string path)
+    public async Task CannotEscapeMediaFolder(string path)
     {
         var client = _factory.CreateClient();
         var res = await client.GetAsync(path);
@@ -187,12 +187,12 @@ public class ProfilePhotoTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task MedyaKlasorundekiJpgDisiDosyaSunulmaz()
+    public async Task NonJpgFileInMediaFolderIsNotServed()
     {
         Directory.CreateDirectory(_factory.MediaRoot);
-        await File.WriteAllTextAsync(Path.Combine(_factory.MediaRoot, "zararli.html"), "<script>alert(1)</script>");
+        await File.WriteAllTextAsync(Path.Combine(_factory.MediaRoot, "malicious.html"), "<script>alert(1)</script>");
 
-        var res = await _factory.CreateClient().GetAsync("/media/zararli.html");
+        var res = await _factory.CreateClient().GetAsync("/media/malicious.html");
 
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
     }

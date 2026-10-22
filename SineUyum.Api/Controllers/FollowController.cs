@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using SineUyum.Api.Dtos;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using SineUyum.Api.Data;
 using SineUyum.Api.Exceptions;
 using SineUyum.Api.Models;
@@ -20,16 +21,18 @@ namespace SineUyum.Api.Controllers
         private readonly ApplicationDbContext _context;
         private readonly NotificationService _notifications;
         private readonly PrivacyService _privacy;
+        private readonly IStringLocalizer _t;
 
-        public FollowController(ApplicationDbContext context, NotificationService notifications, PrivacyService privacy)
+        public FollowController(ApplicationDbContext context, NotificationService notifications, PrivacyService privacy, IStringLocalizer localizer)
         {
             _context = context;
             _notifications = notifications;
             _privacy = privacy;
+            _t = localizer;
         }
 
         [HttpPost("{userIdToFollow}")]
-        // Takip bildirim üretir; takip/bırak döngüsüyle spam'e karşı sıkı sınır.
+        // Follows create notifications; a strict limit against follow/unfollow spam.
         [EnableRateLimiting(RateLimitPolicies.SocialWrite)]
         public async Task<ActionResult<StatusMessageDto>> Follow(string userIdToFollow)
         {
@@ -38,19 +41,19 @@ namespace SineUyum.Api.Controllers
 
             if (currentUserId == userIdToFollow)
             {
-                return BadRequest("Kullanıcı kendini takip edemez.");
+                return BadRequest(_t["follows.cannotFollowSelf"].Value);
             }
             var currentUser = await _context.Users.FindAsync(currentUserId);
             if (currentUser == null) return Unauthorized();
 
-            // Olmayan kullanıcı önceden FK hatasıyla 500 veriyordu.
+            // A missing user used to give a 500 via the FK error.
             if (!await _context.Users.AnyAsync(u => u.Id == userIdToFollow))
             {
-                return NotFound("Kullanıcı bulunamadı.");
+                return NotFound(_t["errors.userNotFound"].Value);
             }
             if (await _privacy.IsBlockedEitherWayAsync(currentUserId, userIdToFollow))
             {
-                throw new DomainException("Bu kullanıcıyı takip edemezsiniz.", StatusCodes.Status403Forbidden);
+                throw new DomainException("follows.notAllowed", StatusCodes.Status403Forbidden);
             }
 
             var alreadyFollowing = await _context.UserFollows
@@ -58,7 +61,7 @@ namespace SineUyum.Api.Controllers
 
             if (alreadyFollowing)
             {
-                return BadRequest("Bu kullanıcıyı zaten takip ediyorsunuz.");
+                return BadRequest(_t["follows.alreadyFollowing"].Value);
             }
 
             var follow = new UserFollow
@@ -68,17 +71,16 @@ namespace SineUyum.Api.Controllers
             };
             await _context.UserFollows.AddAsync(follow);
 
-            // Takip ve takip edilenin bildirimi tek kayıtta; ardından SignalR + push.
-            // Tıklayınca takip edenin profiline gider.
+            // The follow and the followed user's notification are saved
+            // together; then SignalR + push. Tapping it opens the follower's profile.
             await _notifications.NotifyAsync(
                 userIdToFollow,
-                $"{currentUser.UserName} sizi takip etmeye başladı.",
-                $"/profile/{currentUserId}");
+                $"/profile/{currentUserId}",
+                "notifications.newFollower", currentUser.UserName);
 
-            return Ok(new StatusMessageDto("Kullanıcı başarıyla takip edildi."));
+            return Ok(new StatusMessageDto(_t["follows.followed"]));
         }
 
-        // ... Diğer metodlar (Unfollow, GetFollowStatus, GetFollowers, GetFollowing) aynı kalacak ...
         // DELETE: api/follow/{userIdToUnfollow}
         [HttpDelete("{userIdToUnfollow}")]
         public async Task<ActionResult<StatusMessageDto>> Unfollow(string userIdToUnfollow)
@@ -91,13 +93,13 @@ namespace SineUyum.Api.Controllers
 
             if (follow == null)
             {
-                return NotFound("Takip ilişkisi bulunamadı.");
+                return NotFound(_t["follows.notFound"].Value);
             }
 
             _context.UserFollows.Remove(follow);
             await _context.SaveChangesAsync();
 
-            return Ok(new StatusMessageDto("Kullanıcı takipten çıkarıldı."));
+            return Ok(new StatusMessageDto(_t["follows.unfollowed"]));
         }
 
         // GET: api/follow/{userId}/status
@@ -109,7 +111,7 @@ namespace SineUyum.Api.Controllers
 
             if (await _privacy.HasBlockedAsync(userId, currentUserId))
             {
-                return NotFound("Kullanıcı bulunamadı.");
+                return NotFound(_t["errors.userNotFound"].Value);
             }
 
             var isFollowing = await _context.UserFollows
@@ -121,7 +123,7 @@ namespace SineUyum.Api.Controllers
             return Ok(new FollowStatusDto { IsFollowing = isFollowing, FollowerCount = followerCount, FollowingCount = followingCount });
         }
 
-        // --- YENİ EKLENEN METOT: Takipçileri Getir ---
+        // GET: api/follow/{userId}/followers
         [HttpGet("{userId}/followers")]
         public async Task<ActionResult<List<UserBriefDto>>> GetFollowers(string userId)
         {
@@ -133,11 +135,11 @@ namespace SineUyum.Api.Controllers
                 .Where(f => f.FollowingId == userId)
                 .Select(f => new UserBriefDto { Id = f.Follower.Id, UserName = f.Follower.UserName })
                 .ToListAsync();
-            
+
             return Ok(followers);
         }
 
-        // --- YENİ EKLENEN METOT: Takip Edilenleri Getir ---
+        // GET: api/follow/{userId}/following
         [HttpGet("{userId}/following")]
         public async Task<ActionResult<List<UserBriefDto>>> GetFollowing(string userId)
         {

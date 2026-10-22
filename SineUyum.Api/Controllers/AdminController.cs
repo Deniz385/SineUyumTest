@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
 using SineUyum.Api.Exceptions;
@@ -15,10 +16,14 @@ namespace SineUyum.Api.Controllers
     [Authorize(Roles = "Admin")]
     public class AdminController : ControllerBase
     {
-        // Eşleştirme artık istek içinde çalışmaz (M7): TMDb çağrıları ve büyük
-        // etkinlikler isteği zaman aşımına düşürüyordu. Ön kontrol hemen
-        // yapılır (hatalar 404/400 olarak döner), iş kuyruğa alınır ve 202
-        // döner; sonuç GET .../matching ile izlenir.
+        private readonly IStringLocalizer _t;
+
+        public AdminController(IStringLocalizer localizer) => _t = localizer;
+
+        // Matching no longer runs inside the request (M7): TMDb calls and large
+        // events made requests time out. The pre-checks run right away (errors
+        // come back as 404/400), the job is queued and 202 is returned; the
+        // result is followed with GET .../matching.
         [HttpPost("events/{eventId}/create-groups")]
         public async Task<ActionResult<MatchingRunDto>> TriggerMatching(
             int eventId,
@@ -33,7 +38,7 @@ namespace SineUyum.Api.Controllers
                 (r.Status == MatchingRunStatus.Queued || r.Status == MatchingRunStatus.Running));
             if (active)
             {
-                throw new DomainException("Bu etkinlik için eşleştirme zaten sürüyor.", StatusCodes.Status409Conflict);
+                throw new DomainException("matching.alreadyRunning", StatusCodes.Status409Conflict);
             }
 
             var run = new MatchingRun
@@ -45,10 +50,10 @@ namespace SineUyum.Api.Controllers
             await context.SaveChangesAsync();
             queue.Signal();
 
-            return AcceptedAtAction(nameof(GetMatching), new { eventId }, MatchingRunDto.From(run));
+            return AcceptedAtAction(nameof(GetMatching), new { eventId }, MatchingRunDto.From(run, _t));
         }
 
-        // Etkinliğin en son eşleştirme işi.
+        // The event's latest matching job.
         [HttpGet("events/{eventId}/matching")]
         public async Task<ActionResult<MatchingRunDto>> GetMatching(int eventId, [FromServices] ApplicationDbContext context)
         {
@@ -56,11 +61,11 @@ namespace SineUyum.Api.Controllers
                 .Where(r => r.CinemaEventId == eventId)
                 .OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id)
                 .FirstOrDefaultAsync();
-            if (run == null) throw DomainException.NotFound("Bu etkinlik için eşleştirme başlatılmamış.");
-            return Ok(MatchingRunDto.From(run));
+            if (run == null) throw DomainException.NotFound("matching.notStarted");
+            return Ok(MatchingRunDto.From(run, _t));
         }
 
-        // Elle abonelik (promosyon, destek; ödeme entegrasyonu öncesi deneme).
+        // Manual subscription (promotions, support; trying out before payments exist).
         [HttpPost("users/{userId}/subscription")]
         public async Task<ActionResult<StatusMessageDto>> GrantSubscription(
             string userId,
@@ -69,7 +74,7 @@ namespace SineUyum.Api.Controllers
         {
             var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "admin";
             await subscriptions.GrantManualAsync(userId, dto.Days, adminId);
-            return Ok(new StatusMessageDto($"{dto.Days} günlük abonelik tanımlandı."));
+            return Ok(new StatusMessageDto(_t["subscriptions.granted", dto.Days]));
         }
     }
 }

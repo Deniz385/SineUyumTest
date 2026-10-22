@@ -17,7 +17,7 @@ namespace SineUyum.Api.Models
         public string RecipientId { get; set; } = string.Empty;
         public AppUser Recipient { get; set; } = null!;
 
-        // Film önerisi gönderilebilmesi için Content artık zorunlu değil (nullable).
+        // Content is optional (nullable) so a movie suggestion can be sent on its own.
         public string? Content { get; set; }
 
         public DateTime? DateRead { get; set; }
@@ -25,11 +25,11 @@ namespace SineUyum.Api.Models
         [Required]
         public DateTime MessageSent { get; set; } = DateTime.UtcNow;
 
-        // Film önerme özelliği için yeni alanlar
+        // Fields for suggesting a movie
         public int? MovieId { get; set; }
         [ForeignKey("MovieId")]
         public Movie? Movie { get; set; }
-         public int? WatchlistId { get; set; } // Opsiyonel liste ID'si
+         public int? WatchlistId { get; set; } // Optional list id
         [ForeignKey("WatchlistId")]
         public Watchlist? Watchlist { get; set; }
     }

@@ -4,9 +4,9 @@ using System.Text.Json;
 
 namespace SineUyum.Api.Tests;
 
-// API sürümleme: tüm uçlar artık "/api/v1/..." altında. Eski sürümsüz
-// "/api/..." istekleri ise geriye dönük uyumluluk katmanıyla v1'e yönlenir,
-// böylece dağıtılmış eski istemciler kırılmaz.
+// API versioning: every endpoint lives under "/api/v1/...". Old unversioned
+// "/api/..." requests are routed to v1 by a backward compatibility layer, so
+// deployed old clients do not break.
 public class ApiVersioningTests : IClassFixture<TestWebAppFactory>
 {
     private readonly TestWebAppFactory _factory;
@@ -18,11 +18,11 @@ public class ApiVersioningTests : IClassFixture<TestWebAppFactory>
     private static NewUserDto NewUser()
     {
         var name = "ver_" + Guid.NewGuid().ToString("N")[..10];
-        return new NewUserDto(name, $"{name}@test.com", "Sifre123");
+        return new NewUserDto(name, $"{name}@test.com", "Password123");
     }
 
     [Fact]
-    public async Task V1_Yolu_Calisir()
+    public async Task V1Path_Works()
     {
         var client = _factory.CreateClient();
         var user = NewUser();
@@ -40,13 +40,13 @@ public class ApiVersioningTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task SurumSuz_Yol_V1e_Yonlenir()
+    public async Task UnversionedPath_IsRoutedToV1()
     {
         var client = _factory.CreateClient();
         var user = NewUser();
 
-        // Kayıt v1 ile; giriş eski sürümsüz yol ile — uyumluluk katmanı
-        // isteği v1'e taşıdığı için çalışmalı.
+        // Register with v1, log in with the old unversioned path — it must work
+        // because the compatibility layer moves the request to v1.
         var register = await client.PostAsJsonAsync("/api/v1/account/register",
             new { username = user.Username, email = user.Email, password = user.Password });
         register.EnsureSuccessStatusCode();

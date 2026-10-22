@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Localization;
 using SineUyum.Api.Dtos;
 using SineUyum.Api.Exceptions;
 using SineUyum.Api.Models;
@@ -20,17 +21,20 @@ namespace SineUyum.Api.Controllers
         private readonly TokenService _tokenService;
         private readonly SubscriptionService _subscriptions;
         private readonly IEnumerable<IPaymentProvider> _providers;
+        private readonly IStringLocalizer _t;
 
         public SubscriptionController(
             UserManager<AppUser> userManager,
             TokenService tokenService,
             SubscriptionService subscriptions,
-            IEnumerable<IPaymentProvider> providers)
+            IEnumerable<IPaymentProvider> providers,
+            IStringLocalizer localizer)
         {
             _userManager = userManager;
             _tokenService = tokenService;
             _subscriptions = subscriptions;
             _providers = providers;
+            _t = localizer;
         }
 
         [HttpGet]
@@ -50,18 +54,18 @@ namespace SineUyum.Api.Controllers
             });
         }
 
-        // Ödemesiz aktivasyon KALDIRILDI (G4): herkes tek istekle abone
-        // olabiliyordu. Eski istemciler anlaşılır bir hata alır.
+        // Activation without payment was REMOVED (G4): anyone could subscribe
+        // with a single request. Old clients get an understandable error.
         [HttpPost("activate")]
         public IActionResult ActivateSubscription() =>
             Problem(
-                title: "Ödemesiz abonelik kaldırıldı. Abonelik ödeme ile başlatılır.",
+                title: _t["subscriptions.freeActivationRemoved"],
                 statusCode: StatusCodes.Status410Gone);
 
-        // İstemci ödemeyi sağlayıcıda tamamladıktan sonra aldığı belirteci
-        // (iyzico ödeme belirteci, App Store/Google Play makbuzu) gönderir;
-        // sunucu bunu SAĞLAYICIYLA doğrular. Yanıt yeni token içerir ki
-        // abonelik claim'i hemen güncellensin.
+        // After completing the payment at the provider, the client sends the
+        // token it received (iyzico payment token, App Store/Google Play
+        // receipt); the server verifies it WITH THE PROVIDER. The response
+        // carries a new token so the subscription claim updates right away.
         [HttpPost("verify")]
         [EnableRateLimiting("payment")]
         public async Task<ActionResult<AuthResponseDto>> Verify([FromBody] VerifyPurchaseDto dto, CancellationToken ct)
@@ -74,19 +78,19 @@ namespace SineUyum.Api.Controllers
             var provider = FindProvider(dto.Provider);
             var purchase = await provider.VerifyAsync(dto.PurchaseToken, userId, ct);
 
-            // Sağlayıcı kendi adını yazar; istemcinin söylediğine güvenilmez.
+            // The provider writes its own name; what the client says is not trusted.
             if (purchase.Provider != provider.Name)
             {
-                throw new InvalidOperationException("Sağlayıcı farklı bir ad döndürdü.");
+                throw new InvalidOperationException("The provider returned a different name.");
             }
 
             await _subscriptions.ApplyVerifiedPurchaseAsync(userId, purchase);
             return Ok(await _tokenService.CreateAuthResponseAsync(user, Request.Headers.UserAgent.ToString()));
         }
 
-        // Sağlayıcıdan sunucuya bildirim (yenileme, iptal, iade). Kimlik
-        // doğrulaması yoktur; güven sağlayıcının İMZASINA dayanır ve imza
-        // sağlayıcı sınıfında doğrulanır.
+        // Provider-to-server notifications (renewal, cancellation, refund). There
+        // is no authentication; trust rests on the provider's SIGNATURE, which
+        // the provider class verifies.
         [HttpPost("webhooks/{provider}")]
         [AllowAnonymous]
         public async Task<IActionResult> Webhook(string provider, CancellationToken ct)
@@ -97,7 +101,7 @@ namespace SineUyum.Api.Controllers
             var change = await handler.ParseWebhookAsync(Request, ct);
             if (change != null)
             {
-                if (change.Provider != handler.Name) throw new InvalidOperationException("Sağlayıcı farklı bir ad döndürdü.");
+                if (change.Provider != handler.Name) throw new InvalidOperationException("The provider returned a different name.");
                 await _subscriptions.ApplyProviderEventAsync(change);
             }
             return Ok();
@@ -108,11 +112,11 @@ namespace SineUyum.Api.Controllers
             if (!_providers.Any())
             {
                 throw new DomainException(
-                    "Ödeme henüz yapılandırılmadı; şu an abonelik satın alınamıyor.",
+                    "subscriptions.paymentsNotConfigured",
                     StatusCodes.Status503ServiceUnavailable);
             }
             return _providers.FirstOrDefault(p => p.Name == name)
-                ?? throw new DomainException("Bilinmeyen ödeme sağlayıcısı.");
+                ?? throw new DomainException("subscriptions.unknownProvider");
         }
     }
 }

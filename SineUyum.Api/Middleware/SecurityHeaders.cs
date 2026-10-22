@@ -1,10 +1,9 @@
 namespace SineUyum.Api.Middleware
 {
-    // G9: Her yanıta (hatalar ve 429 dahil) temel güvenlik başlıkları. API
-    // yalnızca JSON döndüğü için katı bir CSP uygundur: yanıt bir tarayıcıda
-    // doğrudan açılsa ya da çerçeveye konsa bile betik çalıştıramaz.
-    // Swagger arayüzü (yalnızca geliştirmede) kendi betiklerine ihtiyaç
-    // duyduğu için CSP'den muaftır.
+    // G9: basic security headers on every response (errors and 429 included).
+    // The API only returns JSON, so a strict CSP fits: even if a response is
+    // opened directly in a browser or framed, it cannot run scripts. The
+    // Swagger UI (development only) needs its own scripts and is exempt from the CSP.
     public static class SecurityHeaders
     {
         public const string ApiContentSecurityPolicy = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
@@ -16,11 +15,11 @@ namespace SineUyum.Api.Middleware
                 context.Response.OnStarting(() =>
                 {
                     var headers = context.Response.Headers;
-                    // Tarayıcı içerik türünü tahmin etmesin (ör. yüklenen dosyayı HTML sanmasın).
+                    // The browser must not guess the content type (e.g. treat an uploaded file as HTML).
                     headers["X-Content-Type-Options"] = "nosniff";
-                    // Başka sitelerin çerçevesinde açılmasın (clickjacking).
+                    // Must not be opened inside other sites' frames (clickjacking).
                     headers["X-Frame-Options"] = "DENY";
-                    // İstek adreslerindeki kimlikler (/profile/{id} vb.) başka sitelere sızmasın.
+                    // Ids in request URLs (/profile/{id} etc.) must not leak to other sites.
                     headers["Referrer-Policy"] = "no-referrer";
                     headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()";
                     headers["Cross-Origin-Opener-Policy"] = "same-origin";

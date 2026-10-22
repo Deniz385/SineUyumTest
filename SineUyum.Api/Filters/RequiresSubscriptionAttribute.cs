@@ -6,10 +6,10 @@ using SineUyum.Api.Services;
 
 namespace SineUyum.Api.Filters
 {
-    // Ücretli özellik: aktif abonelik yoksa 402 döner. Kontrol SUNUCUDA ve
-    // veritabanından yapılır. Önceden etkinlik özelliği yalnızca web
-    // istemcisinde gizleniyordu (mobilde hiç gizlenmiyordu); API'yi doğrudan
-    // çağıran herkes ödemeden etkinliğe katılabiliyordu.
+    // Paid feature: returns 402 without an active subscription. The check runs
+    // ON THE SERVER, against the database. The events feature used to be hidden
+    // only in the web client (not at all on mobile); anyone calling the API
+    // directly could join events without paying.
     public sealed class RequiresSubscriptionAttribute : TypeFilterAttribute
     {
         public RequiresSubscriptionAttribute() : base(typeof(RequiresSubscriptionFilter)) { }
@@ -25,11 +25,11 @@ namespace SineUyum.Api.Filters
                 var user = context.HttpContext.User;
                 var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
-                // Yöneticiler etkinlikleri test edebilsin.
+                // Admins can test events.
                 if (userId != null && !user.IsInRole("Admin") && !await _subscriptions.IsActiveAsync(userId))
                 {
                     throw new DomainException(
-                        "Bu özellik için aktif abonelik gerekli.",
+                        "subscriptions.required",
                         StatusCodes.Status402PaymentRequired);
                 }
 

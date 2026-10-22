@@ -116,9 +116,9 @@ namespace SineUyum.Api.Migrations
                 table: "UserRatings",
                 columns: new[] { "UserId", "ActivityAt" });
 
-            // Benzersiz indeksten önce: kodda denetlenen "kullanıcı başına tek
-            // puan" kuralı eşzamanlı isteklerde çift kayıt bırakmış olabilir.
-            // En son kaydedilen (en büyük Id) kalır.
+            // Before the unique index: the "one rating per user" rule, checked only in
+            // code, may have left duplicates under concurrent requests.
+            // The most recently saved one (highest Id) is kept.
             migrationBuilder.Sql("""
                 DELETE FROM "UserRatings" r
                 USING "UserRatings" newer

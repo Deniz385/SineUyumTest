@@ -20,9 +20,9 @@ namespace SineUyum.Api.Models
         public string? Address { get; set; }
 
         [Required]
-        public int GroupSize { get; set; } // Etkinlikteki masaların kaç kişilik olacağı
+        public int GroupSize { get; set; } // How many people sit at each table of the event
 
-        // Bu etkinlik için seçilen film (oylama sonrası belirlenecek)
+        // The movie chosen for this event (decided after the vote)
         public int? SelectedMovieId { get; set; }
         [ForeignKey("SelectedMovieId")]
         public Movie? SelectedMovie { get; set; }

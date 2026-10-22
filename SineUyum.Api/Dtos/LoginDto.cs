@@ -4,10 +4,10 @@ namespace SineUyum.Api.Dtos
 {
     public class LoginDto
     {
-        [Required(ErrorMessage = "Kullanıcı adı zorunludur.")]
+        [Required(ErrorMessage = "validation.usernameRequired")]
         public string Username { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Şifre zorunludur.")]
+        [Required(ErrorMessage = "validation.passwordRequired")]
         public string Password { get; set; } = string.Empty;
     }
 }

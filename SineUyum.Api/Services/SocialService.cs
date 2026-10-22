@@ -5,8 +5,8 @@ using SineUyum.Api.Models;
 
 namespace SineUyum.Api.Services
 {
-    // İnceleme ve akışın ortak kuralları: kimin içeriği kime görünür (G12
-    // ile aynı kural) ve yazar başına uyum rozeti.
+    // Shared rules for reviews and the feed: whose content is visible to whom (the
+    // same rule as G12) and the per-author compatibility badge.
     public class SocialService
     {
         private readonly ApplicationDbContext _context;
@@ -18,9 +18,9 @@ namespace SineUyum.Api.Services
             _privacy = privacy;
         }
 
-        // Puan ve incelemeler profil ayrıntısıdır: engel yoksa ve yazarın
-        // görünürlüğü izin veriyorsa (Herkes / yazarın takip ettiği biriyse)
-        // görünür. Kendi içeriği her zaman görünür.
+        // Ratings and reviews are profile details: visible when there is no block
+        // and the author's visibility allows it (Everyone / someone the author follows).
+        // Own content is always visible.
         public IQueryable<AppUser> VisibleAuthors(string viewerId)
         {
             var blocked = _privacy.BlockedPartnerIds(viewerId);
@@ -35,12 +35,12 @@ namespace SineUyum.Api.Services
         public async Task<bool> CanSeeAuthorAsync(string viewerId, string authorId) =>
             await VisibleAuthors(viewerId).AnyAsync(u => u.Id == authorId);
 
-        // Görüntüleyenin verilen yazarlarla uyumu (tek sorgu). Ortak filmi
-        // olmayanlar ve kendisi listede yer almaz.
+        // The viewer's compatibility with the given authors (one query). Authors with
+        // no common movies and the viewer themselves are left out.
         public async Task<Dictionary<string, double>> CompatibilityWithAsync(string viewerId, IReadOnlyCollection<string> authorIds) =>
             (await CompatibilityDetailsAsync(viewerId, authorIds)).ToDictionary(p => p.Key, p => p.Value.Score);
 
-        // Uyum ve dayandığı ortak film sayısı (güvenilirlik eşiği için).
+        // Compatibility and the number of common movies behind it (for a reliability threshold).
         public async Task<Dictionary<string, (double Score, int CommonCount)>> CompatibilityDetailsAsync(string viewerId, IReadOnlyCollection<string> authorIds)
         {
             var others = authorIds.Where(id => id != viewerId).Distinct().ToList();
@@ -59,9 +59,9 @@ namespace SineUyum.Api.Services
                     g => (Math.Round(CompatibilityCalculator.Score(g.Select(p => (p.Mine, p.Theirs)).ToList()), 0), g.Count()));
         }
 
-        // "Sana göre puan": bu filmi puanlamış, sana güvenilir biçimde uyumlu
-        // kişilerin puanlarının uyumla ağırlıklı ortalaması. Genel ortalama
-        // herkesin zevkidir; bu, senin zevkine benzeyenlerin.
+        // "Score for you": the compatibility-weighted average of the ratings of people
+        // who rated this movie and reliably match you. The overall average is everyone's
+        // taste; this one is the taste of people like you.
         public const int ForYouMinCommonMovies = 3;
         public const double ForYouMinCompatibility = 60;
         public const int ForYouMinRaters = 2;
@@ -86,7 +86,7 @@ namespace SineUyum.Api.Services
                 .ToList();
             if (matches.Count < ForYouMinRaters) return null;
 
-            // Ağırlık uyumun karesi: %95 uyumlunun sözü %65'inkinden çok daha değerli.
+            // The weight is the squared compatibility: a 95% match counts far more than a 65% one.
             var weights = matches.Select(m => Math.Pow(m.Compatibility / 100.0, 2)).ToList();
             var score = matches.Select((m, i) => m.Rater.Rating * weights[i]).Sum() / weights.Sum();
 
@@ -107,8 +107,8 @@ namespace SineUyum.Api.Services
             };
         }
 
-        // İncelemeleri görüntüleyen için DTO'ya çevirir (beğeni/yorum sayıları,
-        // beğenmiş mi, yazarın puanı ve uyum rozeti).
+        // Turns reviews into DTOs for the viewer (like/comment counts, liked by me,
+        // the author's rating and the compatibility badge).
         public async Task<List<ReviewDto>> ToDtosAsync(string viewerId, IQueryable<Review> reviews)
         {
             var rows = await reviews

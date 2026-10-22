@@ -40,9 +40,9 @@ namespace SineUyum.Api.Migrations
                 table: "EventGroupSuggestions",
                 column: "MovieId");
 
-            // Mevcut "1,2,3" değerlerini sırasıyla taşı. Sayı olmayan parçalar
-            // (eskiden ekranı 500'e düşüren bozuk veri), Movies'te olmayan
-            // filmler ve tekrarlar atlanır. Sütun ancak taşımadan sonra silinir.
+            // Move the existing "1,2,3" values in order. Non-numeric parts (the bad
+            // data that used to take the screen down with a 500), movies missing from
+            // Movies and duplicates are skipped. The column is dropped only after the move.
             migrationBuilder.Sql("""
                 INSERT INTO "EventGroupSuggestions" ("EventGroupId", "MovieId", "Rank")
                 SELECT g."Id", trim(t.part)::int, MIN(t.ord) - 1

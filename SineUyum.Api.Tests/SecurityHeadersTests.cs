@@ -4,8 +4,8 @@ using SineUyum.Api.Middleware;
 
 namespace SineUyum.Api.Tests;
 
-// G9: güvenlik başlıkları her yanıtta — başarılı, kimliksiz, bulunamadı ve
-// doğrulama hatası dahil.
+// G9: security headers on every response — success, unauthenticated, not found
+// and validation errors included.
 public class SecurityHeadersTests : IClassFixture<TestWebAppFactory>
 {
     private readonly HttpClient _client;
@@ -16,13 +16,13 @@ public class SecurityHeadersTests : IClassFixture<TestWebAppFactory>
     {
         { "GET", "/health", HttpStatusCode.OK },
         { "GET", "/api/v1/account/me", HttpStatusCode.Unauthorized },
-        { "GET", "/api/v1/yok-boyle-bir-uc", HttpStatusCode.NotFound },
+        { "GET", "/api/v1/no-such-endpoint", HttpStatusCode.NotFound },
         { "POST", "/api/v1/account/login", HttpStatusCode.BadRequest },
     };
 
     [Theory]
     [MemberData(nameof(Requests))]
-    public async Task HerYanittaGuvenlikBasliklari(string method, string url, HttpStatusCode expected)
+    public async Task EveryResponseHasSecurityHeaders(string method, string url, HttpStatusCode expected)
     {
         var req = new HttpRequestMessage(new HttpMethod(method), url);
         if (method == "POST") req.Content = JsonContent.Create(new { });
@@ -34,7 +34,7 @@ public class SecurityHeadersTests : IClassFixture<TestWebAppFactory>
         Assert.Equal("no-referrer", Header(res, "Referrer-Policy"));
         Assert.Equal(SecurityHeaders.ApiContentSecurityPolicy, Header(res, "Content-Security-Policy"));
         Assert.Contains("camera=()", Header(res, "Permissions-Policy"));
-        Assert.False(res.Headers.Contains("Server"), "Server başlığı sunucu yazılımını açık etmemeli");
+        Assert.False(res.Headers.Contains("Server"), "The Server header must not disclose the server software");
     }
 
     private static string? Header(HttpResponseMessage res, string name) =>

@@ -8,14 +8,14 @@ namespace SineUyum.Api.Models
         [Key]
         public int Id { get; set; }
 
-        // Takip eden kullanıcı
+        // The user who follows
         [Required]
-        public string FollowerId { get; set; } = string.Empty; // Başlangıç değeri atandı
-        public AppUser Follower { get; set; } = null!; // Başlangıç değeri atandı
+        public string FollowerId { get; set; } = string.Empty; // Initial value assigned
+        public AppUser Follower { get; set; } = null!; // Initial value assigned
 
-        // Takip edilen kullanıcı
+        // The user being followed
         [Required]
-        public string FollowingId { get; set; } = string.Empty; // Başlangıç değeri atandı
-        public AppUser Following { get; set; } = null!; // Başlangıç değeri atandı
+        public string FollowingId { get; set; } = string.Empty; // Initial value assigned
+        public AppUser Following { get; set; } = null!; // Initial value assigned
     }
 }

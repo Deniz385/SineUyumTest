@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace SineUyum.Api.Controllers
 {
-    // Mobil uygulama açılışta buraya bakar: sunucu ayakta mı, uygulamanın
-    // sürümü hâlâ destekliyor mu, bakım modunda mıyız.
+    // The mobile app checks this on startup: is the server up, is the app's
+    // version still supported, are we in maintenance mode.
     [ApiController]
     [Route("api/app")]
     [AllowAnonymous]
@@ -22,7 +22,7 @@ namespace SineUyum.Api.Controllers
         {
             return Ok(new AppConfigDto
             {
-                // Bu sürümden eskisi zorunlu güncellemeye düşer.
+                // Versions older than this are forced to update.
                 MinimumSupportedVersion = _configuration["App:MinimumSupportedVersion"] ?? "1.0.0",
                 LatestVersion = _configuration["App:LatestVersion"] ?? "1.0.0",
                 MaintenanceMode = _configuration.GetValue("App:MaintenanceMode", false),

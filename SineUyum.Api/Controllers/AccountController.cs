@@ -3,8 +3,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
+using SineUyum.Api.Exceptions;
+using SineUyum.Api.Localization;
 using SineUyum.Api.Models;
 using SineUyum.Api.Services;
 using System.Security.Claims;
@@ -20,14 +23,18 @@ namespace SineUyum.Api.Controllers
         private readonly TokenService _tokenService;
         private readonly SubscriptionService _subscriptions;
         private readonly PrivacyService _privacy;
+        private readonly SupportedLanguages _languages;
+        private readonly IStringLocalizer _t;
 
-        public AccountController(UserManager<AppUser> userManager, ApplicationDbContext context, TokenService tokenService, SubscriptionService subscriptions, PrivacyService privacy)
+        public AccountController(UserManager<AppUser> userManager, ApplicationDbContext context, TokenService tokenService, SubscriptionService subscriptions, PrivacyService privacy, SupportedLanguages languages, IStringLocalizer localizer)
         {
             _userManager = userManager;
             _context = context;
             _tokenService = tokenService;
             _subscriptions = subscriptions;
             _privacy = privacy;
+            _languages = languages;
+            _t = localizer;
         }
 
         [HttpPost("register")]
@@ -37,14 +44,20 @@ namespace SineUyum.Api.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
-            var user = new AppUser { UserName = registerDto.Username, Email = registerDto.Email };
+            // New accounts start in the language the client is using.
+            var user = new AppUser
+            {
+                UserName = registerDto.Username,
+                Email = registerDto.Email,
+                Language = _languages.Resolve(SupportedLanguages.Current)
+            };
             var result = await _userManager.CreateAsync(user, registerDto.Password);
             if (!result.Succeeded)
                 return BadRequest(result.Errors);
 
             await _userManager.AddToRoleAsync(user, "User");
 
-            return Ok(new StatusMessageDto("Kullanıcı başarıyla oluşturuldu."));
+            return Ok(new StatusMessageDto(_t["account.registered"]));
         }
 
         [HttpPost("login")]
@@ -56,13 +69,13 @@ namespace SineUyum.Api.Controllers
                 return BadRequest(ModelState);
             var user = await _userManager.FindByNameAsync(loginDto.Username);
             if (user == null || !await _userManager.CheckPasswordAsync(user, loginDto.Password))
-                return Unauthorized(new StatusMessageDto("Kullanıcı adı veya şifre hatalı."));
+                return Unauthorized(new StatusMessageDto(_t["account.invalidCredentials"]));
 
-            return Ok(await _tokenService.CreateAuthResponseAsync(user, DeviceInfo()));
+            return Ok(await _tokenService.CreateAuthResponseAsync(user, DeviceInfo(), HttpContext.ExplicitRequestLanguage(_languages)));
         }
 
-        // Mobil istemci access token'ı süresi dolduğunda bu endpoint'i çağırır;
-        // kullanıcıdan tekrar giriş istemek gerekmez.
+        // The mobile client calls this when its access token expires; the user
+        // does not have to log in again.
         [HttpPost("refresh")]
         [AllowAnonymous]
         [EnableRateLimiting("auth")]
@@ -71,24 +84,24 @@ namespace SineUyum.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var response = await _tokenService.RefreshAsync(dto.RefreshToken, DeviceInfo());
+            var response = await _tokenService.RefreshAsync(dto.RefreshToken, DeviceInfo(), HttpContext.ExplicitRequestLanguage(_languages));
             if (response == null)
-                return Unauthorized(new StatusMessageDto("Yenileme anahtarı geçersiz veya süresi dolmuş."));
+                return Unauthorized(new StatusMessageDto(_t["account.invalidRefreshToken"]));
 
             return Ok(response);
         }
 
-        // Çıkış: refresh token sunucu tarafında iptal edilir.
+        // Logout: the refresh token is revoked on the server.
         [HttpPost("logout")]
         [Authorize]
         public async Task<ActionResult<StatusMessageDto>> Logout([FromBody] RefreshRequestDto dto)
         {
             await _tokenService.RevokeAsync(dto.RefreshToken);
-            return Ok(new StatusMessageDto("Çıkış yapıldı."));
+            return Ok(new StatusMessageDto(_t["account.loggedOut"]));
         }
 
-        // Mobil uygulama açılışında token'ın hâlâ geçerli olduğunu doğrulamak ve
-        // güncel kullanıcı bilgisini (abonelik durumu dahil) almak için kullanılır.
+        // Used when the mobile app starts, to check that the token is still
+        // valid and to get fresh user details (subscription state included).
         [HttpGet("me")]
         [Authorize]
         public async Task<ActionResult<UserSummaryDto>> Me()
@@ -110,16 +123,36 @@ namespace SineUyum.Api.Controllers
                 ProfileImageUrl = user.ProfileImageUrl,
                 IsSubscribed = subscription.IsActive,
                 SubscriptionExpires = subscription.ExpiresAt,
-                Roles = roles.ToList()
+                Roles = roles.ToList(),
+                Language = user.Language
             });
         }
 
-        // Uygulamada parola değiştirmenin hiçbir yolu yoktu; bir kullanıcı
-        // parolasını değiştirmek istediğinde yapabileceği bir şey olmuyordu.
+        // The user's language: notifications (in-app and push) are rendered in
+        // it. Clients set it when the user picks a language.
+        [HttpPut("language")]
+        [Authorize]
+        public async Task<ActionResult<LanguageDto>> UpdateLanguage([FromBody] LanguageDto dto)
+        {
+            var user = await CurrentUserAsync();
+            if (user == null) return Unauthorized();
+
+            var language = _languages.Match(dto.Language)
+                ?? throw new DomainException("account.unsupportedLanguage", [dto.Language, string.Join(", ", _languages.All)]);
+
+            user.Language = language;
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded) return BadRequest(result.Errors);
+
+            return Ok(new LanguageDto { Language = language });
+        }
+
+        // There was no way to change the password in the app; a user who wanted
+        // to change theirs could do nothing about it.
         //
-        // Parola değişince kullanıcının diğer tüm oturumları kapatılır (çalınmış
-        // bir refresh token'ın geçerli kalmaması için), isteği yapan cihaz için
-        // yeni bir token çifti döner ki kullanıcı kendi oturumundan düşmesin.
+        // After a password change all of the user's other sessions are closed
+        // (so a stolen refresh token stops working), and the requesting device
+        // gets a new token pair so the user stays signed in there.
         [HttpPost("change-password")]
         [Authorize]
         [EnableRateLimiting("auth")]
@@ -146,7 +179,7 @@ namespace SineUyum.Api.Controllers
             return Ok(await _tokenService.CreateAuthResponseAsync(user, DeviceInfo()));
         }
 
-        // Gizlilik ayarları (G12). Her biri bağımsız açılıp kapatılır.
+        // Privacy settings (G12). Each one is switched on and off independently.
         [HttpGet("privacy")]
         [Authorize]
         public async Task<ActionResult<PrivacySettingsDto>> GetPrivacy()
@@ -205,9 +238,10 @@ namespace SineUyum.Api.Controllers
             }
 
             limit = Math.Clamp(limit, 1, 100);
-            var loweredQuery = query.ToLower();
+            // Invariant: in a Turkish request culture "I" would lower to a dotless i.
+            var loweredQuery = query.ToLowerInvariant();
 
-            // Aramada görünmemeyi seçenler ve engel olan kişiler (iki yönde) çıkmaz.
+            // People who chose to be hidden from search and blocked people (both ways) are excluded.
             var blockedIds = _privacy.BlockedPartnerIds(currentUserId);
             var users = await _userManager.Users
                 .Where(u => u.UserName != null && u.Id != currentUserId && u.UserName.ToLower().Contains(loweredQuery))
@@ -225,8 +259,8 @@ namespace SineUyum.Api.Controllers
 
             if (users.Count == 0) return Ok(users);
 
-            // Önceden her kullanıcı için ayrı sorgu atılıyordu (N+1). Artık tüm
-            // eşleşen kullanıcıların ortak puanları tek sorguda çekiliyor.
+            // This used to run one query per user (N+1). Now the common ratings
+            // of all matching users are fetched in a single query.
             var userIds = users.Select(u => u.Id).ToList();
             var commonRatings = await (
                 from mine in _context.UserRatings.Where(r => r.UserId == currentUserId)

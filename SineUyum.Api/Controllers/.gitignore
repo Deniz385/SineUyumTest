@@ -1,13 +1,13 @@
-# Visual Studio ve .NET için Standart .gitignore Dosyasý
+# Standard .gitignore for Visual Studio and .NET
 
-## Kullanýcýya özel dosyalar (User-specific files)
+## User-specific files
 *.rsuser
 *.suo
 *.user
 *.userosscache
 *.sln.docstates
 
-## Visual Studio tarafýndan oluþturulan klasörler (Visual Studio generated folders)
+## Visual Studio generated folders
 .vs/
 *.cr/
 *.[Cc]ache/
@@ -26,12 +26,12 @@ bld/
 [Dd]rop/
 [Ll]ogs/
 
-## Yeniden oluþturulabilir dosyalar (ReSharper)
+## Regenerable files (ReSharper)
 _ReSharper*/
 *.[Rr]e[Ss]harper
 *.DotSettings.user
 
-## Test sonuçlarý dosyalarý (Test results)
+## Test results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 *.[Pp]ublish.xml
@@ -41,21 +41,21 @@ _ReSharper*/
 *.log
 *.scc
 
-## Paketler ve baðýmlýlýklar (Packages)
+## Packages
 *.nupkg
 *.nuget.props
 *.nuget.targets
 packages/
 *.lock.json
 
-## Hassas ve yerel ayar dosyalarý (Secrets and local settings)
-# UserSecrets C# projesi içindeki secrets.json dosyasýný gizler
+## Secrets and local settings
+# Hides the secrets.json file of UserSecrets inside the C# project
 **/secrets.json
 
-# Yerel geliþtirme ortamýna özel appsettings dosyasý
+# appsettings file specific to the local development environment
 appsettings.Development.json
 
-## Çeþitli (Miscellaneous)
+## Miscellaneous
 *.docmd
 *.pdb
 *_i.c
@@ -72,11 +72,11 @@ appsettings.Development.json
 .deploy_version
 ~$*
 
-# Rider IDE dosyalarý
+# Rider IDE files
 .idea/
 
-# Kendi Projemize Özel Ekleme (Our Project-Specific Addition)
+# Our project-specific additions
 # -------------------------------------------------------------------
-# SQLite veritabaný dosyalarýný yoksay
+# Ignore SQLite database files
 *.db
 *.db-journal

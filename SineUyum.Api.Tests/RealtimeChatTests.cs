@@ -7,7 +7,7 @@ using static SineUyum.Api.Tests.PushTestSupport;
 
 namespace SineUyum.Api.Tests;
 
-// M11: canlı sohbet — gerçek SignalR istemcisiyle, gerçek hub ve JWT ile.
+// M11: live chat — with a real SignalR client, the real hub and a JWT.
 public class RealtimeChatTests : IClassFixture<TestWebAppFactory>, IAsyncDisposable
 {
     private readonly TestWebAppFactory _factory;
@@ -49,75 +49,75 @@ public class RealtimeChatTests : IClassFixture<TestWebAppFactory>, IAsyncDisposa
     private static string[] Keys(JsonElement e) => e.EnumerateObject().Select(p => p.Name).OrderBy(k => k).ToArray();
 
     [Fact]
-    public async Task Mesaj_IkiTarafaCanliGider_UcuncuKisiyeGitmez()
+    public async Task Message_GoesLiveToBothSides_NotToAThirdPerson()
     {
         var client = _factory.CreateClient();
-        var ayse = await RegisterAsync(client, "rt_");
-        var ali = await RegisterAsync(client, "rt_");
-        var baskasi = await RegisterAsync(client, "rt_");
+        var alice = await RegisterAsync(client, "rt_");
+        var bob = await RegisterAsync(client, "rt_");
+        var stranger = await RegisterAsync(client, "rt_");
 
-        var ayseLive = await ConnectAsync(ayse);
-        var aliLive = await ConnectAsync(ali);
-        var aliOtherTab = await ConnectAsync(ali); // aynı hesabın ikinci sekmesi
-        var baskasiLive = await ConnectAsync(baskasi);
+        var aliceLive = await ConnectAsync(alice);
+        var bobLive = await ConnectAsync(bob);
+        var bobOtherTab = await ConnectAsync(bob); // a second tab of the same account
+        var strangerLive = await ConnectAsync(stranger);
 
-        var res = await client.SendAsync(Authed(HttpMethod.Post, "/api/v1/messages", ali.Token,
-            new { recipientId = ayse.UserId, content = "canlı selam" }));
+        var res = await client.SendAsync(Authed(HttpMethod.Post, "/api/v1/messages", bob.Token,
+            new { recipientId = alice.UserId, content = "live hello" }));
         res.EnsureSuccessStatusCode();
         using var createdDoc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
         var created = createdDoc.RootElement;
         var id = created.GetProperty("id").GetInt32();
         Assert.True(id > 0);
-        Assert.Equal("canlı selam", created.GetProperty("content").GetString());
+        Assert.Equal("live hello", created.GetProperty("content").GetString());
 
-        await Eventually(() => ayseLive.Messages.Any() && aliLive.Messages.Any() && aliOtherTab.Messages.Any(),
-            "alıcıya ve gönderenin tüm bağlantılarına canlı mesaj");
+        await Eventually(() => aliceLive.Messages.Any() && bobLive.Messages.Any() && bobOtherTab.Messages.Any(),
+            "live message to the recipient and all of the sender's connections");
 
-        var received = ayseLive.Messages.Single();
+        var received = aliceLive.Messages.Single();
         Assert.Equal(id, received.GetProperty("id").GetInt32());
-        Assert.Equal(ali.UserId, received.GetProperty("senderId").GetString());
-        Assert.Equal("canlı selam", received.GetProperty("content").GetString());
-        Assert.Equal(id, aliOtherTab.Messages.Single().GetProperty("id").GetInt32());
+        Assert.Equal(bob.UserId, received.GetProperty("senderId").GetString());
+        Assert.Equal("live hello", received.GetProperty("content").GetString());
+        Assert.Equal(id, bobOtherTab.Messages.Single().GetProperty("id").GetInt32());
 
-        // Bildirim de gerçek hub üzerinden, sözleşmeye uygun gelir.
-        await Eventually(() => ayseLive.Notifications.Any(), "alıcıya bildirim");
+        // The notification also arrives through the real hub, matching the contract.
+        await Eventually(() => aliceLive.Notifications.Any(), "notification to the recipient");
         Assert.Equal(new[] { "createdAt", "id", "isRead", "message", "relatedUrl" },
-            Keys(ayseLive.Notifications.Single()));
+            Keys(aliceLive.Notifications.Single()));
 
-        // Konuşmanın dışındaki kullanıcı hiçbir şey almaz.
+        // A user outside the conversation receives nothing.
         await Task.Delay(300);
-        Assert.Empty(baskasiLive.Messages);
-        Assert.Empty(baskasiLive.Notifications);
+        Assert.Empty(strangerLive.Messages);
+        Assert.Empty(strangerLive.Notifications);
     }
 
-    // İstemci canlı mesajı, thread'den gelen mesajla aynı modelle okur.
+    // The client reads the live message with the same model as the thread's.
     [Fact]
-    public async Task CanliMesaj_ThreadIleAyniSekilde()
+    public async Task LiveMessage_SameShapeAsThread()
     {
         var client = _factory.CreateClient();
-        var ayse = await RegisterAsync(client, "rt_");
-        var ali = await RegisterAsync(client, "rt_");
-        var ayseLive = await ConnectAsync(ayse);
+        var alice = await RegisterAsync(client, "rt_");
+        var bob = await RegisterAsync(client, "rt_");
+        var aliceLive = await ConnectAsync(alice);
 
-        var res = await client.SendAsync(Authed(HttpMethod.Post, "/api/v1/messages", ali.Token,
-            new { recipientId = ayse.UserId, content = "şekil" }));
+        var res = await client.SendAsync(Authed(HttpMethod.Post, "/api/v1/messages", bob.Token,
+            new { recipientId = alice.UserId, content = "shape" }));
         res.EnsureSuccessStatusCode();
-        await Eventually(() => ayseLive.Messages.Any(), "canlı mesaj");
+        await Eventually(() => aliceLive.Messages.Any(), "live message");
 
-        var thread = await client.SendAsync(Authed(HttpMethod.Get, $"/api/v1/messages/thread/{ali.UserId}", ayse.Token));
+        var thread = await client.SendAsync(Authed(HttpMethod.Get, $"/api/v1/messages/thread/{bob.UserId}", alice.Token));
         using var threadDoc = JsonDocument.Parse(await thread.Content.ReadAsStringAsync());
         var fromThread = threadDoc.RootElement.EnumerateArray().Single();
 
-        Assert.Equal(Keys(fromThread), Keys(ayseLive.Messages.Single()));
+        Assert.Equal(Keys(fromThread), Keys(aliceLive.Messages.Single()));
         using var createdDoc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
         Assert.Equal(Keys(fromThread), Keys(createdDoc.RootElement));
     }
 
-    // Tarayıcı ve Flutter istemcileri token'ı sorgu parametresiyle yollar
-    // (WebSocket başlık taşıyamaz); .NET istemcisi başlık kullandığı için bu yol
-    // doğrudan sınanır.
+    // Browser and Flutter clients send the token as a query parameter
+    // (WebSockets cannot carry headers); the .NET client uses a header, so this path
+    // is tested directly.
     [Fact]
-    public async Task Hub_KimlikIster_SorguParametresiyleKabulEder()
+    public async Task Hub_RequiresIdentity_AcceptsQueryParameter()
     {
         var client = _factory.CreateClient();
         var me = await RegisterAsync(client, "rt_");

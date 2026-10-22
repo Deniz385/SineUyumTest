@@ -1,6 +1,7 @@
 namespace SineUyum.Api.Dtos
 {
-    // Yalnızca bilgi mesajı dönen uçlar için: { "message": "..." }.
+    // For endpoints that only return an informational message: { "message": "..." }.
+    // The message is in the request language.
     public class StatusMessageDto
     {
         public string Message { get; set; } = string.Empty;
@@ -9,8 +10,8 @@ namespace SineUyum.Api.Dtos
         public StatusMessageDto(string message) => Message = message;
     }
 
-    // Film özeti; etkinlik önerilerinde, mesajdaki film önerisinde ve
-    // "addmovie" yanıtında aynı şekil kullanılır.
+    // Movie summary; the same shape is used for event suggestions, a movie
+    // suggested in a message and the "addmovie" response.
     public class MovieSummaryDto
     {
         public int Id { get; set; }
@@ -18,7 +19,7 @@ namespace SineUyum.Api.Dtos
         public string? PosterPath { get; set; }
     }
 
-    // Takipçi / takip edilen listelerindeki kullanıcı.
+    // A user in follower / following lists.
     public class UserBriefDto
     {
         public string Id { get; set; } = string.Empty;

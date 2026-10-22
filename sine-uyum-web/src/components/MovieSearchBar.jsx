@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api/axiosConfig'; // DÜZELTME: axios yerine merkezi api import ediliyor
+import { useTranslation } from 'react-i18next';
+import api from '../api/axiosConfig';
 import { Autocomplete, TextField, CircularProgress, Box } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 
@@ -10,10 +11,11 @@ export const MovieSearchBar = ({ onMovieSelect }) => {
   const [loading, setLoading] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const navigate = useNavigate();
-  const { user } = useAuth(); // DÜZELTME: token yerine user kullanılıyor
+  const { t } = useTranslation();
+  const { user } = useAuth();
 
   useEffect(() => {
-    // Eğer kullanıcı giriş yapmamışsa arama yapma
+    // Don't search when nobody is logged in
     if (!user) {
         setOptions([]);
         return;
@@ -22,7 +24,7 @@ export const MovieSearchBar = ({ onMovieSelect }) => {
     const delayDebounceFn = setTimeout(() => {
       if (inputValue) {
         setLoading(true);
-        // DÜZELTME: 'api' kullanılıyor ve header kaldırılıyor. Interceptor token'ı ekleyecek.
+        // The interceptor adds the token and language headers.
         api.get(`/api/v1/movies/search`, {
           params: { query: inputValue }
         }).then(response => {
@@ -30,7 +32,7 @@ export const MovieSearchBar = ({ onMovieSelect }) => {
           const uniqueMovies = Array.from(new Map(movies.map(movie => [movie.id, movie])).values());
           setOptions(uniqueMovies);
         }).catch(err => {
-          console.error("Film arama hatası:", err);
+          console.error("Movie search failed:", err);
         }).finally(() => {
             setLoading(false);
         });
@@ -40,7 +42,7 @@ export const MovieSearchBar = ({ onMovieSelect }) => {
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [inputValue, user]); // DÜZELTME: Bağımlılık 'user' olarak değiştirildi
+  }, [inputValue, user]);
 
   const handleOnChange = (event, value) => {
     if (value && value.id) {
@@ -75,7 +77,7 @@ export const MovieSearchBar = ({ onMovieSelect }) => {
       renderInput={(params) => (
         <TextField
           {...params}
-          placeholder="Film ara..."
+          placeholder={t('search.moviesPlaceholder')}
           variant="outlined"
           size="small"
           InputProps={{

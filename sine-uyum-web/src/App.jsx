@@ -12,8 +12,8 @@ import { NotificationProvider } from './context/NotificationContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageLoader } from './components/Layout';
 
-// Sayfalar ihtiyaç anında yüklenir (M13): giriş ekranı tüm uygulamayı
-// (yönetici paneli, sohbet, SignalR...) indirmeden açılır.
+// Pages are loaded on demand (M13): the login screen opens without downloading
+// the whole app (admin panel, chat, SignalR...).
 const page = (load, name) => lazy(() => load().then((m) => ({ default: m[name] })));
 const HomePage = page(() => import('./pages/HomePage'), 'HomePage');
 const ProfilePage = page(() => import('./pages/ProfilePage'), 'ProfilePage');
@@ -36,11 +36,11 @@ function App() {
         <AuthProvider>
           <SnackbarProvider>
             <NotificationProvider>
-              {/* Son çare: sağlayıcılar ya da giriş ekranı çökerse beyaz ekran yerine hata kartı. */}
+              {/* Last resort: if a provider or the login screen crashes, show an error card instead of a blank page. */}
               <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
               <Routes>
-                {/* Herkesin erişebileceği rotalar */}
+                {/* Public routes */}
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/" element={<LoginPage />} />

@@ -5,11 +5,11 @@ import { useAuth } from '../context/AuthContext';
 export const AdminRoute = () => {
   const { user } = useAuth();
 
-  // Eğer kullanıcı varsa VE 'Admin' rolüne sahipse, içindeki sayfaları (<AdminPage />) göster.
+  // Logged in AND has the 'Admin' role: render the nested pages (<AdminPage />).
   if (user && user.roles?.includes('Admin')) {
     return <Outlet />;
   }
 
-  // Admin değilse, ana sayfaya yönlendir.
+  // Not an admin: redirect to the home page.
   return <Navigate to="/home" replace />;
 };

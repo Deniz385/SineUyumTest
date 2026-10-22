@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api, { mediaUrl } from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, Grid, Card, CardContent, Avatar, Button, Chip } from '@mui/material';
 
 const UserResultCard = ({ user }) => {
+    const { t } = useTranslation();
     const getChipColor = (score) => {
         if (score > 75) return "success";
         if (score > 50) return "warning";
@@ -25,7 +27,7 @@ const UserResultCard = ({ user }) => {
                     
                     {user.compatibilityScore > 0 && (
                         <Chip 
-                            label={`Uyum: %${user.compatibilityScore}`} 
+                            label={t('search.compatibility', { score: user.compatibilityScore })} 
                             color={getChipColor(user.compatibilityScore)}
                             size="small"
                             sx={{ my: 1 }} 
@@ -33,12 +35,12 @@ const UserResultCard = ({ user }) => {
                     )}
 
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1, minHeight: '40px' }}>
-                        {user.bio ? `"${user.bio.substring(0, 70)}..."` : "Kullanıcının bir biyografisi yok."}
+                        {user.bio ? `"${user.bio.substring(0, 70)}..."` : t('search.noBio')}
                     </Typography>
                 </CardContent>
                 <Box sx={{ p: 2, pt: 0 }}>
                     <Button component={Link} to={`/profile/${user.id}`} variant="contained" fullWidth>
-                        Profile Git
+                        {t('search.goToProfile')}
                     </Button>
                 </Box>
             </Card>
@@ -47,6 +49,7 @@ const UserResultCard = ({ user }) => {
 };
 
 export const SearchResultsPage = () => {
+    const { t } = useTranslation();
     const [searchParams] = useSearchParams();
     const query = searchParams.get('query');
     const { user } = useAuth();
@@ -69,22 +72,22 @@ export const SearchResultsPage = () => {
                 });
                 setUsers(response.data.$values || response.data);
                 if ((response.data.$values || response.data).length === 0) {
-                    setMessage(`'${query}' için sonuç bulunamadı.`);
+                    setMessage(t('search.noResults', { query }));
                 }
             } catch {
-                setMessage('Kullanıcılar aranırken bir hata oluştu.');
+                setMessage(t('search.error'));
             } finally {
                 setIsLoading(false);
             }
         };
 
         fetchUsers();
-    }, [query, user]);
+    }, [query, user, t]);
 
     return (
         <div className="page-container">
             <Typography variant="h4" component="h1" gutterBottom>
-                Arama Sonuçları: "{query}"
+                {t('search.title', { query })}
             </Typography>
 
             {isLoading && <CircularProgress sx={{ my: 4 }} />}

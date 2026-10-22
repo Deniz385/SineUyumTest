@@ -1,15 +1,17 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
 
 /**
- * Yeniden kullanılabilir onaylama diyalog kutusu.
- * @param {boolean} open - Diyalogun açık olup olmadığını kontrol eder.
- * @param {function} onClose - Diyalog kapatıldığında (iptal edildiğinde) çalışacak fonksiyon.
- * @param {function} onConfirm - Onay butonuna basıldığında çalışacak fonksiyon.
- * @param {string} title - Diyalog başlığı.
- * @param {string} description - Diyalog içindeki açıklama metni.
+ * Reusable confirmation dialog.
+ * @param {boolean} open - Whether the dialog is open.
+ * @param {function} onClose - Called when the dialog is closed (cancelled).
+ * @param {function} onConfirm - Called when the confirm button is pressed.
+ * @param {string} title - Dialog title.
+ * @param {string} description - Explanatory text inside the dialog.
  */
 export const ConfirmationDialog = ({ open, onClose, onConfirm, title, description }) => {
+  const { t } = useTranslation();
   return (
     <Dialog
       open={open}
@@ -24,9 +26,9 @@ export const ConfirmationDialog = ({ open, onClose, onConfirm, title, descriptio
         </DialogContentText>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>İptal</Button>
+        <Button onClick={onClose}>{t('common.cancel')}</Button>
         <Button onClick={onConfirm} color="primary" autoFocus>
-          Onayla
+          {t('common.confirm')}
         </Button>
       </DialogActions>
     </Dialog>

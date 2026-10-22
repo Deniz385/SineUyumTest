@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { TextField, Button, Box, Typography, CircularProgress } from '@mui/material';
 import api from '../api/axiosConfig';
-import { useSnackbar } from '../context/SnackbarProvider'; // <-- SNACKBAR KANCASINI İÇE AKTAR
+import { useSnackbar } from '../context/SnackbarProvider';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 
 export const LoginPage = () => {
+  const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { loginAction } = useAuth();
-  const { showSnackbar } = useSnackbar(); // <-- SNACKBAR FONKSİYONUNU AL
+  const { showSnackbar } = useSnackbar();
 
   const handleLogin = async (event) => {
     event.preventDefault();
@@ -22,12 +25,11 @@ export const LoginPage = () => {
         password: password,
       });
 
-      // Yanıt { token, refreshToken, expiresAt, user } içeriyor.
+      // The response contains { token, refreshToken, expiresAt, user }.
       loginAction(response.data);
 
     } catch (err) {
-      // --- DEĞİŞİKLİK: setError yerine showSnackbar ---
-      const errorMessage = err.response?.data?.message || 'Giriş yapılırken bir sorun oluştu. Lütfen tekrar deneyin.';
+      const errorMessage = err.response?.data?.message || t('auth.login.failed');
       showSnackbar(errorMessage, 'error');
     } finally {
       setIsLoading(false);
@@ -43,22 +45,24 @@ export const LoginPage = () => {
         padding: 4,
         boxShadow: 3,
         borderRadius: 2,
-        // Temadan renk almak için bgcolor güncellendi
+        // Background colour comes from the theme
         backgroundColor: 'background.paper',
         textAlign: 'center'
       }}
     >
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: -2, mr: -2 }}>
+        <LanguageSwitcher variant="text" />
+      </Box>
       <Typography variant="h4" component="h1" gutterBottom>
-        Giriş Yap
+        {t('auth.login.title')}
       </Typography>
       <Box component="form" onSubmit={handleLogin} sx={{ mt: 1 }}>
-        {/* AlertMessage bileşeni tamamen kaldırıldı */}
         <TextField
           margin="normal"
           required
           fullWidth
           id="username"
-          label="Kullanıcı Adı"
+          label={t('auth.username')}
           name="username"
           autoComplete="username"
           autoFocus
@@ -70,7 +74,7 @@ export const LoginPage = () => {
           required
           fullWidth
           name="password"
-          label="Şifre"
+          label={t('auth.password')}
           type="password"
           id="password"
           autoComplete="current-password"
@@ -84,12 +88,12 @@ export const LoginPage = () => {
           sx={{ mt: 3, mb: 2, py: 1.5 }}
           disabled={isLoading}
         >
-          {isLoading ? <CircularProgress size={24} /> : 'Giriş Yap'}
+          {isLoading ? <CircularProgress size={24} /> : t('auth.login.submit')}
         </Button>
         <Typography variant="body2">
-          Hesabınız yok mu?{' '}
+          {t('auth.login.noAccount')}{' '}
           <Link to="/register" style={{ textDecoration: 'none' }}>
-            Hemen Kayıt Olun
+            {t('auth.login.registerLink')}
           </Link>
         </Typography>
       </Box>

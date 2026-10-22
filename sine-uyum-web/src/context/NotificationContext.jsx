@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useAuth } from './AuthContext';
 import api, { API_URL } from '../api/axiosConfig';
 import { useSnackbar } from './SnackbarProvider';
+import { useTranslation } from 'react-i18next';
 
 const NotificationContext = createContext(null);
 
@@ -9,20 +10,23 @@ export const useNotifications = () => {
     return useContext(NotificationContext);
 };
 
-// Uygulamada TEK SignalR bağlantısı vardır ve burada yaşar. İki olay taşır:
-//   ReceiveNotification → bildirim listesi
-//   ReceiveMessage      → canlı sohbet (subscribeToMessages ile dinlenir)
-//   MessagesRead        → "Görüldü" (subscribeToReads ile dinlenir)
+// The app has a SINGLE SignalR connection and it lives here. It carries:
+//   ReceiveNotification → notification list
+//   ReceiveMessage      → live chat (listened to via subscribeToMessages)
+//   MessagesRead        → "Seen" receipts (listened to via subscribeToReads)
 export const NotificationProvider = ({ children }) => {
     const [notifications, setNotifications] = useState([]);
     const { user } = useAuth();
     const { showSnackbar } = useSnackbar();
+    const { i18n } = useTranslation();
+    const language = i18n.language;
 
     const messageListeners = useRef(new Set());
     const reconnectListeners = useRef(new Set());
     const readListeners = useRef(new Set());
-    // Şu an açık olan sohbetin karşı kullanıcısı: ondan gelen mesaj bildirimi
-    // gösterilmez, doğrudan okundu işaretlenir (mesaj zaten ekranda).
+    // The other user of the conversation currently open: message notifications
+    // from them are not shown but marked as read right away (the message is
+    // already on screen).
     const activeConversation = useRef(null);
     const notificationsRef = useRef(notifications);
     notificationsRef.current = notifications;
@@ -33,7 +37,7 @@ export const NotificationProvider = ({ children }) => {
             const response = await api.get('/api/v1/notification');
             setNotifications(response.data);
         } catch (error) {
-            console.error('Bildirimler alınamadı:', error);
+            console.error('Could not load notifications:', error);
         }
     }, [user]);
 
@@ -42,7 +46,7 @@ export const NotificationProvider = ({ children }) => {
         try {
             await api.post(`/api/v1/notification/${notificationId}/mark-as-read`);
         } catch (error) {
-            console.error('Bildirim okundu olarak işaretlenemedi:', error);
+            console.error('Could not mark the notification as read:', error);
         }
     }, []);
 
@@ -52,8 +56,8 @@ export const NotificationProvider = ({ children }) => {
         let cancelled = false;
         let connection = null;
 
-        // Dinleyiciler start'tan ÖNCE kaydedilir; aksi halde bağlantı kurulduğu
-        // an gelen olaylar kaybolurdu.
+        // Handlers are registered BEFORE start; otherwise events arriving the
+        // moment the connection opens would be lost.
         const subscribe = (hub) => {
             hub.on('ReceiveNotification', (notification) => {
                 const active = activeConversation.current;
@@ -74,21 +78,23 @@ export const NotificationProvider = ({ children }) => {
                 readListeners.current.forEach(listener => listener(receipt));
             });
 
-            // Bağlantı koptuğu sürede gelenler kaçmış olabilir: yeniden kurulunca
-            // bildirimler ve açık ekranlar (sohbet) sunucudan tazelenir.
+            // Events may have been missed while disconnected: after reconnecting,
+            // notifications and open screens (chat) are refetched from the server.
             hub.onreconnected(() => {
                 fetchNotifications();
                 reconnectListeners.current.forEach(listener => listener());
             });
         };
 
-        // SignalR kütüphanesi yalnızca giriş yapılınca yüklenir (M13); giriş
-        // ekranının paketine girmez.
+        // The SignalR library is only loaded after login (M13), so it stays out
+        // of the login screen's bundle.
+        // The hub gets the UI language as ?lang=; a language change opens a new
+        // connection. Push texts are rendered in the user's stored language.
         import('@microsoft/signalr')
             .then((signalR) => {
                 if (cancelled) return;
                 connection = new signalR.HubConnectionBuilder()
-                    .withUrl(`${API_URL}/notificationHub`, {
+                    .withUrl(`${API_URL}/notificationHub?lang=${encodeURIComponent(language)}`, {
                         accessTokenFactory: () => localStorage.getItem('token')
                     })
                     .withAutomaticReconnect()
@@ -96,27 +102,27 @@ export const NotificationProvider = ({ children }) => {
                 subscribe(connection);
                 return connection.start().then(() => { if (!cancelled) fetchNotifications(); });
             })
-            .catch(e => { if (!cancelled) console.error('SignalR bağlantı hatası: ', e); });
+            .catch(e => { if (!cancelled) console.error('SignalR connection error: ', e); });
 
-        // Her durumda durdurulur. Önceden yalnızca "Connected" iken durduruluyordu:
-        // bağlanırken bileşen kaldırılırsa (React Strict Mode, kullanıcı değişimi)
-        // eski bağlantı yaşamaya devam ediyor ve her olay iki kez geliyordu.
+        // Always stopped. It used to be stopped only while "Connected": if the
+        // component unmounted mid-connect (React Strict Mode, user switch) the
+        // old connection stayed alive and every event arrived twice.
         return () => {
             cancelled = true;
             connection?.stop();
         };
-    }, [user, fetchNotifications, showSnackbar]);
+    }, [user, language, fetchNotifications, showSnackbar]);
 
     const markAllAsRead = async () => {
         try {
             await api.post('/api/v1/notification/mark-all-as-read');
             setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
         } catch (error) {
-            console.error('Tüm bildirimler okundu olarak işaretlenemedi:', error);
+            console.error('Could not mark all notifications as read:', error);
         }
     };
 
-    // Dinleyici ekler; dönen fonksiyon kaldırır (useEffect temizliğinde çağrılır).
+    // Adds a listener; the returned function removes it (call it in useEffect cleanup).
     const subscribeToMessages = useCallback((listener) => {
         messageListeners.current.add(listener);
         return () => messageListeners.current.delete(listener);
@@ -132,8 +138,8 @@ export const NotificationProvider = ({ children }) => {
         return () => reconnectListeners.current.delete(listener);
     }, []);
 
-    // Sohbet ekranı açılınca/kapanınca çağrılır. Açılırken o sohbetin okunmamış
-    // bildirimleri de okundu işaretlenir.
+    // Called when a chat screen opens/closes. On open, that conversation's
+    // unread notifications are marked as read too.
     const setActiveConversation = useCallback((otherUserId) => {
         activeConversation.current = otherUserId;
         if (!otherUserId) return;

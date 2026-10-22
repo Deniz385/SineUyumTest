@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Typography, TextField, Button, CircularProgress, Paper, Grid, List, ListItem, ListItemText, Divider, IconButton, Modal } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import api from '../api/axiosConfig';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
-import { useSnackbar } from '../context/SnackbarProvider'; // <-- SNACKBAR KANCASINI İÇE AKTAR
+import { useSnackbar } from '../context/SnackbarProvider';
 
 const EventForm = ({ onFormSubmit, initialData, onCancel, isLoading }) => {
+    const { t } = useTranslation();
     const [eventData, setEventData] = useState({
         locationName: initialData?.locationName || '',
         address: initialData?.address || '',
@@ -30,29 +32,30 @@ const EventForm = ({ onFormSubmit, initialData, onCancel, isLoading }) => {
     return (
         <Paper component="form" onSubmit={handleSubmit} sx={{ p: 3 }}>
             <Typography variant="h5" component="h2" gutterBottom>
-                {initialData ? 'Etkinliği Düzenle' : 'Yeni Etkinlik Oluştur'}
+                {initialData ? t('admin.editEvent') : t('admin.newEvent')}
             </Typography>
-            <TextField label="Etkinlik Adı / Mekan" name="locationName" value={eventData.locationName} onChange={handleChange} fullWidth required margin="normal" />
-            <TextField label="Adres" name="address" value={eventData.address} onChange={handleChange} fullWidth margin="normal" />
-            <TextField label="Etkinlik Tarihi ve Saati" name="eventDate" type="datetime-local" value={eventData.eventDate} onChange={handleChange} fullWidth required margin="normal" InputLabelProps={{ shrink: true }} />
-            <TextField label="Grup Büyüklüğü" name="groupSize" type="number" value={eventData.groupSize} onChange={handleChange} fullWidth required margin="normal" InputProps={{ inputProps: { min: 2, max: 10 } }} />
+            <TextField label={t('admin.locationName')} name="locationName" value={eventData.locationName} onChange={handleChange} fullWidth required margin="normal" />
+            <TextField label={t('admin.address')} name="address" value={eventData.address} onChange={handleChange} fullWidth margin="normal" />
+            <TextField label={t('admin.eventDate')} name="eventDate" type="datetime-local" value={eventData.eventDate} onChange={handleChange} fullWidth required margin="normal" InputLabelProps={{ shrink: true }} />
+            <TextField label={t('admin.groupSize')} name="groupSize" type="number" value={eventData.groupSize} onChange={handleChange} fullWidth required margin="normal" InputProps={{ inputProps: { min: 2, max: 10 } }} />
             <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
                  <Button type="submit" variant="contained" disabled={isLoading}>
-                    {isLoading ? <CircularProgress size={24} /> : (initialData ? 'Güncelle' : 'Oluştur')}
+                    {isLoading ? <CircularProgress size={24} /> : (initialData ? t('common.update') : t('common.create'))}
                 </Button>
-                {onCancel && <Button variant="outlined" onClick={onCancel}>İptal</Button>}
+                {onCancel && <Button variant="outlined" onClick={onCancel}>{t('common.cancel')}</Button>}
             </Box>
         </Paper>
     );
 };
 
 export const AdminPage = () => {
+    const { t, i18n } = useTranslation();
     const [events, setEvents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editingEvent, setEditingEvent] = useState(null);
     const [dialog, setDialog] = useState({ isOpen: false, title: '', description: '', onConfirm: null });
-    const { showSnackbar } = useSnackbar(); // <-- SNACKBAR FONKSİYONUNU AL
+    const { showSnackbar } = useSnackbar();
 
     const fetchEvents = useCallback(async () => {
         setIsLoading(true);
@@ -60,11 +63,11 @@ export const AdminPage = () => {
             const response = await api.get('/api/v1/event');
             setEvents(response.data.$values || response.data);
         } catch {
-            showSnackbar('Etkinlikler yüklenemedi.', 'error');
+            showSnackbar(t('admin.loadFailed'), 'error');
         } finally {
             setIsLoading(false);
         }
-    }, [showSnackbar]);
+    }, [showSnackbar, t]);
 
     useEffect(() => {
         fetchEvents();
@@ -74,10 +77,10 @@ export const AdminPage = () => {
         setIsSubmitting(true);
         try {
             await api.post('/api/v1/event', formData);
-            showSnackbar('Etkinlik başarıyla oluşturuldu!', 'success');
+            showSnackbar(t('admin.created'), 'success');
             fetchEvents();
         } catch (error) {
-            showSnackbar(error.response?.data?.message || 'Etkinlik oluşturulurken bir hata oluştu.', 'error');
+            showSnackbar(error.response?.data?.message || t('admin.createFailed'), 'error');
         } finally {
             setIsSubmitting(false);
         }
@@ -86,8 +89,8 @@ export const AdminPage = () => {
     const handleDeleteEvent = (eventId) => {
         setDialog({
             isOpen: true,
-            title: 'Etkinliği Sil?',
-            description: 'Bu etkinliği ve tüm katılımcılarını kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
+            title: t('admin.deleteTitle'),
+            description: t('admin.deleteBody'),
             onConfirm: () => {
                 setDialog({ isOpen: false });
                 performDelete(eventId);
@@ -96,21 +99,21 @@ export const AdminPage = () => {
     };
 
     const performDelete = async (eventId) => {
-        showSnackbar('Etkinlik siliniyor...', 'info');
+        showSnackbar(t('admin.deleting'), 'info');
         try {
             await api.delete(`/api/v1/event/${eventId}`);
-            showSnackbar('Etkinlik başarıyla silindi.', 'success');
+            showSnackbar(t('admin.deleted'), 'success');
             fetchEvents();
         } catch (error) {
-            showSnackbar(error.response?.data?.message || 'Etkinlik silinirken bir hata oluştu.', 'error');
+            showSnackbar(error.response?.data?.message || t('admin.deleteFailed'), 'error');
         }
     };
     
     const handleTriggerMatch = (eventId) => {
         setDialog({
             isOpen: true,
-            title: 'Eşleştirmeyi Başlat?',
-            description: 'Bu etkinlik için katılımcıları eşleştirmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
+            title: t('admin.matchTitle'),
+            description: t('admin.matchBody'),
             onConfirm: () => {
                 setDialog({ isOpen: false });
                 performMatch(eventId);
@@ -120,9 +123,9 @@ export const AdminPage = () => {
 
     const performMatch = async (eventId) => {
         setIsSubmitting(true);
-        showSnackbar('Eşleştirme işlemi başlatılıyor...', 'info');
+        showSnackbar(t('admin.matchStarting'), 'info');
         try {
-            // Sunucu işi kuyruğa alıp hemen döner (202); bitene dek yoklanır.
+            // The server queues the job and returns at once (202); poll until it finishes.
             let run = (await api.post(`/api/v1/admin/events/${eventId}/create-groups`)).data;
             const deadline = Date.now() + 2 * 60 * 1000;
             while ((run.status === 'Queued' || run.status === 'Running') && Date.now() < deadline) {
@@ -134,10 +137,10 @@ export const AdminPage = () => {
             } else if (run.status === 'Failed') {
                 showSnackbar(run.error || run.message, 'error');
             } else {
-                showSnackbar('Eşleştirme sürüyor; sonucu birazdan tekrar deneyerek görebilirsiniz.', 'info');
+                showSnackbar(t('admin.matchInProgress'), 'info');
             }
         } catch (error) {
-            const errorMessage = error.response?.data?.title || error.response?.data?.message || 'Eşleştirme sırasında bilinmeyen bir hata oluştu.';
+            const errorMessage = error.response?.data?.title || error.response?.data?.message || t('admin.matchFailed');
             showSnackbar(errorMessage, 'error');
         } finally {
             setIsSubmitting(false);
@@ -149,11 +152,11 @@ export const AdminPage = () => {
         setIsSubmitting(true);
         try {
             await api.put(`/api/v1/event/${editingEvent.id}`, formData);
-            showSnackbar('Etkinlik başarıyla güncellendi!', 'success');
+            showSnackbar(t('admin.updated'), 'success');
             setEditingEvent(null);
             fetchEvents();
         } catch (error) {
-            showSnackbar(error.response?.data?.message || 'Etkinlik güncellenirken bir hata oluştu.', 'error');
+            showSnackbar(error.response?.data?.message || t('admin.updateFailed'), 'error');
         } finally {
             setIsSubmitting(false);
         }
@@ -163,7 +166,7 @@ export const AdminPage = () => {
         <>
             <Box className="page-container" sx={{ maxWidth: '1000px', textAlign: 'left' }}>
                 <Typography variant="h4" component="h1" gutterBottom>
-                    Yönetici Paneli
+                    {t('admin.title')}
                 </Typography>
                 
                 <Grid container spacing={4}>
@@ -172,7 +175,7 @@ export const AdminPage = () => {
                     </Grid>
                     <Grid xs={12} md={8}>
                         <Paper sx={{ p: 2 }}>
-                            <Typography variant="h5" component="h2" gutterBottom>Mevcut Etkinlikler</Typography>
+                            <Typography variant="h5" component="h2" gutterBottom>{t('admin.existingEvents')}</Typography>
                             {isLoading ? <CircularProgress /> : (
                                 <List>
                                     {events.map((event, index) => (
@@ -180,12 +183,12 @@ export const AdminPage = () => {
                                             <ListItem>
                                                 <ListItemText
                                                     primary={event.locationName}
-                                                    secondary={`Tarih: ${new Date(event.eventDate).toLocaleString('tr-TR')} - Katılımcı: ${event.participantCount} - Grup: ${event.groupSize} kişi`}
+                                                    secondary={t('admin.eventSummary', { date: new Date(event.eventDate).toLocaleString(i18n.language), participants: event.participantCount, groupSize: event.groupSize })}
                                                 />
                                                 <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                                    <Button size="small" variant="outlined" onClick={() => handleTriggerMatch(event.id)} disabled={isSubmitting}>Eşleştir</Button>
-                                                    <IconButton onClick={() => setEditingEvent(event)} color="primary" disabled={isSubmitting}><EditIcon /></IconButton>
-                                                    <IconButton onClick={() => handleDeleteEvent(event.id)} color="error" disabled={isSubmitting}><DeleteIcon /></IconButton>
+                                                    <Button size="small" variant="outlined" onClick={() => handleTriggerMatch(event.id)} disabled={isSubmitting}>{t('admin.match')}</Button>
+                                                    <IconButton onClick={() => setEditingEvent(event)} color="primary" disabled={isSubmitting} aria-label={t('common.edit')}><EditIcon /></IconButton>
+                                                    <IconButton onClick={() => handleDeleteEvent(event.id)} color="error" disabled={isSubmitting} aria-label={t('common.delete')}><DeleteIcon /></IconButton>
                                                 </Box>
                                             </ListItem>
                                             {index < events.length - 1 && <Divider />}

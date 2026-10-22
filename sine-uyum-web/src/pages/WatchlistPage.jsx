@@ -3,6 +3,7 @@ import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, Grid, Card, CardContent, Button, Modal, TextField } from '@mui/material';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import AddIcon from '@mui/icons-material/Add';
 
 const modalStyle = {
@@ -18,6 +19,7 @@ const modalStyle = {
 };
 
 export const WatchlistPage = () => {
+    const { t } = useTranslation();
     const { user } = useAuth();
     const [watchlists, setWatchlists] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -31,13 +33,13 @@ export const WatchlistPage = () => {
         setIsLoading(true);
         try {
             const response = await api.get(`/api/v1/watchlist`);
-            setWatchlists(response.data); // $values kontrolü kaldırıldı
+            setWatchlists(response.data);
         } catch {
-            setError('Listeler yüklenirken bir hata oluştu.');
+            setError(t('watchlist.loadError'));
         } finally {
             setIsLoading(false);
         }
-    }, [user]);
+    }, [user, t]);
 
     useEffect(() => {
         fetchWatchlists();
@@ -54,7 +56,7 @@ export const WatchlistPage = () => {
             setNewListDesc('');
             fetchWatchlists();
         } catch {
-            setError("Yeni liste oluşturulurken bir hata oluştu.");
+            setError(t('watchlist.createFailed'));
         }
     };
 
@@ -65,12 +67,12 @@ export const WatchlistPage = () => {
         <>
             <Box className="page-container" sx={{ maxWidth: '1000px' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                    <Typography variant="h4" component="h1">İzleme Listelerim</Typography>
-                    <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpen(true)}>Yeni Liste Oluştur</Button>
+                    <Typography variant="h4" component="h1">{t('watchlist.title')}</Typography>
+                    <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpen(true)}>{t('watchlist.create')}</Button>
                 </Box>
                 
                 {watchlists.length === 0 ? (
-                    <Typography>Henüz hiç izleme listeniz yok. Hemen bir tane oluşturun!</Typography>
+                    <Typography>{t('watchlist.empty')}</Typography>
                 ) : (
                     <Grid container spacing={3}>
                         {watchlists.map(list => (
@@ -79,7 +81,7 @@ export const WatchlistPage = () => {
                                     <CardContent>
                                         <Typography variant="h6">{list.name}</Typography>
                                         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{list.description}</Typography>
-                                        <Typography variant="body2" color="text.secondary">{list.itemCount} film</Typography>
+                                        <Typography variant="body2" color="text.secondary">{t('watchlist.movieCount', { count: list.itemCount })}</Typography>
                                     </CardContent>
                                 </Card>
                             </Grid>
@@ -90,10 +92,10 @@ export const WatchlistPage = () => {
 
             <Modal open={open} onClose={() => setOpen(false)}>
                 <Box sx={modalStyle} component="form" onSubmit={handleCreateList}>
-                    <Typography variant="h6" component="h2" sx={{ mb: 2 }}>Yeni Liste Oluştur</Typography>
-                    <TextField autoFocus required margin="dense" label="Liste Adı" fullWidth variant="outlined" value={newListName} onChange={(e) => setNewListName(e.target.value)} />
-                    <TextField margin="dense" label="Açıklama (Opsiyonel)" fullWidth multiline rows={3} variant="outlined" value={newListDesc} onChange={(e) => setNewListDesc(e.target.value)} />
-                    <Button type="submit" variant="contained" sx={{ mt: 2 }}>Oluştur</Button>
+                    <Typography variant="h6" component="h2" sx={{ mb: 2 }}>{t('watchlist.create')}</Typography>
+                    <TextField autoFocus required margin="dense" label={t('watchlist.name')} fullWidth variant="outlined" value={newListName} onChange={(e) => setNewListName(e.target.value)} />
+                    <TextField margin="dense" label={t('watchlist.description')} fullWidth multiline rows={3} variant="outlined" value={newListDesc} onChange={(e) => setNewListDesc(e.target.value)} />
+                    <Button type="submit" variant="contained" sx={{ mt: 2 }}>{t('common.create')}</Button>
                 </Box>
             </Modal>
         </>

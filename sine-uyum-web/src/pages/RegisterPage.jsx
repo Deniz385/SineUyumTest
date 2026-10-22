@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { TextField, Button, Box, Typography, CircularProgress } from '@mui/material';
-import { useSnackbar } from '../context/SnackbarProvider'; // <-- SNACKBAR KANCASINI İÇE AKTAR
+import { useSnackbar } from '../context/SnackbarProvider';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import api from '../api/axiosConfig';
 
 export const RegisterPage = () => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -14,7 +17,7 @@ export const RegisterPage = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { showSnackbar } = useSnackbar(); // <-- SNACKBAR FONKSİYONUNU AL
+  const { showSnackbar } = useSnackbar();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -24,7 +27,7 @@ export const RegisterPage = () => {
     event.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
-      showSnackbar('Şifreler uyuşmuyor.', 'error');
+      showSnackbar(t('auth.register.passwordMismatch'), 'error');
       return;
     }
 
@@ -37,7 +40,7 @@ export const RegisterPage = () => {
         password: formData.password,
       });
 
-      showSnackbar('Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz...', 'success');
+      showSnackbar(t('auth.register.success'), 'success');
       
       setTimeout(() => {
         navigate('/login');
@@ -46,7 +49,7 @@ export const RegisterPage = () => {
     } catch (err) {
       const errorMessages = err.response?.data?.errors
         ? err.response.data.errors.map(e => e.description).join(' ')
-        : err.response?.data?.message || 'Kayıt sırasında bir sunucu hatası oluştu.';
+        : err.response?.data?.message || t('auth.register.failed');
       showSnackbar(errorMessages, 'error');
     } finally {
       setIsLoading(false);
@@ -62,46 +65,48 @@ export const RegisterPage = () => {
         padding: 4,
         boxShadow: 3,
         borderRadius: 2,
-        // Temadan renk almak için bgcolor güncellendi
+        // Background colour comes from the theme
         backgroundColor: 'background.paper',
         textAlign: 'center'
       }}
     >
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: -2, mr: -2 }}>
+        <LanguageSwitcher variant="text" />
+      </Box>
       <Typography variant="h4" component="h1" gutterBottom>
-        Kayıt Ol
+        {t('auth.register.title')}
       </Typography>
       <Box component="form" onSubmit={handleRegister} sx={{ mt: 1 }}>
-        {/* AlertMessage bileşenleri tamamen kaldırıldı */}
         <TextField
           margin="normal" required fullWidth autoFocus
-          label="Kullanıcı Adı" name="username"
+          label={t('auth.username')} name="username"
           value={formData.username} onChange={handleChange}
         />
         <TextField
           margin="normal" required fullWidth
-          label="E-posta" name="email" type="email"
+          label={t('auth.email')} name="email" type="email"
           value={formData.email} onChange={handleChange}
         />
         <TextField
           margin="normal" required fullWidth
-          label="Şifre" name="password" type="password"
+          label={t('auth.password')} name="password" type="password"
           value={formData.password} onChange={handleChange}
         />
         <TextField
           margin="normal" required fullWidth
-          label="Şifre Tekrar" name="confirmPassword" type="password"
+          label={t('auth.confirmPassword')} name="confirmPassword" type="password"
           value={formData.confirmPassword} onChange={handleChange}
         />
         <Button
           type="submit" fullWidth variant="contained"
           sx={{ mt: 3, mb: 2, py: 1.5 }} disabled={isLoading}
         >
-          {isLoading ? <CircularProgress size={24} /> : 'Kayıt Ol'}
+          {isLoading ? <CircularProgress size={24} /> : t('auth.register.submit')}
         </Button>
         <Typography variant="body2">
-          Zaten bir hesabınız var mı?{' '}
+          {t('auth.register.haveAccount')}{' '}
           <Link to="/login" style={{ textDecoration: 'none' }}>
-            Giriş Yapın
+            {t('auth.register.loginLink')}
           </Link>
         </Typography>
       </Box>

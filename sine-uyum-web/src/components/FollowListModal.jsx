@@ -2,6 +2,7 @@
 import React from 'react';
 import { Modal, Box, Typography, List, ListItem, ListItemText, CircularProgress, Divider } from '@mui/material';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const style = {
   position: 'absolute',
@@ -18,6 +19,7 @@ const style = {
 };
 
 export const FollowListModal = ({ open, onClose, title, list, isLoading }) => {
+  const { t } = useTranslation();
   return (
     <Modal open={open} onClose={onClose}>
       <Box sx={style}>
@@ -31,7 +33,7 @@ export const FollowListModal = ({ open, onClose, title, list, isLoading }) => {
           <List>
             {list.length === 0 ? (
               <ListItem>
-                <ListItemText primary="Gösterilecek kimse yok." />
+                <ListItemText primary={t('follow.empty')} />
               </ListItem>
             ) : (
               list.map(user => (

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Trans, useTranslation } from 'react-i18next';
 import api, { mediaUrl } from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Button, Box, Typography, Avatar, Grid, Paper, Alert } from '@mui/material';
@@ -27,6 +28,7 @@ const StatCard = ({ icon, value, label }) => (
 );
 
 export const ProfilePage = () => {
+    const { t } = useTranslation();
     const { userId } = useParams();
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -63,20 +65,20 @@ export const ProfilePage = () => {
             setProfileData(profileRes.data);
             setFollowStatus(followStatusRes.data);
 
-            // Gizli profilde uyum da kapalı (puanlardan türer); hiç istenmez.
+            // On a private profile compatibility is hidden too (it derives from ratings), so it is not requested.
             if (!isMyProfile && !profileRes.data.isRestricted) {
                 const compatibilityRes = await api.get(`/api/v1/compatibility/${userId}`);
                 setCompatibility(compatibilityRes.data);
             }
         } catch (err) {
-            // Engelleyen kullanıcı, engellediğine yokmuş gibi görünür (404).
+            // A user who blocked you looks as if they don't exist (404).
             setError(err.response?.status === 404
-                ? "Kullanıcı bulunamadı."
-                : "Profil bilgileri yüklenirken bir hata oluştu.");
+                ? t('profile.notFound')
+                : t('profile.loadError'));
         } finally {
             setIsLoading(false);
         }
-    }, [userId, user, isMyProfile]); // <-- DÜZELTME BURADA
+    }, [userId, user, isMyProfile, t]);
 
     useEffect(() => {
         fetchProfileData();
@@ -94,7 +96,7 @@ export const ProfilePage = () => {
                 setFollowStatus(prev => ({ ...prev, isFollowing: true, followerCount: prev.followerCount + 1 }));
             }
         } catch (err) {
-            showSnackbar(err.response?.data?.title || 'Takip işlemi başarısız.', 'error');
+            showSnackbar(err.response?.data?.title || t('profile.followFailed'), 'error');
         } finally {
             setIsFollowLoading(false);
         }
@@ -104,20 +106,20 @@ export const ProfilePage = () => {
         setIsBlockDialogOpen(false);
         try {
             await api.post(`/api/v1/blocks/${userId}`);
-            showSnackbar(`${profileData?.userName} engellendi.`, 'success');
+            showSnackbar(t('profile.blocked', { userName: profileData?.userName }), 'success');
             fetchProfileData();
         } catch {
-            showSnackbar('Kullanıcı engellenemedi.', 'error');
+            showSnackbar(t('profile.blockFailed'), 'error');
         }
     };
 
     const handleUnblock = async () => {
         try {
             await api.delete(`/api/v1/blocks/${userId}`);
-            showSnackbar('Engel kaldırıldı.', 'success');
+            showSnackbar(t('profile.unblocked'), 'success');
             fetchProfileData();
         } catch {
-            showSnackbar('Engel kaldırılamadı.', 'error');
+            showSnackbar(t('profile.unblockFailed'), 'error');
         }
     };
 
@@ -136,20 +138,20 @@ export const ProfilePage = () => {
 
     const handleOpenFollowList = async (type) => {
         if (profileData?.isRestricted) return;
-        const title = type === 'followers' ? 'Takipçiler' : 'Takip Edilenler';
+        const title = type === 'followers' ? t('profile.followers') : t('profile.followingList');
         setModalState({ open: true, type, title });
         setIsListLoading(true);
         try {
             const response = await api.get(`/api/v1/follow/${userId}/${type}`);
             setListData(response.data);
         } catch (err) {
-            console.error(`${title} listesi alınamadı:`, err);
+            console.error(`Could not load the ${type} list:`, err);
         } finally {
             setIsListLoading(false);
         }
     };
 
-    if (isLoading) return <div className="page-container">Yükleniyor...</div>;
+    if (isLoading) return <div className="page-container">{t('common.loadingEllipsis')}</div>;
     if (error) return <div className="page-container message error-message">{error}</div>;
 
     const isRestricted = profileData?.isRestricted;
@@ -169,22 +171,22 @@ export const ProfilePage = () => {
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                             <Typography variant="h4" component="h1">{profileData?.userName}</Typography>
                             {isMyProfile ? (
-                                <Button component={Link} to="/profile/edit" variant="outlined">Profili Düzenle</Button>
+                                <Button component={Link} to="/profile/edit" variant="outlined">{t('profile.editProfile')}</Button>
                             ) : isBlockedByMe ? (
-                                <Button variant="outlined" onClick={handleUnblock}>Engeli Kaldır</Button>
+                                <Button variant="outlined" onClick={handleUnblock}>{t('profile.unblock')}</Button>
                             ) : (
                                 <Box sx={{ display: 'flex', gap: 1 }}>
-                                    <Button variant="contained" startIcon={<MessageIcon />} onClick={() => navigate(`/messages/${userId}`)}>Mesaj Gönder</Button>
+                                    <Button variant="contained" startIcon={<MessageIcon />} onClick={() => navigate(`/messages/${userId}`)}>{t('profile.sendMessage')}</Button>
                                     <Button variant={followStatus.isFollowing ? "outlined" : "contained"} onClick={handleFollowToggle} disabled={isFollowLoading}>
-                                        {isFollowLoading ? "İşleniyor..." : (followStatus.isFollowing ? "Takipten Çık" : "Takip Et")}
+                                        {isFollowLoading ? t('common.processing') : (followStatus.isFollowing ? t('profile.unfollow') : t('profile.follow'))}
                                     </Button>
-                                    <Button color="error" onClick={() => setIsBlockDialogOpen(true)}>Engelle</Button>
+                                    <Button color="error" onClick={() => setIsBlockDialogOpen(true)}>{t('profile.block')}</Button>
                                 </Box>
                             )}
                         </Box>
                         <Box sx={{ display: 'flex', gap: 3, mt: 1 }}>
-                            <Typography onClick={() => handleOpenFollowList('followers')} sx={{ cursor: isRestricted ? 'default' : 'pointer' }}><strong>{followStatus.followerCount}</strong> Takipçi</Typography>
-                            <Typography onClick={() => handleOpenFollowList('following')} sx={{ cursor: isRestricted ? 'default' : 'pointer' }}><strong>{followStatus.followingCount}</strong> Takip</Typography>
+                            <Typography onClick={() => handleOpenFollowList('followers')} sx={{ cursor: isRestricted ? 'default' : 'pointer' }}><Trans i18nKey="profile.followerCount" count={followStatus.followerCount} components={{ strong: <strong /> }} /></Typography>
+                            <Typography onClick={() => handleOpenFollowList('following')} sx={{ cursor: isRestricted ? 'default' : 'pointer' }}><Trans i18nKey="profile.followingCount" count={followStatus.followingCount} components={{ strong: <strong /> }} /></Typography>
                         </Box>
                         {profileData?.bio && <Typography variant="body1" sx={{ mt: 2, fontStyle: 'italic', maxWidth: '75ch' }}>"{profileData.bio}"</Typography>}
                     </Box>
@@ -193,39 +195,39 @@ export const ProfilePage = () => {
                 {isRestricted && (
                     <Alert severity="info" sx={{ my: 3, textAlign: 'left' }}>
                         {isBlockedByMe
-                            ? 'Bu kullanıcıyı engellediniz. Birbirinizin profilini göremez, mesajlaşamaz ve aynı etkinlik grubuna düşmezsiniz.'
-                            : 'Bu kullanıcı puanlarını ve listelerini gizli tutuyor.'}
+                            ? t('profile.blockedByMe')
+                            : t('profile.private')}
                     </Alert>
                 )}
 
                 {stats && stats.totalRatings > 0 && (
                     <Box sx={{ textAlign: 'center', mt: 2 }}>
                         <Button variant="outlined" color="secondary" onClick={() => setIsIdentityOpen(true)}>
-                            {isMyProfile ? 'Film kimliğim' : 'Film kimliği'}
+                            {isMyProfile ? t('profile.myIdentity') : t('profile.identity')}
                         </Button>
                     </Box>
                 )}
 
                 {stats && (
                     <Grid container spacing={2} sx={{ my: 3, justifyContent: 'center' }}>
-                        <StatCard icon={<RateReviewIcon color="primary" sx={{mb:1}}/>} value={stats.totalRatings} label="Film Oyladı" />
-                        <StatCard icon={<StarIcon color="warning" sx={{mb:1}}/>} value={`${stats.averageRating} / 10`} label="Puan Ortalaması" />
-                        <StatCard icon={<PlaylistPlayIcon color="secondary" sx={{mb:1}}/>} value={stats.totalMoviesInWatchlists} label="Listelerindeki Film" />
+                        <StatCard icon={<RateReviewIcon color="primary" sx={{mb:1}}/>} value={stats.totalRatings} label={t('profile.statRated')} />
+                        <StatCard icon={<StarIcon color="warning" sx={{mb:1}}/>} value={`${stats.averageRating} / 10`} label={t('profile.statAverage')} />
+                        <StatCard icon={<PlaylistPlayIcon color="secondary" sx={{mb:1}}/>} value={stats.totalMoviesInWatchlists} label={t('profile.statInLists')} />
                     </Grid>
                 )}
 
                 {!isMyProfile && compatibility && (
                     <>
                         <div className="compatibility-score">
-                            <h2>Uyum Puanınız: %{compatibility.compatibilityScore}</h2>
-                            <p>({compatibility.commonMovieCount} ortak filme göre hesaplandı)</p>
+                            <h2>{t('profile.compatibilityScore', { score: compatibility.compatibilityScore })}</h2>
+                            <p>{t('profile.compatibilityBasis', { count: compatibility.commonMovieCount })}</p>
                             <CompatibilityInsights
                                 insights={compatibility.insights}
                                 otherUserId={userId}
                                 otherUserName={profileData?.userName}
                             />
                             {compatibility.commonMovieCount > 0 && (
-                                <Button variant="contained" onClick={handleFetchRecommendations} sx={{ mt: 2 }}>Ortak Film Önerileri Alın</Button>
+                                <Button variant="contained" onClick={handleFetchRecommendations} sx={{ mt: 2 }}>{t('profile.getRecommendations')}</Button>
                             )}
                         </div>
                     </>
@@ -233,7 +235,7 @@ export const ProfilePage = () => {
                 
                 {topRatedMovies.length > 0 && (
                     <Box sx={{ my: 4, textAlign: 'left' }}>
-                        <Typography variant="h5" component="h3" gutterBottom sx={{fontWeight: 'bold'}}>✨ 10/10 Verdiği Filmler</Typography>
+                        <Typography variant="h5" component="h3" gutterBottom sx={{fontWeight: 'bold'}}>{t('profile.topRated')}</Typography>
                          <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 2 }}>
                             {topRatedMovies.map(movie => (
                                 <Link to={`/movie/${movie.movieId}`} key={movie.movieId}>
@@ -247,14 +249,14 @@ export const ProfilePage = () => {
                 {!isRestricted && (
                     <>
                         <hr />
-                        <Typography variant="h5" component="h3" sx={{textAlign: 'left', mt: 3}}>Oylanan Tüm Filmler ({ratings.length || 0})</Typography>
+                        <Typography variant="h5" component="h3" sx={{textAlign: 'left', mt: 3}}>{t('profile.allRated', { count: ratings.length || 0 })}</Typography>
                         <div className="rated-movies-grid">
                             {ratings.map(rating => (
                                 <div key={rating.movieId} className="rated-movie-card">
-                                    <img src={rating.posterPath ? `${IMAGE_BASE_URL}${rating.posterPath}` : '/vite.svg'} alt={`${rating.title} afişi`}/>
+                                    <img src={rating.posterPath ? `${IMAGE_BASE_URL}${rating.posterPath}` : '/vite.svg'} alt={t('profile.posterAlt', { title: rating.title })}/>
                                     <div className="rated-movie-info">
                                         <strong>{rating.title}</strong>
-                                        <span>Verilen Puan: {rating.rating}/10</span>
+                                        <span>{t('profile.givenRating', { rating: rating.rating })}</span>
                                     </div>
                                 </div>
                             ))}
@@ -269,8 +271,8 @@ export const ProfilePage = () => {
                 open={isBlockDialogOpen}
                 onClose={() => setIsBlockDialogOpen(false)}
                 onConfirm={handleBlock}
-                title={`${profileData?.userName ?? 'Kullanıcı'} engellensin mi?`}
-                description="Birbirinizin profilini göremez, mesajlaşamaz ve aynı etkinlik grubuna düşmezsiniz. Karşılıklı takip kaldırılır. Engeli istediğiniz zaman Profili Düzenle > Gizlilik'ten kaldırabilirsiniz."
+                title={t('profile.blockConfirmTitle', { userName: profileData?.userName ?? t('profile.userFallback') })}
+                description={t('profile.blockConfirmBody')}
             />
             <FollowListModal open={modalState.open} onClose={() => setModalState({ open: false, type: '', title: '' })} title={modalState.title} list={listData} isLoading={isListLoading} />
         </>

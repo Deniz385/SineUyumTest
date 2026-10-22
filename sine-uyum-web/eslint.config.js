@@ -24,10 +24,10 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
-      // Context dosyaları hem provider bileşenini hem de kendi hook'unu
-      // (useAuth, useSnackbar vb.) export ediyor. Bu yaygın bir React
-      // kalıbı; yalnızca hot reload'ın o dosyada tam yenileme yapmasına
-      // yol açar, bir hata değil. CI'ı bloke etmemesi için uyarı seviyesinde.
+      // Context files export both the provider component and its hook
+      // (useAuth, useSnackbar, etc.). This is a common React pattern; it only
+      // makes hot reload do a full refresh for that file and is not a bug.
+      // Kept as a warning so it does not block CI.
       'react-refresh/only-export-components': 'warn',
     },
   },

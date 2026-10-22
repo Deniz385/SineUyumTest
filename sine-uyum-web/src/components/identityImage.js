@@ -1,6 +1,10 @@
-// Film kimliği kartını paylaşılabilir PNG olarak çizer (1080x1350, Instagram
-// oranı). Afişler kullanılmaz: başka alan adından gelen görseller canvas'ı
-// "kirletir" ve dışa aktarmayı engeller.
+import i18n from '../i18n';
+
+// Draws the film identity card as a shareable PNG (1080x1350, Instagram
+// ratio). Posters are not used: images from another domain "taint" the
+// canvas and block exporting it.
+// Texts follow the active UI language; the identity's title, description and
+// genre names already arrive localized from the API.
 const W = 1080;
 const H = 1350;
 
@@ -21,10 +25,11 @@ const wrap = (ctx, text, x, y, maxWidth, lineHeight) => {
     return y + lineHeight;
 };
 
-const fmt = (n) => Number(n).toLocaleString('tr-TR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const fmt = (n) => Number(n).toLocaleString(i18n.language, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-// isMine: kendi kartı ("sen" dili, Spotify Wrapped gibi) ya da başkasının ("o").
+// isMine: your own card (second person, like Spotify Wrapped) or someone else's (third person).
 export const drawIdentityCard = (identity, isMine = true) => {
+    const t = i18n.t.bind(i18n);
     const canvas = document.createElement('canvas');
     canvas.width = W;
     canvas.height = H;
@@ -40,7 +45,7 @@ export const drawIdentityCard = (identity, isMine = true) => {
     let y = 150;
     ctx.fillStyle = '#9fb3ff';
     ctx.font = '600 34px system-ui, sans-serif';
-    ctx.fillText('SİNEUYUM · FİLM KİMLİĞİ', pad, y);
+    ctx.fillText(t('identity.card.header'), pad, y);
 
     y += 80;
     ctx.fillStyle = '#ffffff';
@@ -59,13 +64,13 @@ export const drawIdentityCard = (identity, isMine = true) => {
     y += 40;
     ctx.fillStyle = '#ffffff';
     ctx.font = '600 46px system-ui, sans-serif';
-    ctx.fillText(`${identity.totalRatings} film  ·  ortalama ${fmt(identity.averageRating)}`, pad, y);
+    ctx.fillText(t('identity.card.summary', { count: identity.totalRatings, average: fmt(identity.averageRating) }), pad, y);
 
     if (identity.topGenres.length > 0) {
         y += 90;
         ctx.fillStyle = '#9fb3ff';
         ctx.font = '600 34px system-ui, sans-serif';
-        ctx.fillText(isMine ? 'EN ÇOK İZLEDİĞİN TÜRLER' : 'EN ÇOK İZLEDİĞİ TÜRLER', pad, y);
+        ctx.fillText(isMine ? t('identity.card.topGenresMine') : t('identity.card.topGenresTheirs'), pad, y);
         for (const genre of identity.topGenres) {
             y += 70;
             const barWidth = Math.max(40, (W - 2 * pad - 260) * genre.share / 100);
@@ -77,7 +82,7 @@ export const drawIdentityCard = (identity, isMine = true) => {
             ctx.font = '500 38px system-ui, sans-serif';
             ctx.fillText(genre.name, pad, y);
             ctx.font = '600 30px system-ui, sans-serif';
-            ctx.fillText(`%${genre.share}`, pad + 270 + barWidth, y - 4);
+            ctx.fillText(t('identity.card.genreShare', { share: genre.share }), pad + 270 + barWidth, y - 4);
         }
     }
 
@@ -92,27 +97,35 @@ export const drawIdentityCard = (identity, isMine = true) => {
         y = wrap(ctx, text, pad, y, W - 2 * pad, 52) - 52;
     };
     if (identity.contrarianTake) {
-        const t = identity.contrarianTake;
-        line(isMine ? 'EN AYKIRI PUANIN' : 'EN AYKIRI PUANI', `${t.title}: herkes ${fmt(t.tmdbAverage)}, ${isMine ? 'sen' : 'o'} ${t.rating}`);
+        const take = identity.contrarianTake;
+        const values = { title: take.title, average: fmt(take.tmdbAverage), rating: take.rating };
+        line(
+            isMine ? t('identity.card.contrarianMine') : t('identity.card.contrarianTheirs'),
+            isMine ? t('identity.contrarianLineMine', values) : t('identity.contrarianLineTheirs', values)
+        );
     }
     if (identity.favorite) {
-        line(isMine ? 'FAVORİN' : 'FAVORİSİ', `${identity.favorite.title} · ${identity.favorite.rating}/10`);
+        line(isMine ? t('identity.card.favoriteMine') : t('identity.card.favoriteTheirs'), `${identity.favorite.title} · ${identity.favorite.rating}/10`);
     }
 
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.font = '500 32px system-ui, sans-serif';
-    ctx.fillText('Zevkine en uygun kişileri bul: SineUyum', pad, H - 90);
+    ctx.fillText(t('identity.card.footer'), pad, H - 90);
 
     return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
 };
 
-// Cihaz destekliyorsa sistem paylaşım menüsü (mobil tarayıcı: Instagram,
-// WhatsApp...), değilse dosya indirme.
+// Uses the system share sheet when the device supports it (mobile browsers:
+// Instagram, WhatsApp...), otherwise downloads the file.
 export const shareIdentityImage = async (identity, isMine = true) => {
     const blob = await drawIdentityCard(identity, isMine);
     const file = new File([blob], `sineuyum-${identity.userName}.png`, { type: 'image/png' });
     if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'Film kimliğim', text: `${identity.title} — SineUyum film kimliğim` });
+        await navigator.share({
+            files: [file],
+            title: i18n.t('identity.card.shareTitle'),
+            text: i18n.t('identity.card.shareText', { title: identity.title }),
+        });
         return 'shared';
     }
     const url = URL.createObjectURL(blob);

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, Box, Typography, Grid, CircularProgress } from '@mui/material';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const style = {
   position: 'absolute',
@@ -20,11 +21,12 @@ const style = {
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
 
 export const RecommendationModal = ({ open, onClose, recommendations, isLoading, targetUserName }) => {
+  const { t } = useTranslation();
   return (
     <Modal open={open} onClose={onClose}>
       <Box sx={style}>
         <Typography variant="h5" component="h2" gutterBottom>
-          {targetUserName} ile Ortak Zevkinize Göre Film Önerileri
+          {t('recommendations.title', { userName: targetUserName })}
         </Typography>
         {isLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
@@ -32,7 +34,7 @@ export const RecommendationModal = ({ open, onClose, recommendations, isLoading,
           </Box>
         ) : recommendations.length === 0 ? (
           <Typography sx={{ mt: 2 }}>
-            İkinize de uygun bir öneri bulunamadı. Daha fazla ortak filmi yüksek puanla oylamayı deneyin.
+            {t('recommendations.empty')}
           </Typography>
         ) : (
           <Grid container spacing={2} sx={{ mt: 2 }}>

@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 export const ProtectedRoute = ({ children }) => {
   const { user, isRestoring } = useAuth();
 
-  // Oturum refresh token ile geri yükleniyor: karar vermeden bekle.
+  // The session is being restored with the refresh token: wait before deciding.
   if (isRestoring) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
@@ -15,11 +15,11 @@ export const ProtectedRoute = ({ children }) => {
     );
   }
 
-  // Eğer user objesi yoksa (giriş yapılmamışsa), login sayfasına yönlendir.
+  // No user (not logged in): redirect to the login page.
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  // Giriş yapılmışsa, istenen sayfayı (Layout ve içindeki çocukları) göster.
+  // Logged in: render the requested page (Layout and its children).
   return children;
 };

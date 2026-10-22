@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 export const UserSearch = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     const handleSearch = (e) => {
         e.preventDefault();
         if (searchTerm.trim()) {
-            // Kullanıcıyı arama sonuçları sayfasına yönlendir
+            // Go to the search results page
             navigate(`/search?query=${searchTerm}`);
-            setSearchTerm(''); // Arama kutusunu temizle
+            setSearchTerm(''); // Clear the search box
         }
     };
 
@@ -19,7 +21,7 @@ export const UserSearch = () => {
             <input
                 type="text"
                 className="user-search-input"
-                placeholder="Kullanıcı ara..."
+                placeholder={t('search.usersPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
             />

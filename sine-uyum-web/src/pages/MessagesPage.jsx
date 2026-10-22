@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api, { mediaUrl } from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { Box, Typography, CircularProgress, List, ListItem, ListItemText, ListItemAvatar, Avatar, Divider } from '@mui/material';
 
 export const MessagesPage = () => {
+    const { t } = useTranslation();
     const { user } = useAuth();
     const [conversations, setConversations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -19,19 +21,19 @@ export const MessagesPage = () => {
             setConversations(response.data);
             setError('');
         } catch (err) {
-            setError('Konuşmalar yüklenirken bir hata oluştu.');
+            setError(t('messages.loadError'));
             console.error(err);
         } finally {
             setIsLoading(false);
         }
-    }, [user]);
+    }, [user, t]);
 
     useEffect(() => {
         fetchConversations();
     }, [fetchConversations]);
 
-    // Yeni mesaj gelince (ya da bağlantı yeniden kurulunca) liste sunucudan
-    // tazelenir: sıra, son mesaj ve okunma durumu tek kaynaktan gelsin.
+    // When a new message arrives (or the connection is re-established) the list
+    // is refetched, so order, last message and read state come from one source.
     useEffect(() => {
         const unsubscribeMessages = subscribeToMessages(() => fetchConversations());
         const unsubscribeReconnect = subscribeToReconnect(fetchConversations);
@@ -47,12 +49,12 @@ export const MessagesPage = () => {
     return (
         <Box className="page-container" sx={{ maxWidth: '800px' }}>
             <Typography variant="h4" component="h1" gutterBottom>
-                Mesajlar
+                {t('messages.title')}
             </Typography>
             <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
                 {conversations.length === 0 ? (
                     <ListItem>
-                        <ListItemText primary="Hiç konuşmanız yok." />
+                        <ListItemText primary={t('messages.empty')} />
                     </ListItem>
                 ) : (
                     conversations.map((convo, index) => (

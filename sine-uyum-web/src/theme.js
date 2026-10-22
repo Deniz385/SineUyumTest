@@ -1,36 +1,36 @@
 // src/theme.js
 import { createTheme } from '@mui/material/styles';
 
-// Açık mod için renk paleti ve ayarlar
+// Colour palette and settings for light mode
 export const lightTheme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#1976d2', // Klasik Mavi
+      main: '#1976d2', // Classic blue
     },
     secondary: {
-      main: '#dc004e', // Canlı Pembe
+      main: '#dc004e', // Vivid pink
     },
     background: {
-      default: '#f4f6f8', // Çok hafif gri arka plan
-      paper: '#ffffff', // Kartlar ve diğer yüzeyler için beyaz
+      default: '#f4f6f8', // Very light grey background
+      paper: '#ffffff', // White for cards and other surfaces
     },
   },
 });
 
-// Koyu mod için (daha iyi kontrastlı) renk paleti ve ayarlar
+// Colour palette and settings for dark mode (with better contrast)
 export const darkTheme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#64b5f6', // Daha açık ve canlı mavi
+      main: '#64b5f6', // Lighter, more vivid blue
     },
     secondary: {
-      main: '#f48fb1', // Daha açık pembe/fuşya
+      main: '#f48fb1', // Lighter pink/fuchsia
     },
     background: {
-      default: '#121212', // Saf siyaha yakın ana arka plan
-      paper: '#1e1e1e', // Kartlar ve diğer yüzeyler için biraz daha açık gri
+      default: '#121212', // Near-black main background
+      paper: '#1e1e1e', // Slightly lighter grey for cards and other surfaces
     },
     text: {
         primary: '#e0e0e0',

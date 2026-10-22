@@ -1,23 +1,23 @@
 import { useRef, useEffect } from 'react';
 
 /**
- * Bir DOM elemanına fare ile sürükleyerek yatay kaydırma özelliği ekleyen özel bir React hook'u.
- * @returns {React.RefObject} Sürüklenmesi istenen elemana atanacak olan ref nesnesi.
+ * Custom React hook that lets the user scroll an element horizontally by dragging it with the mouse.
+ * @returns {React.RefObject} Ref to attach to the draggable element.
  */
 export const useDraggableScroll = () => {
-    // Sürüklenen DOM elemanına referans tutmak için useRef kullanıyoruz.
+    // Ref to the DOM element being dragged.
     const ref = useRef(null);
 
     useEffect(() => {
         const el = ref.current;
-        if (!el) return; // Eleman henüz render edilmediyse bir şey yapma.
+        if (!el) return; // Nothing to do until the element has rendered.
 
-        // Sürükleme durumu ve başlangıç pozisyonlarını tutacak değişkenler
+        // Drag state and starting positions
         let isDown = false;
         let startX;
         let scrollLeft;
 
-        // Fareye tıklandığında tetiklenir
+        // Fired when the mouse button is pressed
         const onMouseDown = (e) => {
             isDown = true;
             el.classList.add('active-drag');
@@ -25,41 +25,41 @@ export const useDraggableScroll = () => {
             scrollLeft = el.scrollLeft;
         };
 
-        // Fare, elemanın dışına çıktığında tetiklenir
+        // Fired when the mouse leaves the element
         const onMouseLeave = () => {
             isDown = false;
             el.classList.remove('active-drag');
         };
 
-        // Fare tuşu bırakıldığında tetiklenir
+        // Fired when the mouse button is released
         const onMouseUp = () => {
             isDown = false;
             el.classList.remove('active-drag');
         };
 
-        // Fare hareket ettiğinde tetiklenir
+        // Fired when the mouse moves
         const onMouseMove = (e) => {
-            if (!isDown) return; // Sadece fareye basılıyken çalış
-            e.preventDefault(); // Metin seçimi gibi istenmeyen tarayıcı davranışlarını engelle
+            if (!isDown) return; // Only while the button is held down
+            e.preventDefault(); // Prevent unwanted browser behaviour such as text selection
             const x = e.pageX - el.offsetLeft;
-            const walk = (x - startX) * 2; // Kaydırma hızını artırmak için bir çarpan
+            const walk = (x - startX) * 2; // Multiplier to speed up scrolling
             el.scrollLeft = scrollLeft - walk;
         };
 
-        // Event listener'ları elemana ekle
+        // Attach the event listeners
         el.addEventListener('mousedown', onMouseDown);
         el.addEventListener('mouseleave', onMouseLeave);
         el.addEventListener('mouseup', onMouseUp);
         el.addEventListener('mousemove', onMouseMove);
 
-        // Component kaldırıldığında (unmount) event listener'ları temizle
+        // Remove the event listeners on unmount
         return () => {
             el.removeEventListener('mousedown', onMouseDown);
             el.removeEventListener('mouseleave', onMouseLeave);
             el.removeEventListener('mouseup', onMouseUp);
             el.removeEventListener('mousemove', onMouseMove);
         };
-    }, []); // Bu useEffect'in sadece component ilk render edildiğinde çalışmasını sağla
+    }, []); // Run only on the first render
 
-    return ref; // Dışarıya ref nesnesini döndür
+    return ref;
 };

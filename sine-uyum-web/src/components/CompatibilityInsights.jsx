@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Box, Button, Card, CardContent, Chip, Stack, Typography } from '@mui/material';
 import ForumIcon from '@mui/icons-material/Forum';
 import FavoriteIcon from '@mui/icons-material/Favorite';
@@ -19,16 +20,17 @@ const MovieRow = ({ movie, children }) => (
     </Box>
 );
 
-// Uyum puanının nedeni: ortak/ayrışan türler, ortak favori ve sohbet
-// başlatıcı olarak "tartışma filmi".
+// Why the compatibility score is what it is: shared/divergent genres, a shared
+// favourite and a "debate movie" as a conversation starter.
 export const CompatibilityInsights = ({ insights, otherUserId, otherUserName }) => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     if (!insights) return null;
     const { summary, sharedGenres = [], divergentGenres = [], sharedFavorite, debateMovie } = insights;
     if (!summary && !sharedFavorite && !debateMovie) return null;
 
     const askAbout = (movie) => {
-        const draft = `"${movie.title}" filmine ben ${movie.currentUserRating}, sen ${movie.targetUserRating} vermişsin. Neden? 😄`;
+        const draft = t('compatibility.askDraft', { title: movie.title, myRating: movie.currentUserRating, theirRating: movie.targetUserRating });
         navigate(`/messages/${otherUserId}?draft=${encodeURIComponent(draft)}`);
     };
 
@@ -49,11 +51,11 @@ export const CompatibilityInsights = ({ insights, otherUserId, otherUserName }) 
                     <CardContent>
                         <MovieRow movie={sharedFavorite}>
                             <Typography variant="overline" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <FavoriteIcon fontSize="inherit" color="error" /> Ortak favoriniz
+                                <FavoriteIcon fontSize="inherit" color="error" /> {t('compatibility.sharedFavorite')}
                             </Typography>
                             <Typography variant="subtitle1">{sharedFavorite.title}</Typography>
                             <Typography variant="body2" color="text.secondary">
-                                Sen {sharedFavorite.currentUserRating}, {otherUserName} {sharedFavorite.targetUserRating}
+                                {t('compatibility.sharedFavoriteRatings', { myRating: sharedFavorite.currentUserRating, userName: otherUserName, theirRating: sharedFavorite.targetUserRating })}
                             </Typography>
                         </MovieRow>
                     </CardContent>
@@ -65,14 +67,14 @@ export const CompatibilityInsights = ({ insights, otherUserId, otherUserName }) 
                     <CardContent>
                         <MovieRow movie={debateMovie}>
                             <Typography variant="overline" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <ForumIcon fontSize="inherit" color="warning" /> Tartışma filmi
+                                <ForumIcon fontSize="inherit" color="warning" /> {t('compatibility.debateMovie')}
                             </Typography>
                             <Typography variant="subtitle1">{debateMovie.title}</Typography>
                             <Typography variant="body2" color="text.secondary">
-                                Sen {debateMovie.currentUserRating} verdin, {otherUserName} {debateMovie.targetUserRating}. Sor bakalım neden?
+                                {t('compatibility.debateRatings', { myRating: debateMovie.currentUserRating, userName: otherUserName, theirRating: debateMovie.targetUserRating })}
                             </Typography>
                             <Button size="small" startIcon={<ForumIcon />} sx={{ mt: 1 }} onClick={() => askAbout(debateMovie)}>
-                                Ona sor
+                                {t('compatibility.askThem')}
                             </Button>
                         </MovieRow>
                     </CardContent>

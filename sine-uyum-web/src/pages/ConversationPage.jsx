@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
@@ -24,40 +25,47 @@ const modalStyle = {
   borderRadius: 2
 };
 
-const MovieRecommendationCard = ({ movie }) => (
-    <Card sx={{ display: 'flex', alignItems: 'center', p: 1, textDecoration: 'none', backgroundColor: 'rgba(255,255,255,0.1)' }} component={Link} to={`/movie/${movie.id}`}>
-        <CardMedia
-            component="img"
-            sx={{ width: 60, height: 90, borderRadius: 1 }}
-            image={movie.posterPath ? `${IMAGE_BASE_URL}${movie.posterPath}` : '/vite.svg'}
-            alt={movie.title}
-        />
-        <Box sx={{ ml: 1.5 }}>
-            <Typography variant="body2" sx={{ opacity: 0.8 }}>Film Önerisi:</Typography>
-            <Typography fontWeight="bold">{movie.title}</Typography>
-        </Box>
-    </Card>
-);
+const MovieRecommendationCard = ({ movie }) => {
+    const { t } = useTranslation();
+    return (
+        <Card sx={{ display: 'flex', alignItems: 'center', p: 1, textDecoration: 'none', backgroundColor: 'rgba(255,255,255,0.1)' }} component={Link} to={`/movie/${movie.id}`}>
+            <CardMedia
+                component="img"
+                sx={{ width: 60, height: 90, borderRadius: 1 }}
+                image={movie.posterPath ? `${IMAGE_BASE_URL}${movie.posterPath}` : '/vite.svg'}
+                alt={movie.title}
+            />
+            <Box sx={{ ml: 1.5 }}>
+                <Typography variant="body2" sx={{ opacity: 0.8 }}>{t('conversation.movieSuggestion')}</Typography>
+                <Typography fontWeight="bold">{movie.title}</Typography>
+            </Box>
+        </Card>
+    );
+};
 
-const WatchlistShareCard = ({ watchlist }) => (
-    <Card sx={{ display: 'flex', alignItems: 'center', p: 1, textDecoration: 'none', backgroundColor: 'rgba(255,255,255,0.1)' }} component={Link} to={`/watchlist/${watchlist.id}`}>
-        <PlaylistAddIcon sx={{ fontSize: 40, mx: 1.5 }} />
-        <Box sx={{ ml: 1.5 }}>
-            <Typography variant="body2" sx={{ opacity: 0.8 }}>İzleme Listesi:</Typography>
-            <Typography fontWeight="bold">{watchlist.name}</Typography>
-            <Typography variant="caption" sx={{ opacity: 0.7 }}>@{watchlist.ownerUsername}</Typography>
-        </Box>
-    </Card>
-);
+const WatchlistShareCard = ({ watchlist }) => {
+    const { t } = useTranslation();
+    return (
+        <Card sx={{ display: 'flex', alignItems: 'center', p: 1, textDecoration: 'none', backgroundColor: 'rgba(255,255,255,0.1)' }} component={Link} to={`/watchlist/${watchlist.id}`}>
+            <PlaylistAddIcon sx={{ fontSize: 40, mx: 1.5 }} />
+            <Box sx={{ ml: 1.5 }}>
+                <Typography variant="body2" sx={{ opacity: 0.8 }}>{t('conversation.watchlist')}</Typography>
+                <Typography fontWeight="bold">{watchlist.name}</Typography>
+                <Typography variant="caption" sx={{ opacity: 0.7 }}>@{watchlist.ownerUsername}</Typography>
+            </Box>
+        </Card>
+    );
+};
 
 export const ConversationPage = () => {
+    const { t, i18n } = useTranslation();
     const { otherUserId } = useParams();
     const { user } = useAuth();
     const { showSnackbar } = useSnackbar();
     const { subscribeToMessages, subscribeToReads, subscribeToReconnect, setActiveConversation } = useNotifications();
     const [messages, setMessages] = useState([]);
     const [otherUser, setOtherUser] = useState(null);
-    // Profildeki "Ona sor" gibi yerlerden hazır taslakla açılabilir (?draft=).
+    // Can be opened with a prefilled draft (?draft=), e.g. from "Ask them" on a profile.
     const [searchParams] = useSearchParams();
     const [newMessage, setNewMessage] = useState(() => searchParams.get('draft') ?? '');
     const [isLoading, setIsLoading] = useState(true);
@@ -88,7 +96,7 @@ export const ConversationPage = () => {
                 setOtherUser(profileResponse.data);
             }
         } catch (err) {
-            console.error("Mesajlar yüklenemedi:", err);
+            console.error("Could not load messages:", err);
         } finally {
             setIsLoading(false);
         }
@@ -98,8 +106,8 @@ export const ConversationPage = () => {
         fetchThread();
     }, [fetchThread]);
 
-    // Aynı mesaj hem gönderme yanıtından hem canlı olaydan (gönderenin kendisine
-    // de itilir) gelebilir: id ile tekilleştirilir.
+    // The same message can arrive both in the send response and as a live event
+    // (it is pushed to the sender too), so messages are de-duplicated by id.
     const appendMessage = useCallback((message) => {
         setMessages(prev => (prev.some(m => m.id === message.id) ? prev : [...prev, message]));
     }, []);
@@ -108,9 +116,10 @@ export const ConversationPage = () => {
         api.post(`/api/v1/messages/thread/${otherUserId}/mark-as-read`).catch(() => {});
     }, [otherUserId]);
 
-    // Canlı sohbet (M11): bu sohbete ait mesajlar anında eklenir; karşı taraftan
-    // gelen, ekran açık olduğu için hemen okundu sayılır. Bağlantı yeniden
-    // kurulunca kopukluk süresinde kaçanlar için thread tazelenir.
+    // Live chat (M11): messages belonging to this conversation are appended
+    // instantly; ones from the other user count as read right away since the
+    // screen is open. After a reconnect the thread is refetched to catch
+    // anything missed while disconnected.
     useEffect(() => {
         if (!user) return undefined;
         setActiveConversation(otherUserId);
@@ -125,7 +134,7 @@ export const ConversationPage = () => {
             appendMessage(message);
             if (message.senderId === otherUserId) markThreadAsRead();
         });
-        // Karşı taraf okudu (M10): o ana kadarki mesajlarım "Görüldü".
+        // The other user has read the thread (M10): my messages up to that point are "Seen".
         const unsubscribeReads = subscribeToReads((receipt) => {
             if (receipt.readerId !== otherUserId || receipt.otherUserId !== user.id) return;
             setMessages(prev => prev.map(m => (
@@ -147,7 +156,7 @@ export const ConversationPage = () => {
 
     useEffect(scrollToBottom, [messages]);
 
-    // "Görüldü" yalnızca okunmuş son mesajımın altında (her mesajda tekrar etmez).
+    // "Seen" appears only under my last read message, not under every one.
     const lastSeenId = messages.reduce(
         (max, m) => (m.senderId === user?.id && m.dateRead && m.id > max ? m.id : max), 0);
 
@@ -156,11 +165,11 @@ export const ConversationPage = () => {
         try {
             const response = await api.post(`/api/v1/messages`, { recipientId: otherUserId, content, movieId, watchlistId });
             setNewMessage('');
-            // Yanıt, oluşturulan mesajın kendisi; thread'i yeniden çekmeye gerek yok.
+            // The response is the created message itself; no need to refetch the thread.
             appendMessage(response.data);
         } catch (err) {
-            // Gizlilik/engel reddinde (403) sunucunun gerekçesi gösterilir.
-            showSnackbar(err.response?.data?.title || 'Mesaj gönderilemedi.', 'error');
+            // On a privacy/block rejection (403) the server's reason is shown.
+            showSnackbar(err.response?.data?.title || t('conversation.sendFailed'), 'error');
         }
     };
     
@@ -170,7 +179,7 @@ export const ConversationPage = () => {
             await api.post(`/api/v1/ratings/addmovie`, { id: movie.id, title: movie.title, posterPath: movie.poster_path });
         } catch (addMovieError) {
             if (addMovieError.response && addMovieError.response.status !== 400) {
-               console.error("Film eklenirken bir hata oluştu:", addMovieError);
+               console.error("Could not add the movie:", addMovieError);
                return;
             }
         }
@@ -183,7 +192,7 @@ export const ConversationPage = () => {
             const response = await api.get(`/api/v1/watchlist`);
             setUserLists(response.data || []);
         } catch (err) {
-            console.error("Listeler yüklenemedi:", err);
+            console.error("Could not load lists:", err);
         }
     };
 
@@ -205,7 +214,7 @@ export const ConversationPage = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', width: '100%', maxWidth: '800px', margin: 'auto' }}>
                 <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
                     <Typography variant="h6" component={Link} to={`/profile/${otherUserId}`} sx={{textDecoration: 'none', color: 'inherit'}}>
-                        {otherUser?.userName || 'Sohbet'}
+                        {otherUser?.userName || t('conversation.fallbackTitle')}
                     </Typography>
                 </Box>
                 <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -223,43 +232,43 @@ export const ConversationPage = () => {
                                 }
                             </Box>
                             <Typography variant="caption" sx={{ display: 'block', textAlign: msg.senderId === user.id ? 'right' : 'left', color: 'text.secondary', mt: 0.5 }}>
-                                {new Date(msg.messageSent).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                                {msg.id === lastSeenId && ` · Görüldü ${new Date(msg.dateRead).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`}
+                                {new Date(msg.messageSent).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}
+                                {msg.id === lastSeenId && ` · ${t('conversation.seen', { time: new Date(msg.dateRead).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' }) })}`}
                             </Typography>
                         </Box>
                     ))}
                     <div ref={messagesEndRef} />
                 </Box>
                 <Box component="form" onSubmit={handleTextSubmit} sx={{ p: 2, borderTop: 1, borderColor: 'divider', display: 'flex', gap: 1 }}>
-                    <IconButton color="primary" onClick={() => setIsMovieModalOpen(true)} title="Film Öner">
+                    <IconButton color="primary" onClick={() => setIsMovieModalOpen(true)} title={t('conversation.suggestMovie')} aria-label={t('conversation.suggestMovie')}>
                         <AddCircleOutlineIcon />
                     </IconButton>
-                    <IconButton color="primary" onClick={handleOpenWatchlistModal} title="Liste Paylaş">
+                    <IconButton color="primary" onClick={handleOpenWatchlistModal} title={t('conversation.shareList')} aria-label={t('conversation.shareList')}>
                         <PlaylistAddIcon />
                     </IconButton>
-                    <TextField fullWidth variant="outlined" placeholder="Mesaj yaz..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} />
-                    <IconButton type="submit" color="primary"><SendIcon /></IconButton>
+                    <TextField fullWidth variant="outlined" placeholder={t('conversation.placeholder')} value={newMessage} onChange={(e) => setNewMessage(e.target.value)} />
+                    <IconButton type="submit" color="primary" aria-label={t('common.send')}><SendIcon /></IconButton>
                 </Box>
             </Box>
 
             <Modal open={isMovieModalOpen} onClose={() => setIsMovieModalOpen(false)}>
                 <Box sx={modalStyle}>
-                    <Typography variant="h6" sx={{ mb: 2 }}>Film Öner</Typography>
+                    <Typography variant="h6" sx={{ mb: 2 }}>{t('conversation.suggestMovie')}</Typography>
                     <MovieSearchBar onMovieSelect={handleMovieSelectAndSend} />
                 </Box>
             </Modal>
 
             <Modal open={isWatchlistModalOpen} onClose={() => setIsWatchlistModalOpen(false)}>
                 <Box sx={modalStyle}>
-                    <Typography variant="h6" component="h2">Hangi Listeyi Paylaşacaksın?</Typography>
+                    <Typography variant="h6" component="h2">{t('conversation.whichList')}</Typography>
                     <List sx={{ mt: 2 }}>
                         {userLists.length > 0 ? userLists.map((list) => (
                             <ListItem key={list.id} disablePadding>
                                 <ListItemButton onClick={() => handleListSelectAndSend(list.id)}>
-                                    <ListItemText primary={list.name} secondary={`${list.itemCount} film`} />
+                                    <ListItemText primary={list.name} secondary={t('watchlist.movieCount', { count: list.itemCount })} />
                                 </ListItemButton>
                             </ListItem>
-                        )) : (<Typography>Henüz paylaşacak listeniz yok.</Typography>)}
+                        )) : (<Typography>{t('conversation.noListsToShare')}</Typography>)}
                     </List>
                 </Box>
             </Modal>

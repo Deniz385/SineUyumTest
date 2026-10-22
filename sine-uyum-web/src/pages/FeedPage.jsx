@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api from '../api/axiosConfig';
 import { Box, Button, Card, CardContent, CircularProgress, Stack, Typography } from '@mui/material';
 import { AuthorLine, ReviewCard } from '../components/ReviewCard';
@@ -7,23 +8,27 @@ import { TasteTwinCard } from '../components/TasteTwinCard';
 
 const POSTER = 'https://image.tmdb.org/t/p/w92';
 
-const RatedItem = ({ item }) => (
-    <Card variant="outlined">
-        <CardContent>
-            <AuthorLine author={item.author} rating={item.rating} compatibility={item.authorCompatibility} when={item.activityAt}>
-                <Typography variant="body2" color="text.secondary">bir filmi puanladı</Typography>
-            </AuthorLine>
-            <Box component={Link} to={`/movie/${item.movie.id}`}
-                sx={{ display: 'flex', gap: 1.5, alignItems: 'center', mt: 1.5, color: 'inherit', textDecoration: 'none' }}>
-                {item.movie.posterPath && <img src={`${POSTER}${item.movie.posterPath}`} alt="" style={{ width: 46, borderRadius: 4 }} />}
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{item.movie.title}</Typography>
-            </Box>
-        </CardContent>
-    </Card>
-);
+const RatedItem = ({ item }) => {
+    const { t } = useTranslation();
+    return (
+        <Card variant="outlined">
+            <CardContent>
+                <AuthorLine author={item.author} rating={item.rating} compatibility={item.authorCompatibility} when={item.activityAt}>
+                    <Typography variant="body2" color="text.secondary">{t('feed.ratedMovie')}</Typography>
+                </AuthorLine>
+                <Box component={Link} to={`/movie/${item.movie.id}`}
+                    sx={{ display: 'flex', gap: 1.5, alignItems: 'center', mt: 1.5, color: 'inherit', textDecoration: 'none' }}>
+                    {item.movie.posterPath && <img src={`${POSTER}${item.movie.posterPath}`} alt="" style={{ width: 46, borderRadius: 4 }} />}
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{item.movie.title}</Typography>
+                </Box>
+            </CardContent>
+        </Card>
+    );
+};
 
-// Takip ettiklerinin (ve kendi) puanları ve incelemeleri.
+// Ratings and reviews from the people you follow (and your own).
 export const FeedPage = () => {
+    const { t } = useTranslation();
     const [items, setItems] = useState(null);
     const [cursor, setCursor] = useState(null);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -53,29 +58,28 @@ export const FeedPage = () => {
 
     return (
         <Box className="page-container" sx={{ maxWidth: 720, width: '100%' }}>
-            <Typography variant="h4" component="h1" gutterBottom>Akış</Typography>
+            <Typography variant="h4" component="h1" gutterBottom>{t('feed.title')}</Typography>
             <TasteTwinCard />
-            {error && <Typography color="error" sx={{ mb: 2 }}>Akış yüklenemedi.</Typography>}
+            {error && <Typography color="error" sx={{ mb: 2 }}>{t('feed.loadError')}</Typography>}
             {items.length === 0 && !error ? (
                 <Box sx={{ mt: 4 }}>
-                    <Typography variant="h6">Akışın henüz boş</Typography>
+                    <Typography variant="h6">{t('feed.emptyTitle')}</Typography>
                     <Typography color="text.secondary" sx={{ mb: 2 }}>
-                        Takip ettiğin kişilerin puanları ve incelemeleri burada görünür. Üstteki kullanıcı aramasıyla
-                        sana uyumlu kişileri bul ya da bir filme ilk incelemeyi sen yaz.
+                        {t('feed.emptyBody')}
                     </Typography>
-                    <Button component={Link} to="/home" variant="contained">Filmlere göz at</Button>
+                    <Button component={Link} to="/home" variant="contained">{t('feed.browseMovies')}</Button>
                 </Box>
             ) : (
                 <Stack spacing={2}>
                     {items.map((item) => item.review
                         ? <ReviewCard key={`r-${item.review.id}`} review={item.review} showMovie
-                            headline={<Typography variant="body2" color="text.secondary">bir inceleme yazdı</Typography>} />
+                            headline={<Typography variant="body2" color="text.secondary">{t('feed.wroteReview')}</Typography>} />
                         : <RatedItem key={`p-${item.author.id}-${item.movie.id}`} item={item} />)}
                 </Stack>
             )}
             {cursor && (
                 <Button sx={{ mt: 2 }} onClick={loadMore} disabled={isLoadingMore}>
-                    {isLoadingMore ? 'Yükleniyor...' : 'Daha fazla'}
+                    {isLoadingMore ? t('common.loadingEllipsis') : t('common.loadMore')}
                 </Button>
             )}
         </Box>

@@ -6,7 +6,7 @@ import { lightTheme, darkTheme } from '../theme';
 const ThemeContext = createContext();
 
 export const CustomThemeProvider = ({ children }) => {
-  // Başlangıç temasını kullanıcının sistem tercihine göre ayarla
+  // Start with the theme matching the user's system preference
   const prefersDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const [mode, setMode] = useState(prefersDarkMode ? 'dark' : 'light');
 
@@ -14,13 +14,13 @@ export const CustomThemeProvider = ({ children }) => {
     setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
   };
 
-  // Mod değiştiğinde doğru temayı seç
+  // Pick the matching theme whenever the mode changes
   const theme = useMemo(() => (mode === 'light' ? lightTheme : darkTheme), [mode]);
 
   return (
     <ThemeContext.Provider value={{ mode, toggleTheme }}>
       <MuiThemeProvider theme={theme}>
-        {/* CssBaseline, temel CSS sıfırlamaları yapar ve arka plan rengini temaya göre ayarlar */}
+        {/* CssBaseline applies the base CSS reset and sets the background colour from the theme */}
         <CssBaseline /> 
         {children}
       </MuiThemeProvider>
@@ -28,7 +28,7 @@ export const CustomThemeProvider = ({ children }) => {
   );
 };
 
-// Kendi hook'umuzu oluşturalım
+// Hook for reading the theme context
 export const useThemeContext = () => {
     return useContext(ThemeContext);
 };

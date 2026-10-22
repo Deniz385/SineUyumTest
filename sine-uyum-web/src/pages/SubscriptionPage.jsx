@@ -1,16 +1,18 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Alert, Box, Typography, Button, Paper, List, ListItem, ListItemIcon, ListItemText, CircularProgress } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axiosConfig';
 
-const formatDate = (iso) => new Date(iso).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+const formatDate = (iso, language) => new Date(iso).toLocaleDateString(language, { day: 'numeric', month: 'long', year: 'numeric' });
 
-// Abonelik durumu sunucudan okunur (tek kaynak). Ödemesiz "aboneliği test et"
-// düğmesi kaldırıldı: abonelik yalnızca doğrulanmış ödeme ya da yönetici
-// tanımlamasıyla açılır.
+// The subscription status is read from the server (single source of truth).
+// The payment-free "test subscription" button was removed: a subscription is
+// only activated by a verified payment or by an admin.
 export const SubscriptionPage = () => {
+    const { t, i18n } = useTranslation();
     const { user, refreshSession } = useAuth();
     const [status, setStatus] = useState(null);
     const [error, setError] = useState('');
@@ -19,15 +21,15 @@ export const SubscriptionPage = () => {
         try {
             const response = await api.get('/api/v1/subscription');
             setStatus(response.data);
-            // Sunucudaki durum token'dakinden farklıysa (ör. yönetici az önce
-            // tanımladı) token tazelenir ki etkinlik sayfası hemen açılsın.
+            // If the server's status differs from the token's (e.g. an admin just
+            // granted it), the token is refreshed so the event page opens right away.
             if (user && response.data.isActive !== user.isSubscribed) {
                 await refreshSession();
             }
         } catch {
-            setError('Abonelik bilgisi alınamadı.');
+            setError(t('subscription.loadError'));
         }
-    }, [user, refreshSession]);
+    }, [user, refreshSession, t]);
 
     useEffect(() => {
         load();
@@ -40,20 +42,20 @@ export const SubscriptionPage = () => {
                     SineUyum Premium
                 </Typography>
                 <Typography variant="h6" color="text.secondary" sx={{ mb: 3 }}>
-                    Film zevkine en uygun kişilerle tanış ve açık hava sineması etkinliklerine katıl!
+                    {t('subscription.tagline')}
                 </Typography>
                 <List sx={{ textAlign: 'left', display: 'inline-block', mb: 3 }}>
                     <ListItem>
                         <ListItemIcon><CheckCircleIcon color="success" /></ListItemIcon>
-                        <ListItemText primary="Otomatik Grup Eşleştirmeleri" />
+                        <ListItemText primary={t('subscription.featureGroups')} />
                     </ListItem>
                     <ListItem>
                         <ListItemIcon><CheckCircleIcon color="success" /></ListItemIcon>
-                        <ListItemText primary="Grubunla Birlikte Film Oylaması" />
+                        <ListItemText primary={t('subscription.featureVoting')} />
                     </ListItem>
                     <ListItem>
                         <ListItemIcon><CheckCircleIcon color="success" /></ListItemIcon>
-                        <ListItemText primary="Özel Açık Hava Sineması Etkinlikleri" />
+                        <ListItemText primary={t('subscription.featureEvents')} />
                     </ListItem>
                 </List>
 
@@ -63,10 +65,10 @@ export const SubscriptionPage = () => {
                 {status?.isActive && (
                     <>
                         <Alert severity="success" sx={{ textAlign: 'left', mb: 2 }}>
-                            Aboneliğin aktif — {status.willRenew ? 'yenilenme' : 'bitiş'} tarihi: {formatDate(status.expiresAt)}
+                            {t(status.willRenew ? 'subscription.activeRenews' : 'subscription.activeEnds', { date: formatDate(status.expiresAt, i18n.language) })}
                         </Alert>
                         <Button component={Link} to="/my-event" variant="contained" size="large">
-                            Etkinliklere git
+                            {t('subscription.goToEvents')}
                         </Button>
                     </>
                 )}
@@ -74,8 +76,8 @@ export const SubscriptionPage = () => {
                 {status && !status.isActive && (
                     <Alert severity="info" sx={{ textAlign: 'left' }}>
                         {status.availableProviders.length === 0
-                            ? 'Online ödeme çok yakında. Şu an abonelik satın alınamıyor.'
-                            : 'Ödeme seçenekleri hazırlanıyor.'}
+                            ? t('subscription.comingSoon')
+                            : t('subscription.preparing')}
                     </Alert>
                 )}
             </Paper>

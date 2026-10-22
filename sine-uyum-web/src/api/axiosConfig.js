@@ -1,20 +1,25 @@
 import axios from 'axios';
+import i18n, { FALLBACK_LANGUAGE } from '../i18n';
 
-// API_URL'i .env dosyasından al. Eğer tanımlı değilse, localhost'u varsay.
+// API address from the .env file; falls back to the local API.
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5074';
 
 const api = axios.create({
     baseURL: API_URL
 });
 
-// Sunucuya yüklenen medya (ör. profil fotoğrafı) göreli yolla gelir
-// ("/media/avatars/..."); tarayıcıya API adresiyle birlikte verilmeli.
-// Eski kayıtlarda tam URL olabilir, o zaman olduğu gibi kullanılır.
+// The API localizes its messages (errors, notifications, TMDb data...) by
+// this header, so every request carries the active UI language.
+const currentLanguage = () => i18n.language || FALLBACK_LANGUAGE;
+
+// Uploaded media (e.g. profile photos) comes back as a relative path
+// ("/media/avatars/..."), so the browser needs it prefixed with the API address.
+// Older records may hold a full URL, which is used as is.
 export const mediaUrl = (url) => (url && url.startsWith('/') ? `${API_URL}${url}` : url || undefined);
 
-// Token'ları tek yerden okuyup yazmak için yardımcılar.
-// Access token artık kısa ömürlü (varsayılan 60 dk); süresi dolduğunda
-// refresh token ile sessizce yenileniyor.
+// Helpers so tokens are read and written in one place.
+// The access token is short-lived (60 min by default); when it expires it is
+// silently renewed with the refresh token.
 export const TOKEN_KEY = 'token';
 export const REFRESH_TOKEN_KEY = 'refreshToken';
 
@@ -28,17 +33,17 @@ export const clearTokens = () => {
     localStorage.removeItem(REFRESH_TOKEN_KEY);
 };
 
-// Yenileme uçları Authorization başlığı istemez ve 401'de tekrar
-// yenilenmeye çalışılmamalıdır.
+// These endpoints take no Authorization header, and a 401 from them must not
+// trigger another refresh attempt.
 const AUTH_PATHS = ['/api/v1/account/login', '/api/v1/account/register', '/api/v1/account/refresh'];
 const isAuthPath = (url = '') => AUTH_PATHS.some((path) => url.startsWith(path));
 
-// Aynı anda birden fazla istek 401 alırsa tek bir yenileme isteği atılır.
-// (Sunucu refresh token rotation uyguladığı için ikinci istek geçersiz olurdu.)
+// If several requests get a 401 at once, only one refresh request is sent.
+// (The server rotates refresh tokens, so a second one would be invalid.)
 let refreshPromise = null;
 
-// Yeni access token döner (ve token'ları kaydeder); yenilenemezse null.
-// Eşzamanlı çağrılar tek isteğe indirgenir (sunucu rotation uyguluyor).
+// Resolves to a new access token (and saves the tokens), or null if the
+// session cannot be renewed. Concurrent calls share a single request.
 export const refreshAccessTokenOnce = () => {
     refreshPromise = refreshPromise || refreshAccessToken().finally(() => {
         refreshPromise = null;
@@ -51,8 +56,12 @@ const refreshAccessToken = async () => {
     if (!refreshToken) return null;
 
     try {
-        // Interceptor döngüsüne girmemek için ayrı bir axios örneği kullanılır.
-        const response = await axios.post(`${API_URL}/api/v1/account/refresh`, { refreshToken });
+        // A separate axios call so the interceptors cannot loop.
+        const response = await axios.post(
+            `${API_URL}/api/v1/account/refresh`,
+            { refreshToken },
+            { headers: { 'Accept-Language': currentLanguage() } }
+        );
         const { token, refreshToken: newRefreshToken } = response.data || {};
         if (!token || !newRefreshToken) return null;
 
@@ -63,21 +72,22 @@ const refreshAccessToken = async () => {
     }
 };
 
-// Interceptor'lar modül yüklenirken BİR KEZ kurulur. Önceden AuthContext'in
-// useEffect'i içinde kuruluyordu:
-//   * React çocuk bileşenlerin effect'lerini ebeveynden ÖNCE çalıştırdığı için
-//     sayfa açılışındaki ilk istekler Authorization başlığı olmadan gidip 401
-//     alıyor, ardından gereksiz bir token yenileme + tekrar deneme yapılıyordu
-//     (refresh token yoksa kullanıcı her yenilemede çıkışa düşüyordu).
-//   * effect her yeniden çalıştığında interceptor'lar üst üste ekleniyordu.
-// AuthContext artık yalnızca geri çağırımları verir (setupInterceptors).
+// The interceptors are installed ONCE, when this module loads. They used to be
+// installed in an AuthContext useEffect, which caused two problems:
+//   * React runs child effects BEFORE parent effects, so the first requests on
+//     page load went out without an Authorization header, got a 401 and then
+//     triggered a needless token refresh + retry (and without a refresh token
+//     the user was logged out on every reload).
+//   * every re-run of the effect stacked another set of interceptors.
+// AuthContext now only provides the callbacks (setupInterceptors).
 let onLogout = null;
 let onTokenRefreshed = null;
 
-// İstek gönderilmeden önce çalışır: token her istekte doğrudan localStorage'dan
-// okunur (React state'inin gecikmelerinden etkilenmez).
+// Runs before each request. The token is read straight from localStorage every
+// time, so it is never affected by React state lagging behind.
 api.interceptors.request.use(
     (config) => {
+        config.headers['Accept-Language'] = currentLanguage();
         if (!isAuthPath(config.url)) {
             const token = localStorage.getItem(TOKEN_KEY);
             if (token) {
@@ -89,15 +99,15 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// API'den yanıt geldikten sonra çalışır
+// Runs after the API responds.
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
         const isUnauthorized = error.response?.status === 401;
 
-        // 401 alındıysa önce refresh token ile yenilemeyi dene; başarılıysa
-        // kullanıcı hiçbir şey fark etmeden istek tekrarlanır.
+        // On a 401, first try to renew the session with the refresh token; if
+        // that works, the request is retried without the user noticing.
         if (isUnauthorized && originalRequest && !originalRequest._retried && !isAuthPath(originalRequest.url)) {
             originalRequest._retried = true;
 
@@ -109,7 +119,7 @@ api.interceptors.response.use(
                 return api(originalRequest);
             }
 
-            console.error("Oturum yenilenemedi. Çıkış yapılıyor.");
+            console.error("Could not renew the session. Logging out.");
             if (onLogout) onLogout();
         }
 
@@ -117,8 +127,8 @@ api.interceptors.response.use(
     }
 );
 
-// AuthContext çıkış ve token yenilendi geri çağırımlarını buradan verir.
-// Tekrar çağrılması güvenlidir; yalnızca geri çağırımlar güncellenir.
+// AuthContext passes its logout and token-refreshed callbacks in here.
+// Calling it again is safe; only the callbacks are replaced.
 export const setupInterceptors = (logoutAction, tokenRefreshedAction) => {
     onLogout = logoutAction;
     onTokenRefreshed = tokenRefreshedAction;

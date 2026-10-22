@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, Card, CardMedia, CircularProgress } from '@mui/material';
@@ -33,6 +34,7 @@ const MovieRow = ({ title, movies }) => {
 };
 
 export const HomePage = () => {
+    const { t } = useTranslation();
     const { user } = useAuth();
     const [popularMovies, setPopularMovies] = useState([]);
     const [nowPlayingMovies, setNowPlayingMovies] = useState([]);
@@ -51,7 +53,7 @@ export const HomePage = () => {
                 setPopularMovies(popularRes.data.results || []);
                 setNowPlayingMovies(nowPlayingRes.data.results || []);
             } catch (error) {
-                console.error("Ana sayfa filmleri yüklenemedi:", error);
+                console.error("Could not load home page movies:", error);
             } finally {
                 setLoading(false);
             }
@@ -62,7 +64,7 @@ export const HomePage = () => {
     return (
         <Box sx={{ width: '100%', maxWidth: '1400px', margin: 'auto', px: { xs: 2, md: 4 }, py: 2 }}>
             <Typography variant="h3" component="h1" gutterBottom align="left">
-                Keşfet
+                {t('home.title')}
             </Typography>
             
             {loading ? (
@@ -71,8 +73,8 @@ export const HomePage = () => {
                 </Box>
             ) : (
                 <>
-                    <MovieRow title="Popüler Filmler" movies={popularMovies} />
-                    <MovieRow title="Vizyondakiler" movies={nowPlayingMovies} />
+                    <MovieRow title={t('home.popular')} movies={popularMovies} />
+                    <MovieRow title={t('home.nowPlaying')} movies={nowPlayingMovies} />
                 </>
             )}
         </Box>

@@ -7,8 +7,8 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Kütüphaneler ayrı parçalarda: uygulama kodu değişince tarayıcı
-        // önbelleğindeki React/MUI yeniden indirilmez.
+        // Libraries go into separate chunks so that React/MUI stay in the
+        // browser cache when only application code changes.
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined;
           if (id.includes('@microsoft/signalr')) return 'signalr';

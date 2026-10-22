@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api, { mediaUrl } from '../api/axiosConfig';
 import { useSnackbar } from '../context/SnackbarProvider';
 import {
@@ -13,30 +14,34 @@ import StarIcon from '@mui/icons-material/Star';
 
 const POSTER = 'https://image.tmdb.org/t/p/w92';
 
-const formatWhen = (iso) => new Date(iso).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' });
+const formatWhen = (iso, language) => new Date(iso).toLocaleDateString(language, { day: 'numeric', month: 'short', year: 'numeric' });
 
-export const AuthorLine = ({ author, rating, compatibility, when, children }) => (
-    <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 1 }}>
-        <Avatar component={Link} to={`/profile/${author.id}`} src={mediaUrl(author.profileImageUrl)} sx={{ width: 36, height: 36 }}>
-            {author.userName?.charAt(0).toUpperCase()}
-        </Avatar>
-        <Box sx={{ flexGrow: 1, textAlign: 'left' }}>
-            <Typography component={Link} to={`/profile/${author.id}`} sx={{ fontWeight: 600, color: 'inherit', textDecoration: 'none' }}>
-                {author.userName}
-            </Typography>
-            {children}
-            {when && <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{formatWhen(when)}</Typography>}
-        </Box>
-        {rating != null && <Chip size="small" icon={<StarIcon />} label={`${rating}/10`} />}
-        {compatibility != null && (
-            <Tooltip title="Bu kişiyle film zevkinizin uyumu">
-                <Chip size="small" color={compatibility >= 70 ? 'success' : 'default'} variant="outlined" label={`%${compatibility} uyumlu`} />
-            </Tooltip>
-        )}
-    </Stack>
-);
+export const AuthorLine = ({ author, rating, compatibility, when, children }) => {
+    const { t, i18n } = useTranslation();
+    return (
+        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 1 }}>
+            <Avatar component={Link} to={`/profile/${author.id}`} src={mediaUrl(author.profileImageUrl)} sx={{ width: 36, height: 36 }}>
+                {author.userName?.charAt(0).toUpperCase()}
+            </Avatar>
+            <Box sx={{ flexGrow: 1, textAlign: 'left' }}>
+                <Typography component={Link} to={`/profile/${author.id}`} sx={{ fontWeight: 600, color: 'inherit', textDecoration: 'none' }}>
+                    {author.userName}
+                </Typography>
+                {children}
+                {when && <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{formatWhen(when, i18n.language)}</Typography>}
+            </Box>
+            {rating != null && <Chip size="small" icon={<StarIcon />} label={`${rating}/10`} />}
+            {compatibility != null && (
+                <Tooltip title={t('reviews.compatibilityTooltip')}>
+                    <Chip size="small" color={compatibility >= 70 ? 'success' : 'default'} variant="outlined" label={t('reviews.compatibilityChip', { compatibility })} />
+                </Tooltip>
+            )}
+        </Stack>
+    );
+};
 
 const Comments = ({ reviewId, onCountChange }) => {
+    const { t } = useTranslation();
     const { showSnackbar } = useSnackbar();
     const [comments, setComments] = useState(null);
     const [text, setText] = useState('');
@@ -60,7 +65,7 @@ const Comments = ({ reviewId, onCountChange }) => {
             onCountChange(1);
             setText('');
         } catch (error) {
-            showSnackbar(error.response?.data?.title || 'Yorum gönderilemedi.', 'error');
+            showSnackbar(error.response?.data?.title || t('reviews.comments.sendFailed'), 'error');
         } finally {
             setIsSending(false);
         }
@@ -72,7 +77,7 @@ const Comments = ({ reviewId, onCountChange }) => {
             setComments((prev) => prev.filter((c) => c.id !== comment.id));
             onCountChange(-1);
         } catch {
-            showSnackbar('Yorum silinemedi.', 'error');
+            showSnackbar(t('reviews.comments.deleteFailed'), 'error');
         }
     };
 
@@ -89,21 +94,22 @@ const Comments = ({ reviewId, onCountChange }) => {
                         {c.text}
                     </Typography>
                     {c.canDelete && (
-                        <IconButton size="small" aria-label="Yorumu sil" onClick={() => remove(c)}><DeleteOutlineIcon fontSize="small" /></IconButton>
+                        <IconButton size="small" aria-label={t('reviews.comments.delete')} onClick={() => remove(c)}><DeleteOutlineIcon fontSize="small" /></IconButton>
                     )}
                 </Box>
             ))}
             <Box component="form" onSubmit={send} sx={{ display: 'flex', gap: 1 }}>
-                <TextField size="small" fullWidth placeholder="Yorum yaz..." value={text} inputProps={{ maxLength: 500 }}
+                <TextField size="small" fullWidth placeholder={t('reviews.comments.placeholder')} value={text} inputProps={{ maxLength: 500 }}
                     onChange={(e) => setText(e.target.value)} />
-                <Button type="submit" disabled={isSending || !text.trim()}>Gönder</Button>
+                <Button type="submit" disabled={isSending || !text.trim()}>{t('common.send')}</Button>
             </Box>
         </Box>
     );
 };
 
-// Bir inceleme: yazar, puan, uyum rozeti, spoiler gizleme, beğeni ve yorumlar.
+// A single review: author, rating, compatibility badge, spoiler blur, likes and comments.
 export const ReviewCard = ({ review: initial, showMovie = false, headline }) => {
+    const { t } = useTranslation();
     const { showSnackbar } = useSnackbar();
     const [review, setReview] = useState(initial);
     const [revealed, setRevealed] = useState(false);
@@ -113,7 +119,7 @@ export const ReviewCard = ({ review: initial, showMovie = false, headline }) => 
 
     const toggleLike = async () => {
         const liked = !review.likedByMe;
-        // İyimser güncelleme; sunucu yanıtı sayıyı düzeltir.
+        // Optimistic update; the server response corrects the count.
         setReview((r) => ({ ...r, likedByMe: liked, likeCount: r.likeCount + (liked ? 1 : -1) }));
         try {
             const res = liked
@@ -122,7 +128,7 @@ export const ReviewCard = ({ review: initial, showMovie = false, headline }) => 
             setReview((r) => ({ ...r, likedByMe: res.data.liked, likeCount: res.data.likeCount }));
         } catch (error) {
             setReview((r) => ({ ...r, likedByMe: !liked, likeCount: r.likeCount + (liked ? -1 : 1) }));
-            showSnackbar(error.response?.data?.title || 'Beğeni kaydedilemedi.', 'error');
+            showSnackbar(error.response?.data?.title || t('reviews.likeFailed'), 'error');
         }
     };
 
@@ -154,7 +160,7 @@ export const ReviewCard = ({ review: initial, showMovie = false, headline }) => 
                     </Typography>
                     {hidden && (
                         <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Button variant="contained" size="small" onClick={() => setRevealed(true)}>Spoiler içeriyor — göster</Button>
+                            <Button variant="contained" size="small" onClick={() => setRevealed(true)}>{t('reviews.spoilerReveal')}</Button>
                         </Box>
                     )}
                 </Box>
@@ -162,11 +168,11 @@ export const ReviewCard = ({ review: initial, showMovie = false, headline }) => 
                 <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
                     <Button size="small" color={review.likedByMe ? 'error' : 'inherit'}
                         startIcon={review.likedByMe ? <FavoriteIcon /> : <FavoriteBorderIcon />} onClick={toggleLike}
-                        aria-label={review.likedByMe ? 'Beğenmekten vazgeç' : 'Beğen'}>
+                        aria-label={review.likedByMe ? t('reviews.unlike') : t('reviews.like')}>
                         {review.likeCount}
                     </Button>
                     <Button size="small" color="inherit" startIcon={<ChatBubbleOutlineIcon />} onClick={() => setShowComments((v) => !v)}>
-                        {review.commentCount} yorum
+                        {t('reviews.commentCount', { count: review.commentCount })}
                     </Button>
                 </Stack>
                 {showComments && (

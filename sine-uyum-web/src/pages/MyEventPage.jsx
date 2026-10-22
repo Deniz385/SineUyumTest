@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Trans, useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, CircularProgress, Paper, Avatar, AvatarGroup, Alert, Grid, Card, CardContent, CardMedia, CardActions, Button, Chip } from '@mui/material';
 import EventIcon from '@mui/icons-material/Event';
@@ -8,30 +9,41 @@ import api, { mediaUrl } from '../api/axiosConfig';
 
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 
-const AvailableEvent = ({ event, onJoin }) => (
-    <Paper elevation={3} sx={{ p: 4, mt: 4, textAlign: 'center' }}>
-        <Typography variant="h5" component="h2" gutterBottom>Sıradaki Etkinlik</Typography>
-        <Typography variant="h6">{event.locationName}</Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary', my: 2 }}>
-            <EventIcon sx={{ mr: 1 }} />
-            <Typography variant="body1">
-                {new Date(event.eventDate).toLocaleDateString('tr-TR', { weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-            </Typography>
-        </Box>
-        <Button variant="contained" size="large" onClick={() => onJoin(event.id)} sx={{ mt: 2 }}>
-            Bu Haftaki Etkinliğe Katıl!
-        </Button>
-    </Paper>
-);
+const EVENT_DATE_FORMAT = { weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
 
-const PendingEvent = ({ event }) => (
-    <Alert severity="info" sx={{ mt: 4, p: 3 }}>
-        <Typography variant="h6">Eşleştirme Bekleniyor</Typography>
-        <Typography>Harika bir film deneyimi için eşleştirmeni yapıyoruz! **{event.locationName}** etkinliğine başarıyla katıldın. Eşleşmeler tamamlandığında bu sayfada masanı görebileceksin.</Typography>
-    </Alert>
-);
+const AvailableEvent = ({ event, onJoin }) => {
+    const { t, i18n } = useTranslation();
+    return (
+        <Paper elevation={3} sx={{ p: 4, mt: 4, textAlign: 'center' }}>
+            <Typography variant="h5" component="h2" gutterBottom>{t('event.next')}</Typography>
+            <Typography variant="h6">{event.locationName}</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary', my: 2 }}>
+                <EventIcon sx={{ mr: 1 }} />
+                <Typography variant="body1">
+                    {new Date(event.eventDate).toLocaleDateString(i18n.language, EVENT_DATE_FORMAT)}
+                </Typography>
+            </Box>
+            <Button variant="contained" size="large" onClick={() => onJoin(event.id)} sx={{ mt: 2 }}>
+                {t('event.join')}
+            </Button>
+        </Paper>
+    );
+};
+
+const PendingEvent = ({ event }) => {
+    const { t } = useTranslation();
+    return (
+        <Alert severity="info" sx={{ mt: 4, p: 3 }}>
+            <Typography variant="h6">{t('event.pendingTitle')}</Typography>
+            <Typography>
+                <Trans i18nKey="event.pendingBody" values={{ location: event.locationName }} components={{ strong: <strong /> }} />
+            </Typography>
+        </Alert>
+    );
+};
 
 const MatchedEvent = ({ data, onVote }) => {
+    const { t, i18n } = useTranslation();
     const { user } = useAuth();
     
     const group = data.group;
@@ -49,9 +61,9 @@ const MatchedEvent = ({ data, onVote }) => {
                 <Typography variant="h5" component="h2">{event.locationName}</Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary', my: 2 }}>
                     <EventIcon sx={{ mr: 1 }} />
-                    <Typography variant="h6">{new Date(event.eventDate).toLocaleDateString('tr-TR', { weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</Typography>
+                    <Typography variant="h6">{new Date(event.eventDate).toLocaleDateString(i18n.language, EVENT_DATE_FORMAT)}</Typography>
                 </Box>
-                <Typography variant="h6" component="h3" sx={{ mt: 4, mb: 2 }}>Masanız</Typography>
+                <Typography variant="h6" component="h3" sx={{ mt: 4, mb: 2 }}>{t('event.yourTable')}</Typography>
                 <AvatarGroup max={10} sx={{ justifyContent: 'center', mb: 2 }}>
                     {groupMembers.map(member => (
                         <Avatar key={member.id} component={Link} to={`/profile/${member.id}`} alt={member.userName} src={mediaUrl(member.profileImageUrl)} sx={{ width: 64, height: 64, border: '2px solid white' }} title={member.userName} />
@@ -59,7 +71,7 @@ const MatchedEvent = ({ data, onVote }) => {
                 </AvatarGroup>
             </Paper>
 
-            <Typography variant="h5" component="h2" sx={{ mb: 3 }}>Film Oylaması</Typography>
+            <Typography variant="h5" component="h2" sx={{ mb: 3 }}>{t('event.movieVote')}</Typography>
             <Grid container spacing={3} justifyContent="center">
                 {suggestedMovies.map(movie => (
                     <Grid item xs={12} sm={6} md={4} key={movie.id}>
@@ -68,9 +80,9 @@ const MatchedEvent = ({ data, onVote }) => {
                             <CardContent sx={{ flexGrow: 1 }}><Typography gutterBottom variant="h6" component="div">{movie.title}</Typography></CardContent>
                             <CardActions sx={{ justifyContent: 'space-between', p: 2 }}>
                                 <Button size="small" variant={currentUserVoteId === movie.id ? "contained" : "outlined"} onClick={() => onVote(movie.id)} startIcon={<HowToVoteIcon />}>
-                                    {currentUserVoteId === movie.id ? "Oyum Bu" : "Oyla"}
+                                    {currentUserVoteId === movie.id ? t('event.myVote') : t('event.vote')}
                                 </Button>
-                                <Chip label={`${getVoteCount(movie.id)} Oy`} variant="outlined" />
+                                <Chip label={t('event.voteCount', { count: getVoteCount(movie.id) })} variant="outlined" />
                             </CardActions>
                         </Card>
                     </Grid>
@@ -82,6 +94,7 @@ const MatchedEvent = ({ data, onVote }) => {
 
 
 export const MyEventPage = () => {
+    const { t } = useTranslation();
     const { user } = useAuth();
     const navigate = useNavigate();
     const [statusData, setStatusData] = useState(null);
@@ -109,8 +122,8 @@ export const MyEventPage = () => {
         fetchEventStatus();
     }, [fetchEventStatus]);
 
-    // Sunucu ücretli özelliği kendisi denetler (402). Abonelik bittiyse
-    // kullanıcı abonelik sayfasına yönlendirilir.
+    // The server enforces the paid feature itself (402). If the subscription
+    // has ended, the user is sent to the subscription page.
     const handleActionError = (error, fallback) => {
         if (error.response?.status === 402) {
             navigate('/subscription');
@@ -125,7 +138,7 @@ export const MyEventPage = () => {
             await api.post(`/api/v1/event/${eventId}/join`);
             fetchEventStatus();
         } catch (error) {
-            handleActionError(error, "Etkinliğe katılırken bir hata oluştu.");
+            handleActionError(error, t('event.joinFailed'));
         }
     };
     
@@ -137,7 +150,7 @@ export const MyEventPage = () => {
             });
             fetchEventStatus();
         } catch (error) {
-            handleActionError(error, "Oyunuz kaydedilirken bir sorun oluştu.");
+            handleActionError(error, t('event.voteFailed'));
         }
     };
     
@@ -162,7 +175,7 @@ export const MyEventPage = () => {
             );
         }
         if (!statusData) {
-            return <Alert severity="warning" sx={{ mt: 4 }}>Etkinlik durumu alınamadı. Lütfen sayfayı yenileyin.</Alert>;
+            return <Alert severity="warning" sx={{ mt: 4 }}>{t('event.statusUnavailable')}</Alert>;
         }
 
         switch (statusData.status) {
@@ -173,15 +186,15 @@ export const MyEventPage = () => {
             case 'MATCHED':
                 return <MatchedEvent data={statusData} onVote={handleVote} />;
             case 'NONE':
-                return <Alert severity="info" sx={{ mt: 4 }}>Katılabileceğin yeni bir etkinlik bulunmuyor. Lütfen daha sonra tekrar kontrol et.</Alert>;
+                return <Alert severity="info" sx={{ mt: 4 }}>{t('event.none')}</Alert>;
             default:
-                return <Alert severity="error" sx={{ mt: 4 }}>Etkinlik bilgileri yüklenirken bir hata oluştu.</Alert>;
+                return <Alert severity="error" sx={{ mt: 4 }}>{t('event.loadError')}</Alert>;
         }
     };
 
     return (
         <Box className="page-container">
-            <Typography variant="h4" component="h1" gutterBottom>Etkinliğim</Typography>
+            <Typography variant="h4" component="h1" gutterBottom>{t('event.title')}</Typography>
             {renderContent()}
         </Box>
     );

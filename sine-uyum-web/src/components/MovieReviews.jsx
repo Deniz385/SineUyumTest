@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import api from '../api/axiosConfig';
 import { useSnackbar } from '../context/SnackbarProvider';
 import { Alert, Box, Button, Checkbox, CircularProgress, FormControlLabel, Stack, TextField, Typography } from '@mui/material';
@@ -6,9 +7,10 @@ import { ReviewCard } from './ReviewCard';
 
 const PAGE_SIZE = 20;
 
-// Film sayfasındaki incelemeler: kendi incelemesini yaz/düzenle/sil ve
-// başkalarının incelemeleri (en yeniden eskiye).
+// Reviews on the movie page: write/edit/delete your own review, plus
+// everyone else's (newest first).
 export const MovieReviews = ({ movieId, refreshKey, onForYou }) => {
+    const { t } = useTranslation();
     const { showSnackbar } = useSnackbar();
     const [data, setData] = useState(null);
     const [reviews, setReviews] = useState([]);
@@ -42,9 +44,9 @@ export const MovieReviews = ({ movieId, refreshKey, onForYou }) => {
             const res = await api.put(`/api/v1/reviews/movie/${movieId}`, draft);
             setData((d) => ({ ...d, mine: res.data }));
             setIsEditing(false);
-            showSnackbar('İncelemen kaydedildi.', 'success');
+            showSnackbar(t('reviews.saved'), 'success');
         } catch (error) {
-            showSnackbar(error.response?.data?.title || 'İnceleme kaydedilemedi.', 'error');
+            showSnackbar(error.response?.data?.title || t('reviews.saveFailed'), 'error');
         } finally {
             setIsSaving(false);
         }
@@ -57,7 +59,7 @@ export const MovieReviews = ({ movieId, refreshKey, onForYou }) => {
             setDraft({ text: '', containsSpoilers: false });
             setIsEditing(true);
         } catch {
-            showSnackbar('İnceleme silinemedi.', 'error');
+            showSnackbar(t('reviews.deleteFailed'), 'error');
         }
     };
 
@@ -66,15 +68,15 @@ export const MovieReviews = ({ movieId, refreshKey, onForYou }) => {
     return (
         <Box sx={{ mt: 5, textAlign: 'left' }} data-testid="movie-reviews">
             <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2 }}>
-                İncelemeler {data.totalCount > 0 && `(${data.totalCount})`}
+                {data.totalCount > 0 ? t('reviews.titleWithCount', { count: data.totalCount }) : t('reviews.title')}
             </Typography>
 
             {data.myRating == null ? (
-                <Alert severity="info" sx={{ mb: 2 }}>İnceleme yazmak için önce filmi puanla.</Alert>
+                <Alert severity="info" sx={{ mb: 2 }}>{t('reviews.rateFirst')}</Alert>
             ) : isEditing ? (
                 <Box component="form" onSubmit={save} sx={{ mb: 3 }}>
                     <TextField
-                        label={`İncelemen (puanın: ${data.myRating}/10)`}
+                        label={t('reviews.yourReview', { rating: data.myRating })}
                         multiline minRows={3} fullWidth
                         value={draft.text}
                         inputProps={{ maxLength: 2000 }}
@@ -83,12 +85,12 @@ export const MovieReviews = ({ movieId, refreshKey, onForYou }) => {
                     <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1 }}>
                         <FormControlLabel
                             control={<Checkbox checked={draft.containsSpoilers} onChange={(e) => setDraft((d) => ({ ...d, containsSpoilers: e.target.checked }))} />}
-                            label="Spoiler içeriyor"
+                            label={t('reviews.containsSpoilers')}
                         />
                         <Box sx={{ flexGrow: 1 }} />
-                        {data.mine && <Button onClick={() => setIsEditing(false)}>Vazgeç</Button>}
+                        {data.mine && <Button onClick={() => setIsEditing(false)}>{t('reviews.discard')}</Button>}
                         <Button type="submit" variant="contained" disabled={isSaving || !draft.text.trim()}>
-                            {data.mine ? 'Güncelle' : 'Paylaş'}
+                            {data.mine ? t('common.update') : t('reviews.post')}
                         </Button>
                     </Stack>
                 </Box>
@@ -96,8 +98,8 @@ export const MovieReviews = ({ movieId, refreshKey, onForYou }) => {
                 <Box sx={{ mb: 3 }}>
                     <ReviewCard review={data.mine} />
                     <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                        <Button size="small" onClick={() => setIsEditing(true)}>Düzenle</Button>
-                        <Button size="small" color="error" onClick={remove}>Sil</Button>
+                        <Button size="small" onClick={() => setIsEditing(true)}>{t('common.edit')}</Button>
+                        <Button size="small" color="error" onClick={remove}>{t('common.delete')}</Button>
                     </Stack>
                 </Box>
             ) : null}
@@ -106,10 +108,10 @@ export const MovieReviews = ({ movieId, refreshKey, onForYou }) => {
                 {reviews.map((r) => <ReviewCard key={r.id} review={r} />)}
             </Stack>
             {reviews.length === 0 && (
-                <Typography color="text.secondary">Henüz başka inceleme yok. İlk yazan sen ol.</Typography>
+                <Typography color="text.secondary">{t('reviews.empty')}</Typography>
             )}
             {reviews.length < data.totalCount && (
-                <Button sx={{ mt: 2 }} onClick={() => load(page + 1)}>Daha fazla</Button>
+                <Button sx={{ mt: 2 }} onClick={() => load(page + 1)}>{t('common.loadMore')}</Button>
             )}
         </Box>
     );

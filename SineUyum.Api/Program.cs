@@ -170,6 +170,7 @@ builder.Services.AddScoped<SubscriptionService>();
 builder.Services.AddScoped<PrivacyService>();
 builder.Services.AddScoped<SocialService>();
 builder.Services.AddScoped<TasteTwinService>();
+builder.Services.AddScoped<YearInReviewService>();
 // Weekly taste twin notifications.
 builder.Services.Configure<TasteTwinOptions>(builder.Configuration.GetSection("TasteTwin"));
 builder.Services.AddSingleton<TasteTwinWorker>();

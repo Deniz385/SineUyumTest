@@ -351,6 +351,84 @@
   totalCount: number
   year: number
 
+## diary.forMovie  GET /api/v1/diary/movie/{id} -> 200
+  $: array
+  [].createdAt: string
+  [].id: number
+  [].movie.id: number
+  [].movie.posterPath: string
+  [].movie.title: string
+  [].movie: object
+  [].note: string
+  [].rating: number
+  [].rewatch: bool
+  [].watchedOn: string
+  []: object
+
+## yearInReview  GET /api/v1/year-in-review/user/{id} -> 200
+  $: object
+  availableYears: array
+  availableYears[]: number
+  averageRating: number
+  busiestMonth.count: number
+  busiestMonth.month: number
+  busiestMonth: object
+  favoriteWeekday: null
+  firstMovie.movie.id: number
+  firstMovie.movie.posterPath: string
+  firstMovie.movie.title: string
+  firstMovie.movie: object
+  firstMovie.watchedOn: string
+  firstMovie: object
+  identity.averageRating: number
+  identity.contrarianTake: null
+  identity.deviation: null
+  identity.favorite.movieId: number
+  identity.favorite.posterPath: string
+  identity.favorite.rating: number
+  identity.favorite.title: string
+  identity.favorite.tmdbAverage: null
+  identity.favorite: object
+  identity.title: string
+  identity.titleDescription: string
+  identity.topGenres: array
+  identity.totalRatings: number
+  identity.userName: string
+  identity: object
+  isMine: bool
+  lastMovie.movie.id: number
+  lastMovie.movie.posterPath: string
+  lastMovie.movie.title: string
+  lastMovie.movie: object
+  lastMovie.watchedOn: string
+  lastMovie: object
+  minMovies: number
+  months: array
+  months[].count: number
+  months[].month: number
+  months[]: object
+  mostRewatched: null
+  previousYearAverage: null
+  ready: bool
+  tasteMate: null
+  topMovies: array
+  topMovies[].movieId: number
+  topMovies[].posterPath: string
+  topMovies[].rating: number
+  topMovies[].title: string
+  topMovies[].tmdbAverage: null
+  topMovies[]: object
+  totals.commentsReceived: number
+  totals.diaryEntries: number
+  totals.likesReceived: number
+  totals.movies: number
+  totals.ratings: number
+  totals.reviews: number
+  totals.rewatches: number
+  totals: object
+  userName: string
+  year: number
+
 ## diary.delete  DELETE /api/v1/diary/{id} -> 200
   $: object
   message: string

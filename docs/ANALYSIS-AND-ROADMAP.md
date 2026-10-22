@@ -549,7 +549,12 @@ messages when scrolling up for message pagination.
   visit).
 - Tested with the production bundle (`vite preview`) in real Chromium.
 
-**Remaining:** unifying the loading / empty / error displays across pages.
+- ✅ Loading / empty / error displays are shared components
+  (`src/components/states/`) used across the pages; failed loads have a
+  "Try again" button.
+- ✅ The navbar no longer wraps at medium widths: text links from 1200px, icons
+  with tooltips from 900px, a drawer below; secondary items (profile, edit
+  profile, privacy, theme, language, log out) are in an account menu.
 
 ---
 

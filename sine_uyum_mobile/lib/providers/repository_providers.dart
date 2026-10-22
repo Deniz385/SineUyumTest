@@ -7,6 +7,7 @@ import '../data/models/message.dart';
 import '../data/models/movie.dart';
 import '../data/models/profile.dart';
 import '../data/models/watchlist.dart';
+import '../data/repositories/diary_repository.dart';
 import '../data/repositories/event_repository.dart';
 import '../data/repositories/message_repository.dart';
 import '../data/repositories/movie_repository.dart';
@@ -34,6 +35,10 @@ final socialRepositoryProvider = Provider<SocialRepository>(
 
 final watchlistRepositoryProvider = Provider<WatchlistRepository>(
   (ref) => WatchlistRepository(_client(ref)),
+);
+
+final diaryRepositoryProvider = Provider<DiaryRepository>(
+  (ref) => DiaryRepository(_client(ref)),
 );
 
 final messageRepositoryProvider = Provider<MessageRepository>(

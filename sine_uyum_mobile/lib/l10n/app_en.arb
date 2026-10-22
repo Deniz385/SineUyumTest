@@ -687,5 +687,63 @@
   "watchlistFilterUnwatchedShared": "Unwatched by all of us",
   "watchlistFilterUnwatched": "Not watched yet",
   "watchlistAllWatchedShared": "Every movie here has been watched by at least one of you.",
-  "watchlistAllWatched": "You've watched every movie in this list."
+  "watchlistAllWatched": "You've watched every movie in this list.",
+  "diaryAdd": "Add to diary",
+  "diarySheetPrompt": "When did you watch it?",
+  "diaryEditTitle": "Edit diary entry",
+  "diaryWatchedOn": "Watched on",
+  "diaryRewatch": "Rewatch",
+  "diaryRewatchHint": "You've seen it before",
+  "diaryNoteLabel": "Note (optional)",
+  "diaryNoteHint": "Where, with whom, how it felt...",
+  "diaryRateToo": "Rate it too",
+  "diaryRateTooHint": "Updates your rating of the movie",
+  "diarySave": "Save to diary",
+  "diaryEntryAdded": "Added to your diary.",
+  "diaryEntryUpdated": "Diary entry updated.",
+  "diaryEntryDeleted": "Diary entry deleted.",
+  "diaryDeleteTitle": "Delete this diary entry?",
+  "diaryDeleteBody": "Your {date} watch of \"{title}\" will be removed from your diary. Your rating stays.",
+  "@diaryDeleteBody": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "diaryTitle": "Film diary",
+  "myDiary": "My diary",
+  "diaryYearTotal": "{count, plural, =0{No movies logged in {year}} =1{1 movie logged in {year}} other{{count} movies logged in {year}}}",
+  "@diaryYearTotal": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "diaryRewatchCount": "{count, plural, =1{1 rewatch} other{{count} rewatches}}",
+  "@diaryRewatchCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "diaryEmptyOwn": "Your diary is empty. Log what you watch and when with \"Add to diary\" on a movie's page.",
+  "diaryEmptyOther": "Nothing logged in this diary yet.",
+  "diaryEmptyYear": "Nothing logged in {year}.",
+  "@diaryEmptyYear": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "diaryLoadMore": "Load more"
 }

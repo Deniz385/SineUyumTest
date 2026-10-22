@@ -4,12 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/movie.dart';
 import '../../data/models/watchlist.dart';
 import '../../l10n/l10n.dart';
+import '../../providers/diary_provider.dart';
 import '../../providers/repository_providers.dart';
+import '../../providers/session_provider.dart';
 import '../../widgets/movie_widgets.dart';
 import '../../widgets/poster_image.dart';
 import '../../widgets/state_views.dart';
 import '../../providers/social_provider.dart';
 import '../../providers/watchlist_provider.dart';
+import '../diary/diary_entry_sheet.dart';
 import '../social/movie_reviews_section.dart';
 
 class MovieDetailPage extends ConsumerWidget {
@@ -129,6 +132,35 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
     }
   }
 
+  Future<void> _addToDiary() async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    // My current rating (from the reviews section) prefills the sheet.
+    final myRating = ref.read(movieReviewsProvider(_movie.id)).value?.myRating;
+
+    final saved = await DiaryEntrySheet.show(
+      context,
+      movieTitle: _movie.title,
+      initialRating: myRating,
+      onSubmit: (draft) async {
+        await ref.read(diaryRepositoryProvider).create(_movie.id, draft);
+        // Any open diary (e.g. the one this page was opened from) reloads.
+        ref.invalidate(diaryProvider);
+        if (draft.rating != null) {
+          // The rating was saved too: same refreshes as rating directly.
+          ref.invalidate(myEventProvider);
+          ref.invalidate(movieReviewsProvider(_movie.id));
+          ref.invalidate(feedProvider);
+          final myId = ref.read(sessionProvider).user?.id;
+          if (myId != null) ref.invalidate(userProfileProvider(myId));
+        }
+      },
+    );
+    if (saved == true) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.diaryEntryAdded)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -205,6 +237,12 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: _isBusy ? null : _addToDiary,
+          icon: const Icon(Icons.edit_calendar_outlined),
+          label: Text(l10n.diaryAdd),
         ),
         if (_movie.overview != null && _movie.overview!.isNotEmpty) ...[
           const SizedBox(height: 24),

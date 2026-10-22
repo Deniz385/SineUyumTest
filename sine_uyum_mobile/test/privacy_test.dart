@@ -217,6 +217,8 @@ void main() {
     expect(find.textContaining('gizli tutuyor'), findsOneWidget);
     expect(find.textContaining('Puanladığı filmler'), findsNothing);
     expect(find.text('Puanlama'), findsNothing);
+    // The diary follows the same rule, so it isn't offered either.
+    expect(find.text('Film günlüğü'), findsNothing);
     expect(social.compatibilityCalls, 0);
     // Following and messaging are still possible.
     expect(find.text('Takip et'), findsOneWidget);

@@ -39,6 +39,9 @@ class ResponseCache {
     RegExp(r'^/api/v1/blocks$'),
     RegExp(r'^/api/v1/feed$'),
     RegExp(r'^/api/v1/reviews/movie/\d+$'),
+    // A diary (pages and yearly summary) can be read back offline; the
+    // providers refetch after every change, which refreshes the copy.
+    RegExp(r'^/api/v1/diary/user/[^/]+(/summary)?$'),
   ];
 
   static bool isCacheable(String path) =>

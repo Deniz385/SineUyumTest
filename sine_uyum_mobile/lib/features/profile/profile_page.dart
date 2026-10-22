@@ -74,19 +74,30 @@ class ProfilePage extends ConsumerWidget {
                 ],
               ] else ...[
                 _Stats(statistics: profile.statistics),
-                if (profile.statistics.totalRatings > 0)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      onPressed: () => context.push(
-                        '/profile/$userId/identity${isOwnProfile ? '?mine=1' : ''}',
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    if (profile.statistics.totalRatings > 0)
+                      TextButton.icon(
+                        onPressed: () => context.push(
+                          '/profile/$userId/identity${isOwnProfile ? '?mine=1' : ''}',
+                        ),
+                        icon: const Icon(Icons.badge_outlined),
+                        label: Text(
+                          isOwnProfile
+                              ? l10n.myFilmIdentity
+                              : l10n.filmIdentity,
+                        ),
                       ),
-                      icon: const Icon(Icons.badge_outlined),
+                    TextButton.icon(
+                      onPressed: () => context.push('/profile/$userId/diary'),
+                      icon: const Icon(Icons.menu_book_outlined),
                       label: Text(
-                        isOwnProfile ? l10n.myFilmIdentity : l10n.filmIdentity,
+                        isOwnProfile ? l10n.myDiary : l10n.diaryTitle,
                       ),
                     ),
-                  ),
+                  ],
+                ),
                 if (!isOwnProfile) ...[
                   const SizedBox(height: 20),
                   _SocialActions(userId: userId, userName: profile.userName),

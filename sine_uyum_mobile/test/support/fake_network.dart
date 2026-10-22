@@ -20,6 +20,9 @@ class FakeServer implements HttpClientAdapter {
   /// Decoded JSON bodies of every request, in order (null when empty).
   final bodies = <Object?>[];
 
+  /// Query parameters of every request, in order.
+  final queries = <Map<String, dynamic>>[];
+
   @override
   Future<ResponseBody> fetch(
     RequestOptions options,
@@ -30,6 +33,7 @@ class FakeServer implements HttpClientAdapter {
     requests.add(key);
     headers.add(Map.of(options.headers));
     bodies.add(options.data);
+    queries.add(Map.of(options.queryParameters));
     if (offline) {
       throw DioException.connectionError(
         requestOptions: options,

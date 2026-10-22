@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/login_page.dart';
 import '../../features/auth/register_page.dart';
+import '../../features/diary/diary_page.dart';
 import '../../features/events/event_page.dart';
 import '../../features/home/home_page.dart';
 import '../../features/messages/conversation_page.dart';
@@ -125,6 +126,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           userId: state.pathParameters['userId'] ?? '',
           isMine: state.uri.queryParameters['mine'] == '1',
         ),
+      ),
+      GoRoute(
+        path: '/profile/:userId/diary',
+        builder: (context, state) =>
+            DiaryPage(userId: state.pathParameters['userId'] ?? ''),
       ),
       GoRoute(
         path: '/profile/:userId',

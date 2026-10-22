@@ -55,7 +55,7 @@ class FakeDevices implements DeviceRepository {
     required String token,
     required String platform,
   }) async {
-    if (failRegister) throw Exception('ağ yok');
+    if (failRegister) throw Exception('no network');
     registered.add((token, platform));
   }
 
@@ -63,7 +63,7 @@ class FakeDevices implements DeviceRepository {
   Future<void> unregister(String token) async => unregistered.add(token);
 }
 
-/// Depoya/ağa dokunmadan oturum durumunu testten sürmek için.
+/// Drives the session state from a test without touching storage/network.
 class FakeSession extends SessionNotifier {
   @override
   SessionState build() => const SessionState.unknown();
@@ -97,7 +97,7 @@ void main() {
         connectivitySourceProvider.overrideWithValue(connectivity),
       ],
     );
-    // Sağlayıcı uygulamada kök widget'ta izlenir; testte de canlı tutulur.
+    // The app watches the provider in the root widget; keep it alive here too.
     container.listen(pushProvider, (_, _) {});
   });
 
@@ -107,23 +107,26 @@ void main() {
       container.read(sessionProvider.notifier) as FakeSession;
 
   Future<void> settle() async {
-    // Olay döngüsünün akış olaylarını teslim etmesine izin ver, sonra
-    // sıradaki adımların bitmesini bekle.
+    // Let the event loop deliver stream events, then wait for the queued
+    // steps to finish.
     await Future<void>.delayed(Duration.zero);
     await container.read(pushProvider.notifier).settled;
   }
 
   PushStatus status() => container.read(pushProvider);
 
-  test('girişte izin alınır ve cihaz kaydedilir', () async {
-    session().signIn('u1');
-    await settle();
+  test(
+    'on sign-in, permission is requested and the device registered',
+    () async {
+      session().signIn('u1');
+      await settle();
 
-    expect(devices.registered, [('token-1', 'android')]);
-    expect(status(), PushStatus.registered);
-  });
+      expect(devices.registered, [('token-1', 'android')]);
+      expect(status(), PushStatus.registered);
+    },
+  );
 
-  test('Firebase yapılandırılmamışsa hiçbir şey kaydedilmez', () async {
+  test('nothing is registered when Firebase is not configured', () async {
     messaging.configured = false;
     session().signIn('u1');
     await settle();
@@ -132,7 +135,7 @@ void main() {
     expect(status(), PushStatus.disabled);
   });
 
-  test('izin verilmezse kayıt yapılmaz', () async {
+  test('nothing is registered without permission', () async {
     messaging.permission = false;
     session().signIn('u1');
     await settle();
@@ -141,7 +144,7 @@ void main() {
     expect(status(), PushStatus.permissionDenied);
   });
 
-  test('token yenilenince yeni token kaydedilir', () async {
+  test('a refreshed token is registered', () async {
     session().signIn('u1');
     await settle();
 
@@ -151,7 +154,7 @@ void main() {
     expect(devices.registered.map((r) => r.$1), ['token-1', 'token-2']);
   });
 
-  test('çıkışta kayıt silinir, sonraki yenilemeler kaydedilmez', () async {
+  test('sign-out unregisters; later refreshes are not registered', () async {
     session().signIn('u1');
     await settle();
     messaging.refresh.add('token-2');
@@ -167,13 +170,13 @@ void main() {
     expect(devices.registered.map((r) => r.$1), isNot(contains('token-3')));
   });
 
-  test('hiç kayıt yokken çıkış sunucuyu çağırmaz', () async {
+  test('sign-out without a registration does not call the server', () async {
     session().signOut();
     await settle();
     expect(devices.unregistered, isEmpty);
   });
 
-  test('başka hesapla girişte cihaz yeniden kaydedilir', () async {
+  test('the device is registered again for another account', () async {
     session().signIn('u1');
     await settle();
     session().signOut();
@@ -185,7 +188,7 @@ void main() {
     expect(devices.unregistered, ['token-1']);
   });
 
-  test('soğuk açılıştaki bildirime bir kez gidilir', () async {
+  test('the cold-start notification is opened once', () async {
     messaging.initial = const PushOpened(
       relatedUrl: '/messages/u9',
       notificationId: 5,
@@ -203,7 +206,7 @@ void main() {
     expect(messaging.initialCalls, 1);
   });
 
-  test('arka plandayken dokunulan bildirim işlenir', () async {
+  test('a notification tapped in the background is handled', () async {
     session().signIn('u1');
     await settle();
 
@@ -213,38 +216,41 @@ void main() {
     expect(handled.map((o) => o.relatedUrl), ['/profile/u3']);
   });
 
-  test('kayıt ağ hatasıyla düşerse uygulama etkilenmez', () async {
+  test('a registration network failure does not affect the app', () async {
     devices.failRegister = true;
     session().signIn('u1');
     await settle();
 
     expect(status(), isNot(PushStatus.registered));
-    // Sonraki adımlar hâlâ işlenir.
+    // Later steps are still processed.
     devices.failRegister = false;
     messaging.refresh.add('token-2');
     await settle();
     expect(devices.registered.map((r) => r.$1), ['token-2']);
   });
 
-  test('çevrimdışıyken düşen kayıt ağ dönünce yeniden denenir', () async {
-    container.listen(networkStatusProvider, (_, _) {});
-    devices.failRegister = true;
-    session().signIn('u1');
-    await settle();
-    expect(status(), PushStatus.idle);
+  test(
+    'a registration that failed offline is retried when back online',
+    () async {
+      container.listen(networkStatusProvider, (_, _) {});
+      devices.failRegister = true;
+      session().signIn('u1');
+      await settle();
+      expect(status(), PushStatus.idle);
 
-    devices.failRegister = false;
-    connectivity.set(false);
-    await settle();
-    connectivity.set(true);
-    await settle();
+      devices.failRegister = false;
+      connectivity.set(false);
+      await settle();
+      connectivity.set(true);
+      await settle();
 
-    expect(devices.registered.map((r) => r.$1), ['token-1']);
-    expect(status(), PushStatus.registered);
-  });
+      expect(devices.registered.map((r) => r.$1), ['token-1']);
+      expect(status(), PushStatus.registered);
+    },
+  );
 
   group('PushOpened.fromData', () {
-    test('sunucunun string alanlarını çözer', () {
+    test("parses the server's string fields", () {
       final opened = PushOpened.fromData({
         'relatedUrl': '/my-event',
         'notificationId': '42',
@@ -253,7 +259,7 @@ void main() {
       expect(opened.notificationId, 42);
     });
 
-    test('eksik/bozuk id null olur', () {
+    test('a missing/invalid id becomes null', () {
       expect(PushOpened.fromData({}).notificationId, isNull);
       expect(
         PushOpened.fromData({'notificationId': 'x'}).notificationId,

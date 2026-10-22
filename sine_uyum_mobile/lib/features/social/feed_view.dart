@@ -3,13 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../data/models/social.dart';
+import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/social_provider.dart';
 import '../../widgets/poster_image.dart';
 import '../../widgets/state_views.dart';
 import 'review_card.dart';
 
-/// Takip ettiklerinin (ve kendi) puanları ve incelemeleri.
+/// Ratings and reviews from the people you follow (and your own).
 class FeedView extends ConsumerWidget {
   const FeedView({super.key});
 
@@ -31,27 +32,27 @@ class FeedView extends ConsumerWidget {
         },
         child: state.items.isEmpty
             ? ListView(
-                children: const [
-                  Padding(padding: EdgeInsets.all(12), child: TasteTwinCard()),
-                  SizedBox(height: 24),
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: TasteTwinCard(),
+                  ),
+                  const SizedBox(height: 24),
                   EmptyView(
                     icon: Icons.dynamic_feed_outlined,
-                    message:
-                        'Akışın henüz boş. Keşfet sekmesinden sana uyumlu '
-                        'kişileri takip et ya da bir filme ilk incelemeyi '
-                        'sen yaz.',
+                    message: context.l10n.feedEmpty,
                   ),
                 ],
               )
             : ListView.builder(
                 padding: const EdgeInsets.all(12),
-                // İlk öğe: bu haftanın zevk ikizi (yoksa boş).
+                // First item: this week's taste twin (empty if none).
                 itemCount: state.items.length + 1 + (state.hasMore ? 1 : 0),
                 itemBuilder: (context, position) {
                   if (position == 0) return const TasteTwinCard();
                   final index = position - 1;
                   if (index == state.items.length) {
-                    // Sona gelince sonraki sayfa.
+                    // Reached the end: load the next page.
                     WidgetsBinding.instance.addPostFrameCallback(
                       (_) => ref.read(feedProvider.notifier).loadMore(),
                     );
@@ -66,7 +67,7 @@ class FeedView extends ConsumerWidget {
                       ? ReviewCard(
                           review: review,
                           showMovie: true,
-                          subtitle: 'bir inceleme yazdı',
+                          subtitle: context.l10n.feedWroteReview,
                         )
                       : _RatedCard(item: item);
                 },
@@ -93,7 +94,7 @@ class _RatedCard extends StatelessWidget {
               author: item.author,
               rating: item.rating,
               compatibility: item.authorCompatibility,
-              subtitle: 'bir filmi puanladı',
+              subtitle: context.l10n.feedRatedMovie,
               when: item.activityAt,
             ),
             const SizedBox(height: 10),
@@ -123,7 +124,7 @@ class _RatedCard extends StatelessWidget {
   }
 }
 
-/// Bu haftanın zevk ikizi: sana en uyumlu, henüz takip etmediğin biri.
+/// This week's taste twin: your best match that you don't follow yet.
 class TasteTwinCard extends ConsumerStatefulWidget {
   const TasteTwinCard({super.key});
 
@@ -148,6 +149,7 @@ class _TasteTwinCardState extends ConsumerState<TasteTwinCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final twin = ref.watch(tasteTwinProvider).value;
     if (twin == null) return const SizedBox.shrink();
     final following = _followed || twin.isFollowing;
@@ -164,9 +166,9 @@ class _TasteTwinCardState extends ConsumerState<TasteTwinCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '✨ BU HAFTANIN ZEVK İKİZİ',
-            style: TextStyle(
+          Text(
+            l10n.tasteTwinHeader,
+            style: const TextStyle(
               color: Color(0xFFFFD54F),
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -191,8 +193,10 @@ class _TasteTwinCardState extends ConsumerState<TasteTwinCard> {
                       style: const TextStyle(color: Colors.white, fontSize: 17),
                     ),
                     Text(
-                      '%${twin.compatibility.round()} uyumlu · '
-                      '${twin.commonMovieCount} ortak film',
+                      l10n.tasteTwinStats(
+                        l10n.percent(twin.compatibility),
+                        twin.commonMovieCount,
+                      ),
                       style: const TextStyle(color: Color(0xFFE3E8FF)),
                     ),
                   ],
@@ -206,12 +210,14 @@ class _TasteTwinCardState extends ConsumerState<TasteTwinCard> {
               OutlinedButton(
                 style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
                 onPressed: () => context.push('/profile/${twin.user.id}'),
-                child: const Text('Profili gör'),
+                child: Text(l10n.viewProfile),
               ),
               const SizedBox(width: 8),
               FilledButton(
                 onPressed: following ? null : () => _follow(twin),
-                child: Text(following ? 'Takip ediliyor' : 'Takip et'),
+                child: Text(
+                  following ? l10n.followingState : l10n.commonFollow,
+                ),
               ),
             ],
           ),

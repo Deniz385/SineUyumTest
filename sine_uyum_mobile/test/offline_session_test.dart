@@ -32,7 +32,7 @@ void main() {
 
   setUp(() {
     server = FakeServer();
-    tokens = MemoryTokens(access: 'eski-access', refresh: 'gecerli-refresh');
+    tokens = MemoryTokens(access: 'old-access', refresh: 'valid-refresh');
     store = MemoryCacheStore();
     connectivity = FakeConnectivity();
     container = make();
@@ -51,82 +51,83 @@ void main() {
     return container.read(sessionProvider);
   }
 
-  group('oturum (çevrimdışı hataları)', () {
-    test(
-      'çevrimdışı ilk açılış token\'ları silmez; ağ dönünce açılır',
-      () async {
-        server.offline = true;
+  group('session (offline failures)', () {
+    test('an offline first start keeps the tokens; signs in once the network '
+        'is back', () async {
+      server.offline = true;
 
-        var state = await start();
-        expect(tokens.access, 'eski-access');
-        expect(tokens.refresh, 'gecerli-refresh');
-        expect(
-          state.status,
-          SessionStatus.unknown,
-          reason: 'açılışta beklemeli',
-        );
+      var state = await start();
+      expect(tokens.access, 'old-access');
+      expect(tokens.refresh, 'valid-refresh');
+      expect(
+        state.status,
+        SessionStatus.unknown,
+        reason: 'should wait at start',
+      );
 
-        // Ağ geri geliyor.
-        server.offline = false;
-        server.routes['GET /api/v1/account/me'] = (200, userJson('u1'));
-        connectivity.set(false);
-        await pump(5);
-        connectivity.set(true);
-        await pump();
+      // The network comes back.
+      server.offline = false;
+      server.routes['GET /api/v1/account/me'] = (200, userJson('u1'));
+      connectivity.set(false);
+      await pump(5);
+      connectivity.set(true);
+      await pump();
 
-        state = container.read(sessionProvider);
-        expect(state.status, SessionStatus.authenticated);
-        expect(state.user?.id, 'u1');
-      },
-    );
+      state = container.read(sessionProvider);
+      expect(state.status, SessionStatus.authenticated);
+      expect(state.user?.id, 'u1');
+    });
 
-    test(
-      'daha önce açılmışsa çevrimdışı kayıtlı kullanıcıyla açılır',
-      () async {
-        server.routes['GET /api/v1/account/me'] = (200, userJson('u1'));
-        await start(); // çevrimiçi açılış: /me kaydedilir
+    test('opens offline with the saved user if it was opened before', () async {
+      server.routes['GET /api/v1/account/me'] = (200, userJson('u1'));
+      await start(); // online start: /me is saved
 
-        // Uygulama kapanıp çevrimdışı yeniden açılıyor (aynı depo).
-        server.offline = true;
-        container = make();
-        final state = await start();
-
-        expect(state.status, SessionStatus.authenticated);
-        expect(state.user?.id, 'u1');
-      },
-    );
-
-    test('yenileme sırasında ağ koparsa oturum kapanmaz', () async {
-      server.routes['GET /api/v1/account/me'] = (401, null);
-      container = make(adapter: _RefreshUnreachable(server));
-      var expired = false;
-      container.read(apiClientProvider).onSessionExpired = () => expired = true;
-
+      // The app is closed and reopened offline (same store).
+      server.offline = true;
+      container = make();
       final state = await start();
 
-      expect(expired, isFalse, reason: 'ağ hatası "oturum bitti" sayıldı');
-      expect(tokens.refresh, 'gecerli-refresh');
-      expect(state.status, isNot(SessionStatus.unauthenticated));
+      expect(state.status, SessionStatus.authenticated);
+      expect(state.user?.id, 'u1');
     });
 
     test(
-      'sunucu refresh token\'ı reddederse oturum kapanır ve önbellek silinir',
+      'the session stays open if the network drops during a refresh',
       () async {
-        store.storedScope = 'u1';
-        store.entries['u1|/api/v1/messages'] = '{"data":[]}';
         server.routes['GET /api/v1/account/me'] = (401, null);
-        server.routes['POST /api/v1/account/refresh'] = (401, null);
+        container = make(adapter: _RefreshUnreachable(server));
+        var expired = false;
+        container.read(apiClientProvider).onSessionExpired = () =>
+            expired = true;
 
         final state = await start();
 
-        expect(state.status, SessionStatus.unauthenticated);
-        expect(tokens.refresh, isNull);
-        expect(store.entries, isEmpty);
+        expect(
+          expired,
+          isFalse,
+          reason: 'a network error was treated as "session over"',
+        );
+        expect(tokens.refresh, 'valid-refresh');
+        expect(state.status, isNot(SessionStatus.unauthenticated));
       },
     );
+
+    test('if the server rejects the refresh token the session ends and the '
+        'cache is cleared', () async {
+      store.storedScope = 'u1';
+      store.entries['u1|/api/v1/messages'] = '{"data":[]}';
+      server.routes['GET /api/v1/account/me'] = (401, null);
+      server.routes['POST /api/v1/account/refresh'] = (401, null);
+
+      final state = await start();
+
+      expect(state.status, SessionStatus.unauthenticated);
+      expect(tokens.refresh, isNull);
+      expect(store.entries, isEmpty);
+    });
   });
 
-  group('okuma önbelleği', () {
+  group('read cache', () {
     late ResponseCache cache;
 
     setUp(() async {
@@ -135,11 +136,11 @@ void main() {
       cache = container.read(responseCacheProvider);
     });
 
-    test('ağ hatasında son başarılı yanıt döner', () async {
+    test('returns the last successful response on a network error', () async {
       server.routes['GET /api/v1/messages'] = (
         200,
         [
-          {'otherUserId': 'ali', 'lastMessageContent': 'selam'},
+          {'otherUserId': 'ali', 'lastMessageContent': 'hello'},
         ],
       );
       final api = container.read(apiClientProvider);
@@ -149,11 +150,11 @@ void main() {
       server.offline = true;
       final offline = await api.get<List<dynamic>>('/api/v1/messages');
 
-      expect((offline.single as Map)['lastMessageContent'], 'selam');
+      expect((offline.single as Map)['lastMessageContent'], 'hello');
       expect(container.read(networkStatusProvider).isOffline, isTrue);
     });
 
-    test('cihaz çevrimdışıyken ağ hiç denenmez', () async {
+    test('the network is not tried while the device is offline', () async {
       server.routes['GET /api/v1/notification'] = (200, <Object>[]);
       final api = container.read(apiClientProvider);
       await api.get<List<dynamic>>('/api/v1/notification');
@@ -167,7 +168,7 @@ void main() {
       expect(server.requests, isEmpty);
     });
 
-    test('arama gibi listede olmayan uçlar saklanmaz', () async {
+    test('endpoints not on the list (like search) are not cached', () async {
       server.routes['GET /api/v1/account/search'] = (200, <Object>[]);
       final api = container.read(apiClientProvider);
       await api.get<List<dynamic>>(
@@ -186,44 +187,47 @@ void main() {
       );
     });
 
-    test('sunucu yanıtları (404 vb.) önbellekle örtülmez', () async {
+    test('server responses (404 etc.) are not masked by the cache', () async {
       final api = container.read(apiClientProvider);
       server.routes['GET /api/v1/profile/x'] = (200, {'id': 'x'});
       await api.get<Map<String, dynamic>>('/api/v1/profile/x');
       await pump(3);
 
-      server.routes['GET /api/v1/profile/x'] = (404, {'title': 'yok'});
+      server.routes['GET /api/v1/profile/x'] = (404, {'title': 'not found'});
       await expectLater(
         api.get<Map<String, dynamic>>('/api/v1/profile/x'),
         throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 404)),
       );
     });
 
-    test('başka hesapla giriş önceki kullanıcının verisini siler', () async {
-      final api = container.read(apiClientProvider);
-      server.routes['GET /api/v1/messages'] = (200, <Object>[]);
-      await api.get<List<dynamic>>('/api/v1/messages');
-      await pump(3);
-      expect(store.entries.keys.any((k) => k.startsWith('u1|')), isTrue);
+    test(
+      "signing in with another account deletes the previous user's data",
+      () async {
+        final api = container.read(apiClientProvider);
+        server.routes['GET /api/v1/messages'] = (200, <Object>[]);
+        await api.get<List<dynamic>>('/api/v1/messages');
+        await pump(3);
+        expect(store.entries.keys.any((k) => k.startsWith('u1|')), isTrue);
 
-      server.routes['POST /api/v1/account/login'] = (
-        200,
-        {
-          'token': 't2',
-          'refreshToken': 'r2',
-          'expiresAt': '2030-01-01T00:00:00Z',
-          'user': userJson('u2'),
-        },
-      );
-      await container
-          .read(sessionProvider.notifier)
-          .login(username: 'b', password: 'p');
+        server.routes['POST /api/v1/account/login'] = (
+          200,
+          {
+            'token': 't2',
+            'refreshToken': 'r2',
+            'expiresAt': '2030-01-01T00:00:00Z',
+            'user': userJson('u2'),
+          },
+        );
+        await container
+            .read(sessionProvider.notifier)
+            .login(username: 'b', password: 'p');
 
-      expect(store.entries.keys.any((k) => k.startsWith('u1|')), isFalse);
-      expect(cache.scope, 'u2');
-    });
+        expect(store.entries.keys.any((k) => k.startsWith('u1|')), isFalse);
+        expect(cache.scope, 'u2');
+      },
+    );
 
-    test('çıkışta önbellek silinir', () async {
+    test('the cache is cleared on sign-out', () async {
       final api = container.read(apiClientProvider);
       server.routes['GET /api/v1/messages'] = (200, <Object>[]);
       await api.get<List<dynamic>>('/api/v1/messages');
@@ -238,7 +242,8 @@ void main() {
   });
 }
 
-/// /me sunucuya ulaşır (401), refresh isteği ise ağ hatası alır.
+/// /me reaches the server (401), while the refresh request gets a network
+/// error.
 class _RefreshUnreachable extends FakeServer {
   _RefreshUnreachable(this.inner);
   final FakeServer inner;
@@ -252,7 +257,7 @@ class _RefreshUnreachable extends FakeServer {
     if (options.path == '/api/v1/account/refresh') {
       throw DioException.connectionError(
         requestOptions: options,
-        reason: 'ağ yok (test)',
+        reason: 'no network (test)',
       );
     }
     return inner.fetch(options, requestStream, cancelFuture);

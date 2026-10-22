@@ -7,7 +7,7 @@ import 'package:sine_uyum_mobile/providers/session_provider.dart';
 
 import 'support/fake_network.dart';
 
-// Gerçek ApiClient + dio ile: sunucunun 204'ü "zevk ikizi yok" demektir.
+// With the real ApiClient + dio: a 204 from the server means "no taste twin".
 void main() {
   late FakeServer server;
   late ProviderContainer container;
@@ -27,12 +27,12 @@ void main() {
     addTearDown(container.dispose);
   });
 
-  test('204 boş gövde → null', () async {
+  test('204 with an empty body → null', () async {
     server.routes['GET /api/v1/taste-twin'] = (204, null);
     expect(await container.read(socialRepositoryProvider).tasteTwin(), isNull);
   });
 
-  test('200 → zevk ikizi', () async {
+  test('200 → a taste twin', () async {
     server.routes['GET /api/v1/taste-twin'] = (
       200,
       {

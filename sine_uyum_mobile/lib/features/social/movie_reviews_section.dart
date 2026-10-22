@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/social.dart';
+import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/social_provider.dart';
 import 'review_card.dart';
 
-/// Film sayfasındaki incelemeler: kendi incelemesini yaz/düzenle/sil ve
-/// başkalarının incelemeleri.
+/// Reviews on the movie page: write/edit/delete your own review, and read
+/// other people's.
 class MovieReviewsSection extends ConsumerStatefulWidget {
   const MovieReviewsSection({super.key, required this.movieId});
 
@@ -32,7 +33,7 @@ class _MovieReviewsSectionState extends ConsumerState<MovieReviewsSection> {
   }
 
   void _seed(MovieReviews data) {
-    // Taslak her yüklemede değil, inceleme değişince doldurulur.
+    // The draft is filled when the review changes, not on every load.
     final key = data.mine?.id ?? -1;
     if (_seededFor == key) return;
     _seededFor = key;
@@ -56,7 +57,7 @@ class _MovieReviewsSectionState extends ConsumerState<MovieReviewsSection> {
       _seededFor = null;
       ref.invalidate(movieReviewsProvider(widget.movieId));
       ref.invalidate(feedProvider);
-      _show('İncelemen kaydedildi.');
+      if (mounted) _show(context.l10n.reviewSaved);
     } catch (error) {
       _show(error.toString());
     } finally {
@@ -83,6 +84,7 @@ class _MovieReviewsSectionState extends ConsumerState<MovieReviewsSection> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final reviews = ref.watch(movieReviewsProvider(widget.movieId));
 
@@ -93,7 +95,7 @@ class _MovieReviewsSectionState extends ConsumerState<MovieReviewsSection> {
       ),
       error: (error, _) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Text('İncelemeler yüklenemedi: $error'),
+        child: Text(l10n.reviewsLoadFailed(error.toString())),
       ),
       data: (data) {
         _seed(data);
@@ -104,16 +106,16 @@ class _MovieReviewsSectionState extends ConsumerState<MovieReviewsSection> {
             const SizedBox(height: 24),
             Text(
               data.totalCount > 0
-                  ? 'İncelemeler (${data.totalCount})'
-                  : 'İncelemeler',
+                  ? l10n.reviewsTitleWithCount(data.totalCount)
+                  : l10n.reviewsTitle,
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             if (data.myRating == null)
-              const Card(
+              Card(
                 child: ListTile(
-                  leading: Icon(Icons.info_outline),
-                  title: Text('İnceleme yazmak için önce filmi puanla.'),
+                  leading: const Icon(Icons.info_outline),
+                  title: Text(l10n.reviewRateFirst),
                 ),
               )
             else if (_editing) ...[
@@ -123,7 +125,7 @@ class _MovieReviewsSectionState extends ConsumerState<MovieReviewsSection> {
                 maxLines: 8,
                 maxLength: 2000,
                 decoration: InputDecoration(
-                  labelText: 'İncelemen (puanın: ${data.myRating}/10)',
+                  labelText: l10n.reviewFieldLabel(data.myRating!),
                   border: const OutlineInputBorder(),
                 ),
               ),
@@ -133,7 +135,7 @@ class _MovieReviewsSectionState extends ConsumerState<MovieReviewsSection> {
                     child: CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       controlAffinity: ListTileControlAffinity.leading,
-                      title: const Text('Spoiler içeriyor'),
+                      title: Text(l10n.containsSpoilers),
                       value: _spoilers,
                       onChanged: (v) => setState(() => _spoilers = v ?? false),
                     ),
@@ -141,11 +143,13 @@ class _MovieReviewsSectionState extends ConsumerState<MovieReviewsSection> {
                   if (mine != null)
                     TextButton(
                       onPressed: () => setState(() => _editing = false),
-                      child: const Text('Vazgeç'),
+                      child: Text(l10n.commonCancel),
                     ),
                   FilledButton(
                     onPressed: _saving ? null : _save,
-                    child: Text(mine == null ? 'Paylaş' : 'Güncelle'),
+                    child: Text(
+                      mine == null ? l10n.reviewPost : l10n.reviewUpdate,
+                    ),
                   ),
                 ],
               ),
@@ -155,12 +159,12 @@ class _MovieReviewsSectionState extends ConsumerState<MovieReviewsSection> {
                 children: [
                   TextButton(
                     onPressed: () => setState(() => _editing = true),
-                    child: const Text('Düzenle'),
+                    child: Text(l10n.commonEdit),
                   ),
                   TextButton(
                     onPressed: _delete,
                     child: Text(
-                      'Sil',
+                      l10n.commonDelete,
                       style: TextStyle(color: theme.colorScheme.error),
                     ),
                   ),
@@ -169,9 +173,9 @@ class _MovieReviewsSectionState extends ConsumerState<MovieReviewsSection> {
             ],
             const SizedBox(height: 8),
             if (data.reviews.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: Text('Henüz başka inceleme yok. İlk yazan sen ol.'),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(l10n.reviewsNoneYet),
               )
             else
               for (final review in data.reviews) ReviewCard(review: review),
@@ -182,8 +186,8 @@ class _MovieReviewsSectionState extends ConsumerState<MovieReviewsSection> {
   }
 }
 
-/// Film başlığının yanında "Sana göre" puanı; yeterli veri yoksa hiçbir şey.
-/// İncelemelerle aynı istekten gelir (ek çağrı yok).
+/// The "for you" score next to the movie title; nothing without enough data.
+/// It comes with the reviews request (no extra call).
 class ForYouBadge extends ConsumerWidget {
   const ForYouBadge({super.key, required this.movieId});
 
@@ -193,16 +197,20 @@ class ForYouBadge extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final forYou = ref.watch(movieReviewsProvider(movieId)).value?.forYou;
     if (forYou == null) return const SizedBox.shrink();
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final who = forYou.topMatches
         .map(
-          (m) =>
-              '${m.author.userName} (%${m.compatibility.round()}) ${m.rating}',
+          (m) => l10n.forYouMatchEntry(
+            m.author.userName,
+            l10n.percent(m.compatibility),
+            m.rating,
+          ),
         )
         .join(', ');
 
     return Tooltip(
-      message: 'Sana uyumlu ${forYou.basedOn} kişiye göre: $who',
+      message: l10n.forYouTooltip(forYou.basedOn, who),
       triggerMode: TooltipTriggerMode.tap,
       child: Padding(
         padding: const EdgeInsets.only(top: 6),
@@ -211,13 +219,13 @@ class ForYouBadge extends ConsumerWidget {
             Icon(Icons.favorite, size: 16, color: theme.colorScheme.secondary),
             const SizedBox(width: 4),
             Text(
-              forYou.score.toStringAsFixed(1),
+              l10n.decimal(forYou.score),
               style: theme.textTheme.titleSmall?.copyWith(
                 color: theme.colorScheme.secondary,
               ),
             ),
             Text(
-              ' sana göre (${forYou.basedOn} uyumlu kişi)',
+              l10n.forYouSuffix(forYou.basedOn),
               style: theme.textTheme.bodySmall,
             ),
           ],

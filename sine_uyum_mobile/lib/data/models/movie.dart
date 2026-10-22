@@ -1,6 +1,8 @@
-/// TMDb'den gelen film özeti. API bu yanıtları olduğu gibi proxy'lediği için
-/// alan adları TMDb'nin snake_case biçimindedir; kendi veritabanımızdan gelen
-/// kayıtlarda ise camelCase olur. İki biçim de desteklenir.
+import '../../l10n/l10n.dart';
+
+/// Movie summary from TMDb. The API proxies those responses as-is, so field
+/// names are TMDb's snake_case; records from our own database are camelCase.
+/// Both shapes are supported.
 class Movie {
   const Movie({
     required this.id,
@@ -32,7 +34,10 @@ class Movie {
   factory Movie.fromJson(Map<String, dynamic> json) {
     return Movie(
       id: (json['id'] as num?)?.toInt() ?? 0,
-      title: json['title'] as String? ?? json['name'] as String? ?? 'Başlıksız',
+      title:
+          json['title'] as String? ??
+          json['name'] as String? ??
+          L10n.current.untitledMovie,
       posterPath:
           json['posterPath'] as String? ?? json['poster_path'] as String?,
       backdropPath:
@@ -62,7 +67,7 @@ class Movie {
   };
 }
 
-/// Kullanıcının bir filme verdiği puan (profil ekranında listelenir).
+/// A user's rating of a movie (listed on the profile screen).
 class RatedMovie {
   const RatedMovie({
     required this.movieId,
@@ -80,7 +85,7 @@ class RatedMovie {
     return RatedMovie(
       movieId: (json['movieId'] as num?)?.toInt() ?? 0,
       rating: (json['rating'] as num?)?.toInt() ?? 0,
-      title: json['title'] as String? ?? 'Başlıksız',
+      title: json['title'] as String? ?? L10n.current.untitledMovie,
       posterPath: json['posterPath'] as String?,
     );
   }

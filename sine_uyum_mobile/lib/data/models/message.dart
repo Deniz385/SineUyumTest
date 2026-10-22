@@ -1,4 +1,6 @@
-/// `/api/v1/messages` listesindeki sohbet özeti.
+import '../../l10n/l10n.dart';
+
+/// Conversation summary in the `/api/v1/messages` list.
 class Conversation {
   const Conversation({
     required this.otherUserId,
@@ -30,9 +32,8 @@ class Conversation {
   }
 }
 
-/// `/api/v1/messages/thread/{otherUserId}` içindeki tek mesaj.
-/// Mesaj düz metin olabilir, bir film önerisi ya da bir izleme listesi
-/// paylaşımı taşıyabilir.
+/// A single message in `/api/v1/messages/thread/{otherUserId}`.
+/// It may be plain text, or carry a movie suggestion or a shared watchlist.
 class ChatMessage {
   const ChatMessage({
     required this.id,
@@ -53,7 +54,7 @@ class ChatMessage {
   final String? content;
   final DateTime? messageSent;
 
-  /// Alıcının okuduğu an; okundu bilgisi kapalıysa hep null (M10).
+  /// When the recipient read it; always null if read receipts are off (M10).
   final DateTime? dateRead;
   final SharedMovie? movie;
   final SharedWatchlist? watchlist;
@@ -94,8 +95,8 @@ class ChatMessage {
   }
 }
 
-/// SignalR "MessagesRead": [readerId], [otherUserId]'nin [lastReadMessageId]'ye
-/// kadarki mesajlarını [readAt]'te okudu.
+/// SignalR "MessagesRead": [readerId] read [otherUserId]'s messages up to
+/// [lastReadMessageId] at [readAt].
 class MessagesRead {
   const MessagesRead({
     required this.readerId,
@@ -132,7 +133,7 @@ class SharedMovie {
   factory SharedMovie.fromJson(Map<String, dynamic> json) {
     return SharedMovie(
       id: (json['id'] as num?)?.toInt() ?? 0,
-      title: json['title'] as String? ?? 'Başlıksız',
+      title: json['title'] as String? ?? L10n.current.untitledMovie,
       posterPath: json['posterPath'] as String?,
     );
   }
@@ -152,7 +153,7 @@ class SharedWatchlist {
   factory SharedWatchlist.fromJson(Map<String, dynamic> json) {
     return SharedWatchlist(
       id: (json['id'] as num?)?.toInt() ?? 0,
-      name: json['name'] as String? ?? 'İsimsiz liste',
+      name: json['name'] as String? ?? L10n.current.untitledWatchlist,
       ownerUsername: json['ownerUsername'] as String?,
     );
   }

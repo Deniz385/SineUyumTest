@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../core/config/app_config.dart';
 
-/// TMDb poster görseli. `posterPath` null ise yer tutucu gösterir.
+/// TMDb poster image. Shows a placeholder when `posterPath` is null.
 class PosterImage extends StatelessWidget {
   const PosterImage({
     super.key,
@@ -64,7 +64,7 @@ class PosterImage extends StatelessWidget {
   }
 }
 
-/// Kullanıcı profil fotoğrafı. Fotoğraf yoksa kullanıcı adının baş harfi.
+/// User profile photo, or the username's initial when there is none.
 class UserAvatar extends StatelessWidget {
   const UserAvatar({
     super.key,

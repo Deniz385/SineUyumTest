@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/offline/network_status.dart';
+import '../../l10n/l10n.dart';
 
-/// Saklı token okunurken gösterilen açılış ekranı. İlk açılışta ağ yoksa
-/// oturum doğrulanamaz; token'lar korunur ve ağ dönünce devam edilir.
+/// Splash screen shown while the stored token is read. Without a network on
+/// first start the session can't be verified; the tokens are kept and it
+/// continues once the network returns.
 class SplashPage extends ConsumerWidget {
   const SplashPage({super.key});
 
@@ -22,12 +24,15 @@ class SplashPage extends ConsumerWidget {
               color: Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(height: 16),
-            Text('SineUyum', style: Theme.of(context).textTheme.headlineSmall),
+            Text(
+              context.l10n.appName,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
             const SizedBox(height: 24),
             const CircularProgressIndicator(),
             if (offline) ...[
               const SizedBox(height: 16),
-              const Text('Bağlantı bekleniyor…'),
+              Text(context.l10n.splashWaitingForConnection),
             ],
           ],
         ),

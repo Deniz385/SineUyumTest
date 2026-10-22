@@ -1,9 +1,10 @@
-/// Derleme zamanı yapılandırması.
+/// Build-time configuration.
 ///
-/// API adresi koda gömülmez; build sırasında verilir:
+/// The API URL is not hard-coded; it is passed at build time:
 ///   flutter run --dart-define=API_URL=http://10.0.2.2:5074
 ///
-/// Android emülatörde ana makine `10.0.2.2`, iOS simülatörde `localhost`tur.
+/// The host machine is `10.0.2.2` on the Android emulator and `localhost` on
+/// the iOS simulator.
 class AppConfig {
   const AppConfig._();
 
@@ -12,35 +13,35 @@ class AppConfig {
     defaultValue: 'http://10.0.2.2:5074',
   );
 
-  /// Sunucuya yüklenen medya (ör. profil fotoğrafı) göreli yolla gelir
-  /// (`/media/avatars/...`); API adresiyle birleştirilir. Eski kayıtlarda tam
-  /// URL olabilir, o zaman olduğu gibi kullanılır.
+  /// Media uploaded to the server (e.g. profile photos) comes as a relative
+  /// path (`/media/avatars/...`) and is joined with the API URL. Older records
+  /// may hold a full URL, which is used as-is.
   static String? resolveMediaUrl(String? url) {
     if (url == null || url.isEmpty) return null;
     return url.startsWith('/') ? '$apiUrl$url' : url;
   }
 
-  /// TMDb poster/backdrop adresleri için temel URL.
-  /// Sunucu `/api/v1/app/config` ile bunu ezebilir.
+  /// Base URL for TMDb poster/backdrop images.
+  /// The server may override it via `/api/v1/app/config`.
   static const String tmdbImageBaseUrl = String.fromEnvironment(
     'TMDB_IMAGE_BASE_URL',
     defaultValue: 'https://image.tmdb.org/t/p/',
   );
 
-  /// Uygulama sürümü — sunucudaki minimum desteklenen sürümle karşılaştırılır.
+  /// App version, compared with the minimum version supported by the server.
   static const String appVersion = String.fromEnvironment(
     'APP_VERSION',
     defaultValue: '1.0.0',
   );
 
-  // --- Push bildirimi (Firebase Cloud Messaging) ---
-  // Değerler Firebase konsolu → Proje ayarları → "Uygulamalarınız"dan alınır
-  // ve build sırasında verilir (google-services.json / plist gerekmez):
+  // --- Push notifications (Firebase Cloud Messaging) ---
+  // Values come from Firebase console → Project settings → "Your apps" and
+  // are passed at build time (no google-services.json / plist needed):
   //   --dart-define=FIREBASE_API_KEY=... --dart-define=FIREBASE_PROJECT_ID=...
   //   --dart-define=FIREBASE_MESSAGING_SENDER_ID=...
   //   --dart-define=FIREBASE_ANDROID_APP_ID=... --dart-define=FIREBASE_IOS_APP_ID=...
-  // Verilmezse push kapalıdır; uygulama SignalR ile (ön planda) bildirim
-  // almaya devam eder.
+  // Without them push is off; the app still receives notifications over
+  // SignalR (in the foreground).
 
   static const String firebaseApiKey = String.fromEnvironment(
     'FIREBASE_API_KEY',

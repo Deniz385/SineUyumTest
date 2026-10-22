@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../data/models/profile.dart';
+import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../widgets/poster_image.dart';
 import '../../widgets/state_views.dart';
 
-/// Gizlilik ayarları (G12). Her değişiklik anında kaydedilir; ayarlar
-/// birbirinden bağımsızdır. Sunucu reddederse önceki değere dönülür.
+/// Privacy settings (G12). Every change is saved immediately; the settings
+/// are independent. If the server rejects a change, the previous value comes
+/// back.
 class PrivacySettingsPage extends ConsumerStatefulWidget {
   const PrivacySettingsPage({super.key});
 
@@ -18,7 +20,7 @@ class PrivacySettingsPage extends ConsumerStatefulWidget {
 }
 
 class _PrivacySettingsPageState extends ConsumerState<PrivacySettingsPage> {
-  // Kaydedilmekte olan değer; sunucu yanıtına kadar ekranda bu görünür.
+  // The value being saved; shown until the server responds.
   PrivacySettings? _pending;
   bool _saving = false;
 
@@ -48,10 +50,11 @@ class _PrivacySettingsPageState extends ConsumerState<PrivacySettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final settings = ref.watch(privacySettingsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Gizlilik')),
+      appBar: AppBar(title: Text(l10n.privacyTitle)),
       body: settings.when(
         loading: () => const LoadingView(),
         error: (error, _) => ErrorView(
@@ -66,7 +69,7 @@ class _PrivacySettingsPageState extends ConsumerState<PrivacySettingsPage> {
 
           return ListView(
             children: [
-              const _SectionTitle('Puanlarımı ve listelerimi kim görebilir'),
+              _SectionTitle(l10n.privacyWhoSeesRatings),
               RadioGroup<ProfileVisibility>(
                 groupValue: shown.profileVisibility,
                 onChanged: (value) {
@@ -80,20 +83,20 @@ class _PrivacySettingsPageState extends ConsumerState<PrivacySettingsPage> {
                       RadioListTile<ProfileVisibility>(
                         value: option,
                         enabled: !_saving,
-                        title: Text(option.label),
+                        title: Text(option.label(l10n)),
                       ),
                   ],
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
-                  'Adın, fotoğrafın ve biyografin her zaman görünür.',
-                  style: TextStyle(fontSize: 12),
+                  l10n.privacyAlwaysVisible,
+                  style: const TextStyle(fontSize: 12),
                 ),
               ),
               const Divider(height: 32),
-              const _SectionTitle('Bana kim mesaj gönderebilir'),
+              _SectionTitle(l10n.privacyWhoCanMessage),
               RadioGroup<MessagePermission>(
                 groupValue: shown.messagePermission,
                 onChanged: (value) {
@@ -107,35 +110,30 @@ class _PrivacySettingsPageState extends ConsumerState<PrivacySettingsPage> {
                       RadioListTile<MessagePermission>(
                         value: option,
                         enabled: !_saving,
-                        title: Text(option.label),
+                        title: Text(option.label(l10n)),
                       ),
                   ],
                 ),
               ),
               const Divider(height: 32),
               SwitchListTile(
-                title: const Text('Kullanıcı aramasında görünme'),
-                subtitle: const Text(
-                  'Profil bağlantın ve mevcut sohbetlerin çalışmaya devam eder.',
-                ),
+                title: Text(l10n.privacyHideFromSearch),
+                subtitle: Text(l10n.privacyHideFromSearchHint),
                 value: shown.hiddenFromSearch,
                 onChanged: _saving
                     ? null
                     : (value) => save(shown.copyWith(hiddenFromSearch: value)),
               ),
               SwitchListTile(
-                title: const Text('Okundu bilgisi'),
-                subtitle: const Text(
-                  'Kapatırsan mesajlarını okuduğun görünmez; sen de '
-                  'başkalarınınkini göremezsin.',
-                ),
+                title: Text(l10n.privacyReadReceipts),
+                subtitle: Text(l10n.privacyReadReceiptsHint),
                 value: shown.showReadReceipts,
                 onChanged: _saving
                     ? null
                     : (value) => save(shown.copyWith(showReadReceipts: value)),
               ),
               const Divider(height: 32),
-              const _SectionTitle('Engellenen kullanıcılar'),
+              _SectionTitle(l10n.privacyBlockedUsers),
               const _BlockedUsers(),
             ],
           );
@@ -177,11 +175,9 @@ class _BlockedUsers extends ConsumerWidget {
       ),
       data: (users) {
         if (users.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Text(
-              'Kimseyi engellemedin. Engellemek için kişinin profilini aç.',
-            ),
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text(context.l10n.privacyNoBlockedUsers),
           );
         }
         return Column(
@@ -208,7 +204,7 @@ class _BlockedUsers extends ConsumerWidget {
                       }
                     }
                   },
-                  child: const Text('Engeli kaldır'),
+                  child: Text(context.l10n.commonUnblock),
                 ),
               ),
           ],
@@ -216,4 +212,20 @@ class _BlockedUsers extends ConsumerWidget {
       },
     );
   }
+}
+
+extension on ProfileVisibility {
+  String label(AppLocalizations l10n) => switch (this) {
+    ProfileVisibility.public => l10n.visibilityPublic,
+    ProfileVisibility.following => l10n.visibilityFollowing,
+    ProfileVisibility.private => l10n.visibilityPrivate,
+  };
+}
+
+extension on MessagePermission {
+  String label(AppLocalizations l10n) => switch (this) {
+    MessagePermission.everyone => l10n.messagePermissionEveryone,
+    MessagePermission.following => l10n.messagePermissionFollowing,
+    MessagePermission.nobody => l10n.messagePermissionNobody,
+  };
 }

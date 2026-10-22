@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/social.dart';
 import 'repository_providers.dart';
 
-/// Bir filmin incelemeleri (ilk sayfa) ve kullanıcının kendi puanı/incelemesi.
+/// A movie's reviews (first page) and the user's own rating/review.
 final movieReviewsProvider = FutureProvider.autoDispose
     .family<MovieReviews, int>(
       (ref, movieId) =>
@@ -24,7 +24,8 @@ class FeedState {
   bool get hasMore => nextCursor != null;
 }
 
-/// Akış: ilk sayfa yüklenir, [loadMore] imleçle sonrakini ekler.
+/// The feed: the first page is loaded, [FeedNotifier.loadMore] appends the
+/// next one using the cursor.
 final feedProvider = AsyncNotifierProvider.autoDispose<FeedNotifier, FeedState>(
   FeedNotifier.new,
 );
@@ -32,7 +33,9 @@ final feedProvider = AsyncNotifierProvider.autoDispose<FeedNotifier, FeedState>(
 class FeedNotifier extends AsyncNotifier<FeedState> {
   @override
   Future<FeedState> build() async {
-    final page = await ref.read(socialRepositoryProvider).feed();
+    // Watched: the repository is rebuilt on a language change, so the feed
+    // reloads in the new language.
+    final page = await ref.watch(socialRepositoryProvider).feed();
     return FeedState(items: page.items, nextCursor: page.nextCursor);
   }
 
@@ -58,13 +61,13 @@ class FeedNotifier extends AsyncNotifier<FeedState> {
         ),
       );
     } catch (_) {
-      // Sonraki sayfa yüklenemezse eldeki liste korunur; tekrar denenebilir.
+      // If the next page fails, the current list is kept; it can be retried.
       if (ref.mounted) state = AsyncData(current);
     }
   }
 }
 
-/// Bu haftanın zevk ikizi (akışın üstünde).
+/// This week's taste twin (above the feed).
 final tasteTwinProvider = FutureProvider.autoDispose<TasteTwin?>(
   (ref) => ref.watch(socialRepositoryProvider).tasteTwin(),
 );

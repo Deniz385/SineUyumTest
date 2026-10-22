@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../data/models/profile.dart';
+import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/session_provider.dart';
 import '../../widgets/movie_widgets.dart';
@@ -16,26 +17,27 @@ class ProfilePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final profile = ref.watch(userProfileProvider(userId));
     final isOwnProfile = ref.watch(sessionProvider).user?.id == userId;
     final loaded = profile.asData?.value;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profil'),
+        title: Text(l10n.profileTitle),
         actions: [
           if (isOwnProfile)
             IconButton(
-              tooltip: 'Profili düzenle',
+              tooltip: l10n.editProfile,
               icon: const Icon(Icons.edit_outlined),
               onPressed: () => context.push('/profile/edit'),
             ),
           if (!isOwnProfile && loaded != null && !loaded.isBlockedByMe)
             PopupMenuButton<String>(
-              tooltip: 'Diğer',
+              tooltip: l10n.moreTooltip,
               onSelected: (_) => _confirmBlock(context, ref, loaded),
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'block', child: Text('Engelle')),
+              itemBuilder: (_) => [
+                PopupMenuItem(value: 'block', child: Text(l10n.commonBlock)),
               ],
             ),
         ],
@@ -81,7 +83,7 @@ class ProfilePage extends ConsumerWidget {
                       ),
                       icon: const Icon(Icons.badge_outlined),
                       label: Text(
-                        isOwnProfile ? 'Film kimliğim' : 'Film kimliği',
+                        isOwnProfile ? l10n.myFilmIdentity : l10n.filmIdentity,
                       ),
                     ),
                   ),
@@ -101,15 +103,12 @@ class ProfilePage extends ConsumerWidget {
 
   List<Widget> _ratings(BuildContext context, UserProfile profile) => [
     Text(
-      'Puanladığı filmler (${profile.ratings.length})',
+      context.l10n.ratedMoviesTitle(profile.ratings.length),
       style: Theme.of(context).textTheme.titleMedium,
     ),
     const SizedBox(height: 8),
     if (profile.ratings.isEmpty)
-      const EmptyView(
-        icon: Icons.star_outline,
-        message: 'Henüz puanlanmış film yok.',
-      )
+      EmptyView(icon: Icons.star_outline, message: context.l10n.noRatedMovies)
     else
       for (final rated in profile.ratings)
         MovieListTile(
@@ -125,23 +124,20 @@ class ProfilePage extends ConsumerWidget {
     WidgetRef ref,
     UserProfile profile,
   ) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('${profile.userName} engellensin mi?'),
-        content: const Text(
-          'Birbirinizin profilini göremez, mesajlaşamaz ve aynı etkinlik '
-          'grubuna düşmezsiniz. Karşılıklı takip kaldırılır. Engeli '
-          'Ayarlar > Gizlilik\'ten kaldırabilirsin.',
-        ),
+        title: Text(l10n.blockConfirmTitle(profile.userName)),
+        content: Text(l10n.blockConfirmBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Vazgeç'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Engelle'),
+            child: Text(l10n.commonBlock),
           ),
         ],
       ),
@@ -167,10 +163,10 @@ class _RestrictedNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Card(
+    return Card(
       child: ListTile(
-        leading: Icon(Icons.lock_outline),
-        title: Text('Bu kullanıcı puanlarını ve listelerini gizli tutuyor.'),
+        leading: const Icon(Icons.lock_outline),
+        title: Text(context.l10n.profileRestricted),
       ),
     );
   }
@@ -189,10 +185,7 @@ class _BlockedNotice extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Bu kullanıcıyı engelledin. Birbirinizin profilini göremez, '
-              'mesajlaşamaz ve aynı etkinlik grubuna düşmezsiniz.',
-            ),
+            Text(context.l10n.profileBlockedNotice),
             const SizedBox(height: 12),
             OutlinedButton(
               onPressed: () async {
@@ -210,7 +203,7 @@ class _BlockedNotice extends ConsumerWidget {
                   }
                 }
               },
-              child: const Text('Engeli kaldır'),
+              child: Text(context.l10n.commonUnblock),
             ),
           ],
         ),
@@ -264,18 +257,22 @@ class _Stats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 16),
         child: Row(
           children: [
-            _StatTile(label: 'Puanlama', value: '${statistics.totalRatings}'),
             _StatTile(
-              label: 'Ortalama',
-              value: statistics.averageRating.toStringAsFixed(1),
+              label: l10n.statRatings,
+              value: '${statistics.totalRatings}',
             ),
             _StatTile(
-              label: 'Listelerde',
+              label: l10n.statAverage,
+              value: l10n.decimal(statistics.averageRating),
+            ),
+            _StatTile(
+              label: l10n.statInLists,
               value: '${statistics.totalMoviesInWatchlists}',
             ),
           ],
@@ -305,7 +302,7 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-/// Takip et / takibi bırak ve uyumluluk bilgisi.
+/// Follow / unfollow and the compatibility info.
 class _SocialActions extends ConsumerWidget {
   const _SocialActions({
     required this.userId,
@@ -316,11 +313,13 @@ class _SocialActions extends ConsumerWidget {
   final String userId;
   final String userName;
 
-  /// Gizli profilde uyum da kapalıdır (puanlardan türer); hiç istenmez.
+  /// On a private profile compatibility is hidden too (it derives from the
+  /// ratings), so it isn't even requested.
   final bool showCompatibility;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final followStatus = ref.watch(followStatusProvider(userId));
 
     Future<void> toggleFollow(bool isFollowing) async {
@@ -380,12 +379,12 @@ class _SocialActions extends ConsumerWidget {
                     ? OutlinedButton.icon(
                         onPressed: () => toggleFollow(true),
                         icon: const Icon(Icons.person_remove_outlined),
-                        label: const Text('Takibi bırak'),
+                        label: Text(l10n.unfollow),
                       )
                     : FilledButton.icon(
                         onPressed: () => toggleFollow(false),
                         icon: const Icon(Icons.person_add_outlined),
-                        label: const Text('Takip et'),
+                        label: Text(l10n.commonFollow),
                       ),
               ),
               const SizedBox(width: 12),
@@ -395,7 +394,7 @@ class _SocialActions extends ConsumerWidget {
                     '/conversation/$userId?name=${Uri.encodeComponent(userName)}',
                   ),
                   icon: const Icon(Icons.chat_bubble_outline),
-                  label: const Text('Mesaj'),
+                  label: Text(l10n.sendMessage),
                 ),
               ),
             ],
@@ -405,7 +404,8 @@ class _SocialActions extends ConsumerWidget {
           data: (status) => Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-              '${status.followerCount} takipçi · ${status.followingCount} takip',
+              '${l10n.followerCount(status.followerCount)} · '
+              '${l10n.followingCount(status.followingCount)}',
               style: Theme.of(context).textTheme.labelSmall,
             ),
           ),
@@ -416,7 +416,8 @@ class _SocialActions extends ConsumerWidget {
   }
 }
 
-/// Uyumun nedeni, ortak favori ve "tartışma filmi" (sohbet başlatıcı).
+/// Why you match, a shared favorite and a "debate movie" (a conversation
+/// starter).
 class _Insights extends StatelessWidget {
   const _Insights({
     required this.insights,
@@ -430,6 +431,7 @@ class _Insights extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final favorite = insights.sharedFavorite;
     final debate = insights.debateMovie;
@@ -465,9 +467,13 @@ class _Insights extends StatelessWidget {
             Card(
               child: ListTile(
                 leading: const Icon(Icons.favorite, color: Colors.redAccent),
-                title: Text('Ortak favoriniz: ${favorite.title}'),
+                title: Text(l10n.sharedFavorite(favorite.title)),
                 subtitle: Text(
-                  'Sen ${favorite.currentUserRating}, $userName ${favorite.targetUserRating}',
+                  l10n.sharedFavoriteRatings(
+                    favorite.currentUserRating,
+                    userName,
+                    favorite.targetUserRating,
+                  ),
                 ),
                 onTap: () => context.push('/movie/${favorite.movieId}'),
               ),
@@ -476,22 +482,27 @@ class _Insights extends StatelessWidget {
             Card(
               child: ListTile(
                 leading: const Icon(Icons.forum_outlined),
-                title: Text('Tartışma filmi: ${debate.title}'),
+                title: Text(l10n.debateMovie(debate.title)),
                 subtitle: Text(
-                  'Sen ${debate.currentUserRating} verdin, $userName '
-                  '${debate.targetUserRating}. Sor bakalım neden?',
+                  l10n.debateMovieRatings(
+                    debate.currentUserRating,
+                    userName,
+                    debate.targetUserRating,
+                  ),
                 ),
                 trailing: TextButton(
                   onPressed: () {
-                    final draft =
-                        '"${debate.title}" filmine ben ${debate.currentUserRating}, '
-                        'sen ${debate.targetUserRating} vermişsin. Neden? 😄';
+                    final draft = l10n.debateDraft(
+                      debate.title,
+                      debate.currentUserRating,
+                      debate.targetUserRating,
+                    );
                     context.push(
                       '/conversation/$userId?name=${Uri.encodeComponent(userName)}'
                       '&draft=${Uri.encodeComponent(draft)}',
                     );
                   },
-                  child: const Text('Ona sor'),
+                  child: Text(l10n.askThem),
                 ),
               ),
             ),
@@ -509,7 +520,7 @@ class _RatingChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Chip(
-      label: Text('$rating/10'),
+      label: Text(context.l10n.ratingOutOfTen(rating)),
       visualDensity: VisualDensity.compact,
       padding: EdgeInsets.zero,
     );

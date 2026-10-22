@@ -9,6 +9,7 @@ import '../core/offline/network_status.dart';
 import '../data/models/message.dart';
 import '../data/models/notification.dart';
 import 'chat_provider.dart';
+import 'locale_provider.dart';
 import 'repository_providers.dart';
 import 'session_provider.dart';
 
@@ -43,33 +44,48 @@ final notificationsProvider =
       NotificationNotifier.new,
     );
 
-/// Bildirimleri REST ile çeker, SignalR ile canlı dinler.
+/// Fetches notifications over REST and listens for live ones over SignalR.
 ///
-/// SignalR yalnızca uygulama ön plandayken çalışır; uygulama kapalıyken
-/// bildirimler FCM ile gelir (bkz. push_provider.dart). Aynı bağlantı canlı
-/// sohbet mesajlarını da taşır ("ReceiveMessage" → [ChatEvents]).
+/// SignalR only runs while the app is in the foreground; when it is closed,
+/// notifications arrive via FCM (see push_provider.dart). The same connection
+/// also carries live chat messages ("ReceiveMessage" → [ChatEvents]).
+///
+/// Notification texts are localized by the server; the hub URL carries the
+/// UI language (`lang`), and a language change reconnects and reloads.
 class NotificationNotifier extends Notifier<NotificationState> {
   HubConnection? _connection;
   Timer? _retryTimer;
   int _failures = 0;
 
-  // Bağlantı kurulamazsa yeniden deneme aralıkları (son değer tekrarlanır).
+  // Retry delays when the connection fails (the last one repeats).
   static const _retryDelays = [5, 15, 30, 60];
 
   @override
   NotificationState build() {
-    // Oturum durumu değiştikçe bağlantıyı kur/kapat.
+    // Connect/disconnect as the session changes.
     final session = ref.watch(sessionProvider);
 
     ref.onDispose(_disconnect);
 
-    // Ağ geri gelince beklemeden bağlan ve kaçanları tazele.
+    // When the network comes back, connect right away and refresh whatever
+    // was missed.
     ref.listen<NetworkStatus>(networkStatusProvider, (previous, next) {
       if (previous?.isOffline == true && !next.isOffline) {
         _retryTimer?.cancel();
         _connect();
         _resync();
       }
+    });
+
+    // New language: reconnect so the hub gets the new `lang`, and reload the
+    // list in that language.
+    ref.listen<String>(apiLanguageProvider, (previous, next) {
+      if (previous == next || !ref.read(sessionProvider).isAuthenticated) {
+        return;
+      }
+      _disconnect();
+      _connect();
+      load();
     });
 
     if (session.isAuthenticated) {
@@ -96,7 +112,7 @@ class NotificationNotifier extends Notifier<NotificationState> {
   }
 
   Future<void> markAsRead(int notificationId) async {
-    // İyimser güncelleme: kullanıcı beklemesin.
+    // Optimistic update: the user doesn't wait.
     state = state.copyWith(
       items: state.items
           .map(
@@ -112,8 +128,9 @@ class NotificationNotifier extends Notifier<NotificationState> {
     }
   }
 
-  /// SignalR'dan gelen bildirim. O sohbet ekranda açıksa mesaj zaten
-  /// görülüyor: bildirim okundu olarak eklenir ve sunucuda da işaretlenir.
+  /// A notification from SignalR. If that conversation is open on screen the
+  /// message is already visible: the notification is added as read and also
+  /// marked on the server.
   @visibleForTesting
   void onNotification(AppNotification notification) {
     final active = ref.read(activeConversationProvider);
@@ -130,7 +147,7 @@ class NotificationNotifier extends Notifier<NotificationState> {
     state = state.copyWith(items: [notification, ...state.items]);
   }
 
-  /// Sohbet açılınca o sohbetin okunmamış bildirimlerini okundu işaretler.
+  /// When a conversation opens, marks its unread notifications as read.
   Future<void> markConversationRead(String otherUserId) async {
     final ids = state.items
         .where((n) => !n.isRead && n.relatedUrl == '/messages/$otherUserId')
@@ -156,10 +173,11 @@ class NotificationNotifier extends Notifier<NotificationState> {
     if (_connection != null) return;
 
     final storage = ref.read(tokenStorageProvider);
+    final language = Uri.encodeQueryComponent(ref.read(apiLanguageProvider));
 
     final connection = HubConnectionBuilder()
         .withUrl(
-          '${AppConfig.apiUrl}/notificationHub',
+          '${AppConfig.apiUrl}/notificationHub?lang=$language',
           options: HttpConnectionOptions(
             accessTokenFactory: () async =>
                 await storage.readAccessToken() ?? '',
@@ -175,12 +193,12 @@ class NotificationNotifier extends Notifier<NotificationState> {
           AppNotification.fromJson(payload.cast<String, dynamic>()),
         );
       } else {
-        // Biçim beklenmedikse listeyi yeniden çekmek güvenli olanı.
+        // Unexpected shape: refetching the list is the safe option.
         load();
       }
     });
 
-    // Canlı sohbet (M11).
+    // Live chat (M11).
     connection.on('ReceiveMessage', (arguments) {
       final payload = arguments?.firstOrNull;
       if (payload is! Map) return;
@@ -190,7 +208,7 @@ class NotificationNotifier extends Notifier<NotificationState> {
       ref.invalidate(conversationsProvider);
     });
 
-    // Okundu bilgisi (M10).
+    // Read receipts (M10).
     connection.on('MessagesRead', (arguments) {
       final payload = arguments?.firstOrNull;
       if (payload is! Map) return;
@@ -198,16 +216,16 @@ class NotificationNotifier extends Notifier<NotificationState> {
       if (read != null) ref.read(chatEventsProvider).addRead(read);
     });
 
-    // Bağlantı koptuğu sürede gelenler kaçmış olabilir: bildirimler ve açık
-    // sohbet sunucudan tazelenir.
+    // Events may have been missed while disconnected: notifications and the
+    // open conversation are refreshed from the server.
     connection.onreconnected(({connectionId}) => _resync());
 
-    // Otomatik yeniden bağlanma ~40 sn sonra (4 deneme) vazgeçer ve bağlantı
-    // kalıcı olarak kapanır. Önceden _connection dolu kaldığı için bir daha
-    // hiç bağlanılmıyor, canlı bildirim/sohbet uygulama yeniden başlatılana
-    // dek ölüyordu. Artık bırakılıp yeniden denenir.
+    // Automatic reconnect gives up after ~40 s (4 attempts) and the
+    // connection closes for good. Previously _connection stayed set, so it
+    // never connected again and live notifications/chat were dead until the
+    // app restarted. Now it is released and retried.
     connection.onclose(({error}) {
-      if (!identical(_connection, connection)) return; // bilerek kapatıldı
+      if (!identical(_connection, connection)) return; // closed on purpose
       _connection = null;
       _scheduleRetry();
     });
@@ -216,11 +234,11 @@ class NotificationNotifier extends Notifier<NotificationState> {
 
     try {
       await connection.start();
-      if (_failures > 0) _resync(); // aradaki kopuklukta kaçanlar
+      if (_failures > 0) _resync(); // missed during the outage
       _failures = 0;
     } catch (error) {
-      // Bildirimler olmadan da uygulama çalışmaya devam etmeli.
-      debugPrint('SignalR bağlantısı kurulamadı: $error');
+      // The app must keep working without notifications.
+      debugPrint('SignalR connection failed: $error');
       if (identical(_connection, connection)) _connection = null;
       _scheduleRetry();
     }
@@ -236,7 +254,8 @@ class NotificationNotifier extends Notifier<NotificationState> {
     });
   }
 
-  /// Kopukluktan sonra: bildirimler, açık sohbet ve sohbet listesi tazelenir.
+  /// After an outage: refreshes notifications, the open conversation and the
+  /// conversation list.
   void _resync() {
     if (!ref.mounted || !ref.read(sessionProvider).isAuthenticated) return;
     load();

@@ -1,4 +1,5 @@
-/// `/api/v1/account/login`, `/api/v1/account/me` yanıtlarındaki kullanıcı özeti.
+/// User summary in the `/api/v1/account/login` and `/api/v1/account/me`
+/// responses.
 class AppUser {
   const AppUser({
     required this.id,
@@ -40,7 +41,7 @@ class AppUser {
   }
 }
 
-/// [AppUser.fromJson] ile geri okunabilen biçim (çevrimdışı önbellek için).
+/// Shape readable back with [AppUser.fromJson] (for the offline cache).
 extension AppUserJson on AppUser {
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -54,7 +55,8 @@ extension AppUserJson on AppUser {
   };
 }
 
-/// `/api/v1/account/login`, `/refresh` ve `/api/v1/subscription/activate` yanıtı.
+/// Response of `/api/v1/account/login`, `/refresh` and
+/// `/api/v1/subscription/activate`.
 class AuthResult {
   const AuthResult({
     required this.token,
@@ -82,7 +84,7 @@ class AuthResult {
   }
 }
 
-/// `/api/v1/account/search` sonucundaki kullanıcı + uyumluluk skoru.
+/// A user plus compatibility score from `/api/v1/account/search`.
 class UserSearchResult {
   const UserSearchResult({
     required this.id,
@@ -112,7 +114,7 @@ class UserSearchResult {
   }
 }
 
-/// `/api/v1/subscription` yanıtı.
+/// Response of `/api/v1/subscription`.
 class SubscriptionInfo {
   const SubscriptionInfo({
     required this.isActive,
@@ -126,10 +128,10 @@ class SubscriptionInfo {
   final DateTime? expiresAt;
   final String? provider;
 
-  /// false: iptal edildi, [expiresAt]'te sona erecek.
+  /// false: cancelled, ends at [expiresAt].
   final bool willRenew;
 
-  /// Sunucuda yapılandırılmış ödeme sağlayıcıları (boşsa satın alınamaz).
+  /// Payment providers configured on the server (empty: can't be bought).
   final List<String> availableProviders;
 
   factory SubscriptionInfo.fromJson(Map<String, dynamic> json) =>

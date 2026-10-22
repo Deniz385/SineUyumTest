@@ -3,17 +3,23 @@ import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 
-/// Çevrimdışı kullanım için okuma yanıtlarının yerel kopyası.
+/// Local copy of read responses for offline use.
 ///
-/// * Yalnızca [isCacheable] listesindeki GET uçları saklanır (arama ve öneri
-///   gibi sınırsız büyüyen ya da çevrimdışı anlamsız olanlar saklanmaz).
-/// * Aynı anda tek kullanıcının verisi tutulur: başka hesapla girişte, çıkışta
-///   ve oturum düşünce silinir — cihazı sonra kullanan kişi önceki kullanıcının
-///   mesajlarını göremesin.
+/// * Only the GET endpoints listed in [isCacheable] are stored (search,
+///   suggestions and the like grow without bound or are pointless offline).
+/// * Only one user's data is kept at a time: it is deleted when another
+///   account signs in, on sign-out and when the session ends, so the next
+///   person using the device cannot read the previous user's messages.
+/// * Keys include the request language. The server localizes responses
+///   (titles, genres, messages) by `Accept-Language`, so after a language
+///   switch an offline read must not serve a copy in the old language. This
+///   keeps both copies (bounded by the store's entry limit) instead of
+///   wiping the whole cache, which would leave nothing to show offline.
 class ResponseCache {
-  ResponseCache(this._store);
+  ResponseCache(this._store, {this._language});
 
   final CacheStore _store;
+  final String Function()? _language;
   String? _scope;
 
   static final _cacheable = <RegExp>[
@@ -38,11 +44,11 @@ class ResponseCache {
   static bool isCacheable(String path) =>
       _cacheable.any((r) => r.hasMatch(path));
 
-  /// Kimin verisinin tutulduğu; oturum yokken null (hiçbir şey saklanmaz).
+  /// Whose data is kept; null when signed out (nothing is stored).
   String? get scope => _scope;
 
-  // Önbellek bir iyileştirmedir: depolama hatası (disk dolu, izin) giriş
-  // yapmayı ya da isteği asla bozmamalı; hata "önbellek yok" gibi davranır.
+  // The cache is an optimisation: a storage error (disk full, permissions)
+  // must never break signing in or a request; it behaves like a cache miss.
   static Future<T?> _safe<T>(Future<T> Function() op) async {
     try {
       return await op();
@@ -51,13 +57,13 @@ class ResponseCache {
     }
   }
 
-  /// Uygulama açılışında son kullanıcının kapsamını geri yükler (oturum henüz
-  /// doğrulanmadan çevrimdışı /me okunabilsin diye).
+  /// Restores the last user's scope at app start (so /me can be read offline
+  /// before the session is verified).
   Future<void> restoreScope() async =>
       _scope ??= await _safe<String?>(_store.readScope);
 
-  /// Oturum açan kullanıcıyı kapsam yapar. Farklı bir kullanıcıysa önceki
-  /// kullanıcının tüm verisi silinir.
+  /// Makes the signed-in user the scope. If it is a different user, all of
+  /// the previous user's data is deleted.
   Future<void> useScope(String userId) async {
     final stored = _scope ?? await _safe<String?>(_store.readScope);
     if (stored != null && stored != userId) await _safe(_store.clearAll);
@@ -65,19 +71,22 @@ class ResponseCache {
     await _safe(() => _store.writeScope(userId));
   }
 
-  /// Çıkış / oturum sonu: tüm veri ve kapsam silinir.
+  /// Sign-out / end of session: all data and the scope are deleted.
   Future<void> clear() async {
     _scope = null;
     await _safe(_store.clearAll);
   }
 
-  /// Saklanabilir istekse anahtar, değilse null.
+  /// The key for a cacheable request (language-prefixed, e.g.
+  /// `en:/api/v1/feed`), otherwise null.
   String? keyFor(String path, Map<String, dynamic>? query) {
     if (_scope == null || !isCacheable(path)) return null;
-    if (query == null || query.isEmpty) return path;
+    final language = _language?.call();
+    final prefix = language == null || language.isEmpty ? '' : '$language:';
+    if (query == null || query.isEmpty) return '$prefix$path';
     final entries = query.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
-    return '$path?${entries.map((e) => '${e.key}=${e.value}').join('&')}';
+    return '$prefix$path?${entries.map((e) => '${e.key}=${e.value}').join('&')}';
   }
 
   Future<Object?> read(String key) async {
@@ -88,7 +97,7 @@ class ResponseCache {
     try {
       return (jsonDecode(raw) as Map<String, dynamic>)['data'];
     } on FormatException {
-      return null; // bozuk kayıt: yok say
+      return null; // corrupt entry: ignore
     }
   }
 
@@ -105,7 +114,7 @@ class ResponseCache {
   }
 }
 
-/// Kalıcı depolama. Uygulamada dosya sistemi, testlerde bellek.
+/// Persistent storage: the file system in the app, memory in tests.
 abstract class CacheStore {
   Future<String?> read(String scope, String key);
   Future<void> write(String scope, String key, String value);
@@ -139,9 +148,10 @@ class MemoryCacheStore implements CacheStore {
   Future<void> writeScope(String scope) async => storedScope = scope;
 }
 
-/// Her kayıt bir dosya. Uygulamanın önbellek dizininde tutulur: yedeklemeye
-/// (iCloud/Android) girmez ve işletim sistemi yer gerekince silebilir — önbellek
-/// için doğru anlam. Kayıt sayısı sınırlıdır; aşılınca en eskiler silinir.
+/// One file per entry, in the app's cache directory: it is excluded from
+/// backups (iCloud/Android) and the OS may delete it when space is needed,
+/// which is the right semantics for a cache. The number of entries is
+/// capped; beyond that the oldest are deleted.
 class FileCacheStore implements CacheStore {
   FileCacheStore({Future<Directory> Function()? root, this.maxEntries = 300})
     : _rootFn = root ?? _defaultRoot;
@@ -159,8 +169,9 @@ class FileCacheStore implements CacheStore {
     return dir;
   }
 
-  // Anahtar dosya adına güvenli, sabit bir özete çevrilir (FNV-1a 64 bit).
-  // Çakışmaya karşı anahtarın kendisi de kayda yazılıp okurken doğrulanır.
+  // The key is turned into a stable, filename-safe hash (FNV-1a 64-bit).
+  // The key itself is also stored in the entry and checked on read, to
+  // guard against collisions.
   static String _hash(String input) {
     var hash = 0xcbf29ce484222325;
     for (final unit in utf8.encode(input)) {
@@ -183,7 +194,7 @@ class FileCacheStore implements CacheStore {
       if (record['k'] != '$scope|$key') return null;
       return record['v'] as String?;
     } catch (_) {
-      return null; // okunamayan kayıt önbellek ıskası sayılır
+      return null; // an unreadable entry counts as a cache miss
     }
   }
 

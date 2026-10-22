@@ -4,11 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../widgets/poster_image.dart';
 import '../../widgets/state_views.dart';
 
-/// Kullanıcı arama — sonuçlar uyumluluk yüzdesine göre sıralanır.
+/// User search — results are sorted by compatibility percentage.
 class UserSearchPage extends ConsumerStatefulWidget {
   const UserSearchPage({super.key});
 
@@ -37,6 +38,7 @@ class _UserSearchPageState extends ConsumerState<UserSearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Column(
       children: [
         Padding(
@@ -45,17 +47,17 @@ class _UserSearchPageState extends ConsumerState<UserSearchPage> {
             controller: _controller,
             onChanged: _onChanged,
             textInputAction: TextInputAction.search,
-            decoration: const InputDecoration(
-              hintText: 'Kullanıcı adı ara...',
-              prefixIcon: Icon(Icons.search),
+            decoration: InputDecoration(
+              hintText: l10n.userSearchHint,
+              prefixIcon: const Icon(Icons.search),
             ),
           ),
         ),
         Expanded(
           child: _query.isEmpty
-              ? const EmptyView(
+              ? EmptyView(
                   icon: Icons.people_outline,
-                  message: 'Film zevkine uyan kişileri bulmak için kullanıcı adı ara.',
+                  message: l10n.userSearchPrompt,
                 )
               : ref
                     .watch(userSearchProvider(_query))
@@ -67,7 +69,7 @@ class _UserSearchPageState extends ConsumerState<UserSearchPage> {
                             ref.invalidate(userSearchProvider(_query)),
                       ),
                       data: (users) => users.isEmpty
-                          ? const EmptyView(message: 'Kullanıcı bulunamadı.')
+                          ? EmptyView(message: l10n.userSearchEmpty)
                           : ListView.builder(
                               itemCount: users.length,
                               itemBuilder: (context, index) {

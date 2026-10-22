@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../data/models/profile.dart';
+import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../widgets/state_views.dart';
 
@@ -16,13 +17,13 @@ final filmIdentityProvider = FutureProvider.autoDispose
       (ref, userId) => ref.watch(socialRepositoryProvider).identity(userId),
     );
 
-/// Kartın PNG'sini sistem paylaşım menüsüne verir (testte değiştirilir).
+/// Hands the card's PNG to the system share sheet (replaced in tests).
 typedef ImageSharer = Future<void> Function(List<int> png, String text);
 
 final imageSharerProvider = Provider<ImageSharer>(
   (ref) => (png, text) async {
     final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/sineuyum-film-kimligi.png');
+    final file = File('${dir.path}/sineuyum-film-identity.png');
     await file.writeAsBytes(png, flush: true);
     await SharePlus.instance.share(
       ShareParams(
@@ -33,10 +34,9 @@ final imageSharerProvider = Provider<ImageSharer>(
   },
 );
 
-String _fmt(double n) => n.toStringAsFixed(1).replaceAll('.', ',');
-
-/// Film kimliği kartı: puanlardan çıkan zevk profili ve unvan; görsel olarak
-/// paylaşılır (Instagram, WhatsApp...).
+/// Film identity card: the taste profile and title derived from the user's
+/// ratings, shared as an image (Instagram, WhatsApp...). The title,
+/// description and genre names come localized from the server.
 class FilmIdentityPage extends ConsumerStatefulWidget {
   const FilmIdentityPage({
     super.key,
@@ -56,6 +56,7 @@ class _FilmIdentityPageState extends ConsumerState<FilmIdentityPage> {
   bool _sharing = false;
 
   Future<void> _share(FilmIdentity identity) async {
+    final l10n = context.l10n;
     setState(() => _sharing = true);
     try {
       final boundary =
@@ -64,13 +65,12 @@ class _FilmIdentityPageState extends ConsumerState<FilmIdentityPage> {
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
       await ref.read(imageSharerProvider)(
         bytes!.buffer.asUint8List(),
-        '${identity.title} — SineUyum film kimliğim',
+        l10n.filmIdentityShareText(identity.title),
       );
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Görsel paylaşılamadı.')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.shareImageFailed)));
       }
     } finally {
       if (mounted) setState(() => _sharing = false);
@@ -79,10 +79,11 @@ class _FilmIdentityPageState extends ConsumerState<FilmIdentityPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final identity = ref.watch(filmIdentityProvider(widget.userId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Film kimliği')),
+      appBar: AppBar(title: Text(l10n.filmIdentity)),
       body: identity.when(
         loading: () => const LoadingView(),
         error: (error, _) => ErrorView(
@@ -100,7 +101,7 @@ class _FilmIdentityPageState extends ConsumerState<FilmIdentityPage> {
             FilledButton.icon(
               onPressed: _sharing ? null : () => _share(data),
               icon: const Icon(Icons.ios_share),
-              label: const Text('Görsel olarak paylaş'),
+              label: Text(l10n.shareAsImage),
             ),
           ],
         ),
@@ -117,6 +118,7 @@ class _IdentityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     const label = TextStyle(
       color: Color(0xFF9FB3FF),
       fontSize: 12,
@@ -140,7 +142,7 @@ class _IdentityCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('SİNEUYUM · FİLM KİMLİĞİ', style: label),
+          Text(l10n.identityCardHeader, style: label),
           const SizedBox(height: 6),
           Text('@${identity.userName}', style: body),
           const SizedBox(height: 14),
@@ -159,13 +161,18 @@ class _IdentityCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            '${identity.totalRatings} film · ortalama ${_fmt(identity.averageRating)}',
+            l10n.identitySummary(
+              identity.totalRatings,
+              l10n.decimal(identity.averageRating),
+            ),
             style: body.copyWith(fontWeight: FontWeight.w600),
           ),
           if (identity.topGenres.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text(
-              isMine ? 'EN ÇOK İZLEDİĞİN TÜRLER' : 'EN ÇOK İZLEDİĞİ TÜRLER',
+              isMine
+                  ? l10n.identityTopGenresMine
+                  : l10n.identityTopGenresTheirs,
               style: label,
             ),
             for (final g in identity.topGenres)
@@ -186,26 +193,42 @@ class _IdentityCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text('%${g.share}', style: body),
+                    Text(l10n.percent(g.share), style: body),
                   ],
                 ),
               ),
           ],
           if (take != null && take.tmdbAverage != null) ...[
             const SizedBox(height: 16),
-            Text(isMine ? 'EN AYKIRI PUANIN' : 'EN AYKIRI PUANI', style: label),
+            Text(
+              isMine
+                  ? l10n.identityContrarianMine
+                  : l10n.identityContrarianTheirs,
+              style: label,
+            ),
             const SizedBox(height: 4),
             Text(
-              '${take.title}: herkes ${_fmt(take.tmdbAverage!)}, '
-              '${isMine ? 'sen' : 'o'} ${take.rating}',
+              (isMine
+                  ? l10n.identityContrarianLineMine
+                  : l10n.identityContrarianLineTheirs)(
+                take.title,
+                l10n.decimal(take.tmdbAverage!),
+                take.rating,
+              ),
               style: body,
             ),
           ],
           if (favorite != null) ...[
             const SizedBox(height: 12),
-            Text(isMine ? 'FAVORİN' : 'FAVORİSİ', style: label),
+            Text(
+              isMine ? l10n.identityFavoriteMine : l10n.identityFavoriteTheirs,
+              style: label,
+            ),
             const SizedBox(height: 4),
-            Text('${favorite.title} · ${favorite.rating}/10', style: body),
+            Text(
+              l10n.identityFavoriteLine(favorite.title, favorite.rating),
+              style: body,
+            ),
           ],
         ],
       ),

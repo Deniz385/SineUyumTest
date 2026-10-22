@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/movie.dart';
 import '../../data/models/watchlist.dart';
+import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../widgets/movie_widgets.dart';
 import '../../widgets/poster_image.dart';
@@ -20,7 +21,7 @@ class MovieDetailPage extends ConsumerWidget {
     final movie = ref.watch(movieDetailProvider(movieId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Film detayı')),
+      appBar: AppBar(title: Text(context.l10n.movieDetailTitle)),
       body: movie.when(
         loading: () => const LoadingView(),
         error: (error, _) => ErrorView(
@@ -60,12 +61,12 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
     setState(() => _isBusy = true);
     try {
       await ref.read(movieRepositoryProvider).rate(_movie, rating);
-      // Profil istatistikleri değiştiği için ilgili sağlayıcılar tazelenir.
+      // Profile statistics changed, so the related providers are refreshed.
       ref.invalidate(myEventProvider);
-      // Puan verildi: inceleme yazma alanı açılsın, akış güncellensin.
+      // Rated: the review field becomes available and the feed updates.
       ref.invalidate(movieReviewsProvider(_movie.id));
       ref.invalidate(feedProvider);
-      _showMessage('Puanın kaydedildi: $rating/10');
+      if (mounted) _showMessage(context.l10n.ratingSaved(rating));
     } catch (error) {
       _showMessage(error.toString());
     } finally {
@@ -84,8 +85,9 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
 
     if (!mounted) return;
 
+    final l10n = context.l10n;
     if (lists.isEmpty) {
-      _showMessage('Önce "Listeler" sekmesinden bir liste oluştur.');
+      _showMessage(l10n.watchlistCreateFirst);
       return;
     }
 
@@ -95,15 +97,15 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
         child: ListView(
           shrinkWrap: true,
           children: [
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('Hangi listeye eklenecek?'),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(l10n.watchlistPickTitle),
             ),
             for (final list in lists)
               ListTile(
                 leading: const Icon(Icons.bookmark_outline),
                 title: Text(list.name),
-                subtitle: Text('${list.itemCount} film'),
+                subtitle: Text(l10n.movieCount(list.itemCount)),
                 onTap: () => Navigator.of(context).pop(list),
               ),
           ],
@@ -118,7 +120,7 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
       await ref.read(watchlistRepositoryProvider).addMovie(selected.id, _movie);
       ref.invalidate(myWatchlistsProvider);
       ref.invalidate(watchlistDetailProvider(selected.id));
-      _showMessage('"${selected.name}" listesine eklendi.');
+      _showMessage(l10n.addedToWatchlist(selected.name));
     } catch (error) {
       _showMessage(error.toString());
     } finally {
@@ -128,6 +130,7 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
 
     return ListView(
@@ -148,7 +151,7 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
                     Text(_movie.year!, style: theme.textTheme.bodySmall),
                   if (_movie.runtime != null)
                     Text(
-                      '${_movie.runtime} dakika',
+                      l10n.runtimeMinutes(_movie.runtime!),
                       style: theme.textTheme.bodySmall,
                     ),
                   if (_movie.voteAverage != null) ...[
@@ -157,8 +160,11 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
                       children: [
                         const Icon(Icons.star, size: 16, color: Colors.amber),
                         const SizedBox(width: 4),
-                        Text(_movie.voteAverage!.toStringAsFixed(1)),
-                        Text(' / 10 (TMDb)', style: theme.textTheme.bodySmall),
+                        Text(l10n.decimal(_movie.voteAverage!)),
+                        Text(
+                          l10n.tmdbScoreSuffix,
+                          style: theme.textTheme.bodySmall,
+                        ),
                       ],
                     ),
                   ],
@@ -186,7 +192,7 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
               child: FilledButton.icon(
                 onPressed: _isBusy ? null : _rate,
                 icon: const Icon(Icons.star_outline),
-                label: const Text('Puan ver'),
+                label: Text(l10n.rateMovie),
               ),
             ),
             const SizedBox(width: 12),
@@ -194,14 +200,14 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
               child: OutlinedButton.icon(
                 onPressed: _isBusy ? null : _addToWatchlist,
                 icon: const Icon(Icons.bookmark_add_outlined),
-                label: const Text('Listeye ekle'),
+                label: Text(l10n.addToList),
               ),
             ),
           ],
         ),
         if (_movie.overview != null && _movie.overview!.isNotEmpty) ...[
           const SizedBox(height: 24),
-          Text('Özet', style: theme.textTheme.titleMedium),
+          Text(l10n.overviewTitle, style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
           Text(_movie.overview!, style: theme.textTheme.bodyMedium),
         ],

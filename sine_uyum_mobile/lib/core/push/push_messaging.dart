@@ -4,7 +4,8 @@ import 'package:flutter/foundation.dart';
 
 import '../config/app_config.dart';
 
-/// Push bildirimine dokunulduğunda gelen veri (sunucudaki `data` alanı).
+/// Data delivered when a push notification is tapped (the server's `data`
+/// field).
 class PushOpened {
   const PushOpened({this.relatedUrl, this.notificationId});
 
@@ -17,27 +18,27 @@ class PushOpened {
   final int? notificationId;
 }
 
-/// Firebase Messaging üzerinde ince bir katman. Bildirim mantığı bu arayüzle
-/// konuşur; böylece Firebase'in olmadığı birim testlerinde sahtesi kullanılır.
+/// A thin layer over Firebase Messaging. The notification logic talks to this
+/// interface, so unit tests (which have no Firebase) can use a fake.
 abstract class PushMessaging {
-  /// Firebase'i başlatır. Yapılandırma yoksa ya da platform desteklemiyorsa
-  /// `false` döner ve push kapalı kalır.
+  /// Initializes Firebase. Returns `false` (push stays off) when it is not
+  /// configured or the platform is unsupported.
   Future<bool> initialize();
 
-  /// Bildirim izni ister (Android 13+, iOS). Verildiyse `true`.
+  /// Asks for notification permission (Android 13+, iOS). `true` if granted.
   Future<bool> requestPermission();
 
   Future<String?> getToken();
 
   Stream<String> get onTokenRefresh;
 
-  /// Uygulama kapalıyken dokunulan bildirim (soğuk açılış), yoksa `null`.
+  /// The notification tapped while the app was closed (cold start), or `null`.
   Future<PushOpened?> initialOpened();
 
-  /// Uygulama arka plandayken dokunulan bildirimler.
+  /// Notifications tapped while the app was in the background.
   Stream<PushOpened> get onOpened;
 
-  /// Sunucuya bildirilecek platform adı.
+  /// Platform name reported to the server.
   String get platform;
 }
 
@@ -79,8 +80,8 @@ class FirebasePushMessaging implements PushMessaging {
       );
       return _initialized = true;
     } catch (error) {
-      // Yanlış yapılandırma uygulamayı düşürmemeli; push kapalı kalır.
-      debugPrint('Firebase başlatılamadı, push kapalı: $error');
+      // A bad configuration must not crash the app; push stays off.
+      debugPrint('Firebase could not be initialized, push disabled: $error');
       return _initialized = false;
     }
   }
@@ -92,13 +93,13 @@ class FirebasePushMessaging implements PushMessaging {
         settings.authorizationStatus == AuthorizationStatus.provisional;
   }
 
-  // firebase_messaging 17, kayıt token'ı yerine Firebase Installation ID
-  // (FID) tabanlı register()/onRegistered API'sini getirdi ve bunları
-  // "deprecated" işaretledi. FID akışı çok yeni (Android'de ek manifest
-  // bayrağı istiyor) ve gerçek cihazda doğrulanmadan geçilmeyecek. Token
-  // API'si hâlâ destekleniyor; sunucunun kullandığı FCM v1 `message.token`
-  // geçiş süresince hem token'ı hem FID'i kabul ediyor, yani ileride geçiş
-  // yalnızca istemci değişikliği olacak (bkz. yol haritası B7).
+  // firebase_messaging 17 introduced a Firebase Installation ID (FID) based
+  // register()/onRegistered API in place of the registration token and
+  // marked these as deprecated. The FID flow is very new (it needs an extra
+  // manifest flag on Android) and won't be adopted before it is verified on
+  // a real device. The token API is still supported; the FCM v1
+  // `message.token` the server uses accepts both tokens and FIDs during the
+  // transition, so switching later is a client-only change (see roadmap B7).
   @override
   // ignore: deprecated_member_use
   Future<String?> getToken() => FirebaseMessaging.instance.getToken();

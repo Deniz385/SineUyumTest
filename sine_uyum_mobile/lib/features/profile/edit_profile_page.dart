@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/session_provider.dart';
 import '../../widgets/poster_image.dart';
 
-/// Galeri/kamera erişimi; testlerde sahtesiyle değiştirilir.
+/// Gallery/camera access; replaced with a fake in tests.
 final imagePickerProvider = Provider<ImagePicker>((ref) => ImagePicker());
 
 class EditProfilePage extends ConsumerStatefulWidget {
@@ -48,8 +49,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   }
 
   Future<void> _pickAndUpload(ImageSource source) async {
-    // Platform seçiciler bu ayarlarla JPEG'e çevirir (iOS'ta HEIC dahil) ve
-    // küçültür; sunucu yine de doğrulayıp 512x512'ye indirir.
+    // With these settings the platform pickers convert to JPEG (HEIC on iOS
+    // included) and downscale; the server still validates and resizes to
+    // 512x512.
     final file = await ref
         .read(imagePickerProvider)
         .pickImage(
@@ -59,13 +61,13 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           imageQuality: 85,
           preferredCameraDevice: CameraDevice.front,
         );
-    if (file == null) return; // kullanıcı vazgeçti
+    if (file == null) return; // the user cancelled
 
     setState(() => _isUploading = true);
     try {
       await ref.read(socialRepositoryProvider).uploadProfilePhoto(file.path);
       await _refreshAfterChange();
-      _showMessage('Profil fotoğrafı güncellendi.');
+      if (mounted) _showMessage(context.l10n.photoUpdated);
     } catch (error) {
       _showMessage(error.toString());
     } finally {
@@ -78,7 +80,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     try {
       await ref.read(socialRepositoryProvider).deleteProfilePhoto();
       await _refreshAfterChange();
-      _showMessage('Profil fotoğrafı kaldırıldı.');
+      if (mounted) _showMessage(context.l10n.photoRemoved);
     } catch (error) {
       _showMessage(error.toString());
     } finally {
@@ -87,6 +89,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   }
 
   Future<void> _showPhotoOptions(bool hasPhoto) async {
+    final l10n = context.l10n;
     final action = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
@@ -96,12 +99,12 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Galeriden seç'),
+              title: Text(l10n.pickFromGallery),
               onTap: () => Navigator.of(context).pop('gallery'),
             ),
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Fotoğraf çek'),
+              title: Text(l10n.takePhoto),
               onTap: () => Navigator.of(context).pop('camera'),
             ),
             if (hasPhoto)
@@ -111,7 +114,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   color: Theme.of(context).colorScheme.error,
                 ),
                 title: Text(
-                  'Fotoğrafı kaldır',
+                  l10n.removePhoto,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
                 onTap: () => Navigator.of(context).pop('remove'),
@@ -140,14 +143,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           .read(socialRepositoryProvider)
           .updateProfile(
             bio: _bioController.text.trim(),
-            // Fotoğraf yalnızca yükleme ile değişir; mevcut değer aynen gider.
+            // The photo only changes via upload; send the current value as-is.
             profileImageUrl: ref.read(sessionProvider).user?.profileImageUrl,
           );
 
       await _refreshAfterChange();
 
       if (!mounted) return;
-      _showMessage('Profil güncellendi.');
+      _showMessage(context.l10n.profileUpdated);
       Navigator.of(context).pop();
     } catch (error) {
       _showMessage(error.toString());
@@ -158,11 +161,12 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final user = ref.watch(sessionProvider).user;
     final hasPhoto = user?.profileImageUrl?.isNotEmpty ?? false;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profili düzenle')),
+      appBar: AppBar(title: Text(l10n.editProfile)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -189,15 +193,15 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                     ? null
                     : () => _showPhotoOptions(hasPhoto),
                 icon: const Icon(Icons.edit_outlined),
-                label: Text(hasPhoto ? 'Fotoğrafı değiştir' : 'Fotoğraf ekle'),
+                label: Text(hasPhoto ? l10n.changePhoto : l10n.addPhoto),
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _bioController,
                 maxLines: 4,
                 maxLength: 500,
-                decoration: const InputDecoration(
-                  labelText: 'Hakkında',
+                decoration: InputDecoration(
+                  labelText: l10n.bioLabel,
                   alignLabelWithHint: true,
                 ),
               ),
@@ -210,7 +214,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                         width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Kaydet'),
+                    : Text(l10n.commonSave),
               ),
             ],
           ),

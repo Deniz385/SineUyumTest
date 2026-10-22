@@ -10,6 +10,8 @@ import 'package:sine_uyum_mobile/features/settings/privacy_settings_page.dart';
 import 'package:sine_uyum_mobile/providers/repository_providers.dart';
 import 'package:sine_uyum_mobile/providers/session_provider.dart';
 
+import 'support/localized_app.dart';
+
 class FakeSocial implements SocialRepository {
   PrivacySettings settings = const PrivacySettings();
   final updates = <PrivacySettings>[];
@@ -86,8 +88,8 @@ class FakeSession extends SessionNotifier {
 }
 
 void main() {
-  group('modeller', () {
-    test('gizlilik ayarları sunucu biçimiyle gidip gelir', () {
+  group('models', () {
+    test('privacy settings round-trip in the server format', () {
       final parsed = PrivacySettings.fromJson({
         'profileVisibility': 'Following',
         'messagePermission': 'Nobody',
@@ -104,13 +106,13 @@ void main() {
       });
     });
 
-    test('bilinmeyen değer sunucunun varsayılanına düşer', () {
-      final parsed = PrivacySettings.fromJson({'profileVisibility': 'Yeni'});
+    test("an unknown value falls back to the server's default", () {
+      final parsed = PrivacySettings.fromJson({'profileVisibility': 'New'});
       expect(parsed.profileVisibility, ProfileVisibility.public);
       expect(parsed.messagePermission, MessagePermission.everyone);
     });
 
-    test('profil kısıtlama alanları okunur, eski yanıtta false', () {
+    test('profile restriction fields are read; false in an older response', () {
       final restricted = UserProfile.fromJson({
         'id': 'u2',
         'userName': 'x',
@@ -130,6 +132,7 @@ void main() {
     WidgetTester tester,
     Widget page, {
     FakeSocial? social,
+    Locale locale = tr,
   }) async {
     final fake = social ?? FakeSocial();
     await tester.pumpWidget(
@@ -138,7 +141,7 @@ void main() {
           socialRepositoryProvider.overrideWithValue(fake),
           sessionProvider.overrideWith(FakeSession.new),
         ],
-        child: MaterialApp(home: page),
+        child: localizedApp(locale: locale, home: page),
       ),
     );
     await tester.pumpAndSettle();
@@ -153,7 +156,9 @@ void main() {
     return group.groupValue == tile.value;
   }
 
-  testWidgets('ayar seçilince kaydedilir, diğerleri korunur', (tester) async {
+  testWidgets('a chosen setting is saved and the others are kept', (
+    tester,
+  ) async {
     final social = await pump(tester, const PrivacySettingsPage());
 
     await tester.tap(find.text('Hiç kimse'));
@@ -168,40 +173,38 @@ void main() {
     await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
     expect(social.updates.last.hiddenFromSearch, isTrue);
-    // Önceki değişiklik kaybolmaz.
+    // The previous change isn't lost.
     expect(social.updates.last.messagePermission, MessagePermission.nobody);
   });
 
-  testWidgets('sunucu reddederse eski değer geri gelir ve hata gösterilir', (
-    tester,
-  ) async {
-    final social = FakeSocial()..updateError = ApiException('Kaydedilemedi.');
+  testWidgets('if the server rejects it, the old value returns and the '
+      'error is shown', (tester) async {
+    final social = FakeSocial()..updateError = ApiException('Could not save.');
     await pump(tester, const PrivacySettingsPage(), social: social);
 
     await tester.tap(find.text('Yalnızca ben'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Kaydedilemedi.'), findsOneWidget);
+    expect(find.text('Could not save.'), findsOneWidget);
     expect(selected<ProfileVisibility>(tester, 'Herkes'), isTrue);
     expect(selected<ProfileVisibility>(tester, 'Yalnızca ben'), isFalse);
   });
 
-  testWidgets('engellenenler listelenir ve engel kaldırılır', (tester) async {
+  testWidgets('blocked users are listed and can be unblocked', (tester) async {
     final social = FakeSocial()
-      ..blocked = const [BlockedUser(id: 'u9', userName: 'kotu')];
+      ..blocked = const [BlockedUser(id: 'u9', userName: 'troll')];
     await pump(tester, const PrivacySettingsPage(), social: social);
 
-    await tester.scrollUntilVisible(find.text('kotu'), 100);
+    await tester.scrollUntilVisible(find.text('troll'), 100);
     await tester.tap(find.text('Engeli kaldır'));
     await tester.pumpAndSettle();
 
     expect(social.unblocked, ['u9']);
-    expect(find.text('kotu'), findsNothing);
+    expect(find.text('troll'), findsNothing);
   });
 
-  testWidgets('gizli profilde puan/uyum istenmez, bilgi gösterilir', (
-    tester,
-  ) async {
+  testWidgets('a private profile requests no ratings/compatibility and '
+      'shows a notice', (tester) async {
     final social = FakeSocial()
       ..profileToReturn = const UserProfile(
         id: 'u2',
@@ -215,14 +218,13 @@ void main() {
     expect(find.textContaining('Puanladığı filmler'), findsNothing);
     expect(find.text('Puanlama'), findsNothing);
     expect(social.compatibilityCalls, 0);
-    // Takip ve mesaj hâlâ mümkün.
+    // Following and messaging are still possible.
     expect(find.text('Takip et'), findsOneWidget);
     expect(find.text('Mesaj'), findsOneWidget);
   });
 
-  testWidgets('menüden engellenir; engelliyken yalnızca engeli kaldır', (
-    tester,
-  ) async {
+  testWidgets('blocking from the menu; while blocked only unblock is '
+      'offered', (tester) async {
     final social = await pump(tester, const ProfilePage(userId: 'u2'));
     expect(social.compatibilityCalls, 1);
 
@@ -230,7 +232,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Engelle'));
     await tester.pumpAndSettle();
-    // Onay penceresi.
+    // Confirmation dialog.
     await tester.tap(find.widgetWithText(FilledButton, 'Engelle'));
     await tester.pumpAndSettle();
 
@@ -244,5 +246,48 @@ void main() {
     await tester.pumpAndSettle();
     expect(social.unblocked, ['u2']);
     expect(find.text('Mesaj'), findsOneWidget);
+  });
+
+  testWidgets('renders the privacy settings in English', (tester) async {
+    final social = FakeSocial()
+      ..blocked = const [BlockedUser(id: 'u9', userName: 'troll')];
+    await pump(tester, const PrivacySettingsPage(), social: social, locale: en);
+
+    expect(find.text('Privacy'), findsOneWidget);
+    expect(find.text('Who can see my ratings and lists'), findsOneWidget);
+    expect(find.text('Everyone'), findsNWidgets(2));
+    expect(find.text('Only me'), findsOneWidget);
+
+    await tester.tap(find.text('No one'));
+    await tester.pumpAndSettle();
+    expect(social.updates.single.messagePermission, MessagePermission.nobody);
+    expect(selected<MessagePermission>(tester, 'No one'), isTrue);
+
+    await tester.scrollUntilVisible(find.text('troll'), 100);
+    expect(find.text('Unblock'), findsOneWidget);
+  });
+
+  testWidgets('renders a restricted profile in English', (tester) async {
+    final social = FakeSocial()
+      ..profileToReturn = const UserProfile(
+        id: 'u2',
+        userName: 'mehmet',
+        statistics: ProfileStatistics(),
+        isRestricted: true,
+      );
+    await pump(
+      tester,
+      const ProfilePage(userId: 'u2'),
+      social: social,
+      locale: en,
+    );
+
+    expect(
+      find.text('This user keeps their ratings and lists private.'),
+      findsOneWidget,
+    );
+    expect(find.text('Follow'), findsOneWidget);
+    expect(find.text('Message'), findsOneWidget);
+    expect(find.text('0 followers · 0 following'), findsOneWidget);
   });
 }

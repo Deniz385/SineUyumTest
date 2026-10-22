@@ -2,33 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/offline/network_status.dart';
+import '../l10n/l10n.dart';
 
-/// Tüm ekranların altına, bağlantı yokken "kayıtlı veriler gösteriliyor"
-/// şeridi koyar. `MaterialApp.builder` içinde kullanılır.
+/// Puts a "showing saved data" strip below every screen while offline.
+/// Used in `MaterialApp.builder`.
 class OfflineBanner extends ConsumerWidget {
   const OfflineBanner({super.key, required this.child});
 
   final Widget child;
 
-  static String? messageFor(NetworkStatus status) {
-    if (!status.deviceOnline) {
-      return 'Çevrimdışısın — kayıtlı veriler gösteriliyor';
-    }
-    if (!status.serverReachable) {
-      return 'Sunucuya ulaşılamıyor — kayıtlı veriler gösteriliyor';
-    }
+  static String? messageFor(NetworkStatus status, AppLocalizations l10n) {
+    if (!status.deviceOnline) return l10n.offlineDevice;
+    if (!status.serverReachable) return l10n.offlineServer;
     return null;
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final message = messageFor(ref.watch(networkStatusProvider));
+    final message = messageFor(ref.watch(networkStatusProvider), context.l10n);
     if (message == null) return child;
 
     final colors = Theme.of(context).colorScheme;
     return Column(
       children: [
-        // Şerit alt güvenli alanı kendisi kullanır; ekran onu tekrar eklemesin.
+        // The strip takes the bottom safe area itself; the screen must not add
+        // it again.
         Expanded(
           child: MediaQuery.removePadding(
             context: context,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// Web istemcisindeki (`sine-uyum-web/src/theme.js`) renk paletiyle hizalı
-/// Material 3 temaları.
+/// Material 3 themes aligned with the web client's colour palette
+/// (`sine-uyum-web/src/theme.js`).
 class AppTheme {
   const AppTheme._();
 

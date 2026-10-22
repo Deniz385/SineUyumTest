@@ -4,10 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../data/models/social.dart';
+import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../widgets/poster_image.dart';
 
-/// Yazar satırı: avatar, ad, puan ve uyum rozeti.
+/// Author row: avatar, name, rating and compatibility badge.
 class AuthorRow extends StatelessWidget {
   const AuthorRow({
     super.key,
@@ -26,10 +27,12 @@ class AuthorRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final details = [
       ?subtitle,
-      if (when != null) DateFormat.yMMMd('tr').format(when!.toLocal()),
+      if (when != null)
+        DateFormat.yMMMd(l10n.localeName).format(when!.toLocal()),
     ].join(' · ');
 
     return Row(
@@ -55,13 +58,13 @@ class AuthorRow extends StatelessWidget {
         if (rating != null)
           Chip(
             avatar: const Icon(Icons.star, size: 16, color: Colors.amber),
-            label: Text('$rating/10'),
+            label: Text(l10n.ratingOutOfTen(rating!)),
             visualDensity: VisualDensity.compact,
           ),
         if (compatibility != null) ...[
           const SizedBox(width: 4),
           Chip(
-            label: Text('%${compatibility!.round()} uyumlu'),
+            label: Text(l10n.compatibilityMatch(l10n.percent(compatibility!))),
             visualDensity: VisualDensity.compact,
             side: BorderSide(
               color: compatibility! >= 70
@@ -75,7 +78,7 @@ class AuthorRow extends StatelessWidget {
   }
 }
 
-/// Bir inceleme: spoiler gizleme, beğeni ve yorumlar.
+/// A review: spoiler hiding, likes and comments.
 class ReviewCard extends ConsumerStatefulWidget {
   const ReviewCard({
     super.key,
@@ -105,7 +108,7 @@ class _ReviewCardState extends ConsumerState<ReviewCard> {
   Future<void> _toggleLike() async {
     final before = _review;
     final liked = !before.likedByMe;
-    // İyimser güncelleme; sunucu yanıtı sayıyı düzeltir.
+    // Optimistic update; the server's response corrects the count.
     setState(
       () => _review = before.copyWith(
         likedByMe: liked,
@@ -149,6 +152,7 @@ class _ReviewCardState extends ConsumerState<ReviewCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final hidden = _review.containsSpoilers && !_revealed && !_review.isMine;
 
@@ -192,7 +196,7 @@ class _ReviewCardState extends ConsumerState<ReviewCard> {
               OutlinedButton.icon(
                 onPressed: () => setState(() => _revealed = true),
                 icon: const Icon(Icons.visibility_outlined),
-                label: const Text('Spoiler içeriyor — göster'),
+                label: Text(l10n.spoilerReveal),
               )
             else
               Text(_review.text, style: theme.textTheme.bodyMedium),
@@ -210,7 +214,7 @@ class _ReviewCardState extends ConsumerState<ReviewCard> {
                 TextButton.icon(
                   onPressed: _openComments,
                   icon: const Icon(Icons.chat_bubble_outline),
-                  label: Text('${_review.commentCount} yorum'),
+                  label: Text(l10n.commentCount(_review.commentCount)),
                 ),
               ],
             ),
@@ -221,7 +225,7 @@ class _ReviewCardState extends ConsumerState<ReviewCard> {
   }
 }
 
-/// Yorumlar paneli. Kapanırken yorum sayısındaki değişimi döner.
+/// Comments panel. Returns the change in the comment count when closed.
 class CommentsSheet extends ConsumerStatefulWidget {
   const CommentsSheet({super.key, required this.reviewId});
 
@@ -303,6 +307,7 @@ class _CommentsSheetState extends ConsumerState<CommentsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final comments = _comments;
     return PopScope(
       canPop: false,
@@ -317,7 +322,7 @@ class _CommentsSheetState extends ConsumerState<CommentsSheet> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const ListTile(title: Text('Yorumlar')),
+              ListTile(title: Text(l10n.commentsTitle)),
               Flexible(
                 child: _error != null
                     ? Padding(
@@ -330,9 +335,9 @@ class _CommentsSheetState extends ConsumerState<CommentsSheet> {
                         child: CircularProgressIndicator(),
                       )
                     : comments.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text('Henüz yorum yok. İlk yorumu sen yaz.'),
+                    ? Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(l10n.commentsEmpty),
                       )
                     : ListView(
                         shrinkWrap: true,
@@ -348,7 +353,7 @@ class _CommentsSheetState extends ConsumerState<CommentsSheet> {
                               subtitle: Text(c.text),
                               trailing: c.canDelete
                                   ? IconButton(
-                                      tooltip: 'Yorumu sil',
+                                      tooltip: l10n.deleteComment,
                                       icon: const Icon(Icons.delete_outline),
                                       onPressed: () => _delete(c),
                                     )
@@ -365,15 +370,15 @@ class _CommentsSheetState extends ConsumerState<CommentsSheet> {
                       child: TextField(
                         controller: _controller,
                         maxLength: 500,
-                        decoration: const InputDecoration(
-                          hintText: 'Yorum yaz...',
+                        decoration: InputDecoration(
+                          hintText: l10n.commentHint,
                           counterText: '',
                         ),
                         onSubmitted: (_) => _send(),
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Gönder',
+                      tooltip: l10n.commonSend,
                       onPressed: _sending ? null : _send,
                       icon: const Icon(Icons.send),
                     ),

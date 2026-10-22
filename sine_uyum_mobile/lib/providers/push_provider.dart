@@ -12,16 +12,17 @@ import 'notification_provider.dart';
 import 'session_provider.dart';
 
 enum PushStatus {
-  /// Firebase yapılandırılmamış ya da platform desteklemiyor.
+  /// Firebase isn't configured or the platform isn't supported.
   disabled,
 
-  /// Kullanıcı bildirim iznini vermedi.
+  /// The user didn't grant notification permission.
   permissionDenied,
 
-  /// Cihaz sunucuya kaydedildi; uygulama kapalıyken de bildirim gelir.
+  /// The device is registered; notifications arrive even when the app is
+  /// closed.
   registered,
 
-  /// Oturum yok ya da henüz kurulum sürüyor.
+  /// Signed out, or setup is still in progress.
   idle,
 }
 
@@ -33,8 +34,8 @@ final deviceRepositoryProvider = Provider<DeviceRepository>(
   (ref) => DeviceRepository(ref.watch(apiClientProvider)),
 );
 
-/// Bildirime dokunulunca ne yapılacağı. Varsayılan: bildirimi okundu
-/// işaretle ve ilgili ekrana git. Testlerde değiştirilir.
+/// What happens when a notification is tapped. Default: mark it as read and
+/// open the related screen. Replaced in tests.
 final pushOpenedHandlerProvider = Provider<void Function(PushOpened)>((ref) {
   return (opened) {
     final id = opened.notificationId;
@@ -50,23 +51,24 @@ final pushProvider = NotifierProvider<PushNotifier, PushStatus>(
   PushNotifier.new,
 );
 
-/// Oturumu izleyerek cihazı push için kaydeder/kaydını siler.
+/// Watches the session to register/unregister the device for push.
 ///
-/// * Giriş (ya da açılışta oturumun geri yüklenmesi): izin iste, FCM token'ını
-///   sunucuya kaydet, token yenilenince yeniden kaydet.
-/// * Çıkış ya da oturum süresinin dolması: kaydı sil (uç kimlik doğrulama
-///   istemez), ki cihaz önceki kullanıcının bildirimlerini almasın.
-/// * Bildirime dokunma: soğuk açılış dahil ilgili ekrana git.
+/// * Sign-in (or the session being restored at start): ask for permission,
+///   register the FCM token with the server, re-register when it refreshes.
+/// * Sign-out or session expiry: unregister (the endpoint needs no auth), so
+///   the device doesn't receive the previous user's notifications.
+/// * Tapping a notification: open the related screen, cold start included.
 ///
-/// Uygulama ön plandayken gelen bildirimler zaten SignalR ile listeye düşer;
-/// FCM ön planda sistem bildirimi göstermediği için çift bildirim olmaz.
+/// Notifications arriving in the foreground already reach the list over
+/// SignalR; FCM shows no system notification in the foreground, so there are
+/// no duplicates.
 class PushNotifier extends Notifier<PushStatus> {
   String? _registeredToken;
   StreamSubscription<String>? _tokenRefresh;
   StreamSubscription<PushOpened>? _opened;
   bool _initialHandled = false;
 
-  // Giriş/çıkış hızlı ardışık gelirse adımlar sırayla işlensin.
+  // If sign-in/sign-out come in quick succession, process steps in order.
   Future<void> _pending = Future.value();
 
   PushMessaging get _messaging => ref.read(pushMessagingProvider);
@@ -86,8 +88,8 @@ class PushNotifier extends Notifier<PushStatus> {
       }
     }, fireImmediately: true);
 
-    // Kayıt çevrimdışıyken başarısız olduysa ağ dönünce yeniden dene
-    // (yoksa ancak bir sonraki token yenilemesinde denenirdi).
+    // If registration failed while offline, retry when the network comes
+    // back (otherwise it would only be retried on the next token refresh).
     ref.listen<NetworkStatus>(networkStatusProvider, (previous, next) {
       final cameBack = previous?.isOffline == true && !next.isOffline;
       if (cameBack &&
@@ -107,12 +109,12 @@ class PushNotifier extends Notifier<PushStatus> {
 
   void _enqueue(Future<void> Function() step) {
     _pending = _pending.then((_) => step()).catchError((Object error) {
-      // Push hiçbir zaman uygulamanın geri kalanını bozmamalı.
-      debugPrint('Push kurulumu başarısız: $error');
+      // Push must never break the rest of the app.
+      debugPrint('Push setup failed: $error');
     });
   }
 
-  /// Testlerin bekleyen adımların bitmesini beklemesi için.
+  /// Lets tests wait for pending steps to finish.
   @visibleForTesting
   Future<void> get settled => _pending;
 
@@ -122,7 +124,8 @@ class PushNotifier extends Notifier<PushStatus> {
       return;
     }
 
-    // Dokunma dinleyicisi izinden bağımsız kurulur (izin sonradan verilebilir).
+    // The tap listener is set up regardless of permission (it may be granted
+    // later).
     _opened ??= _messaging.onOpened.listen(_handleOpened);
     if (!_initialHandled) {
       _initialHandled = true;
@@ -135,11 +138,11 @@ class PushNotifier extends Notifier<PushStatus> {
       return;
     }
 
-    // Kayıttan ÖNCE dinlenir: ilk kayıt ağ hatasıyla düşse bile sonraki
-    // token yenilemesi cihazı kaydedebilsin.
+    // Listen BEFORE registering: even if the first registration fails with
+    // a network error, the next token refresh can register the device.
     _tokenRefresh ??= _messaging.onTokenRefresh.listen(
       (fresh) => _enqueue(() async {
-        // Oturum kapandıktan sonra gelen yenilemeler kaydedilmez.
+        // Refreshes arriving after sign-out aren't registered.
         if (ref.read(sessionProvider).isAuthenticated) await _register(fresh);
       }),
     );
@@ -164,9 +167,9 @@ class PushNotifier extends Notifier<PushStatus> {
     try {
       await _devices.unregister(token);
     } catch (error) {
-      // Çevrimdışıysa sunucu, token'ı bir sonraki girişte başka kullanıcıya
-      // taşır ya da FCM "UNREGISTERED" dediğinde siler.
-      debugPrint('Cihaz kaydı silinemedi: $error');
+      // If offline, the server moves the token to another user on the next
+      // sign-in, or deletes it when FCM reports "UNREGISTERED".
+      debugPrint('Device unregistration failed: $error');
     }
   }
 

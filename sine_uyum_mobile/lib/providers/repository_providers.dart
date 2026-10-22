@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/network/api_client.dart';
 import '../data/models/app_user.dart';
 import '../data/models/event.dart';
 import '../data/models/message.dart';
@@ -12,33 +13,42 @@ import '../data/repositories/movie_repository.dart';
 import '../data/repositories/notification_repository.dart';
 import '../data/repositories/social_repository.dart';
 import '../data/repositories/watchlist_repository.dart';
+import 'locale_provider.dart';
 import 'session_provider.dart';
 
+// Watching the API language rebuilds every repository on a language change,
+// so the data providers below (which watch them) refetch server-localized
+// content instead of keeping it in the old language.
+ApiClient _client(Ref ref) {
+  ref.watch(apiLanguageProvider);
+  return ref.watch(apiClientProvider);
+}
+
 final movieRepositoryProvider = Provider<MovieRepository>(
-  (ref) => MovieRepository(ref.watch(apiClientProvider)),
+  (ref) => MovieRepository(_client(ref)),
 );
 
 final socialRepositoryProvider = Provider<SocialRepository>(
-  (ref) => SocialRepository(ref.watch(apiClientProvider)),
+  (ref) => SocialRepository(_client(ref)),
 );
 
 final watchlistRepositoryProvider = Provider<WatchlistRepository>(
-  (ref) => WatchlistRepository(ref.watch(apiClientProvider)),
+  (ref) => WatchlistRepository(_client(ref)),
 );
 
 final messageRepositoryProvider = Provider<MessageRepository>(
-  (ref) => MessageRepository(ref.watch(apiClientProvider)),
+  (ref) => MessageRepository(_client(ref)),
 );
 
 final eventRepositoryProvider = Provider<EventRepository>(
-  (ref) => EventRepository(ref.watch(apiClientProvider)),
+  (ref) => EventRepository(_client(ref)),
 );
 
 final notificationRepositoryProvider = Provider<NotificationRepository>(
-  (ref) => NotificationRepository(ref.watch(apiClientProvider)),
+  (ref) => NotificationRepository(_client(ref)),
 );
 
-// --- Ekranların doğrudan izlediği veri sağlayıcıları ---
+// --- Data providers watched directly by the screens ---
 
 final nowPlayingProvider = FutureProvider<List<Movie>>(
   (ref) => ref.watch(movieRepositoryProvider).nowPlaying(),

@@ -7,13 +7,14 @@ import '../offline/response_cache.dart';
 import '../storage/token_storage.dart';
 import 'api_exception.dart';
 
-/// Tüm HTTP trafiğinin tek giriş noktası.
+/// Single entry point for all HTTP traffic.
 ///
-/// Sorumlulukları:
-///  * Her isteğe access token eklemek
-///  * 401 alındığında refresh token ile sessizce yeni token almak ve isteği
-///    tekrarlamak (kullanıcı tekrar giriş yapmak zorunda kalmaz)
-///  * Yenileme de başarısızsa oturumu kapatmak
+/// Responsibilities:
+///  * Attach the access token and the UI language (`Accept-Language`) to
+///    every request
+///  * On a 401, silently get a new token with the refresh token and retry
+///    the request (the user does not have to sign in again)
+///  * Sign the user out if the refresh fails too
 class ApiClient {
   ApiClient(this._tokenStorage, {Dio? dio, HttpClientAdapter? adapter})
     : _dio =
@@ -24,12 +25,11 @@ class ApiClient {
               connectTimeout: const Duration(seconds: 15),
               receiveTimeout: const Duration(seconds: 20),
               headers: {'Accept': 'application/json'},
-              // Hata kodlarını da yanıt olarak alıp kendimiz yorumluyoruz.
+              // Error statuses are received as responses and interpreted here.
               validateStatus: (status) => status != null && status < 400,
             ),
           ) {
-    // Testlerde ağ katmanı taklit edilir; BaseOptions ve interceptor'lar
-    // gerçek kalır.
+    // Tests fake the network layer; BaseOptions and interceptors stay real.
     if (adapter != null) _dio.httpClientAdapter = adapter;
     _dio.interceptors.add(
       InterceptorsWrapper(onRequest: _onRequest, onError: _onError),
@@ -39,21 +39,27 @@ class ApiClient {
   final Dio _dio;
   final TokenStorage _tokenStorage;
 
-  /// Oturum geri kazanılamadığında (refresh de başarısız) tetiklenir.
-  /// Uygulama katmanı bunu dinleyip kullanıcıyı giriş ekranına yönlendirir.
+  /// Called when the session cannot be recovered (the refresh failed too).
+  /// The app layer listens and sends the user to the sign-in screen.
   void Function()? onSessionExpired;
 
-  /// Çevrimdışı kullanım için okuma yanıtlarının yerel kopyası (opsiyonel).
+  /// Local copy of read responses for offline use (optional).
   ResponseCache? cache;
 
-  /// Cihazın ağ bağlantısı yoksa true; o zaman önbellekli istekler ağı hiç
-  /// beklemeden (zaman aşımı 15 sn) doğrudan önbellekten okunur.
+  /// True when the device has no network; cached requests are then served
+  /// from the cache right away instead of waiting for the 15 s timeout.
   bool Function()? isDeviceOffline;
 
-  /// Her yanıtta (sunucuya ulaşıldı: true) ve ağ hatasında (false) çağrılır.
+  /// Called on every response (server reached: true) and on network errors
+  /// (false).
   void Function(bool reachable)? onServerReachability;
 
-  /// Eşzamanlı 401'lerde tek bir yenileme isteği atılması için paylaşılan future.
+  /// Language code for `Accept-Language` ("tr", "en"...). Read per request so
+  /// a language change applies immediately. The server localizes its
+  /// messages and data accordingly (falling back to English).
+  String Function()? languageCode;
+
+  /// Shared future so that concurrent 401s trigger a single refresh request.
   Future<String?>? _refreshFuture;
 
   Dio get dio => _dio;
@@ -68,6 +74,10 @@ class ApiClient {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
+    final language = languageCode?.call();
+    if (language != null && language.isNotEmpty) {
+      options.headers['Accept-Language'] = language;
+    }
     if (!_authPaths.contains(options.path)) {
       final token = await _tokenStorage.readAccessToken();
       if (token != null && token.isNotEmpty) {
@@ -93,10 +103,11 @@ class ApiClient {
     try {
       newToken = await _refreshAccessToken();
     } on DioException catch (refreshError) {
-      // Yenileme isteği sunucuya ULAŞAMADI (ağ yok). Bu bir ret değil:
-      // token'lar korunur, oturum kapanmaz. Önceden bu da "oturum bitti"
-      // sayılıp token'lar siliniyordu. Çağırana 401 değil ağ hatası iletilir;
-      // aksi halde 401'i gören çağıran (ör. açılış) oturumu yine kapatırdı.
+      // The refresh request never REACHED the server (no network). That is
+      // not a rejection: the tokens are kept and the session stays open.
+      // This used to count as "session over" and delete the tokens. The
+      // caller gets a network error instead of the 401; otherwise a caller
+      // seeing the 401 (e.g. app start) would still sign the user out.
       return handler.next(
         DioException(
           requestOptions: error.requestOptions,
@@ -112,7 +123,7 @@ class ApiClient {
       return handler.next(error);
     }
 
-    // Yeni token ile orijinal isteği bir kez tekrarla.
+    // Retry the original request once with the new token.
     try {
       final options = error.requestOptions;
       options.extra['__retried'] = true;
@@ -125,11 +136,12 @@ class ApiClient {
     }
   }
 
-  /// Refresh token ile yeni access token alır. Eşzamanlı çağrılar aynı
-  /// future'ı paylaşır, böylece tek yenileme isteği atılır (token rotation
-  /// nedeniyle ikinci istek zaten geçersiz olurdu).
+  /// Gets a new access token with the refresh token. Concurrent calls share
+  /// one future, so a single refresh request is sent (with token rotation a
+  /// second request would be invalid anyway).
   ///
-  /// Sunucu reddederse null; sunucuya ulaşılamazsa [DioException] fırlatır.
+  /// Returns null if the server rejects it; throws [DioException] if the
+  /// server cannot be reached.
   Future<String?> _refreshAccessToken() {
     return _refreshFuture ??= _performRefresh().whenComplete(() {
       _refreshFuture = null;
@@ -158,7 +170,7 @@ class ApiClient {
       );
       return accessToken;
     } on DioException catch (error) {
-      // Yanıt varsa sunucu reddetti (geçersiz/süresi dolmuş refresh token).
+      // A response means the server rejected it (invalid/expired token).
       if (error.response != null) return null;
       rethrow;
     }
@@ -170,13 +182,14 @@ class ApiClient {
       return _unwrap(() => _dio.get<T>(path, queryParameters: query));
     }
 
-    // Cihaz çevrimdışıysa ağı hiç deneme: kayıt varsa anında göster.
+    // Device offline: don't try the network, show the saved copy at once.
     if (isDeviceOffline?.call() ?? false) {
       final cached = await cache!.read(cacheKey);
       if (cached != null) return cached as T;
       throw ApiException(
-        'İnternet bağlantısı yok ve bu içerik daha önce kaydedilmemiş.',
+        null,
         isNetworkError: true,
+        kind: ApiErrorKind.offlineNotCached,
       );
     }
 
@@ -184,12 +197,12 @@ class ApiClient {
       final result = await _unwrap(
         () => _dio.get<T>(path, queryParameters: query),
       );
-      // Kaydetme hatası (disk dolu vb.) isteği bozmasın.
+      // A failed save (disk full etc.) must not break the request.
       unawaited(cache!.write(cacheKey, result).catchError((_) {}));
       return result;
     } on ApiException catch (error) {
-      // Yalnızca ağ hatasında önbelleğe düşülür; sunucunun verdiği yanıtlar
-      // (403, 404...) olduğu gibi iletilir.
+      // Only network errors fall back to the cache; server responses
+      // (403, 404...) are passed on as they are.
       if (!error.isNetworkError) rethrow;
       final cached = await cache!.read(cacheKey);
       if (cached == null) rethrow;

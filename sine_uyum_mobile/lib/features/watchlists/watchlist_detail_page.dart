@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../widgets/movie_widgets.dart';
 import '../../widgets/state_views.dart';
@@ -12,10 +13,13 @@ class WatchlistDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final detail = ref.watch(watchlistDetailProvider(listId));
 
     return Scaffold(
-      appBar: AppBar(title: Text(detail.value?.name ?? 'Liste')),
+      appBar: AppBar(
+        title: Text(detail.value?.name ?? l10n.watchlistFallbackTitle),
+      ),
       body: detail.when(
         loading: () => const LoadingView(),
         error: (error, _) => ErrorView(
@@ -24,9 +28,9 @@ class WatchlistDetailPage extends ConsumerWidget {
         ),
         data: (list) {
           if (list.items.isEmpty) {
-            return const EmptyView(
+            return EmptyView(
               icon: Icons.movie_outlined,
-              message: 'Bu listede henüz film yok. Film detay ekranından ekleyebilirsin.',
+              message: l10n.watchlistEmpty,
             );
           }
 
@@ -44,7 +48,7 @@ class WatchlistDetailPage extends ConsumerWidget {
                   title: item.title,
                   posterPath: item.posterPath,
                   trailing: IconButton(
-                    tooltip: 'Listeden kaldır',
+                    tooltip: l10n.removeFromList,
                     icon: const Icon(Icons.delete_outline),
                     onPressed: () async {
                       try {

@@ -5,12 +5,14 @@ import 'package:intl/intl.dart';
 
 import '../../core/network/api_exception.dart';
 import '../../data/models/event.dart';
+import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/session_provider.dart';
 import '../../widgets/poster_image.dart';
 import '../../widgets/state_views.dart';
 
-/// Sinema etkinliği ekranı: katılma, eşleştirme bekleme, grup ve film oylaması.
+/// Cinema event screen: joining, waiting to be matched, the group and the
+/// movie vote.
 class EventPage extends ConsumerWidget {
   const EventPage({super.key});
 
@@ -52,7 +54,7 @@ class _NoneView extends StatelessWidget {
         SizedBox(height: MediaQuery.sizeOf(context).height * 0.2),
         EmptyView(
           icon: Icons.event_busy_outlined,
-          message: message ?? 'Katılabileceğin yeni bir etkinlik bulunmuyor.',
+          message: message ?? context.l10n.eventNoneAvailable,
         ),
       ],
     );
@@ -88,6 +90,7 @@ class _AvailableViewState extends ConsumerState<_AvailableView> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final event = widget.event;
     if (event == null) return const _NoneView();
 
@@ -99,11 +102,11 @@ class _AvailableViewState extends ConsumerState<_AvailableView> {
         FilledButton.icon(
           onPressed: _isJoining ? null : _join,
           icon: const Icon(Icons.how_to_reg_outlined),
-          label: Text(_isJoining ? 'Katılıyor...' : 'Etkinliğe katıl'),
+          label: Text(_isJoining ? l10n.eventJoining : l10n.eventJoin),
         ),
         const SizedBox(height: 8),
         Text(
-          'Katıldıktan sonra film zevkine en yakın kişilerle eşleştirilirsin.',
+          l10n.eventJoinHint,
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall,
         ),
@@ -119,6 +122,7 @@ class _PendingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -127,14 +131,13 @@ class _PendingView extends StatelessWidget {
         const Icon(Icons.hourglass_top_outlined, size: 40),
         const SizedBox(height: 12),
         Text(
-          'Eşleştirme bekleniyor',
+          l10n.eventAwaitingMatch,
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 8),
         Text(
-          'Grubun oluştuğunda bildirim alacaksın. Bu sırada daha fazla filme '
-          'puan vererek eşleşmenin isabetini artırabilirsin.',
+          l10n.eventAwaitingMatchHint,
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall,
         ),
@@ -174,6 +177,7 @@ class _MatchedViewState extends ConsumerState<_MatchedView> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final state = widget.state;
     final group = state.group;
     final currentUserId = ref.watch(sessionProvider).user?.id;
@@ -183,7 +187,7 @@ class _MatchedViewState extends ConsumerState<_MatchedView> {
         .map((vote) => vote.movieId)
         .firstOrNull;
 
-    // Film başına oy sayısı.
+    // Votes per movie.
     final voteCounts = <int, int>{};
     for (final vote in state.votes) {
       voteCounts[vote.movieId] = (voteCounts[vote.movieId] ?? 0) + 1;
@@ -194,10 +198,13 @@ class _MatchedViewState extends ConsumerState<_MatchedView> {
       children: [
         if (state.event != null) _EventCard(event: state.event!),
         const SizedBox(height: 20),
-        Text('Grubun', style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          l10n.eventYourGroup,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 8),
         if (group == null || group.members.isEmpty)
-          const Text('Grup üyeleri yükleniyor...')
+          Text(l10n.eventLoadingMembers)
         else
           Wrap(
             spacing: 12,
@@ -230,15 +237,15 @@ class _MatchedViewState extends ConsumerState<_MatchedView> {
             ],
           ),
         const SizedBox(height: 24),
-        Text('Film oylaması', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 4),
         Text(
-          'Seçtiğin filme tekrar dokunursan oyunu geri çekersin.',
-          style: Theme.of(context).textTheme.bodySmall,
+          l10n.eventMovieVote,
+          style: Theme.of(context).textTheme.titleMedium,
         ),
+        const SizedBox(height: 4),
+        Text(l10n.eventVoteHint, style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: 12),
         if (state.suggestedMovies.isEmpty)
-          const Text('Henüz film önerisi oluşturulmadı.')
+          Text(l10n.eventNoSuggestions)
         else
           for (final movie in state.suggestedMovies)
             Card(
@@ -250,7 +257,7 @@ class _MatchedViewState extends ConsumerState<_MatchedView> {
                   height: 66,
                 ),
                 title: Text(movie.title),
-                subtitle: Text('${voteCounts[movie.id] ?? 0} oy'),
+                subtitle: Text(l10n.eventVoteCount(voteCounts[movie.id] ?? 0)),
                 trailing: Icon(
                   myVote == movie.id
                       ? Icons.check_circle
@@ -274,6 +281,7 @@ class _EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -291,10 +299,9 @@ class _EventCard extends StatelessWidget {
                   const Icon(Icons.calendar_today_outlined, size: 16),
                   const SizedBox(width: 6),
                   Text(
-                    DateFormat(
-                      'd MMMM y, HH:mm',
-                      'tr',
-                    ).format(event.eventDate!.toLocal()),
+                    DateFormat.yMMMMd(l10n.localeName)
+                        .add_Hm()
+                        .format(event.eventDate!.toLocal()),
                   ),
                 ],
               ),
@@ -316,7 +323,7 @@ class _EventCard extends StatelessWidget {
                 children: [
                   const Icon(Icons.groups_outlined, size: 16),
                   const SizedBox(width: 6),
-                  Text('${event.groupSize} kişilik gruplar'),
+                  Text(l10n.eventGroupSize(event.groupSize)),
                 ],
               ),
             ],
@@ -327,8 +334,8 @@ class _EventCard extends StatelessWidget {
   }
 }
 
-/// Sunucu ücretli özelliği kendisi denetler: 402'de abonelik sayfasına
-/// götüren bir eylemle birlikte mesaj gösterilir.
+/// The server enforces the paid feature itself: on a 402 the message is shown
+/// with an action leading to the subscription page.
 void _showActionError(BuildContext context, Object error) {
   final needsSubscription = error is ApiException && error.statusCode == 402;
   ScaffoldMessenger.of(context).showSnackBar(
@@ -336,7 +343,7 @@ void _showActionError(BuildContext context, Object error) {
       content: Text(error.toString()),
       action: needsSubscription
           ? SnackBarAction(
-              label: 'Abonelik',
+              label: context.l10n.commonSubscription,
               onPressed: () => context.push('/subscription'),
             )
           : null,

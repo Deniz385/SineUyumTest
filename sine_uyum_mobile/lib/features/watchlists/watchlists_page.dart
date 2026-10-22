@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../data/models/watchlist.dart';
+import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../widgets/state_views.dart';
 
@@ -11,6 +12,7 @@ class WatchlistsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final lists = ref.watch(myWatchlistsProvider);
 
     return Scaffold(
@@ -23,11 +25,11 @@ class WatchlistsPage extends ConsumerWidget {
         data: (lists) => lists.isEmpty
             ? EmptyView(
                 icon: Icons.bookmark_outline,
-                message: 'Henüz izleme listen yok.',
+                message: l10n.watchlistsEmpty,
                 action: FilledButton.icon(
                   onPressed: () => _showEditor(context, ref),
                   icon: const Icon(Icons.add),
-                  label: const Text('Liste oluştur'),
+                  label: Text(l10n.createList),
                 ),
               )
             : RefreshIndicator(
@@ -44,8 +46,9 @@ class WatchlistsPage extends ConsumerWidget {
                       title: Text(list.name),
                       subtitle: Text(
                         list.description?.isNotEmpty == true
-                            ? '${list.itemCount} film · ${list.description}'
-                            : '${list.itemCount} film',
+                            ? '${l10n.movieCount(list.itemCount)} · '
+                                  '${list.description}'
+                            : l10n.movieCount(list.itemCount),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -57,9 +60,15 @@ class WatchlistsPage extends ConsumerWidget {
                             _confirmDelete(context, ref, list);
                           }
                         },
-                        itemBuilder: (context) => const [
-                          PopupMenuItem(value: 'edit', child: Text('Düzenle')),
-                          PopupMenuItem(value: 'delete', child: Text('Sil')),
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'edit',
+                            child: Text(l10n.commonEdit),
+                          ),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Text(l10n.commonDelete),
+                          ),
                         ],
                       ),
                       onTap: () => context.push('/watchlist/${list.id}'),
@@ -70,7 +79,7 @@ class WatchlistsPage extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showEditor(context, ref),
-        tooltip: 'Yeni liste',
+        tooltip: l10n.newList,
         child: const Icon(Icons.add),
       ),
     );
@@ -86,11 +95,12 @@ class WatchlistsPage extends ConsumerWidget {
       text: existing?.description ?? '',
     );
     final formKey = GlobalKey<FormState>();
+    final l10n = context.l10n;
 
     final saved = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(existing == null ? 'Yeni liste' : 'Listeyi düzenle'),
+        title: Text(existing == null ? l10n.newList : l10n.editList),
         content: Form(
           key: formKey,
           child: Column(
@@ -100,15 +110,15 @@ class WatchlistsPage extends ConsumerWidget {
                 controller: nameController,
                 autofocus: true,
                 maxLength: 100,
-                decoration: const InputDecoration(labelText: 'Liste adı'),
+                decoration: InputDecoration(labelText: l10n.listNameLabel),
                 validator: (value) => (value == null || value.trim().isEmpty)
-                    ? 'Liste adı zorunludur.'
+                    ? l10n.listNameRequired
                     : null,
               ),
               TextFormField(
                 controller: descriptionController,
                 maxLength: 500,
-                decoration: const InputDecoration(labelText: 'Açıklama'),
+                decoration: InputDecoration(labelText: l10n.descriptionLabel),
               ),
             ],
           ),
@@ -116,7 +126,7 @@ class WatchlistsPage extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Vazgeç'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () {
@@ -124,7 +134,7 @@ class WatchlistsPage extends ConsumerWidget {
                 Navigator.of(context).pop(true);
               }
             },
-            child: const Text('Kaydet'),
+            child: Text(l10n.commonSave),
           ),
         ],
       ),
@@ -163,19 +173,20 @@ class WatchlistsPage extends ConsumerWidget {
     WidgetRef ref,
     WatchlistSummary list,
   ) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Liste silinsin mi?'),
-        content: Text('"${list.name}" listesi kalıcı olarak silinecek.'),
+        title: Text(l10n.deleteListTitle),
+        content: Text(l10n.deleteListBody(list.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Vazgeç'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Sil'),
+            child: Text(l10n.commonDelete),
           ),
         ],
       ),

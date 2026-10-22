@@ -2,28 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/movie.dart';
+import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../widgets/movie_widgets.dart';
 import '../../widgets/state_views.dart';
 import '../social/feed_view.dart';
 
-/// Ana sayfa: takip edilenlerin akışı ve film şeritleri.
+/// Home: the feed of followed users and the movie strips.
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const DefaultTabController(
+    final l10n = context.l10n;
+    return DefaultTabController(
       length: 2,
       child: Column(
         children: [
           TabBar(
             tabs: [
-              Tab(text: 'Akış'),
-              Tab(text: 'Filmler'),
+              Tab(text: l10n.homeTabFeed),
+              Tab(text: l10n.homeTabMovies),
             ],
           ),
-          Expanded(child: TabBarView(children: [FeedView(), _MoviesTab()])),
+          const Expanded(
+            child: TabBarView(children: [FeedView(), _MoviesTab()]),
+          ),
         ],
       ),
     );
@@ -38,8 +42,8 @@ class _MoviesTab extends ConsumerWidget {
     final nowPlaying = ref.watch(nowPlayingProvider);
     final popular = ref.watch(popularMoviesProvider);
 
-    // İki şeritten biri yüklenmeye devam ediyorsa tek bir yükleniyor
-    // göstergesi yerine, hazır olan şeridi hemen gösteriyoruz.
+    // If one strip is still loading, show the one that's ready right away
+    // instead of a single loading indicator.
     final hasError = nowPlaying.hasError && popular.hasError;
     if (hasError) {
       return ErrorView(
@@ -67,12 +71,12 @@ class _MoviesTab extends ConsumerWidget {
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           _Section(
-            title: 'Vizyondakiler',
+            title: context.l10n.homeNowPlaying,
             value: nowPlaying,
             onRetry: () => ref.invalidate(nowPlayingProvider),
           ),
           _Section(
-            title: 'Popüler filmler',
+            title: context.l10n.homePopular,
             value: popular,
             onRetry: () => ref.invalidate(popularMoviesProvider),
           ),

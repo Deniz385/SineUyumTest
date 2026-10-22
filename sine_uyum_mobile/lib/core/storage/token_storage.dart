@@ -1,13 +1,13 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-/// Token'ları işletim sisteminin güvenli deposunda tutar
+/// Keeps the tokens in the OS secure store
 /// (iOS Keychain / Android EncryptedSharedPreferences).
-/// `SharedPreferences` kullanılmaz: root'lu cihazda düz metin okunabilir.
+/// Not `SharedPreferences`: on a rooted device that is readable plain text.
 class TokenStorage {
   TokenStorage({FlutterSecureStorage? storage})
-    // Android'de şifreli depolama bu sürümde varsayılan; iOS'ta anahtarın
-    // cihaz ilk açıldıktan sonra okunabilmesi için first_unlock seçiliyor
-    // (arka plandaki token yenilemesi için gerekli).
+    // Encrypted storage is the default on Android in this version; on iOS
+    // first_unlock makes the key readable after the device's first unlock
+    // (needed for token refreshes in the background).
     : _storage =
           storage ??
           const FlutterSecureStorage(

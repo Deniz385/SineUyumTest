@@ -1,5 +1,5 @@
-/// `/api/v1/notification` kaydı. SignalR `ReceiveNotification` olayı da
-/// aynı biçimi gönderir.
+/// A `/api/v1/notification` record. The SignalR `ReceiveNotification` event
+/// sends the same shape. [message] is localized by the server.
 class AppNotification {
   const AppNotification({
     required this.id,

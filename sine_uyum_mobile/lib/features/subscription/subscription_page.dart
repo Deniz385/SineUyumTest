@@ -4,16 +4,18 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../data/models/app_user.dart';
+import '../../l10n/l10n.dart';
 import '../../providers/session_provider.dart';
 import '../../widgets/state_views.dart';
 
-/// Abonelik durumu sunucudan okunur (tek kaynak).
+/// The subscription status is read from the server (the single source of
+/// truth).
 final subscriptionInfoProvider = FutureProvider.autoDispose<SubscriptionInfo>((
   ref,
 ) async {
   final info = await ref.watch(authRepositoryProvider).subscription();
-  // Oturumdaki kullanıcı bilgisi farklıysa (ör. yönetici az önce tanımladı)
-  // tazelenir ki etkinlik ekranı hemen doğru davransın.
+  // If the session's user disagrees (e.g. an admin just granted it), refresh
+  // it so the event screen behaves correctly right away.
   final user = ref.read(sessionProvider).user;
   if (user != null && user.isSubscribed != info.isActive) {
     await ref.read(sessionProvider.notifier).refreshUser();
@@ -21,17 +23,18 @@ final subscriptionInfoProvider = FutureProvider.autoDispose<SubscriptionInfo>((
   return info;
 });
 
-/// Ödemesiz "aboneliği başlat" düğmesi kaldırıldı (G4): abonelik yalnızca
-/// doğrulanmış ödeme ya da yönetici tanımlamasıyla açılır.
+/// The payment-free "start subscription" button was removed (G4): a
+/// subscription is only enabled by a verified payment or by an admin.
 class SubscriptionPage extends ConsumerWidget {
   const SubscriptionPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final info = ref.watch(subscriptionInfoProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Abonelik')),
+      appBar: AppBar(title: Text(l10n.commonSubscription)),
       body: info.when(
         loading: () => const LoadingView(),
         error: (error, _) => ErrorView(
@@ -46,28 +49,25 @@ class SubscriptionPage extends ConsumerWidget {
               _StatusCard(info: info),
               const SizedBox(height: 20),
               Text(
-                'Abonelikle neler geliyor?',
+                l10n.subscriptionBenefitsTitle,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
-              // Yalnızca gerçekten var olan ücretli özellikler listelenir.
-              const _Benefit(text: 'Açık hava sineması etkinliklerine katılım'),
-              const _Benefit(
-                text: 'Film zevkine göre otomatik grup eşleştirme',
-              ),
-              const _Benefit(text: 'Grubunla birlikte film oylaması'),
+              // Only paid features that actually exist are listed.
+              _Benefit(text: l10n.benefitOpenAirEvents),
+              _Benefit(text: l10n.benefitGroupMatching),
+              _Benefit(text: l10n.benefitGroupVoting),
               const SizedBox(height: 24),
               if (info.isActive)
                 FilledButton(
                   onPressed: () => context.go('/event'),
-                  child: const Text('Etkinliklere git'),
+                  child: Text(l10n.goToEvents),
                 )
               else
                 _Notice(
                   text: info.availableProviders.isEmpty
-                      ? 'Online ödeme çok yakında. Şu an abonelik satın '
-                            'alınamıyor.'
-                      : 'Ödeme seçenekleri hazırlanıyor.',
+                      ? l10n.paymentComingSoon
+                      : l10n.paymentPreparing,
                 ),
             ],
           ),
@@ -84,6 +84,7 @@ class _StatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final expires = info.expiresAt;
     return Card(
       child: Padding(
@@ -101,7 +102,9 @@ class _StatusCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  info.isActive ? 'Aboneliğin aktif' : 'Abone değilsin',
+                  info.isActive
+                      ? l10n.subscriptionIsActive
+                      : l10n.subscriptionNotSubscribed,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ],
@@ -109,8 +112,11 @@ class _StatusCard extends StatelessWidget {
             if (info.isActive && expires != null) ...[
               const SizedBox(height: 8),
               Text(
-                '${info.willRenew ? 'Yenilenme' : 'Bitiş'}: '
-                '${DateFormat('d MMMM y', 'tr').format(expires.toLocal())}',
+                (info.willRenew
+                    ? l10n.subscriptionRenews
+                    : l10n.subscriptionEnds)(
+                  DateFormat.yMMMMd(l10n.localeName).format(expires.toLocal()),
+                ),
               ),
             ],
           ],

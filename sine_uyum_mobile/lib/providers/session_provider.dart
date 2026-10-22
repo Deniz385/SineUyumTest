@@ -8,9 +8,10 @@ import '../core/offline/response_cache.dart';
 import '../core/storage/token_storage.dart';
 import '../data/models/app_user.dart';
 import '../data/repositories/auth_repository.dart';
+import 'locale_provider.dart';
 
 enum SessionStatus {
-  /// Depodaki token henüz okunmadı — açılış ekranı gösterilir.
+  /// The stored token hasn't been read yet — the splash screen is shown.
   unknown,
   authenticated,
   unauthenticated,
@@ -30,14 +31,17 @@ class SessionState {
 
 final tokenStorageProvider = Provider<TokenStorage>((ref) => TokenStorage());
 
-/// Ağ katmanı; üretimde null (gerçek ağ), testlerde taklit edilir.
+/// The network layer; null in production (real network), faked in tests.
 final httpAdapterProvider = Provider<HttpClientAdapter?>((ref) => null);
 
-/// Çevrimdışı okuma önbelleği (uygulamada dosya, testlerde bellek).
+/// Offline read cache (files in the app, memory in tests).
 final cacheStoreProvider = Provider<CacheStore>((ref) => FileCacheStore());
 
 final responseCacheProvider = Provider<ResponseCache>(
-  (ref) => ResponseCache(ref.watch(cacheStoreProvider)),
+  (ref) => ResponseCache(
+    ref.watch(cacheStoreProvider),
+    language: () => ref.read(apiLanguageProvider),
+  ),
 );
 
 final apiClientProvider = Provider<ApiClient>((ref) {
@@ -46,11 +50,13 @@ final apiClientProvider = Provider<ApiClient>((ref) {
     adapter: ref.watch(httpAdapterProvider),
   );
   client.cache = ref.watch(responseCacheProvider);
+  // Read per request: a language change applies without rebuilding the client.
+  client.languageCode = () => ref.read(apiLanguageProvider);
   client.isDeviceOffline = () => !ref.read(networkStatusProvider).deviceOnline;
   client.onServerReachability = (reachable) =>
       ref.read(networkStatusProvider.notifier).reportServer(reachable);
 
-  // Yenileme de başarısız olduğunda oturumu kapat.
+  // Sign out when the refresh fails too.
   client.onSessionExpired = () {
     ref.read(sessionProvider.notifier).handleSessionExpired();
   };
@@ -69,14 +75,15 @@ final sessionProvider = NotifierProvider<SessionNotifier, SessionState>(
 class SessionNotifier extends Notifier<SessionState> {
   @override
   SessionState build() {
-    // Çevrimdışı açılışta oturum doğrulanamadıysa ağ dönünce yeniden dene.
+    // If the session couldn't be verified on an offline start, retry when
+    // the network comes back.
     ref.listen<NetworkStatus>(networkStatusProvider, (previous, next) {
       final cameBack = previous?.isOffline == true && !next.isOffline;
       if (cameBack && state.status == SessionStatus.unknown) restore();
     });
 
-    // Token'ı okumak asenkron; önce "bilinmiyor" durumuyla başlayıp
-    // sonucu geldiğinde durumu güncelliyoruz.
+    // Reading the token is async: start as "unknown" and update the state
+    // once the result arrives.
     Future.microtask(restore);
     return const SessionState.unknown();
   }
@@ -85,13 +92,14 @@ class SessionNotifier extends Notifier<SessionState> {
   AuthRepository get _auth => ref.read(authRepositoryProvider);
   ResponseCache get _cache => ref.read(responseCacheProvider);
 
-  /// Uygulama açılışında saklı token ile oturumu geri yükler.
+  /// Restores the session from the stored token at app start.
   ///
-  /// Yalnızca sunucunun kesin reddi oturumu kapatır. Ağ yoksa token'lar
-  /// korunur: kayıtlı kullanıcı bilgisi varsa onunla açılır, yoksa açılış
-  /// ekranında beklenir ve ağ dönünce yeniden denenir. Önceden HER hata
-  /// token'ları siliyordu: uygulamayı internetsiz açan kullanıcı çıkışa
-  /// düşüyor ve yeniden giriş yapmak zorunda kalıyordu.
+  /// Only a definite rejection by the server ends the session. Without a
+  /// network the tokens are kept: the app opens with the saved user if there
+  /// is one, otherwise it waits on the splash screen and retries when the
+  /// network returns. Previously EVERY error deleted the tokens: a user who
+  /// opened the app without internet was signed out and had to sign in
+  /// again.
   Future<void> restore() async {
     final token = await _storage.readAccessToken();
     if (token == null || token.isEmpty) {
@@ -99,30 +107,30 @@ class SessionNotifier extends Notifier<SessionState> {
       return;
     }
 
-    // Son kullanıcının önbelleği: çevrimdışı /me buradan okunabilsin.
+    // The last user's cache, so /me can be read from it offline.
     await _cache.restoreScope();
 
     try {
-      // Token süresi dolmuşsa interceptor refresh token ile yeniler;
-      // o da geçersizse 401 döner ve oturum kapanır.
+      // If the token has expired the interceptor renews it with the refresh
+      // token; if that is invalid too, a 401 comes back and the session ends.
       final user = await _auth.me();
       await _remember(user);
       state = SessionState(status: SessionStatus.authenticated, user: user);
     } on ApiException catch (error) {
-      if (error.isNetworkError) return; // bekle: token'lar duruyor
+      if (error.isNetworkError) return; // wait: the tokens are kept
       await _endSession();
     } catch (_) {
       await _endSession();
     }
   }
 
-  // Oturum açan kullanıcıyı önbellek kapsamı yapar ve profilini saklar:
-  // /me, kapsam ancak kendi yanıtından öğrenildiği için kendiliğinden
-  // saklanamıyordu; bu olmadan çevrimdışı açılış ancak üçüncü seferde
-  // çalışırdı.
+  // Makes the signed-in user the cache scope and saves their profile: /me
+  // couldn't be cached on its own because the scope is only learned from
+  // its response; without this an offline start only worked the third time.
   Future<void> _remember(AppUser user) async {
     await _cache.useScope(user.id);
-    await _cache.write('/api/v1/account/me', user.toJson());
+    final key = _cache.keyFor('/api/v1/account/me', null);
+    if (key != null) await _cache.write(key, user.toJson());
   }
 
   Future<void> _endSession() async {
@@ -140,7 +148,7 @@ class SessionNotifier extends Notifier<SessionState> {
       accessToken: result.token,
       refreshToken: result.refreshToken,
     );
-    // Başka bir hesabın önbelleği varsa silinir.
+    // Another account's cache, if any, is deleted.
     await _remember(result.user);
     state = SessionState(
       status: SessionStatus.authenticated,
@@ -160,30 +168,31 @@ class SessionNotifier extends Notifier<SessionState> {
   Future<void> logout() async {
     final refreshToken = await _storage.readRefreshToken();
     if (refreshToken != null && refreshToken.isNotEmpty) {
-      // Sunucu tarafında iptal edilemese bile yerel token'ları siliyoruz.
+      // The local tokens are deleted even if the server can't revoke them.
       try {
         await _auth.logout(refreshToken);
       } catch (_) {
-        // Yoksay: çıkış her durumda tamamlanmalı.
+        // Ignore: signing out must always complete.
       }
     }
     await _endSession();
   }
 
-  /// Profil güncellendikten sonra oturumdaki kullanıcıyı tazeler.
+  /// Refreshes the session's user after a profile update.
   Future<void> refreshUser() async {
     if (!state.isAuthenticated) return;
     try {
       final user = await _auth.me();
       state = SessionState(status: SessionStatus.authenticated, user: user);
     } catch (_) {
-      // Ağ hatasında mevcut kullanıcı bilgisi korunur.
+      // On a network error the current user is kept.
     }
   }
 
   void handleSessionExpired() {
     if (state.status == SessionStatus.unauthenticated) return;
-    // Oturum bitti: önceki kullanıcının kayıtlı verisi cihazda kalmasın.
+    // Session over: the previous user's saved data must not stay on the
+    // device.
     _cache.clear();
     state = const SessionState.signedOut();
   }

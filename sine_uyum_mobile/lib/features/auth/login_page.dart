@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../l10n/l10n.dart';
 import '../../providers/session_provider.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -42,7 +43,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             username: _usernameController.text.trim(),
             password: _passwordController.text,
           );
-      // Yönlendirmeyi router'ın redirect'i yapar.
+      // The router's redirect takes care of navigation.
     } catch (error) {
       if (mounted) setState(() => _error = error.toString());
     } finally {
@@ -52,6 +53,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -71,13 +73,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'SineUyum',
+                      l10n.appName,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Film zevkine uyan insanları bul',
+                      l10n.loginTagline,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
@@ -86,13 +88,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       controller: _usernameController,
                       textInputAction: TextInputAction.next,
                       autofillHints: const [AutofillHints.username],
-                      decoration: const InputDecoration(
-                        labelText: 'Kullanıcı adı',
-                        prefixIcon: Icon(Icons.person_outline),
+                      decoration: InputDecoration(
+                        labelText: l10n.usernameLabel,
+                        prefixIcon: const Icon(Icons.person_outline),
                       ),
                       validator: (value) =>
                           (value == null || value.trim().isEmpty)
-                          ? 'Kullanıcı adı zorunludur.'
+                          ? l10n.usernameRequired
                           : null,
                     ),
                     const SizedBox(height: 12),
@@ -103,7 +105,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       autofillHints: const [AutofillHints.password],
                       onFieldSubmitted: (_) => _submit(),
                       decoration: InputDecoration(
-                        labelText: 'Şifre',
+                        labelText: l10n.passwordLabel,
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
                           icon: Icon(
@@ -117,7 +119,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         ),
                       ),
                       validator: (value) => (value == null || value.isEmpty)
-                          ? 'Şifre zorunludur.'
+                          ? l10n.passwordRequired
                           : null,
                     ),
                     if (_error != null) ...[
@@ -138,14 +140,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               width: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Giriş yap'),
+                          : Text(l10n.loginSubmit),
                     ),
                     const SizedBox(height: 8),
                     TextButton(
                       onPressed: _isSubmitting
                           ? null
                           : () => context.push('/register'),
-                      child: const Text('Hesabın yok mu? Kayıt ol'),
+                      child: Text(l10n.loginNoAccount),
                     ),
                   ],
                 ),

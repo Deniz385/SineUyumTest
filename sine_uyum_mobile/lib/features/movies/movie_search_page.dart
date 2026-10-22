@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../widgets/movie_widgets.dart';
 import '../../widgets/state_views.dart';
@@ -26,7 +27,7 @@ class _MovieSearchPageState extends ConsumerState<MovieSearchPage> {
     super.dispose();
   }
 
-  /// Her tuş vuruşunda TMDb'ye istek atmamak için 400 ms bekletilir.
+  /// Debounced by 400 ms so TMDb isn't queried on every keystroke.
   void _onChanged(String value) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
@@ -36,6 +37,7 @@ class _MovieSearchPageState extends ConsumerState<MovieSearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
         title: TextField(
@@ -44,7 +46,7 @@ class _MovieSearchPageState extends ConsumerState<MovieSearchPage> {
           textInputAction: TextInputAction.search,
           onChanged: _onChanged,
           decoration: InputDecoration(
-            hintText: 'Film ara...',
+            hintText: l10n.movieSearchHint,
             border: InputBorder.none,
             filled: false,
             suffixIcon: _controller.text.isEmpty
@@ -60,10 +62,7 @@ class _MovieSearchPageState extends ConsumerState<MovieSearchPage> {
         ),
       ),
       body: _query.isEmpty
-          ? const EmptyView(
-              icon: Icons.search,
-              message: 'Aramak istediğin filmin adını yaz.',
-            )
+          ? EmptyView(icon: Icons.search, message: l10n.movieSearchPrompt)
           : ref
                 .watch(movieSearchProvider(_query))
                 .when(
@@ -73,9 +72,7 @@ class _MovieSearchPageState extends ConsumerState<MovieSearchPage> {
                     onRetry: () => ref.invalidate(movieSearchProvider(_query)),
                   ),
                   data: (movies) => movies.isEmpty
-                      ? const EmptyView(
-                          message: 'Bu aramaya uygun film bulunamadı.',
-                        )
+                      ? EmptyView(message: l10n.movieSearchEmpty)
                       : ListView.builder(
                           itemCount: movies.length,
                           itemBuilder: (context, index) {

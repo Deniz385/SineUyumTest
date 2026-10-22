@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../data/models/message.dart';
+import '../../l10n/l10n.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/repository_providers.dart';
@@ -22,7 +23,8 @@ class ConversationPage extends ConsumerStatefulWidget {
   final String otherUserId;
   final String? otherUserName;
 
-  /// Hazır mesaj taslağı (ör. profildeki "Ona sor"); gönderilmeden düzenlenebilir.
+  /// A pre-filled draft (e.g. "Ask them" on a profile); editable before
+  /// sending.
   final String? draft;
 
   @override
@@ -32,15 +34,15 @@ class ConversationPage extends ConsumerStatefulWidget {
 class _ConversationPageState extends ConsumerState<ConversationPage> {
   late final _controller = TextEditingController(text: widget.draft ?? '');
   bool _isSending = false;
-  // dispose'da ref kullanılamadığı için baştan alınır.
+  // Captured up front because `ref` can't be used in dispose.
   late final ActiveConversation _activeConversation;
 
   @override
   void initState() {
     super.initState();
     _activeConversation = ref.read(activeConversationProvider.notifier);
-    // Sohbet açılınca: bu sohbetten gelen bildirimler gösterilmez, mesajlar ve
-    // o sohbetin bildirimleri okundu sayılır.
+    // When the conversation opens: its notifications are no longer shown, and
+    // its messages and notifications count as read.
     Future.microtask(() {
       _activeConversation.open(widget.otherUserId);
       ref.read(chatThreadProvider(widget.otherUserId).notifier).markAsRead();
@@ -55,7 +57,8 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
     _controller.dispose();
     final otherUserId = widget.otherUserId;
     final active = _activeConversation;
-    // Ağaç sökülürken sağlayıcı değiştirmemek için bir sonraki mikro göreve.
+    // Deferred to a microtask so no provider changes while the tree is torn
+    // down.
     Future.microtask(() => active.close(otherUserId));
     super.dispose();
   }
@@ -70,8 +73,8 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
           .read(messageRepositoryProvider)
           .send(recipientId: widget.otherUserId, content: text);
       _controller.clear();
-      // Yanıt mesajın kendisi: thread'i yeniden çekmeden eklenir (canlı yankı
-      // aynı id ile gelirse tekilleştirilir).
+      // The response is the message itself: add it without refetching the
+      // thread (the live echo with the same id is de-duplicated).
       ref.read(chatThreadProvider(widget.otherUserId).notifier).add(sent);
       ref.invalidate(conversationsProvider);
     } catch (error) {
@@ -86,6 +89,7 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final thread = ref.watch(chatThreadProvider(widget.otherUserId));
     final currentUserId = ref.watch(sessionProvider).user?.id;
 
@@ -93,7 +97,7 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
       appBar: AppBar(
         title: InkWell(
           onTap: () => context.push('/profile/${widget.otherUserId}'),
-          child: Text(widget.otherUserName ?? 'Sohbet'),
+          child: Text(widget.otherUserName ?? l10n.conversationFallbackTitle),
         ),
       ),
       body: Column(
@@ -107,9 +111,9 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
                     ref.invalidate(chatThreadProvider(widget.otherUserId)),
               ),
               data: (messages) => messages.isEmpty
-                  ? const EmptyView(
+                  ? EmptyView(
                       icon: Icons.waving_hand_outlined,
-                      message: 'Henüz mesaj yok. İlk mesajı sen yaz.',
+                      message: l10n.conversationEmpty,
                     )
                   : _MessageList(
                       messages: messages,
@@ -131,8 +135,8 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
                       maxLength: 1000,
                       textInputAction: TextInputAction.send,
                       onSubmitted: (_) => _send(),
-                      decoration: const InputDecoration(
-                        hintText: 'Mesaj yaz...',
+                      decoration: InputDecoration(
+                        hintText: l10n.messageHint,
                         counterText: '',
                       ),
                     ),
@@ -160,13 +164,13 @@ class _MessageList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // "Görüldü" yalnızca okunmuş son mesajımın altında.
+    // "Seen" appears only under my last read message.
     final lastSeenId = messages
         .where((m) => m.senderId == currentUserId && m.dateRead != null)
         .fold<int>(0, (max, m) => m.id > max ? m.id : max);
 
     return ListView.builder(
-      // Son mesaj altta olacak şekilde ters çiziyoruz.
+      // Drawn reversed so the latest message is at the bottom.
       reverse: true,
       padding: const EdgeInsets.all(12),
       itemCount: messages.length,
@@ -195,6 +199,8 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final time = DateFormat.Hm(l10n.localeName);
     final scheme = Theme.of(context).colorScheme;
     final background = isMine ? scheme.primaryContainer : scheme.surface;
     final foreground = isMine ? scheme.onPrimaryContainer : scheme.onSurface;
@@ -239,10 +245,11 @@ class _MessageBubble extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   showSeen && message.dateRead != null
-                      ? '${DateFormat.Hm('tr').format(message.messageSent!.toLocal())} · '
-                            'Görüldü ${DateFormat.Hm('tr').format(message.dateRead!.toLocal())}'
-                      : DateFormat.Hm('tr')
-                            .format(message.messageSent!.toLocal()),
+                      ? l10n.messageSentAndSeen(
+                          time.format(message.messageSent!.toLocal()),
+                          time.format(message.dateRead!.toLocal()),
+                        )
+                      : time.format(message.messageSent!.toLocal()),
                   style: Theme.of(context).textTheme.labelSmall
                       ?.copyWith(color: foreground.withValues(alpha: 0.7)),
                 ),
@@ -273,7 +280,7 @@ class _SharedMovieCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Film önerisi',
+                  context.l10n.sharedMovieLabel,
                   style: Theme.of(context).textTheme.labelSmall
                       ?.copyWith(color: foreground.withValues(alpha: 0.7)),
                 ),
@@ -315,7 +322,7 @@ class _SharedWatchlistCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Paylaşılan liste',
+                context.l10n.sharedWatchlistLabel,
                 style: Theme.of(context).textTheme.labelSmall
                     ?.copyWith(color: foreground.withValues(alpha: 0.7)),
               ),

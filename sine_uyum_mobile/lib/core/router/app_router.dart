@@ -25,8 +25,8 @@ import '../../features/watchlists/watchlists_page.dart';
 import '../../providers/session_provider.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  // go_router'ın yönlendirmeyi yeniden değerlendirmesi için oturum durumunu
-  // bir Listenable'a köprülüyoruz.
+  // Bridge the session state to a Listenable so go_router re-evaluates its
+  // redirects.
   final sessionListenable = ValueNotifier<SessionStatus>(
     ref.read(sessionProvider).status,
   );
@@ -43,7 +43,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final location = state.matchedLocation;
       final isAuthRoute = location == '/login' || location == '/register';
 
-      // Token henüz okunmadı: açılış ekranında bekle.
+      // Token not read yet: wait on the splash screen.
       if (status == SessionStatus.unknown) {
         return location == '/splash' ? null : '/splash';
       }
@@ -52,7 +52,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         return isAuthRoute ? null : '/login';
       }
 
-      // Giriş yapılmış; auth veya splash ekranında kalmasın.
+      // Signed in: don't stay on the auth or splash screens.
       if (isAuthRoute || location == '/splash') return '/home';
 
       return null;
@@ -62,7 +62,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (_, _) => const LoginPage()),
       GoRoute(path: '/register', builder: (_, _) => const RegisterPage()),
 
-      // Alt gezinme çubuğundaki beş sekme; her sekme kendi durumunu korur.
+      // The five bottom-navigation tabs; each keeps its own state.
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             AppShell(navigationShell: navigationShell),
@@ -104,7 +104,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
-      // Sekmelerin üzerine açılan detay ekranları.
+      // Detail screens opened on top of the tabs.
       GoRoute(
         path: '/movie/:movieId',
         builder: (context, state) => MovieDetailPage(

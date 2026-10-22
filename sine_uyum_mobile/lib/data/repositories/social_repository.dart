@@ -5,7 +5,7 @@ import '../models/app_user.dart';
 import '../models/profile.dart';
 import '../models/social.dart';
 
-/// Profil, takip ve kullanıcı arama işlemleri.
+/// Profile, follow and user search operations.
 class SocialRepository {
   SocialRepository(this._client);
 
@@ -18,8 +18,8 @@ class SocialRepository {
     return UserProfile.fromJson(data);
   }
 
-  /// Sunucu `profileImageUrl` için yalnızca mevcut değeri (değişmedi) ya da
-  /// boşu (kaldır) kabul eder; fotoğraf [uploadProfilePhoto] ile değişir.
+  /// For `profileImageUrl` the server only accepts the current value
+  /// (unchanged) or empty (remove); the photo changes via [uploadProfilePhoto].
   Future<void> updateProfile({String? bio, String? profileImageUrl}) async {
     await _client.put<Map<String, dynamic>>(
       '/api/v1/profile',
@@ -32,7 +32,8 @@ class SocialRepository {
     );
   }
 
-  /// Fotoğrafı yükler; sunucu 512x512 JPEG'e çevirip yeni adresi döner.
+  /// Uploads the photo; the server converts it to a 512x512 JPEG and returns
+  /// the new URL.
   Future<String?> uploadProfilePhoto(String filePath) async {
     final data = await _client.post<Map<String, dynamic>>(
       '/api/v1/profile/photo',
@@ -113,7 +114,7 @@ class SocialRepository {
     await _client.delete<Map<String, dynamic>>('/api/v1/blocks/$userId');
   }
 
-  // --- Sosyal çekirdek: inceleme, beğeni, yorum, akış ---
+  // --- Social core: reviews, likes, comments, feed ---
 
   Future<MovieReviews> movieReviews(int movieId, {int page = 1}) async {
     final data = await _client.get<Map<String, dynamic>>(
@@ -141,7 +142,7 @@ class SocialRepository {
     );
   }
 
-  /// Beğeni durumunu ayarlar; sunucunun güncel sayısını döner.
+  /// Sets the like state; returns the server's current count.
   Future<({bool liked, int likeCount})> setLiked(
     int reviewId,
     bool liked,
@@ -194,7 +195,7 @@ class SocialRepository {
     return FilmIdentity.fromJson(data);
   }
 
-  /// Bu haftanın zevk ikizi; uygun aday yoksa null (sunucu 204 döner).
+  /// This week's taste twin; null when there is no candidate (server: 204).
   Future<TasteTwin?> tasteTwin() async {
     final data = await _client.get<Object?>('/api/v1/taste-twin');
     return data is Map

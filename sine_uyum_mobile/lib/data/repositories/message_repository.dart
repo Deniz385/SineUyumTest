@@ -32,7 +32,7 @@ class MessageRepository {
         .toList();
   }
 
-  /// Gönderilen mesajın kendisini döner (thread'deki ile aynı şekil).
+  /// Returns the sent message itself (same shape as in the thread).
   Future<ChatMessage> send({
     required String recipientId,
     String? content,

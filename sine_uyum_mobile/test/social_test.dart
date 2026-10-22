@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:intl/date_symbol_data_local.dart';
 import 'package:sine_uyum_mobile/core/network/api_exception.dart';
 import 'package:sine_uyum_mobile/data/models/social.dart';
 import 'package:sine_uyum_mobile/data/repositories/social_repository.dart';
@@ -11,6 +10,8 @@ import 'package:sine_uyum_mobile/features/social/review_card.dart';
 import 'package:sine_uyum_mobile/providers/repository_providers.dart';
 import 'package:sine_uyum_mobile/providers/social_provider.dart';
 
+import 'support/localized_app.dart';
+
 Review review({
   int id = 1,
   bool spoilers = false,
@@ -19,10 +20,10 @@ Review review({
   bool mine = false,
 }) => Review(
   id: id,
-  movie: const ReviewMovie(id: 10, title: 'Başlangıç'),
+  movie: const ReviewMovie(id: 10, title: 'Inception'),
   author: const Author(id: 'u2', userName: 'mehmet'),
   rating: 9,
-  text: 'Topaç dönüyor.',
+  text: 'The top keeps spinning.',
   containsSpoilers: spoilers,
   likeCount: likes,
   likedByMe: liked,
@@ -33,7 +34,7 @@ Review review({
 FeedItem item(int movieId) => FeedItem(
   activityAt: DateTime.utc(2026, 10, 21),
   author: const Author(id: 'u2', userName: 'mehmet'),
-  movie: ReviewMovie(id: movieId, title: 'Film $movieId'),
+  movie: ReviewMovie(id: movieId, title: 'Movie $movieId'),
   rating: 7,
 );
 
@@ -87,10 +88,17 @@ class FakeSocial implements SocialRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-void main() {
-  setUpAll(() => initializeDateFormatting('tr'));
+TasteTwin twin() => TasteTwin.fromJson({
+  'user': {'id': 'u9', 'userName': 'zeynep'},
+  'compatibility': 92.0,
+  'commonMovieCount': 14,
+  'isFollowing': false,
+});
 
-  test('akış ve inceleme modelleri ayrıştırılır', () {
+void main() {
+  setUpAll(initializeAllDateFormatting);
+
+  test('feed and review models are parsed', () {
     final page = FeedPage.fromJson({
       'items': [
         {
@@ -104,7 +112,7 @@ void main() {
             'movie': {'id': 5, 'title': 'X'},
             'author': {'id': 'a', 'userName': 'ayse'},
             'rating': 8,
-            'text': 'güzel',
+            'text': 'nice',
             'containsSpoilers': true,
             'likeCount': 2,
             'commentCount': 1,
@@ -125,7 +133,7 @@ void main() {
     expect(FeedPage.fromJson({}).items, isEmpty);
   });
 
-  test('sana göre puan ayrıştırılır; yoksa null', () {
+  test('the "for you" score is parsed; null when absent', () {
     final parsed = MovieReviews.fromJson({
       'forYou': {
         'score': 8.7,
@@ -144,7 +152,7 @@ void main() {
     expect(MovieReviews.fromJson({'forYou': null}).forYou, isNull);
   });
 
-  test('akış sonraki sayfayı ekler; hata eldekini korur', () async {
+  test('the feed appends the next page; an error keeps what it has', () async {
     final social = FakeSocial()
       ..pages[null] = FeedPage(items: [item(1), item(2)], nextCursor: 'c1')
       ..pages['c1'] = FeedPage(items: [item(3)]);
@@ -160,10 +168,10 @@ void main() {
     expect(state.items.map((i) => i.movie.id), [1, 2, 3]);
     expect(state.hasMore, isFalse);
 
-    // Hata senaryosu: yeni kapsayıcı, ikinci sayfa düşer.
+    // Failure case: a new container where the second page fails.
     final failing = FakeSocial()
       ..pages[null] = FeedPage(items: [item(1)], nextCursor: 'c1')
-      ..feedError = ApiException('ağ yok');
+      ..feedError = ApiException('no network');
     final c2 = ProviderContainer(
       overrides: [socialRepositoryProvider.overrideWithValue(failing)],
     );
@@ -181,12 +189,14 @@ void main() {
     WidgetTester tester,
     Widget child, {
     FakeSocial? fake,
+    Locale locale = tr,
   }) async {
     final social = fake ?? FakeSocial();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [socialRepositoryProvider.overrideWithValue(social)],
-        child: MaterialApp(
+        child: localizedApp(
+          locale: locale,
           home: Scaffold(body: SingleChildScrollView(child: child)),
         ),
       ),
@@ -195,39 +205,66 @@ void main() {
     return social;
   }
 
-  testWidgets('spoiler gizli; dokununca açılır, uyum rozeti görünür', (
+  Future<FakeSocial> pumpFeed(
+    WidgetTester tester,
+    FakeSocial social, {
+    Locale locale = tr,
+  }) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [socialRepositoryProvider.overrideWithValue(social)],
+        child: localizedApp(
+          locale: locale,
+          home: const Scaffold(body: FeedView()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    return social;
+  }
+
+  testWidgets('spoilers hidden until tapped; compatibility badge shown', (
     tester,
   ) async {
     await pump(tester, ReviewCard(review: review(spoilers: true)));
 
-    expect(find.text('Topaç dönüyor.'), findsNothing);
+    expect(find.text('The top keeps spinning.'), findsNothing);
     expect(find.text('%82 uyumlu'), findsOneWidget);
     await tester.tap(find.text('Spoiler içeriyor — göster'));
     await tester.pump();
-    expect(find.text('Topaç dönüyor.'), findsOneWidget);
+    expect(find.text('The top keeps spinning.'), findsOneWidget);
   });
 
-  testWidgets(
-    'beğeni iyimser, sunucu sayısıyla düzeltilir; hatada geri alınır',
-    (tester) async {
-      final social = await pump(tester, ReviewCard(review: review(likes: 3)));
+  testWidgets('the review card renders in English', (tester) async {
+    await pump(tester, ReviewCard(review: review(spoilers: true)), locale: en);
 
-      await tester.tap(find.byIcon(Icons.favorite_border));
-      await tester.pumpAndSettle();
-      expect(social.likes, [(1, true)]);
-      expect(find.byIcon(Icons.favorite), findsOneWidget);
-      expect(find.text('5'), findsOneWidget); // sunucunun sayısı
+    expect(find.text('82% match'), findsOneWidget);
+    expect(find.text('9/10'), findsOneWidget);
+    expect(find.text('0 comments'), findsOneWidget);
+    await tester.tap(find.text('Contains spoilers — show'));
+    await tester.pump();
+    expect(find.text('The top keeps spinning.'), findsOneWidget);
+  });
 
-      social.likeError = ApiException('Çok fazla istek.');
-      await tester.tap(find.byIcon(Icons.favorite));
-      await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.favorite), findsOneWidget); // geri alındı
-      expect(find.text('5'), findsOneWidget);
-      expect(find.text('Çok fazla istek.'), findsOneWidget);
-    },
-  );
+  testWidgets('likes are optimistic, corrected by the server count, and '
+      'rolled back on error', (tester) async {
+    final social = await pump(tester, ReviewCard(review: review(likes: 3)));
 
-  testWidgets('puan yoksa inceleme yazılamaz; puan varsa paylaşılır', (
+    await tester.tap(find.byIcon(Icons.favorite_border));
+    await tester.pumpAndSettle();
+    expect(social.likes, [(1, true)]);
+    expect(find.byIcon(Icons.favorite), findsOneWidget);
+    expect(find.text('5'), findsOneWidget); // the server's count
+
+    social.likeError = ApiException('Too many requests.');
+    await tester.tap(find.byIcon(Icons.favorite));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.favorite), findsOneWidget); // rolled back
+    expect(find.text('5'), findsOneWidget);
+    expect(find.text('Too many requests.'), findsOneWidget);
+  });
+
+  testWidgets('no review without a rating; with a rating it can be posted', (
     tester,
   ) async {
     final social = FakeSocial();
@@ -239,14 +276,41 @@ void main() {
 
     final rated = FakeSocial()..reviews = const MovieReviews(myRating: 8);
     await pump(tester, const MovieReviewsSection(movieId: 10), fake: rated);
-    await tester.enterText(find.byType(TextField), 'Başyapıt.');
+    await tester.enterText(find.byType(TextField), 'Masterpiece.');
     await tester.tap(find.text('Spoiler içeriyor'));
     await tester.tap(find.text('Paylaş'));
     await tester.pumpAndSettle();
-    expect(rated.upserts, [(10, 'Başyapıt.', true)]);
+    expect(rated.upserts, [(10, 'Masterpiece.', true)]);
   });
 
-  testWidgets('sana göre rozeti yalnızca veri varsa', (tester) async {
+  testWidgets('the reviews section renders in English', (tester) async {
+    await pump(
+      tester,
+      const MovieReviewsSection(movieId: 10),
+      fake: FakeSocial(),
+      locale: en,
+    );
+    expect(find.text('Reviews'), findsOneWidget);
+    expect(
+      find.text('Rate the movie first to write a review.'),
+      findsOneWidget,
+    );
+
+    final rated = FakeSocial()..reviews = const MovieReviews(myRating: 8);
+    await pump(
+      tester,
+      const MovieReviewsSection(movieId: 10),
+      fake: rated,
+      locale: en,
+    );
+    expect(find.text('Your review (your rating: 8/10)'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'Masterpiece.');
+    await tester.tap(find.text('Post'));
+    await tester.pumpAndSettle();
+    expect(rated.upserts, [(10, 'Masterpiece.', false)]);
+  });
+
+  testWidgets('the "for you" badge only appears with data', (tester) async {
     final none = FakeSocial();
     await pump(tester, const ForYouBadge(movieId: 10), fake: none);
     expect(find.textContaining('sana göre'), findsNothing);
@@ -256,26 +320,20 @@ void main() {
         forYou: ForYouScore(score: 8.66, basedOn: 3),
       );
     await pump(tester, const ForYouBadge(movieId: 10), fake: some);
-    expect(find.text('8.7'), findsOneWidget);
+    // Turkish uses a decimal comma.
+    expect(find.text('8,7'), findsOneWidget);
     expect(find.text(' sana göre (3 uyumlu kişi)'), findsOneWidget);
+
+    await pump(tester, const ForYouBadge(movieId: 10), fake: some, locale: en);
+    expect(find.text('8.7'), findsOneWidget);
+    expect(find.text(' for you (3 matching people)'), findsOneWidget);
   });
 
-  testWidgets('akışın üstünde zevk ikizi; takip edilebilir', (tester) async {
+  testWidgets('taste twin above the feed; can be followed', (tester) async {
     final social = FakeSocial()
       ..pages[null] = FeedPage(items: [item(1)])
-      ..twin = TasteTwin.fromJson({
-        'user': {'id': 'u9', 'userName': 'zeynep'},
-        'compatibility': 92.0,
-        'commonMovieCount': 14,
-        'isFollowing': false,
-      });
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [socialRepositoryProvider.overrideWithValue(social)],
-        child: const MaterialApp(home: Scaffold(body: FeedView())),
-      ),
-    );
-    await tester.pumpAndSettle();
+      ..twin = twin();
+    await pumpFeed(tester, social);
 
     expect(find.text('zeynep'), findsOneWidget);
     expect(find.text('%92 uyumlu · 14 ortak film'), findsOneWidget);
@@ -285,16 +343,24 @@ void main() {
     expect(find.text('Takip ediliyor'), findsOneWidget);
   });
 
-  testWidgets('zevk ikizi yoksa kart görünmez', (tester) async {
-    final social = FakeSocial()..pages[null] = FeedPage(items: [item(1)]);
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [socialRepositoryProvider.overrideWithValue(social)],
-        child: const MaterialApp(home: Scaffold(body: FeedView())),
-      ),
-    );
+  testWidgets('the feed and taste twin render in English', (tester) async {
+    final social = FakeSocial()
+      ..pages[null] = FeedPage(items: [item(1)])
+      ..twin = twin();
+    await pumpFeed(tester, social, locale: en);
+
+    expect(find.text("✨ THIS WEEK'S TASTE TWIN"), findsOneWidget);
+    expect(find.text('92% match · 14 movies in common'), findsOneWidget);
+    expect(find.text('rated a movie · Oct 21, 2026'), findsOneWidget);
+    await tester.tap(find.text('Follow'));
     await tester.pumpAndSettle();
+    expect(find.text('Following'), findsOneWidget);
+  });
+
+  testWidgets('no taste twin card without a twin', (tester) async {
+    final social = FakeSocial()..pages[null] = FeedPage(items: [item(1)]);
+    await pumpFeed(tester, social);
     expect(find.textContaining('ZEVK İKİZİ'), findsNothing);
-    expect(find.text('Film 1'), findsOneWidget);
+    expect(find.text('Movie 1'), findsOneWidget);
   });
 }

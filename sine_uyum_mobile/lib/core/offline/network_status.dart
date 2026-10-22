@@ -3,8 +3,9 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Cihazın ağ bağlantısı (Wi-Fi/mobil veri var mı). İnternete gerçekten
-/// ulaşılıp ulaşılamadığını söylemez; onu [NetworkStatus.serverReachable] tutar.
+/// The device's network connection (is there Wi-Fi/mobile data). It does not
+/// say whether the internet is actually reachable; that is what
+/// [NetworkStatus.serverReachable] tracks.
 abstract class ConnectivitySource {
   Future<bool> isOnline();
   Stream<bool> get changes;
@@ -21,12 +22,12 @@ class PlusConnectivitySource implements ConnectivitySource {
     try {
       return _online(await _connectivity.checkConnectivity());
     } catch (_) {
-      return true; // bilinmiyorsa ağı denemek zararsız
+      return true; // if unknown, trying the network is harmless
     }
   }
 
-  // Eklenti hatası (desteklenmeyen platform vb.) uygulamayı düşürmemeli;
-  // olay gelmezse ağ "var" kabul edilir ve istek hataları durumu belirler.
+  // A plugin error (unsupported platform etc.) must not crash the app; with
+  // no events the network is assumed "up" and request errors decide.
   @override
   Stream<bool> get changes => _connectivity.onConnectivityChanged
       .map(_online)
@@ -41,14 +42,15 @@ final connectivitySourceProvider = Provider<ConnectivitySource>(
 class NetworkStatus {
   const NetworkStatus({this.deviceOnline = true, this.serverReachable = true});
 
-  /// İşletim sistemine göre bir ağ bağlantısı var.
+  /// The OS reports a network connection.
   final bool deviceOnline;
 
-  /// Son istekte sunucu yanıt verdi (hata kodu dahil). Ağ var ama internet
-  /// yoksa (ör. girişi yapılmamış otel Wi-Fi'ı) burası false olur.
+  /// The server answered the last request (error statuses included). With a
+  /// network but no internet (e.g. a hotel Wi-Fi captive portal) this is
+  /// false.
   final bool serverReachable;
 
-  /// Kullanıcıya "kayıtlı veriler gösteriliyor" denmesi gereken durum.
+  /// The user should be told "showing saved data".
   bool get isOffline => !deviceOnline || !serverReachable;
 
   NetworkStatus copyWith({bool? deviceOnline, bool? serverReachable}) =>
@@ -74,8 +76,8 @@ class NetworkStatusNotifier extends Notifier<NetworkStatus> {
   }
 
   void _onDevice(bool online) {
-    // Ağ geri gelince sunucuya ulaşılabildiği varsayılır; değilse ilk istek
-    // bunu düzeltir.
+    // When the network comes back the server is assumed reachable; if not,
+    // the first request corrects it.
     final next = online
         ? state.copyWith(deviceOnline: true, serverReachable: true)
         : state.copyWith(deviceOnline: false);
@@ -85,7 +87,7 @@ class NetworkStatusNotifier extends Notifier<NetworkStatus> {
     }
   }
 
-  /// [ApiClient] her yanıtta (true) ya da ağ hatasında (false) bildirir.
+  /// Reported by `ApiClient` on every response (true) or network error (false).
   void reportServer(bool reachable) {
     if (state.serverReachable != reachable) {
       state = state.copyWith(serverReachable: reachable);

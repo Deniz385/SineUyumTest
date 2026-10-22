@@ -26,7 +26,7 @@ ChatMessage msg(int id, String from, String to, [String? content]) =>
 
 class FakeMessages implements MessageRepository {
   List<ChatMessage> server = [];
-  Completer<void>? gate; // ilk yüklemeyi bekletmek için
+  Completer<void>? gate; // holds back the first load
   bool failFetch = false;
   int readMarks = 0;
 
@@ -37,7 +37,7 @@ class FakeMessages implements MessageRepository {
     int pageSize = 100,
   }) async {
     if (gate != null) await gate!.future;
-    if (failFetch) throw Exception('ağ yok');
+    if (failFetch) throw Exception('no network');
     return List.of(server);
   }
 
@@ -73,7 +73,7 @@ class SignedInAs extends SessionNotifier {
           status: SessionStatus.authenticated,
           user: AppUser(id: id, userName: id),
         )
-      // Bildirim sağlayıcısı oturum yokken SignalR'a bağlanmaya çalışmaz.
+      // Signed out, the notification provider doesn't try to reach SignalR.
       : const SessionState.signedOut();
 }
 
@@ -105,7 +105,7 @@ void main() {
   });
 
   Future<List<ChatMessage>> load() {
-    container.listen(chatThreadProvider(ali), (_, _) {}); // ekran açık
+    container.listen(chatThreadProvider(ali), (_, _) {}); // screen open
     return container.read(chatThreadProvider(ali).future);
   }
 
@@ -116,44 +116,47 @@ void main() {
 
   Future<void> tick() => Future<void>.delayed(Duration.zero);
 
-  test('karşı taraftan gelen canlı mesaj eklenir ve okundu sayılır', () async {
+  test('a live message from the other side is added and marked read', () async {
     messages.server = [msg(1, ali, me)];
     await load();
 
-    events().addMessage(msg(2, ali, me, 'canlı'));
+    events().addMessage(msg(2, ali, me, 'live'));
     await tick();
 
     expect(ids(), [1, 2]);
     expect(messages.readMarks, 1);
   });
 
-  test('karşı taraf okuyunca o ana kadarki mesajlarım görüldü olur', () async {
-    messages.server = [msg(1, me, ali), msg(2, ali, me), msg(3, me, ali)];
-    await load();
-    events().addMessage(msg(4, me, ali)); // okunmadan sonra gönderilen
-    await tick();
+  test(
+    'when the other side reads, my messages up to then become seen',
+    () async {
+      messages.server = [msg(1, me, ali), msg(2, ali, me), msg(3, me, ali)];
+      await load();
+      events().addMessage(msg(4, me, ali)); // sent after the read
+      await tick();
 
-    final at = DateTime.utc(2026, 10, 20, 12, 30);
-    events().addRead(
-      MessagesRead(
-        readerId: ali,
-        otherUserId: me,
-        lastReadMessageId: 3,
-        readAt: at,
-      ),
-    );
-    await tick();
+      final at = DateTime.utc(2026, 10, 20, 12, 30);
+      events().addRead(
+        MessagesRead(
+          readerId: ali,
+          otherUserId: me,
+          lastReadMessageId: 3,
+          readAt: at,
+        ),
+      );
+      await tick();
 
-    final thread = container.read(chatThreadProvider(ali)).value!;
-    expect(thread.map((m) => m.dateRead).toList(), [at, null, at, null]);
-  });
+      final thread = container.read(chatThreadProvider(ali)).value!;
+      expect(thread.map((m) => m.dateRead).toList(), [at, null, at, null]);
+    },
+  );
 
-  test('başka sohbetin ya da benim okumam görüldü yazmaz', () async {
+  test('reads of another chat, or my own reads, do not mark seen', () async {
     messages.server = [msg(1, me, ali)];
     await load();
 
     final at = DateTime.utc(2026, 10, 20);
-    // zeynep başka bir sohbeti okudu; ben ali'nin mesajlarını okudum.
+    // zeynep read another chat; I read ali's messages.
     events().addRead(
       MessagesRead(
         readerId: zeynep,
@@ -178,7 +181,7 @@ void main() {
     );
   });
 
-  test('olay ayrıştırma: eksik alanlı olay yok sayılır', () {
+  test('event parsing: an event with missing fields is ignored', () {
     expect(MessagesRead.tryParse({'readerId': 'a'}), isNull);
     final parsed = MessagesRead.tryParse({
       'readerId': 'a',
@@ -195,7 +198,7 @@ void main() {
     );
   });
 
-  test('başka sohbetin mesajı bu sohbete eklenmez', () async {
+  test("another chat's message is not added to this one", () async {
     await load();
 
     events().addMessage(msg(5, zeynep, me));
@@ -206,20 +209,20 @@ void main() {
     expect(messages.readMarks, 0);
   });
 
-  test('gönderme yanıtı ve canlı yankı tek mesaj olur', () async {
+  test('the send response and the live echo become one message', () async {
     await load();
-    final sent = msg(3, me, ali, 'selam');
+    final sent = msg(3, me, ali, 'hello');
 
     container.read(chatThreadProvider(ali).notifier).add(sent);
-    events().addMessage(sent); // sunucu gönderene de iter
+    events().addMessage(sent); // the server pushes it to the sender too
     await tick();
 
     expect(ids(), [3]);
-    // Kendi mesajımız için okundu işareti gönderilmez.
+    // No read mark is sent for our own message.
     expect(messages.readMarks, 0);
   });
 
-  test('ilk yükleme sürerken gelen mesaj kaybolmaz', () async {
+  test('a message arriving during the first load is not lost', () async {
     messages.server = [msg(1, ali, me)];
     messages.gate = Completer<void>();
     container.listen(chatThreadProvider(ali), (_, _) {});
@@ -233,13 +236,13 @@ void main() {
     expect(ids(), [1, 2]);
   });
 
-  test('yeniden bağlanınca kaçan mesajlar sıralı ve tekil gelir', () async {
+  test('after a reconnect, missed messages arrive sorted and unique', () async {
     messages.server = [msg(1, ali, me)];
     await load();
-    events().addMessage(msg(4, me, ali)); // yerelde var
+    events().addMessage(msg(4, me, ali)); // already local
     await tick();
 
-    // Kopukken sunucuya 2 ve 3 geldi; 4 de sunucuda.
+    // 2 and 3 reached the server while disconnected; 4 is there too.
     messages.server = [
       msg(1, ali, me),
       msg(2, ali, me),
@@ -253,7 +256,7 @@ void main() {
     expect(ids(), [1, 2, 3, 4]);
   });
 
-  test('yeniden bağlanmada tazeleme başarısızsa liste korunur', () async {
+  test('the list is kept if the refresh after a reconnect fails', () async {
     messages.server = [msg(1, ali, me)];
     await load();
 
@@ -265,23 +268,23 @@ void main() {
     expect(ids(), [1]);
   });
 
-  test('aktif sohbet yalnızca aynı sohbet kapanırsa sıfırlanır', () {
+  test('the active chat resets only when that same chat closes', () {
     final active = container.read(activeConversationProvider.notifier);
     active.open(ali);
-    active.open(zeynep); // hızlı geçiş
-    active.close(ali); // eski ekranın dispose'u geç geldi
+    active.open(zeynep); // quick switch
+    active.close(ali); // the old screen's dispose arrived late
     expect(container.read(activeConversationProvider), zeynep);
     active.close(zeynep);
     expect(container.read(activeConversationProvider), isNull);
   });
 
-  group('açık sohbetin bildirimi', () {
+  group('notification of the open chat', () {
     setUp(() => container = make(authenticated: false));
 
     AppNotification note(int id, String url) =>
         AppNotification(id: id, message: 'n$id', relatedUrl: url);
 
-    test('açık sohbetten gelen bildirim okundu olarak eklenir', () async {
+    test('a notification from the open chat is added as read', () async {
       container.read(activeConversationProvider.notifier).open(ali);
       final notifier = container.read(notificationsProvider.notifier);
 
@@ -294,7 +297,7 @@ void main() {
       expect(notifications.marked, [7]);
     });
 
-    test('başka sohbetin bildirimi okunmamış kalır', () async {
+    test("another chat's notification stays unread", () async {
       container.read(activeConversationProvider.notifier).open(ali);
       final notifier = container.read(notificationsProvider.notifier);
 

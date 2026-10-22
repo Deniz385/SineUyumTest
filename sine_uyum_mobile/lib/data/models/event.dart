@@ -1,17 +1,18 @@
+import '../../l10n/l10n.dart';
 import 'movie.dart';
 
-/// Kullanıcının etkinlik durumu — `/api/v1/event/my-status`.
+/// The user's event status — `/api/v1/event/my-status`.
 enum EventStatus {
-  /// Gruba atanmış, film oylaması açık.
+  /// Assigned to a group; the movie vote is open.
   matched,
 
-  /// Etkinliğe katılmış, eşleştirme bekliyor.
+  /// Joined the event, waiting to be matched.
   pending,
 
-  /// Katılabileceği bir etkinlik var.
+  /// There is an event they can join.
   available,
 
-  /// Katılabileceği etkinlik yok.
+  /// No event to join.
   none;
 
   static EventStatus parse(String? value) {
@@ -88,7 +89,8 @@ class CinemaEvent {
   factory CinemaEvent.fromJson(Map<String, dynamic> json) {
     return CinemaEvent(
       id: (json['id'] as num?)?.toInt() ?? 0,
-      locationName: json['locationName'] as String? ?? 'Sinema etkinliği',
+      locationName:
+          json['locationName'] as String? ?? L10n.current.cinemaEventFallback,
       address: json['address'] as String?,
       eventDate: json['eventDate'] == null
           ? null

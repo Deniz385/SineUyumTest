@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../widgets/poster_image.dart';
 import '../../widgets/state_views.dart';
@@ -21,10 +22,9 @@ class MessagesPage extends ConsumerWidget {
         onRetry: () => ref.invalidate(conversationsProvider),
       ),
       data: (conversations) => conversations.isEmpty
-          ? const EmptyView(
+          ? EmptyView(
               icon: Icons.chat_bubble_outline,
-              message:
-                  'Henüz mesajın yok. Keşfet sekmesinden birine yazabilirsin.',
+              message: context.l10n.messagesEmpty,
             )
           : RefreshIndicator(
               onRefresh: () async {
@@ -56,7 +56,10 @@ class MessagesPage extends ConsumerWidget {
                       children: [
                         if (conversation.lastMessageSent != null)
                           Text(
-                            _formatTimestamp(conversation.lastMessageSent!),
+                            _formatTimestamp(
+                              conversation.lastMessageSent!,
+                              context.l10n.localeName,
+                            ),
                             style: Theme.of(context).textTheme.labelSmall,
                           ),
                         if (!conversation.isRead)
@@ -85,18 +88,18 @@ class MessagesPage extends ConsumerWidget {
   }
 }
 
-/// Bugünse saat, bu yıl içindeyse gün/ay, daha eskiyse tam tarih.
-String _formatTimestamp(DateTime timestamp) {
+/// The time if today, day and month if this year, otherwise the full date.
+String _formatTimestamp(DateTime timestamp, String locale) {
   final local = timestamp.toLocal();
   final now = DateTime.now();
 
   if (local.year == now.year &&
       local.month == now.month &&
       local.day == now.day) {
-    return DateFormat.Hm('tr').format(local);
+    return DateFormat.Hm(locale).format(local);
   }
   if (local.year == now.year) {
-    return DateFormat('d MMM', 'tr').format(local);
+    return DateFormat.MMMd(locale).format(local);
   }
-  return DateFormat('d MMM y', 'tr').format(local);
+  return DateFormat.yMMMd(locale).format(local);
 }

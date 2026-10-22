@@ -5,8 +5,8 @@ final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
   ThemeModeNotifier.new,
 );
 
-/// Açık / koyu / sistem teması. Kalıcı hale getirmek için ileride
-/// shared_preferences eklenebilir.
+/// Light / dark / system theme. Not persisted yet; it could be stored like
+/// the language (see `PreferencesStorage`).
 class ThemeModeNotifier extends Notifier<ThemeMode> {
   @override
   ThemeMode build() => ThemeMode.system;

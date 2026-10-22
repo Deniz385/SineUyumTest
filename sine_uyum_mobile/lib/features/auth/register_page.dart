@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/l10n.dart';
 import '../../providers/session_provider.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
@@ -36,7 +37,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     });
 
     try {
-      // Kayıt başarılıysa aynı bilgilerle otomatik giriş yapılır.
+      // After a successful sign-up, sign in with the same credentials.
       await ref
           .read(sessionProvider.notifier)
           .register(
@@ -53,8 +54,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: const Text('Kayıt ol')),
+      appBar: AppBar(title: Text(l10n.registerTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -69,16 +71,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     TextFormField(
                       controller: _usernameController,
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Kullanıcı adı',
-                        prefixIcon: Icon(Icons.person_outline),
+                      decoration: InputDecoration(
+                        labelText: l10n.usernameLabel,
+                        prefixIcon: const Icon(Icons.person_outline),
                       ),
                       validator: (value) {
                         final text = value?.trim() ?? '';
-                        if (text.isEmpty) return 'Kullanıcı adı zorunludur.';
-                        if (text.length < 3) {
-                          return 'Kullanıcı adı en az 3 karakter olmalıdır.';
-                        }
+                        if (text.isEmpty) return l10n.usernameRequired;
+                        if (text.length < 3) return l10n.usernameTooShort(3);
                         return null;
                       },
                     ),
@@ -87,15 +87,15 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'E-posta',
-                        prefixIcon: Icon(Icons.mail_outline),
+                      decoration: InputDecoration(
+                        labelText: l10n.emailLabel,
+                        prefixIcon: const Icon(Icons.mail_outline),
                       ),
                       validator: (value) {
                         final text = value?.trim() ?? '';
-                        if (text.isEmpty) return 'E-posta zorunludur.';
+                        if (text.isEmpty) return l10n.emailRequired;
                         if (!text.contains('@') || !text.contains('.')) {
-                          return 'Geçerli bir e-posta adresi giriniz.';
+                          return l10n.emailInvalid;
                         }
                         return null;
                       },
@@ -106,20 +106,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       obscureText: true,
                       textInputAction: TextInputAction.done,
                       onFieldSubmitted: (_) => _submit(),
-                      decoration: const InputDecoration(
-                        labelText: 'Şifre',
-                        prefixIcon: Icon(Icons.lock_outline),
-                        // Sunucudaki Identity kuralıyla aynı.
-                        helperText: 'En az 6 karakter ve bir rakam içermeli.',
+                      decoration: InputDecoration(
+                        labelText: l10n.passwordLabel,
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        // Same rule as the server's Identity settings.
+                        helperText: l10n.passwordHelper,
                       ),
                       validator: (value) {
                         final text = value ?? '';
-                        if (text.isEmpty) return 'Şifre zorunludur.';
-                        if (text.length < 6) {
-                          return 'Şifre en az 6 karakter olmalıdır.';
-                        }
+                        if (text.isEmpty) return l10n.passwordRequired;
+                        if (text.length < 6) return l10n.passwordTooShort(6);
                         if (!text.contains(RegExp(r'\d'))) {
-                          return 'Şifre en az bir rakam içermelidir.';
+                          return l10n.passwordNeedsDigit;
                         }
                         return null;
                       },
@@ -142,7 +140,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                               width: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Hesap oluştur'),
+                          : Text(l10n.registerSubmit),
                     ),
                   ],
                 ),

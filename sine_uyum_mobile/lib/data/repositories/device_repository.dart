@@ -1,12 +1,12 @@
 import '../../core/network/api_client.dart';
 
-/// Push bildirimi için cihaz (FCM token) kaydı.
+/// Device (FCM token) registration for push notifications.
 class DeviceRepository {
   DeviceRepository(this._client);
 
   final ApiClient _client;
 
-  /// Tekrar çağrılması güvenlidir; sunucu aynı token'ı günceller.
+  /// Safe to call repeatedly; the server updates the same token.
   Future<void> register({
     required String token,
     required String platform,
@@ -17,8 +17,8 @@ class DeviceRepository {
     );
   }
 
-  /// Oturum gerektirmez: oturumu düşmüş cihaz da bildirim almayı
-  /// durdurabilsin diye sunucuda kimlik doğrulamasız.
+  /// Needs no session: unauthenticated on the server so that a device whose
+  /// session has expired can still stop receiving notifications.
   Future<void> unregister(String token) async {
     await _client.post<dynamic>(
       '/api/v1/devices/unregister',

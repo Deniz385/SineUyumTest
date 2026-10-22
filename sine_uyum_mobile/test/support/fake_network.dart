@@ -4,14 +4,21 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:sine_uyum_mobile/core/offline/network_status.dart';
+import 'package:sine_uyum_mobile/core/storage/preferences_storage.dart';
 import 'package:sine_uyum_mobile/core/storage/token_storage.dart';
 
-/// Sunucunun ne döneceğini (ya da ağın hiç olmadığını) testten belirlemek için.
+/// Lets a test decide what the server returns (or that there is no network).
 class FakeServer implements HttpClientAdapter {
-  /// `METHOD /yol` → (durum, gövde). Eşleşme yoksa 404.
+  /// `METHOD /path` → (status, body). 404 when nothing matches.
   final routes = <String, (int, Object?)>{};
   bool offline = false;
   final requests = <String>[];
+
+  /// Headers of every request, in order.
+  final headers = <Map<String, dynamic>>[];
+
+  /// Decoded JSON bodies of every request, in order (null when empty).
+  final bodies = <Object?>[];
 
   @override
   Future<ResponseBody> fetch(
@@ -21,13 +28,15 @@ class FakeServer implements HttpClientAdapter {
   ) async {
     final key = '${options.method} ${options.path}';
     requests.add(key);
+    headers.add(Map.of(options.headers));
+    bodies.add(options.data);
     if (offline) {
       throw DioException.connectionError(
         requestOptions: options,
-        reason: 'ağ yok (test)',
+        reason: 'no network (test)',
       );
     }
-    final (status, body) = routes[key] ?? (404, {'title': 'yok'});
+    final (status, body) = routes[key] ?? (404, {'title': 'not found'});
     return ResponseBody.fromString(
       body == null ? '' : jsonEncode(body),
       status,
@@ -63,13 +72,25 @@ class MemoryTokens extends TokenStorage {
   Future<void> clear() async => access = refresh = null;
 }
 
+/// In-memory [PreferencesStorage] (no platform channel).
+class MemoryPreferences extends PreferencesStorage {
+  MemoryPreferences({this.language});
+  String? language;
+
+  @override
+  Future<String?> readLanguage() async => language;
+
+  @override
+  Future<void> writeLanguage(String? code) async => language = code;
+}
+
 Map<String, Object?> userJson(String id) => {
   'id': id,
-  'userName': 'kullanici_$id',
+  'userName': 'user_$id',
   'roles': ['User'],
 };
 
-/// İşletim sisteminin bağlantı bilgisini testten sürmek için.
+/// Drives the OS connectivity information from a test.
 class FakeConnectivity implements ConnectivitySource {
   FakeConnectivity({this.online = true});
   bool online;

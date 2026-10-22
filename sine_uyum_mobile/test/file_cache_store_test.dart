@@ -16,21 +16,21 @@ void main() {
     if (await dir.exists()) await dir.delete(recursive: true);
   });
 
-  test('yazılan kayıt geri okunur, kapsam kalıcıdır', () async {
+  test('a written entry reads back and the scope persists', () async {
     await store.write('u1', '/api/v1/messages', '{"data":[1]}');
     await store.writeScope('u1');
 
-    // Yeni örnek = uygulama yeniden açıldı.
+    // A new instance = the app was reopened.
     final reopened = FileCacheStore(root: () async => dir);
     expect(await reopened.read('u1', '/api/v1/messages'), '{"data":[1]}');
     expect(await reopened.readScope(), 'u1');
     expect(await reopened.read('u2', '/api/v1/messages'), isNull);
   });
 
-  test('sınır aşılınca en eski kayıtlar silinir', () async {
+  test('the oldest entries are evicted beyond the limit', () async {
     for (var i = 0; i < 5; i++) {
       await store.write('u1', '/k$i', 'v$i');
-      // Değişiklik zamanlarının ayrışması için.
+      // So the modification times differ.
       await Future<void>.delayed(const Duration(milliseconds: 20));
     }
 
@@ -41,15 +41,15 @@ void main() {
     expect(files.length, 3);
   });
 
-  test('bozuk dosya ıska sayılır, hata fırlatmaz', () async {
+  test('a corrupt file is a miss and does not throw', () async {
     await store.write('u1', '/k', 'v');
     for (final f in dir.listSync().whereType<File>()) {
-      if (f.path.endsWith('.json')) f.writeAsStringSync('{bozuk');
+      if (f.path.endsWith('.json')) f.writeAsStringSync('{corrupt');
     }
     expect(await store.read('u1', '/k'), isNull);
   });
 
-  test('clearAll her şeyi ve kapsamı siler', () async {
+  test('clearAll deletes everything including the scope', () async {
     await store.write('u1', '/k', 'v');
     await store.writeScope('u1');
 
@@ -59,10 +59,10 @@ void main() {
     expect(await store.readScope(), isNull);
   });
 
-  test('ResponseCache bozuk JSON içeriğini yok sayar', () async {
+  test('ResponseCache ignores corrupt JSON content', () async {
     final cache = ResponseCache(store);
     await cache.useScope('u1');
-    await store.write('u1', '/api/v1/messages', 'json-degil');
+    await store.write('u1', '/api/v1/messages', 'not-json');
     expect(await cache.read('/api/v1/messages'), isNull);
   });
 }

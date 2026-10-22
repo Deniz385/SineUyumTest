@@ -2,40 +2,42 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../l10n/l10n.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../widgets/poster_image.dart';
 
-/// Alt gezinme çubuğu ve üst çubuğu taşıyan kabuk.
+/// Shell holding the bottom navigation bar and the app bar.
 class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
-  static const _titles = [
-    'SineUyum',
-    'Keşfet',
-    'Listelerim',
-    'Mesajlar',
-    'Etkinlik',
+  static List<String> _titles(AppLocalizations l10n) => [
+    l10n.appName,
+    l10n.navDiscover,
+    l10n.myListsTitle,
+    l10n.navMessages,
+    l10n.navEvent,
   ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final user = ref.watch(sessionProvider).user;
     final unreadCount = ref.watch(notificationsProvider).unreadCount;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_titles[navigationShell.currentIndex]),
+        title: Text(_titles(l10n)[navigationShell.currentIndex]),
         actions: [
           IconButton(
-            tooltip: 'Film ara',
+            tooltip: l10n.searchMoviesTooltip,
             icon: const Icon(Icons.search),
             onPressed: () => context.push('/movies/search'),
           ),
           IconButton(
-            tooltip: 'Bildirimler',
+            tooltip: l10n.notificationsTitle,
             icon: Badge.count(
               count: unreadCount,
               isLabelVisible: unreadCount > 0,
@@ -44,7 +46,7 @@ class AppShell extends ConsumerWidget {
             onPressed: () => context.push('/notifications'),
           ),
           PopupMenuButton<String>(
-            tooltip: 'Hesap',
+            tooltip: l10n.accountMenuTooltip,
             icon: UserAvatar(
               userName: user?.userName ?? '',
               imageUrl: user?.profileImageUrl,
@@ -60,10 +62,16 @@ class AppShell extends ConsumerWidget {
                   context.push('/settings');
               }
             },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'profile', child: Text('Profilim')),
-              PopupMenuItem(value: 'subscription', child: Text('Abonelik')),
-              PopupMenuItem(value: 'settings', child: Text('Ayarlar')),
+            itemBuilder: (context) => [
+              PopupMenuItem(value: 'profile', child: Text(l10n.menuMyProfile)),
+              PopupMenuItem(
+                value: 'subscription',
+                child: Text(l10n.commonSubscription),
+              ),
+              PopupMenuItem(
+                value: 'settings',
+                child: Text(l10n.commonSettings),
+              ),
             ],
           ),
         ],
@@ -71,37 +79,36 @@ class AppShell extends ConsumerWidget {
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
-        // initialLocation: aynı sekmeye tekrar dokunulduğunda o sekmenin
-        // köküne dönülür.
+        // initialLocation: tapping the current tab again returns to its root.
         onDestinationSelected: (index) => navigationShell.goBranch(
           index,
           initialLocation: index == navigationShell.currentIndex,
         ),
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Ana sayfa',
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home),
+            label: l10n.navHome,
           ),
           NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people),
-            label: 'Keşfet',
+            icon: const Icon(Icons.people_outline),
+            selectedIcon: const Icon(Icons.people),
+            label: l10n.navDiscover,
           ),
           NavigationDestination(
-            icon: Icon(Icons.bookmark_outline),
-            selectedIcon: Icon(Icons.bookmark),
-            label: 'Listeler',
+            icon: const Icon(Icons.bookmark_outline),
+            selectedIcon: const Icon(Icons.bookmark),
+            label: l10n.navLists,
           ),
           NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline),
-            selectedIcon: Icon(Icons.chat_bubble),
-            label: 'Mesajlar',
+            icon: const Icon(Icons.chat_bubble_outline),
+            selectedIcon: const Icon(Icons.chat_bubble),
+            label: l10n.navMessages,
           ),
           NavigationDestination(
-            icon: Icon(Icons.local_activity_outlined),
-            selectedIcon: Icon(Icons.local_activity),
-            label: 'Etkinlik',
+            icon: const Icon(Icons.local_activity_outlined),
+            selectedIcon: const Icon(Icons.local_activity),
+            label: l10n.navEvent,
           ),
         ],
       ),

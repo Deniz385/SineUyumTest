@@ -1,4 +1,6 @@
-/// `/api/v1/watchlist` listesindeki özet kayıt.
+import '../../l10n/l10n.dart';
+
+/// Summary record in the `/api/v1/watchlist` list.
 class WatchlistSummary {
   const WatchlistSummary({
     required this.id,
@@ -15,14 +17,15 @@ class WatchlistSummary {
   factory WatchlistSummary.fromJson(Map<String, dynamic> json) {
     return WatchlistSummary(
       id: (json['id'] as num?)?.toInt() ?? 0,
-      name: json['name'] as String? ?? 'İsimsiz liste',
+      name: json['name'] as String? ?? L10n.current.untitledWatchlist,
       description: json['description'] as String?,
       itemCount: (json['itemCount'] as num?)?.toInt() ?? 0,
     );
   }
 }
 
-/// `/api/v1/watchlist/{listId}` ve `/api/v1/watchlist/public/{listId}` yanıtı.
+/// Response of `/api/v1/watchlist/{listId}` and
+/// `/api/v1/watchlist/public/{listId}`.
 class WatchlistDetail {
   const WatchlistDetail({
     required this.id,
@@ -41,7 +44,7 @@ class WatchlistDetail {
   factory WatchlistDetail.fromJson(Map<String, dynamic> json) {
     return WatchlistDetail(
       id: (json['id'] as num?)?.toInt() ?? 0,
-      name: json['name'] as String? ?? 'İsimsiz liste',
+      name: json['name'] as String? ?? L10n.current.untitledWatchlist,
       description: json['description'] as String?,
       ownerUsername: json['ownerUsername'] as String?,
       items:
@@ -72,7 +75,7 @@ class WatchlistItem {
   factory WatchlistItem.fromJson(Map<String, dynamic> json) {
     return WatchlistItem(
       movieId: (json['movieId'] as num?)?.toInt() ?? 0,
-      title: json['title'] as String? ?? 'Başlıksız',
+      title: json['title'] as String? ?? L10n.current.untitledMovie,
       posterPath: json['posterPath'] as String?,
       addedAt: json['addedAt'] == null
           ? null

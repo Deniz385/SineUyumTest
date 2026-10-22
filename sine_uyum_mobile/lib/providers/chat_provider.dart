@@ -6,8 +6,8 @@ import '../data/models/message.dart';
 import 'repository_providers.dart';
 import 'session_provider.dart';
 
-/// SignalR'dan gelen sohbet olayları. Bağlantıyı [NotificationNotifier]
-/// yönetir ve olayları buraya iter; ekranlar buradan dinler.
+/// Chat events from SignalR. `NotificationNotifier` owns the connection and
+/// pushes events here; screens listen to them.
 class ChatEvents {
   final _messages = StreamController<ChatMessage>.broadcast();
   final _reconnected = StreamController<void>.broadcast();
@@ -15,10 +15,11 @@ class ChatEvents {
 
   Stream<ChatMessage> get messages => _messages.stream;
 
-  /// Karşı taraf mesajları okudu ("Görüldü").
+  /// The other side read the messages ("Seen").
   Stream<MessagesRead> get reads => _reads.stream;
 
-  /// Bağlantı koptuktan sonra yeniden kuruldu: arada kaçan olaylar olabilir.
+  /// The connection was re-established after a drop: events may have been
+  /// missed in between.
   Stream<void> get reconnected => _reconnected.stream;
 
   void addMessage(ChatMessage message) => _messages.add(message);
@@ -38,8 +39,9 @@ final chatEventsProvider = Provider<ChatEvents>((ref) {
   return events;
 });
 
-/// Şu an ekranda açık olan sohbetin karşı kullanıcısı. Ondan gelen mesaj
-/// bildirimi gösterilmez, okundu sayılır (mesaj zaten ekranda).
+/// The other user of the conversation currently on screen. Message
+/// notifications from them aren't shown and count as read (the message is
+/// already visible).
 final activeConversationProvider =
     NotifierProvider<ActiveConversation, String?>(ActiveConversation.new);
 
@@ -49,15 +51,16 @@ class ActiveConversation extends Notifier<String?> {
 
   void open(String otherUserId) => state = otherUserId;
 
-  /// Yalnızca hâlâ aynı sohbet açıksa kapatır (hızlı geçişlerde yeni açılanı
-  /// silmemek için).
+  /// Closes only if the same conversation is still open (so a quick switch
+  /// doesn't clear the newly opened one).
   void close(String otherUserId) {
     if (state == otherUserId) state = null;
   }
 }
 
-/// Bir sohbetin mesajları: önce sunucudan yüklenir, sonra canlı mesajlar
-/// eklenir. Ekran kapanınca (autoDispose) dinleme biter.
+/// A conversation's messages: loaded from the server first, then live
+/// messages are appended. Listening stops when the screen closes
+/// (autoDispose).
 final chatThreadProvider = AsyncNotifierProvider.autoDispose
     .family<ChatThreadNotifier, List<ChatMessage>, String>(
       ChatThreadNotifier.new,
@@ -68,7 +71,7 @@ class ChatThreadNotifier extends AsyncNotifier<List<ChatMessage>> {
 
   final String otherUserId;
 
-  // İlk yükleme sürerken gelen canlı mesajlar; yükleme bitince eklenir.
+  // Live messages that arrive during the first load; added once it finishes.
   final _pending = <ChatMessage>[];
 
   @override
@@ -94,8 +97,9 @@ class ChatThreadNotifier extends AsyncNotifier<List<ChatMessage>> {
   Future<List<ChatMessage>> _fetch() =>
       ref.read(messageRepositoryProvider).thread(otherUserId);
 
-  // Tekilleştirip sıralar. Mesaj id'leri artan olduğu için id sırası gönderim
-  // sırasıdır (yeniden bağlanınca gelen sayfa ile yerel liste birleşirken de).
+  // De-duplicates and sorts. Message ids increase, so id order is send order
+  // (also when merging the page fetched after a reconnect with the local
+  // list).
   static List<ChatMessage> _merge(
     List<ChatMessage> base,
     List<ChatMessage> extra,
@@ -111,8 +115,9 @@ class ChatThreadNotifier extends AsyncNotifier<List<ChatMessage>> {
         (m.senderId == me && m.recipientId == otherUserId);
   }
 
-  /// Mesajı ekler. Aynı mesaj hem gönderme yanıtından hem canlı olaydan
-  /// (gönderenin kendisine de itilir) gelebilir: id ile tekilleştirilir.
+  /// Adds a message. The same message can arrive both from the send response
+  /// and as a live event (it is pushed to the sender too), so it is
+  /// de-duplicated by id.
   void add(ChatMessage message) {
     final current = state.value;
     if (current == null) {
@@ -126,11 +131,11 @@ class ChatThreadNotifier extends AsyncNotifier<List<ChatMessage>> {
   void _onLive(ChatMessage message) {
     if (!_belongsHere(message)) return;
     add(message);
-    // Ekran açık: karşı taraftan gelen mesaj okundu sayılır.
+    // The screen is open: a message from the other side counts as read.
     if (message.senderId == otherUserId) markAsRead();
   }
 
-  // Karşı taraf okudu: o ana kadarki mesajlarım "Görüldü".
+  // The other side read: my messages up to that point become "Seen".
   void _onRead(MessagesRead read) {
     final me = ref.read(sessionProvider).user?.id;
     final current = state.value;
@@ -152,12 +157,12 @@ class ChatThreadNotifier extends AsyncNotifier<List<ChatMessage>> {
       await ref.read(messageRepositoryProvider).markThreadAsRead(otherUserId);
       ref.invalidate(conversationsProvider);
     } catch (_) {
-      // Okundu işaretlemesi başarısız olsa da sohbet görüntülenebilir.
+      // The conversation can be shown even if marking as read fails.
     }
   }
 
-  // Yeniden bağlanınca kopuklukta kaçanlar için sunucudan tazelenir. Hata
-  // olursa mevcut liste korunur.
+  // After a reconnect, refreshes from the server for anything missed while
+  // disconnected. On error the current list is kept.
   Future<void> _refresh() async {
     final fresh = await AsyncValue.guard(_fetch);
     if (fresh.hasValue) {

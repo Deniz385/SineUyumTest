@@ -40,8 +40,18 @@ class AuthRepository {
     );
   }
 
-  /// Abonelik durumu (tek kaynak sunucu). Ödemesiz aktivasyon kaldırıldı;
-  /// abonelik doğrulanmış ödeme ya da yönetici tanımlamasıyla açılır.
+  /// Tells the server the user's language ("tr", "en"...), used for texts it
+  /// generates outside a request (notifications, push).
+  Future<void> updateLanguage(String languageCode) async {
+    await _client.put<dynamic>(
+      '/api/v1/account/language',
+      body: {'language': languageCode},
+    );
+  }
+
+  /// Subscription status (the server is the single source of truth). The
+  /// payment-free activation was removed; a subscription is enabled by a
+  /// verified payment or by an admin.
   Future<SubscriptionInfo> subscription() async {
     final data = await _client.get<Map<String, dynamic>>(
       '/api/v1/subscription',

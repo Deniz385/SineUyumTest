@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- API ile HTTPS uzerinden konusmak icin gerekli. -->
+    <!-- Required to talk to the API over HTTPS. -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
     <application

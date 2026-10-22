@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:intl/date_symbol_data_local.dart';
 import 'package:sine_uyum_mobile/data/models/app_user.dart';
 import 'package:sine_uyum_mobile/data/repositories/auth_repository.dart';
 import 'package:sine_uyum_mobile/features/subscription/subscription_page.dart';
 import 'package:sine_uyum_mobile/providers/session_provider.dart';
+
+import 'support/localized_app.dart';
 
 class FakeAuth implements AuthRepository {
   FakeAuth(this.info);
@@ -34,19 +35,20 @@ class FakeSession extends SessionNotifier {
   @override
   Future<void> refreshUser() async {
     refreshes++;
-    subscribed = true; // sunucudan güncel bilgi geldi
+    subscribed = true; // fresh information from the server
     state = _state();
   }
 }
 
 void main() {
-  // Uygulamada main.dart yükler; testte de Türkçe tarih biçimi gerekli.
-  setUpAll(() => initializeDateFormatting('tr'));
+  // main.dart loads these in the app; dates need them in tests too.
+  setUpAll(initializeAllDateFormatting);
 
   Future<FakeSession> pump(
     WidgetTester tester, {
     required SubscriptionInfo info,
     required bool tokenSaysSubscribed,
+    Locale locale = tr,
   }) async {
     final session = FakeSession(subscribed: tokenSaysSubscribed);
     await tester.pumpWidget(
@@ -55,16 +57,15 @@ void main() {
           authRepositoryProvider.overrideWithValue(FakeAuth(info)),
           sessionProvider.overrideWith(() => session),
         ],
-        child: const MaterialApp(home: SubscriptionPage()),
+        child: localizedApp(locale: locale, home: const SubscriptionPage()),
       ),
     );
     await tester.pumpAndSettle();
     return session;
   }
 
-  testWidgets('abone değilken ödemesiz başlatma düğmesi yok, bilgi notu var', (
-    tester,
-  ) async {
+  testWidgets('when not subscribed: no payment-free start button, '
+      'an info note instead', (tester) async {
     await pump(
       tester,
       info: const SubscriptionInfo(isActive: false),
@@ -77,9 +78,8 @@ void main() {
     expect(find.textContaining('test'), findsNothing);
   });
 
-  testWidgets('sunucuda aktifse bitiş tarihi gösterilir ve oturum tazelenir', (
-    tester,
-  ) async {
+  testWidgets('active on the server: shows the end date and refreshes '
+      'the session', (tester) async {
     final session = await pump(
       tester,
       info: SubscriptionInfo(
@@ -87,16 +87,16 @@ void main() {
         expiresAt: DateTime.utc(2030, 1, 15),
         provider: 'manual',
       ),
-      tokenSaysSubscribed: false, // token eski: yönetici az önce tanımladı
+      tokenSaysSubscribed: false, // stale token: an admin just granted it
     );
 
     expect(find.text('Aboneliğin aktif'), findsOneWidget);
-    expect(find.textContaining('Bitiş:'), findsOneWidget);
+    expect(find.text('Bitiş: 15 Ocak 2030'), findsOneWidget);
     expect(find.text('Etkinliklere git'), findsOneWidget);
     expect(session.refreshes, 1);
   });
 
-  testWidgets('yalnızca gerçekten var olan özellikler listelenir', (
+  testWidgets('lists only the paid features that actually exist', (
     tester,
   ) async {
     await pump(
@@ -108,5 +108,23 @@ void main() {
     expect(find.textContaining('Sınırsız izleme listesi'), findsNothing);
     expect(find.textContaining('öncelik'), findsNothing);
     expect(find.textContaining('etkinliklerine katılım'), findsOneWidget);
+  });
+
+  testWidgets('renders in English with an English date', (tester) async {
+    await pump(
+      tester,
+      info: SubscriptionInfo(
+        isActive: true,
+        expiresAt: DateTime.utc(2030, 1, 15),
+        willRenew: true,
+      ),
+      tokenSaysSubscribed: true,
+      locale: en,
+    );
+
+    expect(find.text('Your subscription is active'), findsOneWidget);
+    expect(find.text('Renews: January 15, 2030'), findsOneWidget);
+    expect(find.text('Joining open-air cinema events'), findsOneWidget);
+    expect(find.text('Go to events'), findsOneWidget);
   });
 }

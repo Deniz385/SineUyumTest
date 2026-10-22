@@ -22,8 +22,8 @@ class MovieRepository {
     return Movie.fromJson(data);
   }
 
-  /// Puan vermeden önce filmin kendi veritabanımızda bulunması gerekiyor
-  /// (API tarafı yabancı anahtar kontrolü yapıyor), bu yüzden önce kaydedilir.
+  /// The movie must exist in our own database before it can be rated (the
+  /// API enforces a foreign key), so it is saved first.
   Future<void> rate(Movie movie, int rating) async {
     await _client.post<Map<String, dynamic>>(
       '/api/v1/ratings/addmovie',

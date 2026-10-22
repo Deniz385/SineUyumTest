@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/models/movie.dart';
+import '../l10n/l10n.dart';
 import 'poster_image.dart';
 
-/// Ana sayfadaki yatay film şeridi.
+/// Horizontal movie strip on the home screen.
 class MovieCarousel extends StatelessWidget {
   const MovieCarousel({super.key, required this.title, required this.movies});
 
@@ -38,7 +39,7 @@ class MovieCarousel extends StatelessWidget {
   }
 }
 
-/// Poster + başlık; dokununca film detayına gider.
+/// Poster + title; opens the movie details on tap.
 class MoviePosterCard extends StatelessWidget {
   const MoviePosterCard({super.key, required this.movie, this.width = 120});
 
@@ -74,7 +75,7 @@ class MoviePosterCard extends StatelessWidget {
   }
 }
 
-/// Arama sonuçları ve liste ekranlarındaki satır biçimi.
+/// Row layout used by search results and list screens.
 class MovieListTile extends StatelessWidget {
   const MovieListTile({
     super.key,
@@ -105,14 +106,14 @@ class MovieListTile extends StatelessWidget {
   }
 }
 
-/// 1-10 arası puan seçtiren alt sayfa.
+/// Bottom sheet for picking a 1-10 rating.
 class RatingSheet extends StatefulWidget {
   const RatingSheet({super.key, required this.movieTitle, this.initialRating});
 
   final String movieTitle;
   final int? initialRating;
 
-  /// Seçilen puanı döner; iptal edilirse null.
+  /// Returns the chosen rating; null if dismissed.
   static Future<int?> show(
     BuildContext context, {
     required String movieTitle,
@@ -148,7 +149,7 @@ class _RatingSheetState extends State<RatingSheet> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Bu filme kaç puan veriyorsun?',
+              context.l10n.ratingSheetPrompt,
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 16),
@@ -177,7 +178,7 @@ class _RatingSheetState extends State<RatingSheet> {
             const SizedBox(height: 8),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(_rating.round()),
-              child: const Text('Puanı kaydet'),
+              child: Text(context.l10n.saveRating),
             ),
           ],
         ),

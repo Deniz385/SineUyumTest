@@ -17,7 +17,7 @@ class EventRepository {
     await _client.post<Map<String, dynamic>>('/api/v1/event/$eventId/join');
   }
 
-  /// Aynı filme tekrar oy vermek oyu geri çeker (API tarafında toggle).
+  /// Voting for the same movie again withdraws the vote (a toggle on the API).
   Future<void> vote({required int groupId, required int movieId}) async {
     await _client.post<Map<String, dynamic>>(
       '/api/v1/event/vote',

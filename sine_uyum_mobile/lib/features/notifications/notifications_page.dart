@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../l10n/l10n.dart';
 import '../../providers/notification_provider.dart';
 import '../../widgets/state_views.dart';
 
@@ -11,17 +12,18 @@ class NotificationsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final state = ref.watch(notificationsProvider);
     final notifier = ref.read(notificationsProvider.notifier);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bildirimler'),
+        title: Text(l10n.notificationsTitle),
         actions: [
           if (state.unreadCount > 0)
             TextButton(
               onPressed: notifier.markAllAsRead,
-              child: const Text('Tümünü okundu yap'),
+              child: Text(l10n.notificationsMarkAllRead),
             ),
         ],
       ),
@@ -34,9 +36,9 @@ class NotificationsPage extends ConsumerWidget {
             return ErrorView(message: state.error!, onRetry: notifier.load);
           }
           if (state.items.isEmpty) {
-            return const EmptyView(
+            return EmptyView(
               icon: Icons.notifications_none,
-              message: 'Henüz bildirimin yok.',
+              message: l10n.notificationsEmpty,
             );
           }
 
@@ -65,10 +67,9 @@ class NotificationsPage extends ConsumerWidget {
                   subtitle: notification.createdAt == null
                       ? null
                       : Text(
-                          DateFormat(
-                            'd MMM y, HH:mm',
-                            'tr',
-                          ).format(notification.createdAt!.toLocal()),
+                          DateFormat.yMMMd(l10n.localeName)
+                              .add_Hm()
+                              .format(notification.createdAt!.toLocal()),
                         ),
                   onTap: () {
                     if (!notification.isRead) {
@@ -87,8 +88,8 @@ class NotificationsPage extends ConsumerWidget {
   }
 }
 
-/// Bildirimler sunucuda web rotalarıyla üretiliyor (`/my-event`,
-/// `/messages/{id}`, `/profile/{id}`). Mobil rota adlarına çeviriyoruz.
+/// The server builds notifications with web routes (`/my-event`,
+/// `/messages/{id}`, `/profile/{id}`); map them to the mobile routes.
 String? _toMobileRoute(String? webUrl) {
   if (webUrl == null || webUrl.isEmpty) return null;
 
@@ -103,5 +104,5 @@ String? _toMobileRoute(String? webUrl) {
   return null;
 }
 
-/// Rota çevirisini birim testten çağırabilmek için açık bırakılmış kopya.
+/// Public alias of the route mapping, so unit tests (and push) can call it.
 String? notificationRouteFor(String? webUrl) => _toMobileRoute(webUrl);

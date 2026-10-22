@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// Yükleniyor / hata / boş durumları için tek biçimli görünümler.
-/// Web tarafında bu durumlar sayfa sayfa farklı ele alınıyordu.
+import '../l10n/l10n.dart';
+
+/// Uniform views for the loading / error / empty states.
+/// The web client handled these differently on every page.
 class LoadingView extends StatelessWidget {
   const LoadingView({super.key});
 
@@ -40,7 +42,7 @@ class ErrorView extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Tekrar dene'),
+                label: Text(context.l10n.commonRetry),
               ),
             ],
           ],
@@ -91,7 +93,7 @@ class EmptyView extends StatelessWidget {
   }
 }
 
-/// Uyumluluk yüzdesini renk koduyla gösteren etiket.
+/// Label showing the compatibility percentage, colour-coded.
 class CompatibilityBadge extends StatelessWidget {
   const CompatibilityBadge({
     super.key,
@@ -104,6 +106,7 @@ class CompatibilityBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final color = switch (score) {
       >= 75 => Colors.green,
       >= 50 => Colors.orange,
@@ -123,13 +126,13 @@ class CompatibilityBadge extends StatelessWidget {
           Icon(Icons.favorite, size: 14, color: color),
           const SizedBox(width: 4),
           Text(
-            '%${score.toStringAsFixed(score % 1 == 0 ? 0 : 1)}',
+            l10n.percent(score, digits: score % 1 == 0 ? 0 : 1),
             style: TextStyle(color: color, fontWeight: FontWeight.w600),
           ),
           if (commonMovieCount != null && commonMovieCount! > 0) ...[
             const SizedBox(width: 6),
             Text(
-              '· $commonMovieCount ortak',
+              l10n.commonMoviesShort(commonMovieCount!),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),

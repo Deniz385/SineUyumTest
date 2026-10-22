@@ -1,6 +1,7 @@
+import '../../l10n/l10n.dart';
 import 'movie.dart';
 
-/// `/api/v1/profile/{userId}` yanıtı.
+/// Response of `/api/v1/profile/{userId}`.
 class UserProfile {
   const UserProfile({
     required this.id,
@@ -18,11 +19,11 @@ class UserProfile {
   final String? bio;
   final String? profileImageUrl;
 
-  /// Görüntüleyen ayrıntıları göremez (gizlilik ayarı ya da kendisi
-  /// engellemiş); puanlar ve istatistikler boş gelir.
+  /// The viewer can't see the details (privacy setting, or they blocked the
+  /// user); ratings and statistics come back empty.
   final bool isRestricted;
 
-  /// Görüntüleyen bu kullanıcıyı engellemiş.
+  /// The viewer has blocked this user.
   final bool isBlockedByMe;
   final List<RatedMovie> ratings;
   final ProfileStatistics statistics;
@@ -79,7 +80,7 @@ class ProfileStatistics {
   }
 }
 
-/// `/api/v1/compatibility/{userId}` yanıtı.
+/// Response of `/api/v1/compatibility/{userId}`.
 class CompatibilityResult {
   const CompatibilityResult({
     this.compatibilityScore = 0,
@@ -111,8 +112,9 @@ class CompatibilityResult {
   }
 }
 
-/// Uyum puanının açıklaması: ortak/ayrışan türler, ortak favori ve sohbet
-/// başlatıcı "tartışma filmi".
+/// Explains the compatibility score: shared/divergent genres, a shared
+/// favorite and a conversation-starting "debate movie". Texts are localized
+/// by the server.
 class CompatibilityInsights {
   const CompatibilityInsights({
     this.summary,
@@ -165,7 +167,7 @@ class CommonMovie {
   factory CommonMovie.fromJson(Map<String, dynamic> json) {
     return CommonMovie(
       movieId: (json['movieId'] as num?)?.toInt() ?? 0,
-      title: json['title'] as String? ?? 'Başlıksız',
+      title: json['title'] as String? ?? L10n.current.untitledMovie,
       posterPath: json['posterPath'] as String?,
       currentUserRating: (json['currentUserRating'] as num?)?.toInt() ?? 0,
       targetUserRating: (json['targetUserRating'] as num?)?.toInt() ?? 0,
@@ -173,7 +175,7 @@ class CommonMovie {
   }
 }
 
-/// `/api/v1/follow/{userId}/status` yanıtı.
+/// Response of `/api/v1/follow/{userId}/status`.
 class FollowStatus {
   const FollowStatus({
     this.isFollowing = false,
@@ -194,15 +196,14 @@ class FollowStatus {
   }
 }
 
-/// Profil ayrıntılarını (puanlar, listeler, uyum) kim görebilir.
+/// Who can see the profile details (ratings, lists, compatibility).
 enum ProfileVisibility {
-  public('Public', 'Herkes'),
-  following('Following', 'Yalnızca takip ettiklerim'),
-  private('Private', 'Yalnızca ben');
+  public('Public'),
+  following('Following'),
+  private('Private');
 
-  const ProfileVisibility(this.apiValue, this.label);
+  const ProfileVisibility(this.apiValue);
   final String apiValue;
-  final String label;
 
   static ProfileVisibility fromApi(Object? value) => values.firstWhere(
     (v) => v.apiValue == value,
@@ -210,15 +211,14 @@ enum ProfileVisibility {
   );
 }
 
-/// Kim yeni mesaj gönderebilir.
+/// Who can start a new conversation.
 enum MessagePermission {
-  everyone('Everyone', 'Herkes'),
-  following('Following', 'Yalnızca takip ettiklerim'),
-  nobody('Nobody', 'Hiç kimse');
+  everyone('Everyone'),
+  following('Following'),
+  nobody('Nobody');
 
-  const MessagePermission(this.apiValue, this.label);
+  const MessagePermission(this.apiValue);
   final String apiValue;
-  final String label;
 
   static MessagePermission fromApi(Object? value) => values.firstWhere(
     (v) => v.apiValue == value,
@@ -239,7 +239,7 @@ class PrivacySettings {
   final MessagePermission messagePermission;
   final bool hiddenFromSearch;
 
-  /// Okundu bilgisi karşılıklı: kapatan başkalarınınkini de görmez.
+  /// Read receipts are mutual: turning them off also hides other people's.
   final bool showReadReceipts;
 
   PrivacySettings copyWith({
@@ -270,7 +270,7 @@ class PrivacySettings {
   };
 }
 
-/// `/api/v1/blocks` öğesi.
+/// An item of `/api/v1/blocks`.
 class BlockedUser {
   const BlockedUser({
     required this.id,
@@ -289,7 +289,8 @@ class BlockedUser {
   );
 }
 
-/// `/api/v1/profile/{userId}/identity`: paylaşılabilir film kimliği.
+/// `/api/v1/profile/{userId}/identity`: the shareable film identity. The
+/// title, description and genre names are localized by the server.
 class FilmIdentity {
   const FilmIdentity({
     required this.userName,

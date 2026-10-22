@@ -6,10 +6,17 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<!-- Languages the app is localized into (lib/l10n/app_*.arb). iOS only
+	     reports these to Flutter as preferred locales when they are listed. -->
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>tr</string>
+	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<!-- Yerel gelistirmede API http://localhost:<port> uzerinden dinleniyor.
-		     Istisna yalnizca localhost icindir; diger tum adresler HTTPS zorunlu. -->
+		<!-- In local development the API listens on http://localhost:<port>.
+		     The exception covers localhost only; every other host requires HTTPS. -->
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
@@ -54,12 +61,12 @@
 			</array>
 		</dict>
 	</dict>
-	<!-- Profil fotoğrafı seçimi (image_picker) için izin açıklamaları. -->
+	<!-- Permission prompts for picking a profile photo (image_picker). -->
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Profil fotoğrafı seçmek için fotoğraflarınıza erişim gerekiyor.</string>
+	<string>SineUyum needs access to your photos so you can choose a profile photo.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Profil fotoğrafı çekmek için kameraya erişim gerekiyor.</string>
-	<!-- Push bildirimi (FCM/APNs): uzak bildirimlerin arka planda işlenmesi. -->
+	<string>SineUyum needs access to the camera so you can take a profile photo.</string>
+	<!-- Push notifications (FCM/APNs): handling remote notifications in the background. -->
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

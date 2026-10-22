@@ -1,0 +1,18 @@
+# Flutter gen-l10n configuration
+# (https://docs.flutter.dev/ui/accessibility-and-internationalization/internationalization).
+#
+# `flutter pub get` (and `flutter run/build/test`) regenerates
+# lib/l10n/app_localizations*.dart from the ARB files below, so the generated
+# Dart files are not committed (see .gitignore).
+#
+# To add a language, add lib/l10n/app_<code>.arb containing every key of the
+# template. It is picked up automatically: supported locales, the language
+# picker in Settings and the Accept-Language header sent to the API.
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+# `AppLocalizations.of(context)` returns a non-null value.
+nullable-getter: false
+# Keep the generated code `dart format`-clean (CI checks formatting).
+format: true

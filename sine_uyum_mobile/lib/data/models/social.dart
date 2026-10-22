@@ -1,4 +1,4 @@
-/// İnceleme, yorum ve akış modelleri (sosyal çekirdek).
+/// Review, comment and feed models (the social core).
 class Author {
   const Author({required this.id, required this.userName, this.imageUrl});
 
@@ -61,7 +61,7 @@ class Review {
   final bool likedByMe;
   final bool isMine;
 
-  /// Görüntüleyenle yazarın uyumu (0-100); kendi incelemesinde null.
+  /// Compatibility between viewer and author (0-100); null on your own review.
   final double? authorCompatibility;
 
   Review copyWith({bool? likedByMe, int? likeCount, int? commentCount}) =>
@@ -96,8 +96,8 @@ class Review {
   );
 }
 
-/// "Sana göre puan": sana uyumlu kişilerin bu filme verdiği puanların
-/// uyumla ağırlıklı ortalaması.
+/// The "for you" score: the average of the ratings given to this movie by
+/// people who match your taste, weighted by compatibility.
 class ForYouScore {
   const ForYouScore({
     required this.score,
@@ -224,7 +224,7 @@ class FeedPage {
   );
 }
 
-/// `/api/v1/taste-twin`: bu haftanın zevk ikizi.
+/// `/api/v1/taste-twin`: this week's taste twin.
 class TasteTwin {
   const TasteTwin({
     required this.user,

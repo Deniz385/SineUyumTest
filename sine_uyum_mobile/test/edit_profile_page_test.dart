@@ -10,8 +10,10 @@ import 'package:sine_uyum_mobile/features/profile/edit_profile_page.dart';
 import 'package:sine_uyum_mobile/providers/repository_providers.dart';
 import 'package:sine_uyum_mobile/providers/session_provider.dart';
 
+import 'support/localized_app.dart';
+
 class FakePicker extends ImagePicker {
-  XFile? next = XFile('/tmp/secilen.jpg');
+  XFile? next = XFile('/tmp/picked.jpg');
   final calls = <(ImageSource, double?, int?)>[];
 
   @override
@@ -56,7 +58,7 @@ class FakeSocial implements SocialRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-/// Oturumdaki kullanıcı, sahte depodaki fotoğrafla tazelenir.
+/// The session's user is refreshed with the photo of the fake repository.
 class FakeSession extends SessionNotifier {
   FakeSession(this.social);
   final FakeSocial social;
@@ -69,7 +71,7 @@ class FakeSession extends SessionNotifier {
     user: AppUser(
       id: 'u1',
       userName: 'ayse',
-      bio: 'eski bio',
+      bio: 'old bio',
       profileImageUrl: social.photoUrl,
     ),
   );
@@ -82,7 +84,7 @@ void main() {
   late FakePicker picker;
   late FakeSocial social;
 
-  Future<void> pumpPage(WidgetTester tester) async {
+  Future<void> pumpPage(WidgetTester tester, {Locale locale = tr}) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -90,7 +92,7 @@ void main() {
           socialRepositoryProvider.overrideWithValue(social),
           sessionProvider.overrideWith(() => FakeSession(social)),
         ],
-        child: const MaterialApp(home: EditProfilePage()),
+        child: localizedApp(locale: locale, home: const EditProfilePage()),
       ),
     );
   }
@@ -100,26 +102,25 @@ void main() {
     social = FakeSocial();
   });
 
-  testWidgets('galeriden seçilen fotoğraf küçültme ayarlarıyla yüklenir', (
-    tester,
-  ) async {
+  testWidgets('a photo picked from the gallery is uploaded with the '
+      'downscaling settings', (tester) async {
     await pumpPage(tester);
     expect(find.text('Fotoğraf ekle'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('change-photo')));
     await tester.pumpAndSettle();
-    // Fotoğraf yokken kaldırma seçeneği gösterilmez.
+    // Without a photo the remove option isn't offered.
     expect(find.text('Fotoğrafı kaldır'), findsNothing);
     await tester.tap(find.text('Galeriden seç'));
     await tester.pumpAndSettle();
 
     expect(picker.calls.single, (ImageSource.gallery, 1600.0, 85));
-    expect(social.uploads, ['/tmp/secilen.jpg']);
+    expect(social.uploads, ['/tmp/picked.jpg']);
     expect(find.text('Profil fotoğrafı güncellendi.'), findsOneWidget);
     expect(find.text('Fotoğrafı değiştir'), findsOneWidget);
   });
 
-  testWidgets('vazgeçilirse yükleme yapılmaz', (tester) async {
+  testWidgets('nothing is uploaded when the user cancels', (tester) async {
     picker.next = null;
     await pumpPage(tester);
 
@@ -132,8 +133,8 @@ void main() {
     expect(social.uploads, isEmpty);
   });
 
-  testWidgets('fotoğraf varken kaldırılabilir', (tester) async {
-    social.photoUrl = '/media/avatars/u1/eski.jpg';
+  testWidgets('an existing photo can be removed', (tester) async {
+    social.photoUrl = '/media/avatars/u1/old.jpg';
     await pumpPage(tester);
 
     await tester.tap(find.byKey(const Key('change-photo')));
@@ -145,9 +146,9 @@ void main() {
     expect(find.text('Fotoğraf ekle'), findsOneWidget);
   });
 
-  testWidgets('sunucu hatası kullanıcıya gösterilir', (tester) async {
+  testWidgets('a server error is shown to the user', (tester) async {
     social.uploadError = ApiException(
-      'Fotoğraf en fazla 10 MB olabilir.',
+      'The photo can be at most 10 MB.',
       statusCode: 413,
     );
     await pumpPage(tester);
@@ -157,34 +158,46 @@ void main() {
     await tester.tap(find.text('Galeriden seç'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Fotoğraf en fazla 10 MB olabilir.'), findsOneWidget);
+    expect(find.text('The photo can be at most 10 MB.'), findsOneWidget);
   });
 
-  testWidgets('kaydet mevcut fotoğraf adresini değiştirmeden yollar', (
-    tester,
-  ) async {
-    social.photoUrl = '/media/avatars/u1/mevcut.jpg';
+  testWidgets('save sends the current photo URL unchanged', (tester) async {
+    social.photoUrl = '/media/avatars/u1/current.jpg';
     await pumpPage(tester);
 
-    await tester.enterText(find.byType(TextFormField), 'yeni bio');
+    await tester.enterText(find.byType(TextFormField), 'new bio');
     await tester.tap(find.text('Kaydet'));
     await tester.pumpAndSettle();
 
-    expect(social.updates.single, ('yeni bio', '/media/avatars/u1/mevcut.jpg'));
+    expect(social.updates.single, ('new bio', '/media/avatars/u1/current.jpg'));
+  });
+
+  testWidgets('renders in English', (tester) async {
+    await pumpPage(tester, locale: en);
+    expect(find.text('Edit profile'), findsOneWidget);
+    expect(find.text('Add photo'), findsOneWidget);
+    expect(find.text('About'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('change-photo')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Choose from gallery'));
+    await tester.pumpAndSettle();
+    expect(find.text('Profile photo updated.'), findsOneWidget);
+    expect(find.text('Change photo'), findsOneWidget);
   });
 
   group('AppConfig.resolveMediaUrl', () {
-    test('göreli yolu API adresiyle birleştirir', () {
+    test('joins a relative path with the API URL', () {
       expect(
         AppConfig.resolveMediaUrl('/media/avatars/u1/a.jpg'),
         '${AppConfig.apiUrl}/media/avatars/u1/a.jpg',
       );
     });
 
-    test('tam URL ve boş değerler', () {
+    test('full URLs and empty values', () {
       expect(
-        AppConfig.resolveMediaUrl('https://cdn.ornek/a.jpg'),
-        'https://cdn.ornek/a.jpg',
+        AppConfig.resolveMediaUrl('https://cdn.example/a.jpg'),
+        'https://cdn.example/a.jpg',
       );
       expect(AppConfig.resolveMediaUrl(''), isNull);
       expect(AppConfig.resolveMediaUrl(null), isNull);

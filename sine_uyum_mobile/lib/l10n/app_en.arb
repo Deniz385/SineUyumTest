@@ -1,0 +1,558 @@
+{
+  "@@locale": "en",
+  "appName": "SineUyum",
+  "@appName": {
+    "description": "Brand name; not translated."
+  },
+  "languageName": "English",
+  "@languageName": {
+    "description": "This language's own name, shown in the language picker."
+  },
+  "commonCancel": "Cancel",
+  "commonSave": "Save",
+  "commonDelete": "Delete",
+  "commonEdit": "Edit",
+  "commonRetry": "Try again",
+  "commonSend": "Send",
+  "commonSettings": "Settings",
+  "commonSubscription": "Subscription",
+  "commonFollow": "Follow",
+  "commonBlock": "Block",
+  "commonUnblock": "Unblock",
+  "ratingOutOfTen": "{rating}/10",
+  "@ratingOutOfTen": {
+    "placeholders": {
+      "rating": {
+        "type": "int"
+      }
+    }
+  },
+  "movieCount": "{count, plural, =1{1 movie} other{{count} movies}}",
+  "@movieCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "untitledMovie": "Untitled",
+  "untitledWatchlist": "Untitled list",
+  "cinemaEventFallback": "Cinema event",
+  "errorServerUnreachable": "Couldn't reach the server, check your connection.",
+  "errorNoInternet": "Couldn't connect to the internet.",
+  "errorRequestCancelled": "The request was cancelled.",
+  "errorSessionExpired": "Your session has expired, please sign in again.",
+  "errorForbidden": "You don't have permission to do this.",
+  "errorNotFound": "Not found.",
+  "errorTooManyRequests": "Too many attempts, please wait a moment.",
+  "errorServer": "Something went wrong on the server, please try again later.",
+  "errorUnexpected": "An unexpected error occurred.",
+  "errorOfflineNotCached": "No internet connection, and this content hasn't been saved for offline use yet.",
+  "loginTagline": "Find people who share your taste in film",
+  "usernameLabel": "Username",
+  "usernameRequired": "Username is required.",
+  "usernameTooShort": "Username must be at least {min} characters.",
+  "@usernameTooShort": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "passwordLabel": "Password",
+  "passwordRequired": "Password is required.",
+  "passwordHelper": "At least 6 characters, including a digit.",
+  "passwordTooShort": "Password must be at least {min} characters.",
+  "@passwordTooShort": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "passwordNeedsDigit": "Password must contain at least one digit.",
+  "emailLabel": "Email",
+  "emailRequired": "Email is required.",
+  "emailInvalid": "Please enter a valid email address.",
+  "loginSubmit": "Sign in",
+  "loginNoAccount": "Don't have an account? Sign up",
+  "registerTitle": "Sign up",
+  "registerSubmit": "Create account",
+  "navHome": "Home",
+  "navDiscover": "Discover",
+  "navLists": "Lists",
+  "navMessages": "Messages",
+  "navEvent": "Event",
+  "myListsTitle": "My lists",
+  "searchMoviesTooltip": "Search movies",
+  "notificationsTitle": "Notifications",
+  "accountMenuTooltip": "Account",
+  "menuMyProfile": "My profile",
+  "splashWaitingForConnection": "Waiting for a connection…",
+  "offlineDevice": "You're offline — showing saved data",
+  "offlineServer": "Can't reach the server — showing saved data",
+  "homeTabFeed": "Feed",
+  "homeTabMovies": "Movies",
+  "homeNowPlaying": "Now playing",
+  "homePopular": "Popular movies",
+  "settingsPrivacySubtitle": "Profile visibility, message permissions, blocked users",
+  "settingsTheme": "Theme",
+  "themeSystem": "System default",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "settingsLanguage": "Language",
+  "languageSystem": "System default",
+  "subscriptionActive": "Active",
+  "subscriptionInactive": "Not active",
+  "settingsPush": "Push notifications",
+  "pushRegistered": "On — arrives even when the app is closed",
+  "pushPermissionDenied": "Off — allow notifications in your device settings",
+  "pushDisabled": "Not configured in this build",
+  "pushIdle": "Getting ready…",
+  "settingsVersion": "Version",
+  "settingsApiUrl": "API URL",
+  "logout": "Sign out",
+  "logoutConfirmTitle": "Sign out?",
+  "privacyTitle": "Privacy",
+  "privacyWhoSeesRatings": "Who can see my ratings and lists",
+  "visibilityPublic": "Everyone",
+  "visibilityFollowing": "Only people I follow",
+  "visibilityPrivate": "Only me",
+  "privacyAlwaysVisible": "Your name, photo and bio are always visible.",
+  "privacyWhoCanMessage": "Who can message me",
+  "messagePermissionEveryone": "Everyone",
+  "messagePermissionFollowing": "Only people I follow",
+  "messagePermissionNobody": "No one",
+  "privacyHideFromSearch": "Hide me from user search",
+  "privacyHideFromSearchHint": "Your profile link and existing chats keep working.",
+  "privacyReadReceipts": "Read receipts",
+  "privacyReadReceiptsHint": "If you turn this off, others won't see when you've read their messages, and you won't see theirs either.",
+  "privacyBlockedUsers": "Blocked users",
+  "privacyNoBlockedUsers": "You haven't blocked anyone. To block someone, open their profile.",
+  "eventNoneAvailable": "There's no new event you can join right now.",
+  "eventJoining": "Joining...",
+  "eventJoin": "Join event",
+  "eventJoinHint": "Once you join, you'll be matched with the people closest to your taste in film.",
+  "eventAwaitingMatch": "Waiting to be matched",
+  "eventAwaitingMatchHint": "You'll get a notification when your group is formed. Meanwhile, rate more movies to make your match more accurate.",
+  "eventYourGroup": "Your group",
+  "eventLoadingMembers": "Loading group members...",
+  "eventMovieVote": "Movie vote",
+  "eventVoteHint": "Tap your pick again to withdraw your vote.",
+  "eventNoSuggestions": "No movie suggestions yet.",
+  "eventVoteCount": "{count, plural, =1{1 vote} other{{count} votes}}",
+  "@eventVoteCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "eventGroupSize": "Groups of {size}",
+  "@eventGroupSize": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "messagesEmpty": "No messages yet. You can write to someone from the Discover tab.",
+  "conversationFallbackTitle": "Chat",
+  "conversationEmpty": "No messages yet. Be the first to write.",
+  "messageHint": "Write a message...",
+  "messageSentAndSeen": "{sentAt} · Seen {seenAt}",
+  "@messageSentAndSeen": {
+    "description": "Time a message was sent, then when it was read.",
+    "placeholders": {
+      "sentAt": {
+        "type": "String"
+      },
+      "seenAt": {
+        "type": "String"
+      }
+    }
+  },
+  "sharedMovieLabel": "Movie suggestion",
+  "sharedWatchlistLabel": "Shared list",
+  "movieDetailTitle": "Movie details",
+  "ratingSaved": "Your rating was saved: {rating}/10",
+  "@ratingSaved": {
+    "placeholders": {
+      "rating": {
+        "type": "int"
+      }
+    }
+  },
+  "watchlistCreateFirst": "Create a list in the \"Lists\" tab first.",
+  "watchlistPickTitle": "Which list should it go in?",
+  "addedToWatchlist": "Added to \"{name}\".",
+  "@addedToWatchlist": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "runtimeMinutes": "{minutes} min",
+  "@runtimeMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "tmdbScoreSuffix": " / 10 (TMDb)",
+  "@tmdbScoreSuffix": {
+    "description": "Shown right after the TMDb vote average."
+  },
+  "rateMovie": "Rate",
+  "addToList": "Add to list",
+  "overviewTitle": "Overview",
+  "movieSearchHint": "Search movies...",
+  "movieSearchPrompt": "Type the name of the movie you're looking for.",
+  "movieSearchEmpty": "No movies match this search.",
+  "ratingSheetPrompt": "How would you rate this movie?",
+  "saveRating": "Save rating",
+  "notificationsMarkAllRead": "Mark all as read",
+  "notificationsEmpty": "No notifications yet.",
+  "profileTitle": "Profile",
+  "editProfile": "Edit profile",
+  "moreTooltip": "More",
+  "myFilmIdentity": "My film identity",
+  "filmIdentity": "Film identity",
+  "ratedMoviesTitle": "Rated movies ({count})",
+  "@ratedMoviesTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noRatedMovies": "No rated movies yet.",
+  "blockConfirmTitle": "Block {userName}?",
+  "@blockConfirmTitle": {
+    "placeholders": {
+      "userName": {
+        "type": "String"
+      }
+    }
+  },
+  "blockConfirmBody": "You won't be able to see each other's profiles, message each other or end up in the same event group. Any follows between you are removed. You can unblock them from Settings > Privacy.",
+  "profileRestricted": "This user keeps their ratings and lists private.",
+  "profileBlockedNotice": "You blocked this user. You can't see each other's profiles, message each other or end up in the same event group.",
+  "statRatings": "Ratings",
+  "statAverage": "Average",
+  "statInLists": "In lists",
+  "unfollow": "Unfollow",
+  "sendMessage": "Message",
+  "followerCount": "{count, plural, =1{1 follower} other{{count} followers}}",
+  "@followerCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "followingCount": "{count} following",
+  "@followingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sharedFavorite": "Your shared favorite: {title}",
+  "@sharedFavorite": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "sharedFavoriteRatings": "You {myRating}, {userName} {theirRating}",
+  "@sharedFavoriteRatings": {
+    "placeholders": {
+      "myRating": {
+        "type": "int"
+      },
+      "userName": {
+        "type": "String"
+      },
+      "theirRating": {
+        "type": "int"
+      }
+    }
+  },
+  "debateMovie": "Debate movie: {title}",
+  "@debateMovie": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "debateMovieRatings": "You gave it {myRating}, {userName} {theirRating}. Why not ask?",
+  "@debateMovieRatings": {
+    "placeholders": {
+      "myRating": {
+        "type": "int"
+      },
+      "userName": {
+        "type": "String"
+      },
+      "theirRating": {
+        "type": "int"
+      }
+    }
+  },
+  "debateDraft": "I gave \"{title}\" a {myRating} and you gave it a {theirRating}. Why? 😄",
+  "@debateDraft": {
+    "description": "Pre-filled chat message sent to the other user.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "myRating": {
+        "type": "int"
+      },
+      "theirRating": {
+        "type": "int"
+      }
+    }
+  },
+  "askThem": "Ask them",
+  "photoUpdated": "Profile photo updated.",
+  "photoRemoved": "Profile photo removed.",
+  "pickFromGallery": "Choose from gallery",
+  "takePhoto": "Take a photo",
+  "removePhoto": "Remove photo",
+  "changePhoto": "Change photo",
+  "addPhoto": "Add photo",
+  "bioLabel": "About",
+  "profileUpdated": "Profile updated.",
+  "filmIdentityShareText": "{title} — my SineUyum film identity",
+  "@filmIdentityShareText": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "shareImageFailed": "Couldn't share the image.",
+  "shareAsImage": "Share as image",
+  "identityCardHeader": "SINEUYUM · FILM IDENTITY",
+  "identitySummary": "{count, plural, =1{1 movie} other{{count} movies}} · average {average}",
+  "@identitySummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "average": {
+        "type": "String"
+      }
+    }
+  },
+  "identityTopGenresMine": "YOUR TOP GENRES",
+  "identityTopGenresTheirs": "THEIR TOP GENRES",
+  "identityContrarianMine": "YOUR MOST CONTRARIAN RATING",
+  "identityContrarianTheirs": "THEIR MOST CONTRARIAN RATING",
+  "identityContrarianLineMine": "{title}: everyone {average}, you {rating}",
+  "@identityContrarianLineMine": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "average": {
+        "type": "String"
+      },
+      "rating": {
+        "type": "int"
+      }
+    }
+  },
+  "identityContrarianLineTheirs": "{title}: everyone {average}, them {rating}",
+  "@identityContrarianLineTheirs": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "average": {
+        "type": "String"
+      },
+      "rating": {
+        "type": "int"
+      }
+    }
+  },
+  "identityFavoriteMine": "YOUR FAVORITE",
+  "identityFavoriteTheirs": "THEIR FAVORITE",
+  "identityFavoriteLine": "{title} · {rating}/10",
+  "@identityFavoriteLine": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "rating": {
+        "type": "int"
+      }
+    }
+  },
+  "feedEmpty": "Your feed is empty for now. Follow people who match your taste from the Discover tab, or write the first review of a movie yourself.",
+  "feedWroteReview": "wrote a review",
+  "feedRatedMovie": "rated a movie",
+  "tasteTwinHeader": "✨ THIS WEEK'S TASTE TWIN",
+  "tasteTwinStats": "{percent} match · {count, plural, =1{1 movie in common} other{{count} movies in common}}",
+  "@tasteTwinStats": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "viewProfile": "View profile",
+  "followingState": "Following",
+  "compatibilityMatch": "{percent} match",
+  "@compatibilityMatch": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "commonMoviesShort": "· {count} in common",
+  "@commonMoviesShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "spoilerReveal": "Contains spoilers — show",
+  "commentCount": "{count, plural, =1{1 comment} other{{count} comments}}",
+  "@commentCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsTitle": "Comments",
+  "commentsEmpty": "No comments yet. Be the first to comment.",
+  "deleteComment": "Delete comment",
+  "commentHint": "Write a comment...",
+  "reviewSaved": "Your review was saved.",
+  "reviewsLoadFailed": "Couldn't load reviews: {error}",
+  "@reviewsLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewsTitle": "Reviews",
+  "reviewsTitleWithCount": "Reviews ({count})",
+  "@reviewsTitleWithCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewRateFirst": "Rate the movie first to write a review.",
+  "reviewFieldLabel": "Your review (your rating: {rating}/10)",
+  "@reviewFieldLabel": {
+    "placeholders": {
+      "rating": {
+        "type": "int"
+      }
+    }
+  },
+  "containsSpoilers": "Contains spoilers",
+  "reviewPost": "Post",
+  "reviewUpdate": "Update",
+  "reviewsNoneYet": "No other reviews yet. Be the first to write one.",
+  "forYouTooltip": "Based on {count} people who match your taste: {people}",
+  "@forYouTooltip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "people": {
+        "type": "String"
+      }
+    }
+  },
+  "forYouMatchEntry": "{userName} ({percent}) {rating}",
+  "@forYouMatchEntry": {
+    "placeholders": {
+      "userName": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      },
+      "rating": {
+        "type": "int"
+      }
+    }
+  },
+  "forYouSuffix": " for you ({count, plural, =1{1 matching person} other{{count} matching people}})",
+  "@forYouSuffix": {
+    "description": "Follows the personalised score; note the leading space.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionBenefitsTitle": "What's included in a subscription?",
+  "benefitOpenAirEvents": "Joining open-air cinema events",
+  "benefitGroupMatching": "Automatic group matching based on your taste in film",
+  "benefitGroupVoting": "Voting on a movie together with your group",
+  "goToEvents": "Go to events",
+  "paymentComingSoon": "Online payment is coming soon. Subscriptions can't be purchased right now.",
+  "paymentPreparing": "Payment options are being prepared.",
+  "subscriptionIsActive": "Your subscription is active",
+  "subscriptionNotSubscribed": "You're not subscribed",
+  "subscriptionRenews": "Renews: {date}",
+  "@subscriptionRenews": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "subscriptionEnds": "Ends: {date}",
+  "@subscriptionEnds": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "userSearchHint": "Search usernames...",
+  "userSearchPrompt": "Search by username to find people who share your taste in film.",
+  "userSearchEmpty": "No users found.",
+  "watchlistFallbackTitle": "List",
+  "watchlistEmpty": "There are no movies in this list yet. You can add some from a movie's detail screen.",
+  "removeFromList": "Remove from list",
+  "watchlistsEmpty": "You don't have any watchlists yet.",
+  "createList": "Create list",
+  "newList": "New list",
+  "editList": "Edit list",
+  "listNameLabel": "List name",
+  "listNameRequired": "List name is required.",
+  "descriptionLabel": "Description",
+  "deleteListTitle": "Delete list?",
+  "deleteListBody": "\"{name}\" will be permanently deleted.",
+  "@deleteListBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
+}

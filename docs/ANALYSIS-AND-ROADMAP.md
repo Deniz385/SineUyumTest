@@ -867,7 +867,11 @@ movie lovers; the core differentiating feature is the compatibility score.
       upper-case buttons and headings (e.g. "TAKIP ET" instead of "TAKİP ET" for
       "Follow", "BU FILMI PUANLA" instead of "BU FİLMİ PUANLA" for "Rate this
       movie"); fixed with `lang="tr"`.
-31. Multi-language support (Turkish + English, extensible) — ⏳ in progress
+31. Multi-language support (Turkish + English, extensible) — ✅
+    - Web: i18next with a language switcher (navbar, drawer, login/register,
+      edit profile); `<html lang>` follows the language. Mobile: gen-l10n ARB
+      files and a System / Türkçe / English setting; the offline cache is keyed
+      by language.
     - Clients send the selected language in the `Accept-Language` header; the API
       localizes every user-facing message (errors, notifications, generated texts,
       genre names, TMDb data) and falls back to English.
@@ -881,3 +885,30 @@ movie lovers; the core differentiating feature is the compatibility score.
       the root README.
     - **Follow-up:** per-language titles for the locally stored movie catalog
       (currently stored in a single language).
+    - **Known gaps:** a few framework validation messages (invalid enum value,
+      implicit required for non-nullable strings) are English only; generic
+      Turkish validation messages show the raw field name; iOS permission
+      prompts are English only (a `tr.lproj/InfoPlist.strings` needs Xcode).
+32. Shared watchlists — ✅
+    - The owner invites people (at most 20); invitees accept or decline, accepted
+      members add and remove movies, the owner removes members, members can
+      leave. Blocking ends memberships between the two users.
+    - Each item shows who added it and which of the list's people have rated it
+      ("watched by"), with an "Unwatched by all of us" filter.
+    - Web and mobile: invitations section, members dialog/sheet with user search,
+      leave list. The invitation notification opens the Lists tab on mobile.
+33. Film diary — ✅
+    - `DiaryEntry`: a dated log of watched movies, separate from ratings
+      (rewatches are separate entries, with an optional note up to 500
+      characters). The same movie cannot be logged twice on the same day; dates
+      in the future or before 1900 are rejected.
+    - `POST /diary` can also set the rating; rating writes now go through
+      `RatingService`, shared with the ratings endpoint, so the feed behaves the
+      same either way.
+    - `GET /diary/user/{id}` (paginated, by year) and `/summary` (per-month counts,
+      rewatches, available years) follow the profile-details privacy rule.
+    - Web: "Add to diary" dialog on the movie page, diary section with a month
+      chart on the profile. Mobile: add sheet on the movie page, diary page
+      (`/profile/:userId/diary`), readable offline.
+    - **Follow-up:** pre-select "Rewatch" when the movie is already in the diary
+      (needs a lookup endpoint for the user's entries of one movie).

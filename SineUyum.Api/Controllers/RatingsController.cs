@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using SineUyum.Api.Dtos;
+using SineUyum.Api.Localization;
 using SineUyum.Api.Services;
 using System.Security.Claims;
 
@@ -41,7 +42,8 @@ namespace SineUyum.Api.Controllers
         public async Task<ActionResult<MovieSummaryDto>> AddMovie([FromBody] AddMovieDto dto)
         {
             var movie = await _movieCatalog.EnsureMovieAsync(dto.MovieId);
-            return Ok(new MovieSummaryDto { Id = movie.Id, Title = movie.Title, PosterPath = movie.PosterPath });
+            var title = await _movieCatalog.TitleAsync(movie, SupportedLanguages.Current);
+            return Ok(new MovieSummaryDto { Id = movie.Id, Title = title, PosterPath = movie.PosterPath });
         }
     }
 }

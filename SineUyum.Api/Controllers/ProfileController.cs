@@ -84,6 +84,7 @@ namespace SineUyum.Api.Controllers
             // The returned list is capped: the top 100 by rating. Even a user
             // with thousands of ratings keeps the response and memory bounded.
             const int maxRatingsReturned = 100;
+            var lang = SupportedLanguages.Current;
             var userRatings = await ratingsQuery
                 .OrderByDescending(r => r.Rating)
                 .ThenByDescending(r => r.MovieId)
@@ -92,7 +93,7 @@ namespace SineUyum.Api.Controllers
                 {
                     MovieId = r.MovieId,
                     Rating = r.Rating,
-                    Title = r.Movie.Title,
+                    Title = r.Movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? r.Movie.Title,
                     PosterPath = r.Movie.PosterPath
                 })
                 .ToListAsync();
@@ -133,12 +134,13 @@ namespace SineUyum.Api.Controllers
             if (viewerId == null) return Unauthorized();
             var owner = await _privacy.EnsureCanViewDetailsAsync(viewerId, userId, User.IsInRole("Admin"));
 
+            var lang = SupportedLanguages.Current;
             var rows = await _context.UserRatings
                 .Where(r => r.UserId == userId)
                 .Select(r => new
                 {
                     r.MovieId,
-                    r.Movie.Title,
+                    Title = r.Movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? r.Movie.Title,
                     r.Movie.PosterPath,
                     r.Rating,
                     r.Movie.TmdbVoteAverage,

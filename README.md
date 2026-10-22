@@ -199,14 +199,18 @@ limits throttle all users together.
 
 ## Localization
 
-The apps support multiple languages (Turkish and English to start); this is
-being implemented across all three platforms.
+The apps support multiple languages (Turkish and English to start).
 
 - Clients send the selected language in the `Accept-Language` header.
 - The API localizes every user-facing message (errors, notifications,
   generated texts, genre names, TMDb data) and falls back to English.
 - The user's language is stored (`PUT /api/v1/account/language`), so
   notifications and push messages are rendered in the recipient's language.
+- Movie titles in the local catalog are stored per language
+  (`MovieTranslations`). A missing title is fetched when someone opens or
+  rates the movie in that language, and `MovieTranslationWorker` fills in the
+  rest in the background (`MovieTranslations__Enabled`,
+  `MovieTranslations__IntervalMinutes`); until then the stored title is shown.
 - Adding a language means adding one translation file per platform and
   registering the language code in each platform's list of supported
   languages:
@@ -217,7 +221,7 @@ being implemented across all three platforms.
   | Web | `sine-uyum-web/src/locales/<lang>.json` |
   | Mobile | `sine_uyum_mobile/lib/l10n/app_<lang>.arb` |
 
-  (Exact file names may still change.)
+  Movie titles for a new language are filled in automatically by the worker.
 
 ## Tests and CI
 

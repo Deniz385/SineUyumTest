@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
+using SineUyum.Api.Localization;
 using System.Security.Claims;
 
 namespace SineUyum.Api.Controllers
@@ -36,7 +37,11 @@ namespace SineUyum.Api.Controllers
                 .AsNoTracking()
                 .ToListAsync();
 
-            return Ok(notifications.Select(n => NotificationDto.From(n, _t)).ToList());
+            // Movie titles in the request language.
+            var args = await MovieTitles.LocalizeAsync(_context,
+                notifications.Select(n => (object?[])MessageArgs.Deserialize(n.MessageArgs)).ToList(),
+                SupportedLanguages.Current);
+            return Ok(notifications.Select((n, i) => NotificationDto.From(n, _t, args[i])).ToList());
         }
 
         // The route the frontend expects ("mark-all-as-read").

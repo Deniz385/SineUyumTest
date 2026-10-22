@@ -883,8 +883,17 @@ movie lovers; the core differentiating feature is the compatibility score.
       `sine_uyum_mobile/lib/l10n/app_<lang>.arb`) + registering the code in each
       platform's list of supported languages. See the "Localization" section of
       the root README.
-    - **Follow-up:** per-language titles for the locally stored movie catalog
-      (currently stored in a single language).
+    - Movie titles in the local catalog are stored per language
+      (`MovieTranslations`; existing titles were kept as Turkish). A missing
+      title is fetched when someone opens or rates the movie in that language
+      (usually a cache hit, since it is the same request as the details page)
+      and `MovieTranslationWorker` fills in the rest (40 titles every 10
+      minutes); until then the stored title is shown. Notifications keep the
+      movie id, so "liked your review of …" shows the title in the reader's
+      language.
+    - Along the way: the catalog cached movie details without credits under the
+      same key as the details page, so a details page could come back without
+      the cast; both now use the same request.
     - **Known gaps:** a few framework validation messages (invalid enum value,
       implicit required for non-nullable strings) are English only; generic
       Turkish validation messages show the raw field name; iOS permission

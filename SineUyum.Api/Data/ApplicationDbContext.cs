@@ -9,6 +9,7 @@
         public DbSet<Movie> Movies { get; set; }
         public DbSet<Genre> Genres { get; set; } // Newly added
         public DbSet<MovieGenre> MovieGenres { get; set; } // Newly added
+        public DbSet<MovieTranslation> MovieTranslations { get; set; }
         public DbSet<UserRating> UserRatings { get; set; }
         public DbSet<Watchlist> Watchlists { get; set; }
         public DbSet<WatchlistItem> WatchlistItems { get; set; }
@@ -299,6 +300,15 @@
             builder.Entity<WatchlistItem>()
                 .HasIndex(i => new { i.WatchlistId, i.MovieId })
                 .IsUnique();
+
+            // One title per movie and language.
+            builder.Entity<MovieTranslation>()
+                .HasKey(t => new { t.MovieId, t.Language });
+            builder.Entity<MovieTranslation>()
+                .HasOne(t => t.Movie)
+                .WithMany(m => m.Translations)
+                .HasForeignKey(t => t.MovieId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // Composite primary key for MovieGenre
             builder.Entity<MovieGenre>()

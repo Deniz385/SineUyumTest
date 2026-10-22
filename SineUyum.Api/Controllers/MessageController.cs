@@ -8,6 +8,7 @@ using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
 using SineUyum.Api.Exceptions;
 using SineUyum.Api.Hubs;
+using SineUyum.Api.Localization;
 using SineUyum.Api.Models;
 using SineUyum.Api.RateLimiting;
 using SineUyum.Api.Services;
@@ -48,7 +49,7 @@ namespace SineUyum.Api.Controllers
         // The single shape of a chat message: the thread list, the send
         // response and the live event share this projection (the client reads
         // all three with the same model).
-        private static readonly System.Linq.Expressions.Expression<Func<Message, MessageThreadItemDto>> ToThreadItem =
+        private static System.Linq.Expressions.Expression<Func<Message, MessageThreadItemDto>> ToThreadItem(string lang) =>
             m => new MessageThreadItemDto
             {
                 Id = m.Id,
@@ -62,7 +63,7 @@ namespace SineUyum.Api.Controllers
                 Movie = m.Movie == null ? null : new MovieSummaryDto
                 {
                     Id = m.Movie.Id,
-                    Title = m.Movie.Title,
+                    Title = m.Movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? m.Movie.Title,
                     PosterPath = m.Movie.PosterPath
                 },
                 Watchlist = m.Watchlist == null ? null : new SharedWatchlistDto
@@ -128,7 +129,7 @@ namespace SineUyum.Api.Controllers
             // requesting client de-duplicates it by id against the response.
             var created = await _context.Messages
                 .Where(m => m.Id == message.Id)
-                .Select(ToThreadItem)
+                .Select(ToThreadItem(SupportedLanguages.Current))
                 .SingleAsync();
 
             await _hubContext.Clients.Users(senderId, createMessageDto.RecipientId)
@@ -157,7 +158,7 @@ namespace SineUyum.Api.Controllers
                 .OrderByDescending(m => m.MessageSent)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(ToThreadItem)
+                .Select(ToThreadItem(SupportedLanguages.Current))
                 .ToListAsync();
 
             // Queried newest first; the client expects oldest first.

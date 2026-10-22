@@ -50,13 +50,14 @@ namespace SineUyum.Api.Controllers
             // Compatibility is derived from the target's ratings; same rule as profile details.
             await _privacy.EnsureCanViewDetailsAsync(currentUserId, targetUserId, User.IsInRole("Admin"));
 
+            var lang = SupportedLanguages.Current;
             var commonRatingsQuery = from r1 in _context.UserRatings.Where(r => r.UserId == currentUserId)
                                      join r2 in _context.UserRatings.Where(r => r.UserId == targetUserId) on r1.MovieId equals r2.MovieId
                                      join movie in _context.Movies on r1.MovieId equals movie.Id
                                      select new CommonMovieDto
                                      {
                                          MovieId = r1.MovieId,
-                                         Title = movie.Title,
+                                         Title = movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? movie.Title,
                                          PosterPath = movie.PosterPath,
                                          CurrentUserRating = r1.Rating,
                                          TargetUserRating = r2.Rating

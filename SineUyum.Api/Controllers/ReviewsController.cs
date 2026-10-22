@@ -6,6 +6,7 @@ using Microsoft.Extensions.Localization;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
 using SineUyum.Api.Exceptions;
+using SineUyum.Api.Localization;
 using SineUyum.Api.Models;
 using SineUyum.Api.RateLimiting;
 using SineUyum.Api.Services;
@@ -124,7 +125,7 @@ namespace SineUyum.Api.Controllers
                         // The like and its notification are saved together.
                         await _notifications.NotifyAsync(review.UserId,
                             $"/movie/{review.MovieId}",
-                            "notifications.reviewLiked", await MyNameAsync(), review.Movie.Title);
+                            "notifications.reviewLiked", await MyNameAsync(), new MovieRef(review.MovieId, review.Movie.Title));
                     }
                     else
                     {
@@ -184,7 +185,7 @@ namespace SineUyum.Api.Controllers
                 // The notification has no comment text (we keep content out of push bodies).
                 await _notifications.NotifyAsync(review.UserId,
                     $"/movie/{review.MovieId}",
-                    "notifications.reviewCommented", await MyNameAsync(), review.Movie.Title);
+                    "notifications.reviewCommented", await MyNameAsync(), new MovieRef(review.MovieId, review.Movie.Title));
             }
             else
             {

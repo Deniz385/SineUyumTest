@@ -22,7 +22,11 @@ namespace SineUyum.Api.Dtos
         // Rendered with the given localizer; rows from before localization
         // have no key and keep their stored text.
         public static NotificationDto From(Notification n, IStringLocalizer t) =>
-            From(n, n.MessageKey == null ? n.Message : t[n.MessageKey, MessageArgs.Deserialize(n.MessageArgs)]);
+            From(n, t, MessageArgs.Deserialize(n.MessageArgs));
+
+        // With arguments already prepared (e.g. movie titles in the request language).
+        public static NotificationDto From(Notification n, IStringLocalizer t, object?[] args) =>
+            From(n, n.MessageKey == null ? n.Message : t[n.MessageKey, args.Select(a => a ?? string.Empty).ToArray()]);
 
         private static NotificationDto From(Notification n, string message) => new()
         {

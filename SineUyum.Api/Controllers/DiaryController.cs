@@ -6,6 +6,7 @@ using Microsoft.Extensions.Localization;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
 using SineUyum.Api.Exceptions;
+using SineUyum.Api.Localization;
 using SineUyum.Api.Models;
 using SineUyum.Api.RateLimiting;
 using SineUyum.Api.Services;
@@ -213,11 +214,18 @@ namespace SineUyum.Api.Controllers
         private static DomainException Duplicate() =>
             new("diary.duplicate", StatusCodes.Status409Conflict);
 
-        private Task<List<DiaryEntryDto>> ToDtosAsync(IQueryable<DiaryEntry> entries) =>
-            entries.Select(d => new DiaryEntryDto
+        private Task<List<DiaryEntryDto>> ToDtosAsync(IQueryable<DiaryEntry> entries)
+        {
+            var lang = SupportedLanguages.Current;
+            return entries.Select(d => new DiaryEntryDto
             {
                 Id = d.Id,
-                Movie = new MovieSummaryDto { Id = d.MovieId, Title = d.Movie.Title, PosterPath = d.Movie.PosterPath },
+                Movie = new MovieSummaryDto
+                {
+                    Id = d.MovieId,
+                    Title = d.Movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? d.Movie.Title,
+                    PosterPath = d.Movie.PosterPath
+                },
                 WatchedOn = d.WatchedOn,
                 Rewatch = d.Rewatch,
                 Note = d.Note,
@@ -227,5 +235,6 @@ namespace SineUyum.Api.Controllers
                     .FirstOrDefault(),
                 CreatedAt = d.CreatedAt
             }).ToListAsync();
+        }
     }
 }

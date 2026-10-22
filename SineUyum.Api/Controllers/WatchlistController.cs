@@ -6,6 +6,7 @@ using Microsoft.Extensions.Localization;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
 using SineUyum.Api.Exceptions;
+using SineUyum.Api.Localization;
 using SineUyum.Api.Models;
 using SineUyum.Api.RateLimiting;
 using SineUyum.Api.Services;
@@ -65,6 +66,7 @@ namespace SineUyum.Api.Controllers
         [HttpGet("public/{listId}")]
         public async Task<ActionResult<PublicWatchlistDto>> GetPublicWatchlistDetails(int listId)
         {
+            var lang = SupportedLanguages.Current;
             var watchlist = await _context.Watchlists
                 .Where(w => w.Id == listId)
                 .Select(w => new PublicWatchlistDto
@@ -78,7 +80,7 @@ namespace SineUyum.Api.Controllers
                         .Select(i => new WatchlistItemDto
                         {
                             MovieId = i.MovieId,
-                            Title = i.Movie.Title,
+                            Title = i.Movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? i.Movie.Title,
                             PosterPath = i.Movie.PosterPath,
                             AddedAt = i.AddedAt
                         }).ToList()
@@ -123,13 +125,14 @@ namespace SineUyum.Api.Controllers
                 .Select(m => m.UserId)
                 .Concat(_context.Watchlists.Where(w => w.Id == listId).Select(w => w.UserId));
 
+            var lang = SupportedLanguages.Current;
             var items = await _context.WatchlistItems
                 .Where(i => i.WatchlistId == listId)
                 .OrderByDescending(i => i.AddedAt)
                 .Select(i => new WatchlistItemDto
                 {
                     MovieId = i.MovieId,
-                    Title = i.Movie.Title,
+                    Title = i.Movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? i.Movie.Title,
                     PosterPath = i.Movie.PosterPath,
                     AddedAt = i.AddedAt,
                     AddedByUsername = i.AddedBy == null ? null : i.AddedBy.UserName,

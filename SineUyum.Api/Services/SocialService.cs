@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
+using SineUyum.Api.Localization;
 using SineUyum.Api.Models;
 
 namespace SineUyum.Api.Services
@@ -111,12 +112,13 @@ namespace SineUyum.Api.Services
         // the author's rating and the compatibility badge).
         public async Task<List<ReviewDto>> ToDtosAsync(string viewerId, IQueryable<Review> reviews)
         {
+            var lang = SupportedLanguages.Current;
             var rows = await reviews
                 .Select(r => new
                 {
                     r.Id,
                     r.MovieId,
-                    MovieTitle = r.Movie.Title,
+                    MovieTitle = r.Movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? r.Movie.Title,
                     MoviePosterPath = r.Movie.PosterPath,
                     r.UserId,
                     r.User.UserName,

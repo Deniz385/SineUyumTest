@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
 using SineUyum.Api.Exceptions;
+using SineUyum.Api.Localization;
 using SineUyum.Api.Services;
 
 namespace SineUyum.Api.Controllers
@@ -45,6 +46,7 @@ namespace SineUyum.Api.Controllers
                 query = query.Where(r => r.ActivityAt < at || (r.ActivityAt == at && r.Id < id));
             }
 
+            var lang = SupportedLanguages.Current;
             var rows = await query
                 .OrderByDescending(r => r.ActivityAt).ThenByDescending(r => r.Id)
                 .Take(limit + 1)
@@ -56,7 +58,7 @@ namespace SineUyum.Api.Controllers
                     r.User.UserName,
                     r.User.ProfileImageUrl,
                     r.MovieId,
-                    MovieTitle = r.Movie.Title,
+                    MovieTitle = r.Movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? r.Movie.Title,
                     MoviePosterPath = r.Movie.PosterPath,
                     r.Rating,
                     ReviewId = _context.Reviews.Where(v => v.UserId == r.UserId && v.MovieId == r.MovieId).Select(v => (int?)v.Id).FirstOrDefault()

@@ -626,6 +626,27 @@ namespace SineUyum.Api.Migrations
                     b.ToTable("MovieGenres");
                 });
 
+            modelBuilder.Entity("SineUyum.Api.Models.MovieTranslation", b =>
+                {
+                    b.Property<int>("MovieId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("MovieId", "Language");
+
+                    b.ToTable("MovieTranslations");
+                });
+
             modelBuilder.Entity("SineUyum.Api.Models.Notification", b =>
                 {
                     b.Property<int>("Id")
@@ -1299,6 +1320,17 @@ namespace SineUyum.Api.Migrations
                     b.Navigation("Movie");
                 });
 
+            modelBuilder.Entity("SineUyum.Api.Models.MovieTranslation", b =>
+                {
+                    b.HasOne("SineUyum.Api.Models.Movie", "Movie")
+                        .WithMany("Translations")
+                        .HasForeignKey("MovieId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Movie");
+                });
+
             modelBuilder.Entity("SineUyum.Api.Models.Notification", b =>
                 {
                     b.HasOne("SineUyum.Api.Models.AppUser", "User")
@@ -1541,6 +1573,8 @@ namespace SineUyum.Api.Migrations
             modelBuilder.Entity("SineUyum.Api.Models.Movie", b =>
                 {
                     b.Navigation("MovieGenres");
+
+                    b.Navigation("Translations");
                 });
 
             modelBuilder.Entity("SineUyum.Api.Models.Review", b =>

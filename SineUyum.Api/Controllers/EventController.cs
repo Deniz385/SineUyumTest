@@ -6,6 +6,7 @@ using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
 using SineUyum.Api.Exceptions;
 using SineUyum.Api.Filters;
+using SineUyum.Api.Localization;
 using SineUyum.Api.Models;
 using System.Security.Claims;
 
@@ -65,10 +66,16 @@ namespace SineUyum.Api.Controllers
                     .Select(v => new EventGroupVoteDto { UserId = v.UserId, MovieId = v.MovieId })
                     .ToListAsync();
                 
+                var lang = SupportedLanguages.Current;
                 var suggestedMovies = await _context.EventGroupSuggestions
                     .Where(s => s.EventGroupId == groupMember.Group.Id)
                     .OrderBy(s => s.Rank)
-                    .Select(s => new MovieSummaryDto { Id = s.Movie.Id, Title = s.Movie.Title, PosterPath = s.Movie.PosterPath })
+                    .Select(s => new MovieSummaryDto
+                    {
+                        Id = s.Movie.Id,
+                        Title = s.Movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? s.Movie.Title,
+                        PosterPath = s.Movie.PosterPath
+                    })
                     .ToListAsync();
 
                 // Backward compatibility: "1,2,3" in the same order for old clients.

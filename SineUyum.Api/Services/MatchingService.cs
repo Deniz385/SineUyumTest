@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SineUyum.Api.Data;
 using SineUyum.Api.Exceptions;
+using SineUyum.Api.Localization;
 using SineUyum.Api.Models;
 using System.Text.Json;
 
@@ -198,8 +199,10 @@ namespace SineUyum.Api.Services
                 if (string.IsNullOrEmpty(_tmdbApiKey)) throw new InvalidOperationException("The TMDb API key is not configured.");
 
                 var client = _httpClientFactory.CreateClient("TMDb");
-                // The titles go into the shared Movies catalog, which is kept in one language.
-                var popularMoviesUrl = $"{TmdbApiBaseUrl}movie/popular?api_key={_tmdbApiKey}&language={MovieCatalogService.CatalogTmdbLanguage}&page=1";
+                // A background job has no request language: titles are stored in
+                // the default language; MovieTranslationWorker adds the others.
+                var language = SupportedLanguages.Default;
+                var popularMoviesUrl = $"{TmdbApiBaseUrl}movie/popular?api_key={_tmdbApiKey}&language={SupportedLanguages.TmdbLanguage(language)}&page=1";
 
                 var response = await client.GetAsync(popularMoviesUrl);
                 if (!response.IsSuccessStatusCode) throw new HttpRequestException($"Could not fetch popular movies from the TMDb API. Status code: {response.StatusCode}");
@@ -226,12 +229,15 @@ namespace SineUyum.Api.Services
                     var movieId = movieElement.GetProperty("id").GetInt32();
                     if (!await _context.Movies.AnyAsync(m => m.Id == movieId))
                     {
-                        moviesToAdd.Add(new Movie
+                        var title = movieElement.GetProperty("title").GetString() ?? MovieCatalogService.UntitledTitle(language);
+                        var movie = new Movie
                         {
                             Id = movieId,
-                            Title = movieElement.GetProperty("title").GetString() ?? MovieCatalogService.UntitledTitle,
+                            Title = title,
                             PosterPath = movieElement.GetProperty("poster_path").GetString()
-                        });
+                        };
+                        movie.Translations.Add(new MovieTranslation { Language = language, Title = title });
+                        moviesToAdd.Add(movie);
                     }
                 }
 

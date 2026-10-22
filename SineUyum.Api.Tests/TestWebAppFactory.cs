@@ -50,6 +50,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
         // would disturb the call counts of the TMDb fakes); tests that need it call it directly.
         Environment.SetEnvironmentVariable("GenreBackfill__Enabled", "false");
         Environment.SetEnvironmentVariable("TasteTwin__Enabled", "false");
+        Environment.SetEnvironmentVariable("MovieTranslations__Enabled", "false");
         builder.UseSetting("Storage:MediaRoot", MediaRoot);
 
         // Optional: to run the whole suite against a real PostgreSQL (with the

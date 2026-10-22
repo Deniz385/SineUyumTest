@@ -69,13 +69,24 @@ namespace SineUyum.Api.Services
                 .ToDictionaryAsync(u => u.Id, u => u.Language);
             var args = MessageArgs.Serialize(messageArgs);
 
-            var notifications = ids.Select(userId => new Notification
+            // Movie titles in each recipient's language.
+            var argsByLanguage = new Dictionary<string, object?[]>();
+            foreach (var language in ids.Select(id => _languages.Resolve(languages.GetValueOrDefault(id))).Distinct())
             {
-                UserId = userId,
-                Message = _catalog.Translate(_languages.Resolve(languages.GetValueOrDefault(userId)), messageKey, messageArgs),
-                MessageKey = messageKey,
-                MessageArgs = args,
-                RelatedUrl = relatedUrl,
+                argsByLanguage[language] = (await MovieTitles.LocalizeAsync(_context, new[] { messageArgs }, language))[0];
+            }
+
+            var notifications = ids.Select(userId =>
+            {
+                var language = _languages.Resolve(languages.GetValueOrDefault(userId));
+                return new Notification
+                {
+                    UserId = userId,
+                    Message = _catalog.Translate(language, messageKey, argsByLanguage[language]),
+                    MessageKey = messageKey,
+                    MessageArgs = args,
+                    RelatedUrl = relatedUrl,
+                };
             }).ToList();
 
             _context.Notifications.AddRange(notifications);

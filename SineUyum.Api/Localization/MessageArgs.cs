@@ -4,7 +4,8 @@ namespace SineUyum.Api.Localization
 {
     // Arguments of a stored message key (notifications, matching errors) as a
     // JSON array. Numbers stay numbers so they are re-formatted per culture
-    // when the text is rendered in another language.
+    // when the text is rendered in another language; movies are stored as
+    // MovieRef so their titles follow the language too.
     public static class MessageArgs
     {
         public static string? Serialize(IReadOnlyCollection<object?> args) =>
@@ -33,6 +34,8 @@ namespace SineUyum.Api.Localization
             JsonValueKind.True => true,
             JsonValueKind.False => false,
             JsonValueKind.Null or JsonValueKind.Undefined => string.Empty,
+            JsonValueKind.Object when e.TryGetProperty(nameof(MovieRef.MovieId), out var id) && id.TryGetInt32(out var movieId) =>
+                new MovieRef(movieId, e.TryGetProperty(nameof(MovieRef.Title), out var title) ? title.GetString() ?? string.Empty : string.Empty),
             _ => e.GetRawText()
         };
     }

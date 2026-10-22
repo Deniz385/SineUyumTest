@@ -6,6 +6,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Localization;
 using SineUyum.Api.Localization;
 using SineUyum.Api.RateLimiting;
+using SineUyum.Api.Services;
 
 namespace SineUyum.Api.Controllers
 {
@@ -20,17 +21,23 @@ namespace SineUyum.Api.Controllers
         private readonly IMemoryCache _cache;
         private readonly string? _tmdbApiKey;
         private readonly IStringLocalizer _t;
+        private readonly MovieCatalogService _catalog;
+        private readonly ILogger<MoviesController> _logger;
         private const string TmdbApiBaseUrl = "https://api.themoviedb.org/3/";
 
         public MoviesController(
             IHttpClientFactory httpClientFactory,
             IMemoryCache cache,
             IConfiguration configuration,
-            IStringLocalizer localizer)
+            IStringLocalizer localizer,
+            MovieCatalogService catalog,
+            ILogger<MoviesController> logger)
         {
             _httpClientFactory = httpClientFactory;
             _cache = cache;
             _t = localizer;
+            _catalog = catalog;
+            _logger = logger;
 
             var apiKey = configuration["TMDb:ApiKey"];
             if (string.IsNullOrEmpty(apiKey))
@@ -60,9 +67,26 @@ namespace SineUyum.Api.Controllers
         [HttpGet("{movieId}")]
         public Task<IActionResult> GetMovieById(int movieId)
         {
-            // Movie details rarely change; long TTL. Same key as MovieCatalogService.
-            var url = $"{TmdbApiBaseUrl}movie/{movieId}?api_key={_tmdbApiKey}&language={Language}&append_to_response=credits";
-            return CachedTmdbJson($"movie:{Language}:{movieId}", url, TimeSpan.FromHours(24));
+            // Movie details rarely change; long TTL. Same request and key as
+            // MovieCatalogService. The title is remembered for the catalog if
+            // the movie is stored but has none in this language yet.
+            var language = SupportedLanguages.Current;
+            var url = MovieCatalogService.DetailsUrl(_tmdbApiKey ?? string.Empty, language, movieId);
+            return CachedTmdbJson(MovieCatalogService.DetailsCacheKey(language, movieId), url, TimeSpan.FromHours(24),
+                json => RememberTitleAsync(movieId, language, json));
+        }
+
+        private async Task RememberTitleAsync(int movieId, string language, string json)
+        {
+            try
+            {
+                await _catalog.RememberTitleAsync(movieId, language, json);
+            }
+            catch (Exception ex) when (ex is System.Text.Json.JsonException or System.Data.Common.DbException)
+            {
+                // Nice to have only: the details page must not fail because of it.
+                _logger.LogWarning(ex, "Could not store the {Language} title of movie {MovieId}.", language, movieId);
+            }
         }
 
         [HttpGet("popular")]
@@ -82,7 +106,7 @@ namespace SineUyum.Api.Controllers
 
         // Fetches JSON from TMDb, or returns it from the cache. Errors (missing
         // key, TMDb error, unreachable) are not cached and are passed through.
-        private async Task<IActionResult> CachedTmdbJson(string cacheKey, string url, TimeSpan ttl)
+        private async Task<IActionResult> CachedTmdbJson(string cacheKey, string url, TimeSpan ttl, Func<string, Task>? onJson = null)
         {
             if (string.IsNullOrEmpty(_tmdbApiKey))
             {
@@ -91,6 +115,7 @@ namespace SineUyum.Api.Controllers
 
             if (_cache.TryGetValue(cacheKey, out string? cached) && cached != null)
             {
+                if (onJson != null) await onJson(cached);
                 return Content(cached, "application/json");
             }
 
@@ -109,6 +134,7 @@ namespace SineUyum.Api.Controllers
                     AbsoluteExpirationRelativeToNow = ttl,
                     Size = 1, // each entry counts as 1 unit towards SizeLimit
                 });
+                if (onJson != null) await onJson(json);
                 return Content(json, "application/json");
             }
             catch (HttpRequestException ex)

@@ -64,6 +64,13 @@ namespace SineUyum.Api.Controllers
                 .ToListAsync();
             _context.UserFollows.RemoveRange(follows);
 
+            // Ortak listeler de biter: birinin sahibi olduğu listede diğeri üye kalmaz.
+            var memberships = await _context.WatchlistMembers
+                .Where(m => (m.UserId == userId && m.Watchlist.UserId == currentUserId) ||
+                            (m.UserId == currentUserId && m.Watchlist.UserId == userId))
+                .ToListAsync();
+            _context.WatchlistMembers.RemoveRange(memberships);
+
             try
             {
                 await _context.SaveChangesAsync();

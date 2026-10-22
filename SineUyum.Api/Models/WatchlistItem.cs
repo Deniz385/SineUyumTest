@@ -18,5 +18,9 @@ namespace SineUyum.Api.Models
         public Movie Movie { get; set; } = null!;
 
         public DateTime AddedAt { get; set; } = DateTime.UtcNow;
+
+        // Ortak listede filmi kimin eklediği (eski kayıtlarda boş: sahip).
+        public string? AddedByUserId { get; set; }
+        public AppUser? AddedBy { get; set; }
     }
 }

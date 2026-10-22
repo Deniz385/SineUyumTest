@@ -278,15 +278,22 @@
   $: object
   description: string
   id: number
+  isOwner: bool
   items: array
+  members: array
   name: string
+  owner: null
 
 ## watchlist.list  GET /api/v1/watchlist -> 200
   $: array
   [].description: string
   [].id: number
+  [].isOwner: bool
+  [].isShared: bool
   [].itemCount: number
+  [].memberCount: number
   [].name: string
+  [].ownerUsername: string
   []: object
 
 ## watchlist.addMovie  POST /api/v1/watchlist/{id}/movies -> 200
@@ -297,13 +304,21 @@
   $: object
   description: string
   id: number
+  isOwner: bool
   items: array
   items[].addedAt: string
+  items[].addedByUsername: string
   items[].movieId: number
   items[].posterPath: string
   items[].title: string
+  items[].watchedBy: array
   items[]: object
+  members: array
   name: string
+  owner.id: string
+  owner.profileImageUrl: null
+  owner.userName: string
+  owner: object
 
 ## watchlist.public  GET /api/v1/watchlist/public/{id} -> 200
   $: object
@@ -311,9 +326,11 @@
   id: number
   items: array
   items[].addedAt: string
+  items[].addedByUsername: null
   items[].movieId: number
   items[].posterPath: string
   items[].title: string
+  items[].watchedBy: array
   items[]: object
   name: string
   ownerUsername: string

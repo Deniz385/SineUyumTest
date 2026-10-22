@@ -24,6 +24,7 @@
         public DbSet<ReviewLike> ReviewLikes { get; set; }
         public DbSet<ReviewComment> ReviewComments { get; set; }
         public DbSet<TasteTwinSuggestion> TasteTwinSuggestions { get; set; }
+        public DbSet<WatchlistMember> WatchlistMembers { get; set; }
         public DbSet<EventVote> EventVotes { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
@@ -231,6 +232,37 @@
                 .WithMany()
                 .HasForeignKey(t => t.SuggestedUserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<WatchlistMember>()
+                .HasKey(m => new { m.WatchlistId, m.UserId });
+
+            // "Beni hangi listelere davet ettiler / üyesiyim" sorgusu için.
+            builder.Entity<WatchlistMember>()
+                .HasIndex(m => new { m.UserId, m.Accepted });
+
+            builder.Entity<WatchlistMember>()
+                .HasOne(m => m.Watchlist)
+                .WithMany(w => w.Members)
+                .HasForeignKey(m => m.WatchlistId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<WatchlistMember>()
+                .HasOne(m => m.User)
+                .WithMany()
+                .HasForeignKey(m => m.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Ekleyen silinirse film listede kalır.
+            builder.Entity<WatchlistItem>()
+                .HasOne(i => i.AddedBy)
+                .WithMany()
+                .HasForeignKey(i => i.AddedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Aynı film bir listede bir kez (önceden yalnızca kodda denetleniyordu).
+            builder.Entity<WatchlistItem>()
+                .HasIndex(i => new { i.WatchlistId, i.MovieId })
+                .IsUnique();
 
             // MovieGenre için birleşik birincil anahtar (composite key) tanımlaması
             builder.Entity<MovieGenre>()

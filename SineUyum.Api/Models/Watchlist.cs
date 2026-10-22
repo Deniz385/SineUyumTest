@@ -21,5 +21,8 @@ namespace SineUyum.Api.Models
 
         // Bir listenin içinde birden çok film olabilir
         public ICollection<WatchlistItem> Items { get; set; } = new List<WatchlistItem>();
+
+        // Ortak liste üyeleri (davet edilen ve kabul edenler).
+        public ICollection<WatchlistMember> Members { get; set; } = new List<WatchlistMember>();
     }
 }

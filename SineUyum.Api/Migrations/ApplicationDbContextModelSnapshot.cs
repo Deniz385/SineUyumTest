@@ -948,6 +948,9 @@ namespace SineUyum.Api.Migrations
                     b.Property<DateTime>("AddedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("AddedByUserId")
+                        .HasColumnType("text");
+
                     b.Property<int>("MovieId")
                         .HasColumnType("integer");
 
@@ -956,11 +959,38 @@ namespace SineUyum.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AddedByUserId");
+
                     b.HasIndex("MovieId");
 
-                    b.HasIndex("WatchlistId");
+                    b.HasIndex("WatchlistId", "MovieId")
+                        .IsUnique();
 
                     b.ToTable("WatchlistItems");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.WatchlistMember", b =>
+                {
+                    b.Property<int>("WatchlistId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("Accepted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("InvitedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("WatchlistId", "UserId");
+
+                    b.HasIndex("UserId", "Accepted");
+
+                    b.ToTable("WatchlistMembers");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -1370,6 +1400,11 @@ namespace SineUyum.Api.Migrations
 
             modelBuilder.Entity("SineUyum.Api.Models.WatchlistItem", b =>
                 {
+                    b.HasOne("SineUyum.Api.Models.AppUser", "AddedBy")
+                        .WithMany()
+                        .HasForeignKey("AddedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("SineUyum.Api.Models.Movie", "Movie")
                         .WithMany()
                         .HasForeignKey("MovieId")
@@ -1382,7 +1417,28 @@ namespace SineUyum.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("AddedBy");
+
                     b.Navigation("Movie");
+
+                    b.Navigation("Watchlist");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.WatchlistMember", b =>
+                {
+                    b.HasOne("SineUyum.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SineUyum.Api.Models.Watchlist", "Watchlist")
+                        .WithMany("Members")
+                        .HasForeignKey("WatchlistId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
 
                     b.Navigation("Watchlist");
                 });
@@ -1419,6 +1475,8 @@ namespace SineUyum.Api.Migrations
             modelBuilder.Entity("SineUyum.Api.Models.Watchlist", b =>
                 {
                     b.Navigation("Items");
+
+                    b.Navigation("Members");
                 });
 #pragma warning restore 612, 618
         }

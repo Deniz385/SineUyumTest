@@ -58,7 +58,7 @@ namespace SineUyum.Api.Controllers
                                      {
                                          MovieId = r1.MovieId,
                                          Title = movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? movie.Title,
-                                         PosterPath = movie.PosterPath,
+                                         PosterPath = movie.Translations.Where(t => t.Language == lang).Select(t => t.PosterPath).FirstOrDefault() ?? movie.PosterPath,
                                          CurrentUserRating = r1.Rating,
                                          TargetUserRating = r2.Rating
                                      };

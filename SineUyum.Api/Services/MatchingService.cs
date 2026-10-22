@@ -230,13 +230,9 @@ namespace SineUyum.Api.Services
                     if (!await _context.Movies.AnyAsync(m => m.Id == movieId))
                     {
                         var title = movieElement.GetProperty("title").GetString() ?? MovieCatalogService.UntitledTitle(language);
-                        var movie = new Movie
-                        {
-                            Id = movieId,
-                            Title = title,
-                            PosterPath = movieElement.GetProperty("poster_path").GetString()
-                        };
-                        movie.Translations.Add(new MovieTranslation { Language = language, Title = title });
+                        var posterPath = movieElement.GetProperty("poster_path").GetString();
+                        var movie = new Movie { Id = movieId, Title = title, PosterPath = posterPath };
+                        movie.Translations.Add(new MovieTranslation { Language = language, Title = title, PosterPath = posterPath });
                         moviesToAdd.Add(movie);
                     }
                 }

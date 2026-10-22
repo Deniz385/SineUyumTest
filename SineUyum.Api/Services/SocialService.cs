@@ -119,7 +119,7 @@ namespace SineUyum.Api.Services
                     r.Id,
                     r.MovieId,
                     MovieTitle = r.Movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? r.Movie.Title,
-                    MoviePosterPath = r.Movie.PosterPath,
+                    MoviePosterPath = r.Movie.Translations.Where(t => t.Language == lang).Select(t => t.PosterPath).FirstOrDefault() ?? r.Movie.PosterPath,
                     r.UserId,
                     r.User.UserName,
                     r.User.ProfileImageUrl,

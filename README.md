@@ -206,11 +206,12 @@ The apps support multiple languages (Turkish and English to start).
   generated texts, genre names, TMDb data) and falls back to English.
 - The user's language is stored (`PUT /api/v1/account/language`), so
   notifications and push messages are rendered in the recipient's language.
-- Movie titles in the local catalog are stored per language
-  (`MovieTranslations`). A missing title is fetched when someone opens or
-  rates the movie in that language, and `MovieTranslationWorker` fills in the
-  rest in the background (`MovieTranslations__Enabled`,
-  `MovieTranslations__IntervalMinutes`); until then the stored title is shown.
+- Movie titles and posters in the local catalog are stored per language
+  (`MovieTranslations`). A missing one is fetched when someone opens or rates
+  the movie in that language, and `MovieTranslationWorker` fills in the rest
+  in the background (`MovieTranslations__Enabled`,
+  `MovieTranslations__IntervalMinutes`); until then the stored title and
+  poster are shown.
 - Adding a language means adding one translation file per platform and
   registering the language code in each platform's list of supported
   languages:
@@ -221,7 +222,8 @@ The apps support multiple languages (Turkish and English to start).
   | Web | `sine-uyum-web/src/locales/<lang>.json` |
   | Mobile | `sine_uyum_mobile/lib/l10n/app_<lang>.arb` |
 
-  Movie titles for a new language are filled in automatically by the worker.
+  Movie titles and posters for a new language are filled in automatically by
+  the worker.
 
 ## Tests and CI
 

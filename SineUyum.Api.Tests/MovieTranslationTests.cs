@@ -13,12 +13,13 @@ using static SineUyum.Api.Tests.PushTestSupport;
 
 namespace SineUyum.Api.Tests;
 
-// Movie titles are stored per language: lists, the feed, the diary and
-// notifications show the title in the reader's language, falling back to the
-// stored title until that language's title is known.
+// Movie titles and posters are stored per language: lists, the feed, the
+// diary and notifications show them in the reader's language, falling back to
+// the stored ones until that language's are known.
 public class MovieTranslationTests : IClassFixture<MovieTranslationTests.Factory>
 {
-    // Turkish requests get "Film {id}", everything else "Movie {id}"; 970404 is not on TMDb.
+    // Turkish requests get "Film {id}" with poster /tr{id}.jpg, everything else
+    // "Movie {id}" with /en{id}.jpg; 970404 is not on TMDb.
     public sealed class FakeTmdb : HttpMessageHandler
     {
         public ConcurrentQueue<string> Requests { get; } = new();
@@ -29,8 +30,10 @@ public class MovieTranslationTests : IClassFixture<MovieTranslationTests.Factory
             Requests.Enqueue(uri.PathAndQuery);
             var id = int.Parse(uri.AbsolutePath.Split('/').Last());
             if (id == 970404) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
-            var title = uri.Query.Contains("language=tr-TR") ? $"Film {id}" : $"Movie {id}";
-            var body = $"{{\"id\":{id},\"title\":\"{title}\",\"poster_path\":\"/p{id}.jpg\",\"genres\":[],\"credits\":{{\"cast\":[]}}}}";
+            var turkish = uri.Query.Contains("language=tr-TR");
+            var title = turkish ? $"Film {id}" : $"Movie {id}";
+            var poster = turkish ? $"/tr{id}.jpg" : $"/en{id}.jpg";
+            var body = $"{{\"id\":{id},\"title\":\"{title}\",\"poster_path\":\"{poster}\",\"genres\":[],\"credits\":{{\"cast\":[]}}}}";
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(body, Encoding.UTF8, "application/json")
@@ -72,26 +75,31 @@ public class MovieTranslationTests : IClassFixture<MovieTranslationTests.Factory
         Assert.True(res.IsSuccessStatusCode, await res.Content.ReadAsStringAsync());
     }
 
-    private async Task<string?> ProfileTitleAsync(Session viewer, string userId, int movieId, string language)
+    // "title | poster" as shown on the profile.
+    private async Task<string> ProfileMovieAsync(Session viewer, string userId, int movieId, string language)
     {
         var profile = await GetJsonAsync($"/api/v1/profile/{userId}", viewer, language);
-        return profile.GetProperty("ratings").EnumerateArray()
-            .Single(r => r.GetProperty("movieId").GetInt32() == movieId)
-            .GetProperty("title").GetString();
+        return Shown(profile.GetProperty("ratings").EnumerateArray()
+            .Single(r => r.GetProperty("movieId").GetInt32() == movieId));
     }
 
-    private async Task<Dictionary<string, string>> TitlesOfAsync(int movieId)
+    private static string Shown(JsonElement movie) =>
+        $"{movie.GetProperty("title").GetString()} | {movie.GetProperty("posterPath").GetString()}";
+
+    // Stored translations as language -> "title | poster".
+    private async Task<Dictionary<string, string>> TranslationsOfAsync(int movieId)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        return await db.MovieTranslations.Where(t => t.MovieId == movieId).ToDictionaryAsync(t => t.Language, t => t.Title);
+        return await db.MovieTranslations.Where(t => t.MovieId == movieId)
+            .ToDictionaryAsync(t => t.Language, t => $"{t.Title} | {t.PosterPath}");
     }
 
-    private async Task SeedMovieAsync(int movieId, string title)
+    private async Task SeedMovieAsync(int movieId, string title, string? posterPath = null)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        db.Movies.Add(new Movie { Id = movieId, Title = title });
+        db.Movies.Add(new Movie { Id = movieId, Title = title, PosterPath = posterPath });
         await db.SaveChangesAsync();
     }
 
@@ -101,15 +109,15 @@ public class MovieTranslationTests : IClassFixture<MovieTranslationTests.Factory
         var me = await RegisterAsync(_client, "mt_", "tr");
         await SendOkAsync(HttpMethod.Post, "/api/v1/ratings", me, new { movieId = 970001, rating = 8 }, "tr");
 
-        Assert.Equal(new Dictionary<string, string> { ["tr"] = "Film 970001" }, await TitlesOfAsync(970001));
-        Assert.Equal("Film 970001", await ProfileTitleAsync(me, me.UserId, 970001, "tr"));
-        // No English title yet: the stored (Turkish) title.
-        Assert.Equal("Film 970001", await ProfileTitleAsync(me, me.UserId, 970001, "en"));
+        Assert.Equal(new Dictionary<string, string> { ["tr"] = "Film 970001 | /tr970001.jpg" }, await TranslationsOfAsync(970001));
+        Assert.Equal("Film 970001 | /tr970001.jpg", await ProfileMovieAsync(me, me.UserId, 970001, "tr"));
+        // Nothing in English yet: the stored (Turkish) title and poster.
+        Assert.Equal("Film 970001 | /tr970001.jpg", await ProfileMovieAsync(me, me.UserId, 970001, "en"));
 
         await _factory.Services.GetRequiredService<MovieTranslationWorker>().RunBatchAsync(CancellationToken.None);
 
-        Assert.Equal("Movie 970001", await ProfileTitleAsync(me, me.UserId, 970001, "en"));
-        Assert.Equal("Film 970001", await ProfileTitleAsync(me, me.UserId, 970001, "tr"));
+        Assert.Equal("Movie 970001 | /en970001.jpg", await ProfileMovieAsync(me, me.UserId, 970001, "en"));
+        Assert.Equal("Film 970001 | /tr970001.jpg", await ProfileMovieAsync(me, me.UserId, 970001, "tr"));
     }
 
     [Fact]
@@ -121,11 +129,11 @@ public class MovieTranslationTests : IClassFixture<MovieTranslationTests.Factory
 
         // Rating (and watchlists, the diary) ensure the title in the request language.
         await SendOkAsync(HttpMethod.Post, "/api/v1/ratings", me, new { movieId = 970010, rating = 7 }, "en");
-        Assert.Equal("Movie 970010", (await TitlesOfAsync(970010))["en"]);
+        Assert.Equal("Movie 970010 | /en970010.jpg", (await TranslationsOfAsync(970010))["en"]);
 
         // The details page remembers it for catalog movies...
         await SendOkAsync(HttpMethod.Get, "/api/v1/movies/970011", me, language: "tr");
-        Assert.Equal("Film 970011", (await TitlesOfAsync(970011))["tr"]);
+        Assert.Equal("Film 970011 | /tr970011.jpg", (await TranslationsOfAsync(970011))["tr"]);
 
         // ...but does not add movies to the catalog.
         await SendOkAsync(HttpMethod.Get, "/api/v1/movies/970012", me, language: "tr");
@@ -147,18 +155,20 @@ public class MovieTranslationTests : IClassFixture<MovieTranslationTests.Factory
         await SendOkAsync(HttpMethod.Post, $"/api/v1/watchlist/{listId}/movies", me, new { movieId = 970020 });
         await SendOkAsync(HttpMethod.Post, "/api/v1/diary", me, new { movieId = 970020, watchedOn = "2026-01-05" });
 
-        foreach (var (language, expected) in new[] { ("tr", "Film 970020"), ("en", "Movie 970020"), ("tr", "Film 970020") })
+        var turkish = "Film 970020 | /tr970020.jpg";
+        var english = "Movie 970020 | /en970020.jpg";
+        foreach (var (language, expected) in new[] { ("tr", turkish), ("en", english), ("tr", turkish) })
         {
             var watchlist = await GetJsonAsync($"/api/v1/watchlist/{listId}", me, language);
-            Assert.Equal(expected, watchlist.GetProperty("items")[0].GetProperty("title").GetString());
+            Assert.Equal(expected, Shown(watchlist.GetProperty("items")[0]));
 
             var diary = await GetJsonAsync($"/api/v1/diary/user/{me.UserId}", me, language);
-            Assert.Equal(expected, diary.GetProperty("items")[0].GetProperty("movie").GetProperty("title").GetString());
+            Assert.Equal(expected, Shown(diary.GetProperty("items")[0].GetProperty("movie")));
 
             var feed = await GetJsonAsync("/api/v1/feed", me, language);
-            Assert.Equal(expected, feed.GetProperty("items").EnumerateArray()
+            Assert.Equal(expected, Shown(feed.GetProperty("items").EnumerateArray()
                 .First(i => i.GetProperty("movie").GetProperty("id").GetInt32() == 970020)
-                .GetProperty("movie").GetProperty("title").GetString());
+                .GetProperty("movie")));
         }
     }
 
@@ -192,14 +202,16 @@ public class MovieTranslationTests : IClassFixture<MovieTranslationTests.Factory
     public async Task Worker_FillsEveryLanguage_MoviesMissingOnTmdbKeepTheirTitleAndAreNotAskedAgain()
     {
         await SeedMovieAsync(970040, "Bir film");
-        await SeedMovieAsync(970404, "TMDb'de yok");
+        await SeedMovieAsync(970404, "TMDb'de yok", "/stored.jpg");
         var worker = _factory.Services.GetRequiredService<MovieTranslationWorker>();
 
         // Other tests' movies may be in the same database: run until nothing is left.
         while (await worker.RunBatchAsync(CancellationToken.None) > 0) { }
 
-        Assert.Equal(new Dictionary<string, string> { ["en"] = "Movie 970040", ["tr"] = "Film 970040" }, await TitlesOfAsync(970040));
-        Assert.Equal(new Dictionary<string, string> { ["en"] = "TMDb'de yok", ["tr"] = "TMDb'de yok" }, await TitlesOfAsync(970404));
+        Assert.Equal(new Dictionary<string, string> { ["en"] = "Movie 970040 | /en970040.jpg", ["tr"] = "Film 970040 | /tr970040.jpg" },
+            await TranslationsOfAsync(970040));
+        Assert.Equal(new Dictionary<string, string> { ["en"] = "TMDb'de yok | /stored.jpg", ["tr"] = "TMDb'de yok | /stored.jpg" },
+            await TranslationsOfAsync(970404));
 
         var before = _factory.Tmdb.Requests.Count;
         Assert.Equal(0, await worker.RunBatchAsync(CancellationToken.None));

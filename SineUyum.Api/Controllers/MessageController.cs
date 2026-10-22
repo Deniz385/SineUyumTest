@@ -64,7 +64,7 @@ namespace SineUyum.Api.Controllers
                 {
                     Id = m.Movie.Id,
                     Title = m.Movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? m.Movie.Title,
-                    PosterPath = m.Movie.PosterPath
+                    PosterPath = m.Movie.Translations.Where(t => t.Language == lang).Select(t => t.PosterPath).FirstOrDefault() ?? m.Movie.PosterPath
                 },
                 Watchlist = m.Watchlist == null ? null : new SharedWatchlistDto
                 {

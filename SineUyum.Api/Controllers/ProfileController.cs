@@ -94,7 +94,7 @@ namespace SineUyum.Api.Controllers
                     MovieId = r.MovieId,
                     Rating = r.Rating,
                     Title = r.Movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? r.Movie.Title,
-                    PosterPath = r.Movie.PosterPath
+                    PosterPath = r.Movie.Translations.Where(t => t.Language == lang).Select(t => t.PosterPath).FirstOrDefault() ?? r.Movie.PosterPath
                 })
                 .ToListAsync();
 
@@ -141,7 +141,7 @@ namespace SineUyum.Api.Controllers
                 {
                     r.MovieId,
                     Title = r.Movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? r.Movie.Title,
-                    r.Movie.PosterPath,
+                    PosterPath = r.Movie.Translations.Where(t => t.Language == lang).Select(t => t.PosterPath).FirstOrDefault() ?? r.Movie.PosterPath,
                     r.Rating,
                     r.Movie.TmdbVoteAverage,
                     Genres = r.Movie.MovieGenres.Select(mg => new { mg.Genre.Id, mg.Genre.Name }).ToList()

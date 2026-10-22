@@ -42,8 +42,8 @@ namespace SineUyum.Api.Controllers
         public async Task<ActionResult<MovieSummaryDto>> AddMovie([FromBody] AddMovieDto dto)
         {
             var movie = await _movieCatalog.EnsureMovieAsync(dto.MovieId);
-            var title = await _movieCatalog.TitleAsync(movie, SupportedLanguages.Current);
-            return Ok(new MovieSummaryDto { Id = movie.Id, Title = title, PosterPath = movie.PosterPath });
+            var (title, posterPath) = await _movieCatalog.LocalizedAsync(movie, SupportedLanguages.Current);
+            return Ok(new MovieSummaryDto { Id = movie.Id, Title = title, PosterPath = posterPath });
         }
     }
 }

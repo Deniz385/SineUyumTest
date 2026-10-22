@@ -81,7 +81,7 @@ namespace SineUyum.Api.Controllers
                         {
                             MovieId = i.MovieId,
                             Title = i.Movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? i.Movie.Title,
-                            PosterPath = i.Movie.PosterPath,
+                            PosterPath = i.Movie.Translations.Where(t => t.Language == lang).Select(t => t.PosterPath).FirstOrDefault() ?? i.Movie.PosterPath,
                             AddedAt = i.AddedAt
                         }).ToList()
                 })
@@ -133,7 +133,7 @@ namespace SineUyum.Api.Controllers
                 {
                     MovieId = i.MovieId,
                     Title = i.Movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? i.Movie.Title,
-                    PosterPath = i.Movie.PosterPath,
+                    PosterPath = i.Movie.Translations.Where(t => t.Language == lang).Select(t => t.PosterPath).FirstOrDefault() ?? i.Movie.PosterPath,
                     AddedAt = i.AddedAt,
                     AddedByUsername = i.AddedBy == null ? null : i.AddedBy.UserName,
                     WatchedBy = _context.UserRatings

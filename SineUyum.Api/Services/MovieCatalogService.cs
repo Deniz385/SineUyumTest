@@ -14,8 +14,8 @@ namespace SineUyum.Api.Services
     // other users saw. Now a movie's local row is created ONLY here, with the
     // title/poster fetched from TMDb; the client only sends a movieId.
     //
-    // Titles are stored per language (MovieTranslations). Movie.Title is the
-    // fallback: the title in the language the movie was first fetched in.
+    // Titles and posters are stored per language (MovieTranslations).
+    // Movie.Title/PosterPath are the fallback: as first fetched.
     // A missing translation is added when someone opens or rates the movie in
     // that language (usually a cache hit: same request as the details page),
     // and MovieTranslationWorker fills in the rest in the background.
@@ -80,7 +80,7 @@ namespace SineUyum.Api.Services
             for (var attempt = 1; ; attempt++)
             {
                 var movie = new Movie { Id = movieId, Title = details.Title, PosterPath = details.PosterPath, TmdbVoteAverage = details.VoteAverage };
-                movie.Translations.Add(new MovieTranslation { Language = language, Title = details.Title });
+                movie.Translations.Add(new MovieTranslation { Language = language, Title = details.Title, PosterPath = details.PosterPath });
                 await AttachGenresAsync(movie, details.Genres);
                 _context.Movies.Add(movie);
                 try
@@ -117,7 +117,7 @@ namespace SineUyum.Api.Services
             try
             {
                 var details = await FetchFromTmdbAsync(movie.Id, language);
-                await SaveTranslationAsync(movie.Id, language, details.Title);
+                await SaveTranslationAsync(movie.Id, language, details.Title, details.PosterPath);
             }
             catch (Exception ex) when (ex is DomainException or HttpRequestException or TaskCanceledException or JsonException)
             {
@@ -126,51 +126,59 @@ namespace SineUyum.Api.Services
         }
 
         // The details page (MoviesController) already has the TMDb response in
-        // the request language: store the title if the movie is in the catalog
-        // and has none in that language yet.
-        public async Task RememberTitleAsync(int movieId, string language, string detailsJson)
+        // the request language: store its title and poster if the movie is in
+        // the catalog and has none in that language yet.
+        public async Task RememberTranslationAsync(int movieId, string language, string detailsJson)
         {
             if (await HasTranslationAsync(movieId, language) || !await _context.Movies.AnyAsync(m => m.Id == movieId)) return;
             using var doc = JsonDocument.Parse(detailsJson);
-            if (doc.RootElement.TryGetProperty("title", out var t) && t.GetString() is { Length: > 0 } title)
+            var root = doc.RootElement;
+            if (root.TryGetProperty("title", out var t) && t.GetString() is { Length: > 0 } title)
             {
-                await SaveTranslationAsync(movieId, language, title);
+                var poster = root.TryGetProperty("poster_path", out var p) && p.ValueKind == JsonValueKind.String ? p.GetString() : null;
+                await SaveTranslationAsync(movieId, language, title, poster);
             }
         }
 
-        // MovieTranslationWorker: fetches the title in a language. A movie that is
-        // not on TMDb gets its fallback title, so it is not asked again.
+        // MovieTranslationWorker: fetches the title and poster in a language. A
+        // movie that is not on TMDb gets its fallback ones, so it is not asked again.
         public async Task FillTranslationAsync(int movieId, string language)
         {
             if (await HasTranslationAsync(movieId, language)) return;
             string title;
+            string? poster;
             try
             {
-                title = (await FetchFromTmdbAsync(movieId, language)).Title;
+                var details = await FetchFromTmdbAsync(movieId, language);
+                (title, poster) = (details.Title, details.PosterPath);
             }
             catch (DomainException ex) when (ex.StatusCode == StatusCodes.Status404NotFound)
             {
-                title = await _context.Movies.Where(m => m.Id == movieId).Select(m => m.Title).FirstAsync();
+                var stored = await _context.Movies.Where(m => m.Id == movieId).Select(m => new { m.Title, m.PosterPath }).FirstAsync();
+                (title, poster) = (stored.Title, stored.PosterPath);
             }
-            await SaveTranslationAsync(movieId, language, title);
+            await SaveTranslationAsync(movieId, language, title, poster);
         }
 
-        // The movie's title in the language, or its fallback title.
-        public async Task<string> TitleAsync(Movie movie, string language) =>
-            await _context.MovieTranslations
+        // The movie's title and poster in the language, or the fallback ones.
+        public async Task<(string Title, string? PosterPath)> LocalizedAsync(Movie movie, string language)
+        {
+            var translation = await _context.MovieTranslations
                 .Where(t => t.MovieId == movie.Id && t.Language == language)
-                .Select(t => t.Title)
-                .FirstOrDefaultAsync() ?? movie.Title;
+                .Select(t => new { t.Title, t.PosterPath })
+                .FirstOrDefaultAsync();
+            return (translation?.Title ?? movie.Title, translation?.PosterPath ?? movie.PosterPath);
+        }
 
         private Task<bool> HasTranslationAsync(int movieId, string language) =>
             _context.MovieTranslations.AnyAsync(t => t.MovieId == movieId && t.Language == language);
 
         // Saved on its own, outside the caller's pending changes; a concurrent
         // insert of the same title is not an error.
-        private Task SaveTranslationAsync(int movieId, string language, string title) =>
+        private Task SaveTranslationAsync(int movieId, string language, string title, string? posterPath) =>
             _context.Database.ExecuteSqlInterpolatedAsync(
-                $@"INSERT INTO ""MovieTranslations"" (""MovieId"", ""Language"", ""Title"", ""UpdatedAt"")
-                   VALUES ({movieId}, {language}, {title}, {DateTime.UtcNow})
+                $@"INSERT INTO ""MovieTranslations"" (""MovieId"", ""Language"", ""Title"", ""PosterPath"", ""UpdatedAt"")
+                   VALUES ({movieId}, {language}, {title}, {posterPath}, {DateTime.UtcNow})
                    ON CONFLICT DO NOTHING");
 
         // Fills in the genres of a movie that has none from TMDb (GenreBackfillWorker).
@@ -186,7 +194,7 @@ namespace SineUyum.Api.Services
             movie.GenresSyncedAt = DateTime.UtcNow;
             movie.TmdbVoteAverage = details.VoteAverage;
             await _context.SaveChangesAsync();
-            await SaveTranslationAsync(movieId, SupportedLanguages.Default, details.Title);
+            await SaveTranslationAsync(movieId, SupportedLanguages.Default, details.Title, details.PosterPath);
         }
 
         private async Task AttachGenresAsync(Movie movie, IReadOnlyList<(int Id, string Name)> genres)

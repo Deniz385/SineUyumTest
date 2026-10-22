@@ -68,19 +68,19 @@ namespace SineUyum.Api.Controllers
         public Task<IActionResult> GetMovieById(int movieId)
         {
             // Movie details rarely change; long TTL. Same request and key as
-            // MovieCatalogService. The title is remembered for the catalog if
-            // the movie is stored but has none in this language yet.
+            // MovieCatalogService. The title and poster are remembered for the
+            // catalog if the movie is stored but has none in this language yet.
             var language = SupportedLanguages.Current;
             var url = MovieCatalogService.DetailsUrl(_tmdbApiKey ?? string.Empty, language, movieId);
             return CachedTmdbJson(MovieCatalogService.DetailsCacheKey(language, movieId), url, TimeSpan.FromHours(24),
-                json => RememberTitleAsync(movieId, language, json));
+                json => RememberTranslationAsync(movieId, language, json));
         }
 
-        private async Task RememberTitleAsync(int movieId, string language, string json)
+        private async Task RememberTranslationAsync(int movieId, string language, string json)
         {
             try
             {
-                await _catalog.RememberTitleAsync(movieId, language, json);
+                await _catalog.RememberTranslationAsync(movieId, language, json);
             }
             catch (Exception ex) when (ex is System.Text.Json.JsonException or System.Data.Common.DbException)
             {

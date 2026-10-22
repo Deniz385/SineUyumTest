@@ -883,14 +883,15 @@ movie lovers; the core differentiating feature is the compatibility score.
       `sine_uyum_mobile/lib/l10n/app_<lang>.arb`) + registering the code in each
       platform's list of supported languages. See the "Localization" section of
       the root README.
-    - Movie titles in the local catalog are stored per language
-      (`MovieTranslations`; existing titles were kept as Turkish). A missing
-      title is fetched when someone opens or rates the movie in that language
+    - Movie titles and posters in the local catalog are stored per language
+      (`MovieTranslations`; existing ones were kept as Turkish; TMDb picks a
+      poster per language, often with the localized title on it). A missing
+      one is fetched when someone opens or rates the movie in that language
       (usually a cache hit, since it is the same request as the details page)
-      and `MovieTranslationWorker` fills in the rest (40 titles every 10
-      minutes); until then the stored title is shown. Notifications keep the
-      movie id, so "liked your review of …" shows the title in the reader's
-      language.
+      and `MovieTranslationWorker` fills in the rest (40 movies every 10
+      minutes); until then the stored title and poster are shown.
+      Notifications keep the movie id, so "liked your review of …" shows the
+      title in the reader's language.
     - Along the way: the catalog cached movie details without credits under the
       same key as the details page, so a details page could come back without
       the cast; both now use the same request.

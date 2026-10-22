@@ -74,7 +74,7 @@ namespace SineUyum.Api.Controllers
                     {
                         Id = s.Movie.Id,
                         Title = s.Movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? s.Movie.Title,
-                        PosterPath = s.Movie.PosterPath
+                        PosterPath = s.Movie.Translations.Where(t => t.Language == lang).Select(t => t.PosterPath).FirstOrDefault() ?? s.Movie.PosterPath
                     })
                     .ToListAsync();
 

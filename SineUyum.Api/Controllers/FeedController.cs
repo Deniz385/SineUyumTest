@@ -59,7 +59,7 @@ namespace SineUyum.Api.Controllers
                     r.User.ProfileImageUrl,
                     r.MovieId,
                     MovieTitle = r.Movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? r.Movie.Title,
-                    MoviePosterPath = r.Movie.PosterPath,
+                    MoviePosterPath = r.Movie.Translations.Where(t => t.Language == lang).Select(t => t.PosterPath).FirstOrDefault() ?? r.Movie.PosterPath,
                     r.Rating,
                     ReviewId = _context.Reviews.Where(v => v.UserId == r.UserId && v.MovieId == r.MovieId).Select(v => (int?)v.Id).FirstOrDefault()
                 })

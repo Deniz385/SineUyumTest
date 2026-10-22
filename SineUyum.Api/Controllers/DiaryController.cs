@@ -224,7 +224,7 @@ namespace SineUyum.Api.Controllers
                 {
                     Id = d.MovieId,
                     Title = d.Movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? d.Movie.Title,
-                    PosterPath = d.Movie.PosterPath
+                    PosterPath = d.Movie.Translations.Where(t => t.Language == lang).Select(t => t.PosterPath).FirstOrDefault() ?? d.Movie.PosterPath
                 },
                 WatchedOn = d.WatchedOn,
                 Rewatch = d.Rewatch,

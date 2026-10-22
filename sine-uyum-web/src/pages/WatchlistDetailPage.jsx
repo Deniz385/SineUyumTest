@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import api, { mediaUrl } from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import {
-    Box, Typography, CircularProgress, Grid, IconButton, Button, Modal, TextField, Avatar, AvatarGroup, Tooltip,
+    Box, Typography, Grid, IconButton, Button, Modal, TextField, Avatar, AvatarGroup, Tooltip,
     Chip, FormControlLabel, Switch,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -12,6 +12,11 @@ import EditIcon from '@mui/icons-material/Edit';
 import GroupIcon from '@mui/icons-material/Group';
 import LogoutIcon from '@mui/icons-material/Logout';
 import CheckIcon from '@mui/icons-material/Check';
+import MovieFilterIcon from '@mui/icons-material/MovieFilter';
+import TaskAltIcon from '@mui/icons-material/TaskAlt';
+import { LoadingState } from '../components/states/LoadingState';
+import { EmptyState } from '../components/states/EmptyState';
+import { ErrorState } from '../components/states/ErrorState';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
 import { WatchlistMembersDialog } from '../components/WatchlistMembersDialog';
 import { useSnackbar } from '../context/SnackbarProvider';
@@ -55,7 +60,10 @@ export const WatchlistDetailPage = () => {
 
     const fetchWatchlistDetails = useCallback(async ({ silent = false } = {}) => {
         if (!user) return;
-        if (!silent) setIsLoading(true);
+        if (!silent) {
+            setIsLoading(true);
+            setError('');
+        }
         try {
             let listData;
             try {
@@ -188,8 +196,8 @@ export const WatchlistDetailPage = () => {
         setWatchlist((current) => ({ ...current, members }));
     };
 
-    if (isLoading) return <CircularProgress />;
-    if (error) return <Typography color="error">{error}</Typography>;
+    if (isLoading) return <LoadingState />;
+    if (error) return <ErrorState message={error} onRetry={() => fetchWatchlistDetails()} />;
 
     const items = watchlist?.items || [];
     const visibleItems = onlyUnwatched ? items.filter((item) => !item.watchedBy?.length) : items;
@@ -253,11 +261,17 @@ export const WatchlistDetailPage = () => {
                 )}
 
                 {items.length === 0 ? (
-                    <Typography>{t('watchlist.noMovies')}</Typography>
+                    <EmptyState
+                        icon={MovieFilterIcon}
+                        title={t('watchlist.noMovies')}
+                        description={isMemberView ? t('watchlist.noMoviesHint') : undefined}
+                    />
                 ) : visibleItems.length === 0 ? (
-                    <Typography color="text.secondary">
-                        {isShared ? t('watchlist.filter.noneLeftShared') : t('watchlist.filter.noneLeftSolo')}
-                    </Typography>
+                    <EmptyState
+                        compact
+                        icon={TaskAltIcon}
+                        title={isShared ? t('watchlist.filter.noneLeftShared') : t('watchlist.filter.noneLeftSolo')}
+                    />
                 ) : (
                     <Grid container spacing={3}>
                         {visibleItems.map(item => (

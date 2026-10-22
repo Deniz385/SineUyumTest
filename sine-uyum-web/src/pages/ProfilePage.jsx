@@ -8,6 +8,8 @@ import MessageIcon from '@mui/icons-material/Message';
 import StarIcon from '@mui/icons-material/Star';
 import RateReviewIcon from '@mui/icons-material/RateReview';
 import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
+import PersonOffIcon from '@mui/icons-material/PersonOff';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { RecommendationModal } from '../components/RecommendationModal';
 import { FollowListModal } from '../components/FollowListModal';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
@@ -15,6 +17,9 @@ import { CompatibilityInsights } from '../components/CompatibilityInsights';
 import { FilmIdentityDialog } from '../components/FilmIdentityDialog';
 import { ProfileDiary } from '../components/ProfileDiary';
 import { useSnackbar } from '../context/SnackbarProvider';
+import { LoadingState } from '../components/states/LoadingState';
+import { EmptyState } from '../components/states/EmptyState';
+import { ErrorState } from '../components/states/ErrorState';
 
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
 
@@ -38,6 +43,7 @@ export const ProfilePage = () => {
     const [profileData, setProfileData] = useState(null);
     const [compatibility, setCompatibility] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    // 'notFound' (also a user who blocked you) or 'failed'.
     const [error, setError] = useState('');
     const [followStatus, setFollowStatus] = useState({ isFollowing: false, followerCount: 0, followingCount: 0 });
     const [isFollowLoading, setIsFollowLoading] = useState(false);
@@ -73,13 +79,11 @@ export const ProfilePage = () => {
             }
         } catch (err) {
             // A user who blocked you looks as if they don't exist (404).
-            setError(err.response?.status === 404
-                ? t('profile.notFound')
-                : t('profile.loadError'));
+            setError(err.response?.status === 404 ? 'notFound' : 'failed');
         } finally {
             setIsLoading(false);
         }
-    }, [userId, user, isMyProfile, t]);
+    }, [userId, user, isMyProfile]);
 
     useEffect(() => {
         fetchProfileData();
@@ -152,8 +156,9 @@ export const ProfilePage = () => {
         }
     };
 
-    if (isLoading) return <div className="page-container">{t('common.loadingEllipsis')}</div>;
-    if (error) return <div className="page-container message error-message">{error}</div>;
+    if (isLoading) return <LoadingState />;
+    if (error === 'notFound') return <EmptyState icon={PersonOffIcon} title={t('profile.notFound')} />;
+    if (error) return <ErrorState message={t('profile.loadError')} onRetry={fetchProfileData} />;
 
     const isRestricted = profileData?.isRestricted;
     const isBlockedByMe = profileData?.isBlockedByMe;
@@ -253,6 +258,9 @@ export const ProfilePage = () => {
                     <>
                         <hr />
                         <Typography variant="h5" component="h3" sx={{textAlign: 'left', mt: 3}}>{t('profile.allRated', { count: ratings.length || 0 })}</Typography>
+                        {ratings.length === 0 && (
+                            <EmptyState compact icon={StarBorderIcon} title={t('profile.noRatings')} />
+                        )}
                         <div className="rated-movies-grid">
                             {ratings.map(rating => (
                                 <div key={rating.movieId} className="rated-movie-card">

@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api, { mediaUrl } from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
-import { Box, Typography, CircularProgress, Grid, Card, CardContent, Avatar, Button, Chip } from '@mui/material';
+import { Box, Typography, Grid, Card, CardContent, Avatar, Button, Chip } from '@mui/material';
+import PersonSearchIcon from '@mui/icons-material/PersonSearch';
+import { LoadingState } from '../components/states/LoadingState';
+import { EmptyState } from '../components/states/EmptyState';
+import { ErrorState } from '../components/states/ErrorState';
 
 const UserResultCard = ({ user }) => {
     const { t } = useTranslation();
@@ -54,35 +58,33 @@ export const SearchResultsPage = () => {
     const query = searchParams.get('query');
     const { user } = useAuth();
 
-    const [users, setUsers] = useState([]);
+    // null until the first search finishes.
+    const [users, setUsers] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [message, setMessage] = useState('');
+    const [error, setError] = useState(false);
+
+    const fetchUsers = useCallback(async () => {
+        if (!query || !user) return;
+
+        setIsLoading(true);
+        setError(false);
+        setUsers(null);
+
+        try {
+            const response = await api.get(`/api/v1/account/search`, {
+                params: { query }
+            });
+            setUsers(response.data.$values || response.data);
+        } catch {
+            setError(true);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [query, user]);
 
     useEffect(() => {
-        const fetchUsers = async () => {
-            if (!query || !user) return;
-
-            setIsLoading(true);
-            setMessage('');
-            setUsers([]);
-
-            try {
-                const response = await api.get(`/api/v1/account/search`, {
-                    params: { query }
-                });
-                setUsers(response.data.$values || response.data);
-                if ((response.data.$values || response.data).length === 0) {
-                    setMessage(t('search.noResults', { query }));
-                }
-            } catch {
-                setMessage(t('search.error'));
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
         fetchUsers();
-    }, [query, user, t]);
+    }, [fetchUsers]);
 
     return (
         <div className="page-container">
@@ -90,14 +92,19 @@ export const SearchResultsPage = () => {
                 {t('search.title', { query })}
             </Typography>
 
-            {isLoading && <CircularProgress sx={{ my: 4 }} />}
-            {message && <Typography sx={{ my: 4 }}>{message}</Typography>}
-            
-            <Grid container spacing={3}>
-                {users.map(user => (
-                    <UserResultCard key={user.id} user={user} />
-                ))}
-            </Grid>
+            {isLoading ? (
+                <LoadingState />
+            ) : error ? (
+                <ErrorState message={t('search.error')} onRetry={fetchUsers} />
+            ) : users?.length === 0 ? (
+                <EmptyState icon={PersonSearchIcon} title={t('search.noResults', { query })} description={t('search.noResultsHint')} />
+            ) : (
+                <Grid container spacing={3}>
+                    {(users ?? []).map(user => (
+                        <UserResultCard key={user.id} user={user} />
+                    ))}
+                </Grid>
+            )}
         </div>
     );
 };

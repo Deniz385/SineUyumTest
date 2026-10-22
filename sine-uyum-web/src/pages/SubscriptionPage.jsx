@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Alert, Box, Typography, Button, Paper, List, ListItem, ListItemIcon, ListItemText, CircularProgress } from '@mui/material';
+import { Alert, Box, Typography, Button, Paper, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axiosConfig';
+import { LoadingState } from '../components/states/LoadingState';
+import { ErrorState } from '../components/states/ErrorState';
 
 const formatDate = (iso, language) => new Date(iso).toLocaleDateString(language, { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -18,6 +20,7 @@ export const SubscriptionPage = () => {
     const [error, setError] = useState('');
 
     const load = useCallback(async () => {
+        setError('');
         try {
             const response = await api.get('/api/v1/subscription');
             setStatus(response.data);
@@ -59,8 +62,8 @@ export const SubscriptionPage = () => {
                     </ListItem>
                 </List>
 
-                {error && <Alert severity="error">{error}</Alert>}
-                {!status && !error && <CircularProgress />}
+                {error && <ErrorState compact message={error} onRetry={load} />}
+                {!status && !error && <LoadingState compact />}
 
                 {status?.isActive && (
                     <>

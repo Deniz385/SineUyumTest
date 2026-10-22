@@ -18,6 +18,9 @@
     "delete": "Delete",
     "send": "Send"
   },
+  "states": {
+    "loadFailed": "Could not load this content."
+  },
   "language": {
     "label": "Language",
     "change": "Change language"
@@ -31,12 +34,19 @@
     "logout": "Log Out",
     "openMenu": "Open menu",
     "toggleTheme": "Toggle theme",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "account": "Account",
+    "signedInAs": "Signed in as @{{userName}}",
+    "editProfile": "Edit profile",
+    "privacy": "Privacy settings",
+    "darkTheme": "Dark theme",
+    "lightTheme": "Light theme"
   },
   "notifications": {
     "title": "Notifications",
     "markAllRead": "Mark All as Read",
     "empty": "No new notifications.",
+    "loadError": "Could not load notifications.",
     "justNow": "just now"
   },
   "search": {
@@ -47,6 +57,7 @@
     "noBio": "This user has no bio yet.",
     "goToProfile": "Go to Profile",
     "noResults": "No results found for '{{query}}'.",
+    "noResultsHint": "Check the spelling or try part of the username.",
     "error": "Something went wrong while searching for users."
   },
   "errorBoundary": {
@@ -81,7 +92,8 @@
   "home": {
     "title": "Discover",
     "popular": "Popular Movies",
-    "nowPlaying": "Now Playing"
+    "nowPlaying": "Now Playing",
+    "loadError": "Could not load the movies."
   },
   "feed": {
     "title": "Feed",
@@ -113,6 +125,7 @@
     "discard": "Cancel",
     "post": "Post",
     "empty": "No other reviews yet. Be the first to write one.",
+    "loadFailed": "Could not load the reviews.",
     "compatibilityTooltip": "How well your taste in film matches this person's",
     "compatibilityChip": "{{compatibility}}% match",
     "spoilerReveal": "Contains spoilers — show",
@@ -156,6 +169,7 @@
   },
   "recommendations": {
     "title": "Movie Recommendations Based on Your Shared Taste with {{userName}}",
+    "emptyTitle": "No recommendations yet",
     "empty": "No recommendations suit you both yet. Try giving high ratings to more of the movies you have in common."
   },
   "follow": {
@@ -211,6 +225,7 @@
     "dateInFuture": "The date can't be in the future.",
     "dateTooEarly": "The date can't be before 1900.",
     "rewatch": "Rewatch",
+    "lastLogged": "Last logged on {{date}}",
     "note": "Note (optional)",
     "noteCounter": "{{length}}/{{max}}",
     "ratingOptional": "Your rating (optional)",
@@ -234,7 +249,7 @@
     "monthCount_one": "{{month}}: {{count}} film",
     "monthCount_other": "{{month}}: {{count}} films",
     "empty": "No films logged in {{year}} yet.",
-    "emptyMine": "No films logged in {{year}} yet. Use \"Add to diary\" on a movie's page to log one.",
+    "emptyMineHint": "Use \"Add to diary\" on a movie's page to log one.",
     "private": "This user keeps their diary private.",
     "unavailable": "This diary is not available.",
     "loadFailed": "Could not load the diary."
@@ -311,6 +326,7 @@
     "getRecommendations": "Get Shared Movie Recommendations",
     "topRated": "\u2728 Movies Rated 10/10",
     "allRated": "All Rated Movies ({{count}})",
+    "noRatings": "No rated movies yet.",
     "givenRating": "Rating: {{rating}}/10",
     "posterAlt": "{{title}} poster",
     "userFallback": "this user",
@@ -320,7 +336,8 @@
   "watchlist": {
     "title": "My Watchlists",
     "create": "Create New List",
-    "empty": "You don't have any watchlists yet. Create one now!",
+    "emptyTitle": "You don't have any watchlists yet",
+    "emptyBody": "Create a list to keep track of the movies you want to watch, alone or with friends.",
     "movieCount_one": "{{count}} movie",
     "movieCount_other": "{{count}} movies",
     "name": "List Name",
@@ -332,6 +349,7 @@
     "edit": "Edit List",
     "delete": "Delete List",
     "noMovies": "There are no movies in this list yet.",
+    "noMoviesHint": "Add movies from a movie's page with the \"Add to List\" button.",
     "removeMovie": "Remove movie",
     "removeMovieTitle": "Remove Movie?",
     "removeMovieBody": "Are you sure you want to permanently remove this movie from the list?",
@@ -402,10 +420,13 @@
   "messages": {
     "title": "Messages",
     "empty": "You don't have any conversations yet.",
+    "emptyHint": "Open someone's profile and choose \"Send Message\" to start a conversation.",
     "loadError": "Something went wrong while loading your conversations."
   },
   "conversation": {
     "fallbackTitle": "Chat",
+    "loadError": "Could not load the messages.",
+    "empty": "No messages yet. Say hello!",
     "movieSuggestion": "Movie suggestion:",
     "watchlist": "Watchlist:",
     "seen": "Seen {{time}}",
@@ -414,7 +435,8 @@
     "placeholder": "Write a message...",
     "sendFailed": "Could not send the message.",
     "whichList": "Which list do you want to share?",
-    "noListsToShare": "You don't have any lists to share yet."
+    "noListsToShare": "You don't have any lists to share yet.",
+    "listsLoadFailed": "Could not load your lists."
   },
   "event": {
     "title": "My Event",
@@ -430,7 +452,7 @@
     "voteCount_other": "{{count}} Votes",
     "joinFailed": "Something went wrong while joining the event.",
     "voteFailed": "There was a problem saving your vote.",
-    "statusUnavailable": "Could not get the event status. Please reload the page.",
+    "statusUnavailable": "Could not get the event status.",
     "none": "There are no new events you can join. Please check back later.",
     "loadError": "Something went wrong while loading event information."
   },
@@ -455,6 +477,7 @@
     "eventDate": "Event Date and Time",
     "groupSize": "Group Size",
     "existingEvents": "Existing Events",
+    "noEvents": "No events yet.",
     "eventSummary": "Date: {{date}} - Participants: {{participants}} - Group: {{groupSize}} people",
     "match": "Match",
     "loadFailed": "Could not load events.",

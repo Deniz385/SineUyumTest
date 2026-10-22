@@ -3,7 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Box, Typography, TextField, Button, CircularProgress, Paper, Grid, List, ListItem, ListItemText, Divider, IconButton, Modal } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EventBusyIcon from '@mui/icons-material/EventBusy';
 import api from '../api/axiosConfig';
+import { LoadingState } from '../components/states/LoadingState';
+import { EmptyState } from '../components/states/EmptyState';
+import { ErrorState } from '../components/states/ErrorState';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
 import { useSnackbar } from '../context/SnackbarProvider';
 
@@ -52,6 +56,7 @@ export const AdminPage = () => {
     const { t, i18n } = useTranslation();
     const [events, setEvents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editingEvent, setEditingEvent] = useState(null);
     const [dialog, setDialog] = useState({ isOpen: false, title: '', description: '', onConfirm: null });
@@ -59,15 +64,16 @@ export const AdminPage = () => {
 
     const fetchEvents = useCallback(async () => {
         setIsLoading(true);
+        setLoadError(false);
         try {
             const response = await api.get('/api/v1/event');
             setEvents(response.data.$values || response.data);
         } catch {
-            showSnackbar(t('admin.loadFailed'), 'error');
+            setLoadError(true);
         } finally {
             setIsLoading(false);
         }
-    }, [showSnackbar, t]);
+    }, []);
 
     useEffect(() => {
         fetchEvents();
@@ -176,7 +182,11 @@ export const AdminPage = () => {
                     <Grid size={{ xs: 12, md: 8 }}>
                         <Paper sx={{ p: 2 }}>
                             <Typography variant="h5" component="h2" gutterBottom>{t('admin.existingEvents')}</Typography>
-                            {isLoading ? <CircularProgress /> : (
+                            {isLoading ? <LoadingState compact /> : loadError ? (
+                                <ErrorState compact message={t('admin.loadFailed')} onRetry={fetchEvents} />
+                            ) : events.length === 0 ? (
+                                <EmptyState compact icon={EventBusyIcon} title={t('admin.noEvents')} />
+                            ) : (
                                 <List>
                                     {events.map((event, index) => (
                                         <React.Fragment key={event.id}>

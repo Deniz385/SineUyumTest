@@ -1,7 +1,10 @@
 import React from 'react';
-import { Modal, Box, Typography, Grid, CircularProgress } from '@mui/material';
+import { Modal, Box, Typography, Grid } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import MovieFilterIcon from '@mui/icons-material/MovieFilter';
+import { LoadingState } from './states/LoadingState';
+import { EmptyState } from './states/EmptyState';
 
 const style = {
   position: 'absolute',
@@ -29,13 +32,9 @@ export const RecommendationModal = ({ open, onClose, recommendations, isLoading,
           {t('recommendations.title', { userName: targetUserName })}
         </Typography>
         {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
-            <CircularProgress />
-          </Box>
+          <LoadingState compact />
         ) : recommendations.length === 0 ? (
-          <Typography sx={{ mt: 2 }}>
-            {t('recommendations.empty')}
-          </Typography>
+          <EmptyState compact icon={MovieFilterIcon} title={t('recommendations.emptyTitle')} description={t('recommendations.empty')} />
         ) : (
           <Grid container spacing={2} sx={{ mt: 2 }}>
             {recommendations.map(movie => (

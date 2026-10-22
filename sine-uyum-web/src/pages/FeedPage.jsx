@@ -2,9 +2,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../api/axiosConfig';
-import { Box, Button, Card, CardContent, CircularProgress, Stack, Typography } from '@mui/material';
+import { Box, Button, Card, CardContent, Stack, Typography } from '@mui/material';
+import DynamicFeedIcon from '@mui/icons-material/DynamicFeed';
 import { AuthorLine, ReviewCard } from '../components/ReviewCard';
 import { TasteTwinCard } from '../components/TasteTwinCard';
+import { LoadingState } from '../components/states/LoadingState';
+import { EmptyState } from '../components/states/EmptyState';
+import { ErrorState } from '../components/states/ErrorState';
 
 const POSTER = 'https://image.tmdb.org/t/p/w92';
 
@@ -54,21 +58,27 @@ export const FeedPage = () => {
         setIsLoadingMore(false);
     };
 
-    if (items === null) return <CircularProgress sx={{ mt: 6 }} />;
+    const retry = () => {
+        setError(false);
+        setItems(null);
+        load(null);
+    };
+
+    if (items === null) return <LoadingState />;
 
     return (
         <Box className="page-container" sx={{ maxWidth: 720, width: '100%' }}>
             <Typography variant="h4" component="h1" gutterBottom>{t('feed.title')}</Typography>
             <TasteTwinCard />
-            {error && <Typography color="error" sx={{ mb: 2 }}>{t('feed.loadError')}</Typography>}
-            {items.length === 0 && !error ? (
-                <Box sx={{ mt: 4 }}>
-                    <Typography variant="h6">{t('feed.emptyTitle')}</Typography>
-                    <Typography color="text.secondary" sx={{ mb: 2 }}>
-                        {t('feed.emptyBody')}
-                    </Typography>
-                    <Button component={Link} to="/home" variant="contained">{t('feed.browseMovies')}</Button>
-                </Box>
+            {items.length === 0 && error ? (
+                <ErrorState message={t('feed.loadError')} onRetry={retry} />
+            ) : items.length === 0 ? (
+                <EmptyState
+                    icon={DynamicFeedIcon}
+                    title={t('feed.emptyTitle')}
+                    description={t('feed.emptyBody')}
+                    action={<Button component={Link} to="/home" variant="contained">{t('feed.browseMovies')}</Button>}
+                />
             ) : (
                 <Stack spacing={2}>
                     {items.map((item) => item.review
@@ -77,7 +87,11 @@ export const FeedPage = () => {
                         : <RatedItem key={`p-${item.author.id}-${item.movie.id}`} item={item} />)}
                 </Stack>
             )}
-            {cursor && (
+            {/* A failed "Load more" keeps what is already shown. */}
+            {error && items.length > 0 && !isLoadingMore && (
+                <ErrorState compact message={t('feed.loadError')} onRetry={cursor ? loadMore : retry} sx={{ mt: 2 }} />
+            )}
+            {cursor && (!error || isLoadingMore) && (
                 <Button sx={{ mt: 2 }} onClick={loadMore} disabled={isLoadingMore}>
                     {isLoadingMore ? t('common.loadingEllipsis') : t('common.loadMore')}
                 </Button>

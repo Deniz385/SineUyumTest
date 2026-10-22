@@ -16,6 +16,8 @@ export const useNotifications = () => {
 //   MessagesRead        → "Seen" receipts (listened to via subscribeToReads)
 export const NotificationProvider = ({ children }) => {
     const [notifications, setNotifications] = useState([]);
+    // The last load failed: the notification menu offers "Try again".
+    const [loadError, setLoadError] = useState(false);
     const { user } = useAuth();
     const { showSnackbar } = useSnackbar();
     const { i18n } = useTranslation();
@@ -36,7 +38,9 @@ export const NotificationProvider = ({ children }) => {
         try {
             const response = await api.get('/api/v1/notification');
             setNotifications(response.data);
+            setLoadError(false);
         } catch (error) {
+            setLoadError(true);
             console.error('Could not load notifications:', error);
         }
     }, [user]);
@@ -151,6 +155,8 @@ export const NotificationProvider = ({ children }) => {
     const value = {
         notifications,
         unreadCount: notifications.filter(n => !n.isRead).length,
+        notificationsLoadError: loadError,
+        reloadNotifications: fetchNotifications,
         markAsRead,
         markAllAsRead,
         subscribeToMessages,

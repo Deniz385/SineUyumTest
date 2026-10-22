@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Rating, Switch, TextField, Typography } from '@mui/material';
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, FormHelperText, Rating, Switch, TextField, Typography } from '@mui/material';
 import api from '../api/axiosConfig';
 import { useSnackbar } from '../context/SnackbarProvider';
-import { EARLIEST_WATCHED_ON, todayIsoDay } from './diaryDates';
+import { EARLIEST_WATCHED_ON, formatIsoDay, todayIsoDay } from './diaryDates';
 
 const DIARY_NOTE_MAX = 500;
 
 // The form lives in its own component: the Dialog unmounts its content when
 // closed, so every opening starts from fresh state.
 const DiaryEntryForm = ({ movie, entry, initialRating, onClose, onSaved }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { showSnackbar } = useSnackbar();
     const isEdit = Boolean(entry);
     const today = todayIsoDay();
@@ -19,6 +19,32 @@ const DiaryEntryForm = ({ movie, entry, initialRating, onClose, onSaved }) => {
     const [note, setNote] = useState(entry?.note ?? '');
     const [rating, setRating] = useState(initialRating ?? null);
     const [isSaving, setIsSaving] = useState(false);
+    // Day of my latest entry for this movie (create mode only).
+    const [lastLoggedOn, setLastLoggedOn] = useState(null);
+    // Once the switch is touched, a late lookup must not override the choice.
+    const rewatchTouched = useRef(false);
+
+    // Logging a movie that is already in my diary is most likely a rewatch:
+    // "Rewatch" starts checked. The lookup is only a hint, so a failure is ignored.
+    const movieId = movie?.id;
+    useEffect(() => {
+        if (isEdit || movieId == null) return undefined;
+        let cancelled = false;
+        api.get(`/api/v1/diary/movie/${movieId}`)
+            .then((res) => {
+                const latest = Array.isArray(res.data) ? res.data[0] : null;
+                if (cancelled || !latest?.watchedOn) return;
+                setLastLoggedOn(latest.watchedOn);
+                if (!rewatchTouched.current) setRewatch(true);
+            })
+            .catch(() => {});
+        return () => { cancelled = true; };
+    }, [isEdit, movieId]);
+
+    const changeRewatch = (checked) => {
+        rewatchTouched.current = true;
+        setRewatch(checked);
+    };
 
     // "yyyy-MM-dd" strings compare correctly as text.
     const dateError = !watchedOn
@@ -78,10 +104,23 @@ const DiaryEntryForm = ({ movie, entry, initialRating, onClose, onSaved }) => {
                     sx={{ mt: 1 }}
                     slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: today, min: EARLIEST_WATCHED_ON } }}
                 />
-                <FormControlLabel
-                    control={<Switch checked={rewatch} onChange={(e) => setRewatch(e.target.checked)} />}
-                    label={t('diary.rewatch')}
-                />
+                <Box>
+                    <FormControlLabel
+                        control={(
+                            <Switch
+                                checked={rewatch}
+                                onChange={(e) => changeRewatch(e.target.checked)}
+                                slotProps={{ input: { 'aria-describedby': lastLoggedOn ? 'diary-last-logged' : undefined } }}
+                            />
+                        )}
+                        label={t('diary.rewatch')}
+                    />
+                    {lastLoggedOn && (
+                        <FormHelperText id="diary-last-logged" data-testid="diary-last-logged" sx={{ mt: 0, mx: 0 }}>
+                            {t('diary.lastLogged', { date: formatIsoDay(lastLoggedOn, i18n.language) })}
+                        </FormHelperText>
+                    )}
+                </Box>
                 <TextField
                     label={t('diary.note')}
                     value={note}

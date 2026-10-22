@@ -5,11 +5,15 @@ import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { useSnackbar } from '../context/SnackbarProvider';
-import { Box, Typography, CircularProgress, TextField, IconButton, Modal, Card, CardMedia, List, ListItem, ListItemButton, ListItemText, Divider } from '@mui/material';
+import { Box, Typography, TextField, IconButton, Modal, Card, CardMedia, List, ListItem, ListItemButton, ListItemText, Divider } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import { MovieSearchBar } from '../components/MovieSearchBar';
+import { LoadingState } from '../components/states/LoadingState';
+import { EmptyState } from '../components/states/EmptyState';
+import { ErrorState } from '../components/states/ErrorState';
 
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
 
@@ -69,9 +73,12 @@ export const ConversationPage = () => {
     const [searchParams] = useSearchParams();
     const [newMessage, setNewMessage] = useState(() => searchParams.get('draft') ?? '');
     const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
     const [isMovieModalOpen, setIsMovieModalOpen] = useState(false);
     const [isWatchlistModalOpen, setIsWatchlistModalOpen] = useState(false);
-    const [userLists, setUserLists] = useState([]);
+    // null while loading; listsError when they could not be loaded.
+    const [userLists, setUserLists] = useState(null);
+    const [listsError, setListsError] = useState(false);
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -95,7 +102,9 @@ export const ConversationPage = () => {
                 const profileResponse = await api.get(`/api/v1/profile/${otherUserId}`);
                 setOtherUser(profileResponse.data);
             }
+            setLoadError(false);
         } catch (err) {
+            setLoadError(true);
             console.error("Could not load messages:", err);
         } finally {
             setIsLoading(false);
@@ -186,14 +195,21 @@ export const ConversationPage = () => {
         handleSendMessage({ movieId: movie.id });
     };
 
-    const handleOpenWatchlistModal = async () => {
-        setIsWatchlistModalOpen(true);
+    const loadUserLists = async () => {
+        setUserLists(null);
+        setListsError(false);
         try {
             const response = await api.get(`/api/v1/watchlist`);
             setUserLists(response.data || []);
         } catch (err) {
+            setListsError(true);
             console.error("Could not load lists:", err);
         }
+    };
+
+    const handleOpenWatchlistModal = () => {
+        setIsWatchlistModalOpen(true);
+        loadUserLists();
     };
 
     const handleListSelectAndSend = (listId) => {
@@ -207,7 +223,14 @@ export const ConversationPage = () => {
         handleSendMessage({ content: newMessage.trim() });
     };
 
-    if (isLoading) return <CircularProgress />;
+    const retry = () => {
+        setLoadError(false);
+        setIsLoading(true);
+        fetchThread();
+    };
+
+    if (isLoading) return <LoadingState />;
+    if (loadError && messages.length === 0) return <ErrorState message={t('conversation.loadError')} onRetry={retry} />;
 
     return (
         <>
@@ -218,6 +241,9 @@ export const ConversationPage = () => {
                     </Typography>
                 </Box>
                 <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {messages.length === 0 && (
+                        <EmptyState compact icon={ChatBubbleOutlineIcon} title={t('conversation.empty')} sx={{ my: 'auto' }} />
+                    )}
                     {messages.map(msg => (
                         <Box key={msg.id} sx={{ alignSelf: msg.senderId === user.id ? 'flex-end' : 'flex-start', maxWidth: '70%' }}>
                             <Box sx={{
@@ -262,13 +288,19 @@ export const ConversationPage = () => {
                 <Box sx={modalStyle}>
                     <Typography variant="h6" component="h2">{t('conversation.whichList')}</Typography>
                     <List sx={{ mt: 2 }}>
-                        {userLists.length > 0 ? userLists.map((list) => (
+                        {listsError ? (
+                            <ErrorState compact message={t('conversation.listsLoadFailed')} onRetry={loadUserLists} />
+                        ) : userLists === null ? (
+                            <LoadingState compact />
+                        ) : userLists.length > 0 ? userLists.map((list) => (
                             <ListItem key={list.id} disablePadding>
                                 <ListItemButton onClick={() => handleListSelectAndSend(list.id)}>
                                     <ListItemText primary={list.name} secondary={t('watchlist.movieCount', { count: list.itemCount })} />
                                 </ListItemButton>
                             </ListItem>
-                        )) : (<Typography>{t('conversation.noListsToShare')}</Typography>)}
+                        )) : (
+                            <EmptyState compact icon={PlaylistAddIcon} title={t('conversation.noListsToShare')} />
+                        )}
                     </List>
                 </Box>
             </Modal>

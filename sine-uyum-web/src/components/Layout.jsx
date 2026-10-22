@@ -1,9 +1,9 @@
 import { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Box, CircularProgress } from '@mui/material';
 import { Navbar } from './Navbar';
 import { ErrorBoundary } from './ErrorBoundary';
+import { LoadingState } from './states/LoadingState';
 
 const layoutStyle = {
   display: 'flex',
@@ -19,14 +19,7 @@ const mainStyle = {
   justifyContent: 'center',
 };
 
-export const PageLoader = () => {
-  const { t } = useTranslation();
-  return (
-    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 6 }}>
-      <CircularProgress aria-label={t('common.loading')} />
-    </Box>
-  );
-};
+export const PageLoader = () => <LoadingState />;
 
 export const Layout = () => {
   const location = useLocation();

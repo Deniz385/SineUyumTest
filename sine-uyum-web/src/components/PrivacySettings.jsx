@@ -1,10 +1,12 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api, { mediaUrl } from '../api/axiosConfig';
 import { useSnackbar } from '../context/SnackbarProvider';
+import { LoadingState } from './states/LoadingState';
+import { ErrorState } from './states/ErrorState';
 import {
-    Avatar, Box, Button, CircularProgress, Divider, FormControl, FormControlLabel, InputLabel,
+    Avatar, Box, Button, Divider, FormControl, FormControlLabel, InputLabel,
     List, ListItem, ListItemAvatar, ListItemText, MenuItem, Select, Switch, Typography
 } from '@mui/material';
 
@@ -30,6 +32,9 @@ export const PrivacySettings = () => {
     const [blocked, setBlocked] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
     const [loadError, setLoadError] = useState(false);
+    const location = useLocation();
+    // Navigation (e.g. the account menu's "Privacy settings") already scrolled for.
+    const scrolledFor = useRef(null);
 
     const load = useCallback(async () => {
         setLoadError(false);
@@ -48,6 +53,13 @@ export const PrivacySettings = () => {
     useEffect(() => {
         load();
     }, [load]);
+
+    // /profile/edit#privacy opens the page at this section, once it has loaded.
+    useEffect(() => {
+        if (!settings || location.hash !== '#privacy' || scrolledFor.current === location.key) return;
+        scrolledFor.current = location.key;
+        document.getElementById('privacy')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, [settings, location.hash, location.key]);
 
     const save = async (patch) => {
         const previous = settings;
@@ -77,17 +89,12 @@ export const PrivacySettings = () => {
     };
 
     if (loadError) {
-        return (
-            <Box sx={{ mt: 4 }}>
-                <Typography color="error">{t('privacy.loadError')}</Typography>
-                <Button onClick={load}>{t('common.retry')}</Button>
-            </Box>
-        );
+        return <ErrorState compact message={t('privacy.loadError')} onRetry={load} sx={{ mt: 4 }} />;
     }
-    if (!settings) return <CircularProgress sx={{ mt: 4 }} />;
+    if (!settings) return <LoadingState compact sx={{ mt: 4 }} />;
 
     return (
-        <Box sx={{ mt: 5, textAlign: 'left' }} data-testid="privacy-settings">
+        <Box id="privacy" sx={{ mt: 5, textAlign: 'left', scrollMarginTop: 16 }} data-testid="privacy-settings">
             <Typography variant="h5" component="h2" gutterBottom>{t('privacy.title')}</Typography>
 
             <FormControl fullWidth margin="normal">

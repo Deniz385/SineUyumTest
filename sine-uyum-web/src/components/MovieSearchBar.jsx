@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../api/axiosConfig';
-import { Autocomplete, TextField, CircularProgress, Box } from '@mui/material';
+import { Autocomplete, TextField, CircularProgress, Box, InputAdornment } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 import { useAuth } from '../context/AuthContext';
 
 export const MovieSearchBar = ({ onMovieSelect }) => {
@@ -60,7 +61,7 @@ export const MovieSearchBar = ({ onMovieSelect }) => {
   return (
     <Autocomplete
       id="movie-search-autocomplete"
-      sx={{ width: '100%', marginRight: 2 }}
+      sx={{ width: '100%' }}
       open={open}
       onOpen={() => setOpen(true)}
       onClose={() => setOpen(false)}
@@ -78,11 +79,18 @@ export const MovieSearchBar = ({ onMovieSelect }) => {
         <TextField
           {...params}
           placeholder={t('search.moviesPlaceholder')}
+          inputProps={{ ...params.inputProps, 'aria-label': t('search.moviesPlaceholder') }}
           variant="outlined"
           size="small"
           InputProps={{
             ...params.InputProps,
-            style: onMovieSelect ? {} : { color: 'white' }, 
+            style: onMovieSelect ? {} : { color: 'white' },
+            // In the navbar it matches the user search box next to it.
+            startAdornment: onMovieSelect ? params.InputProps.startAdornment : (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" sx={{ color: '#adb5bd' }} />
+              </InputAdornment>
+            ),
             endAdornment: (
               <>
                 {loading ? <CircularProgress color="inherit" size={20} /> : null}

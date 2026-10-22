@@ -3,12 +3,16 @@ import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
-import { Box, Typography, Chip, CircularProgress, Button, IconButton, Modal, List, ListItem, ListItemButton, ListItemText, Divider, Tooltip } from '@mui/material';
+import { Box, Typography, Chip, Button, IconButton, Modal, List, ListItem, ListItemButton, ListItemText, Divider, Tooltip } from '@mui/material';
 import { RatingModal } from '../components/RatingModal';
 import { MovieReviews } from '../components/MovieReviews';
 import { DiaryEntryDialog } from '../components/DiaryEntryDialog';
 import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd';
 import EditCalendarIcon from '@mui/icons-material/EditCalendar';
+import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
+import { LoadingState } from '../components/states/LoadingState';
+import { EmptyState } from '../components/states/EmptyState';
+import { ErrorState } from '../components/states/ErrorState';
 import { useSnackbar } from '../context/SnackbarProvider';
 
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
@@ -35,7 +39,9 @@ export const MovieDetailPage = () => {
     const [error, setError] = useState('');
     const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
     const [isWatchlistModalOpen, setIsWatchlistModalOpen] = useState(false);
-    const [userLists, setUserLists] = useState([]);
+    // null while loading; listsError when they could not be loaded.
+    const [userLists, setUserLists] = useState(null);
+    const [listsError, setListsError] = useState(false);
     const [refetchTrigger, setRefetchTrigger] = useState(0);
     const [reviewsKey, setReviewsKey] = useState(0);
     // "For you" score: the rating from people who share your taste (arrives with the reviews).
@@ -47,6 +53,7 @@ export const MovieDetailPage = () => {
     const fetchMovieDetails = useCallback(async () => {
         if (!user) return;
         setIsLoading(true);
+        setError('');
         try {
             const response = await api.get(`/api/v1/movies/${movieId}`);
             setMovie(response.data);
@@ -61,15 +68,21 @@ export const MovieDetailPage = () => {
         fetchMovieDetails();
     }, [fetchMovieDetails, refetchTrigger]);
     
-    const handleOpenWatchlistModal = async () => {
-        setIsWatchlistModalOpen(true);
+    const loadUserLists = async () => {
+        setUserLists(null);
+        setListsError(false);
         try {
             const response = await api.get(`/api/v1/watchlist`);
             // Older API responses wrapped arrays in $values.
             setUserLists(response.data.$values || response.data);
         } catch {
-            showSnackbar(t('movie.listsLoadFailed'), 'error');
+            setListsError(true);
         }
+    };
+
+    const handleOpenWatchlistModal = () => {
+        setIsWatchlistModalOpen(true);
+        loadUserLists();
     };
 
     const handleAddMovieToList = async (listId) => {
@@ -110,8 +123,8 @@ export const MovieDetailPage = () => {
         if (entry.rating !== myRating) setReviewsKey(prev => prev + 1);
     };
 
-    if (isLoading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
-    if (error) return <div className="page-container"><Typography color="error">{error}</Typography></div>;
+    if (isLoading) return <LoadingState />;
+    if (error) return <ErrorState message={error} onRetry={fetchMovieDetails} />;
     if (!movie) return null;
 
     const tmdbScore = Math.round(movie.vote_average * 10);
@@ -171,13 +184,19 @@ export const MovieDetailPage = () => {
                 <Box sx={modalStyle}>
                     <Typography variant="h6" component="h2">{t('movie.whichList')}</Typography>
                     <List sx={{ mt: 2 }}>
-                        {userLists.length > 0 ? userLists.map((list) => (
+                        {listsError ? (
+                            <ErrorState compact message={t('movie.listsLoadFailed')} onRetry={loadUserLists} />
+                        ) : userLists === null ? (
+                            <LoadingState compact />
+                        ) : userLists.length > 0 ? userLists.map((list) => (
                             <ListItem key={list.id} disablePadding>
                                 <ListItemButton onClick={() => handleAddMovieToList(list.id)}>
                                     <ListItemText primary={list.name} />
                                 </ListItemButton>
                             </ListItem>
-                        )) : (<Typography>{t('movie.noLists')}</Typography>)}
+                        )) : (
+                            <EmptyState compact icon={PlaylistAddIcon} title={t('movie.noLists')} />
+                        )}
                          <Divider sx={{ my: 1 }} />
                          <ListItem disablePadding>
                             <ListItemButton component={Link} to="/watchlist">

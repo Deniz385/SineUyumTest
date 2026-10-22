@@ -2,8 +2,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api/axiosConfig';
 import { useSnackbar } from '../context/SnackbarProvider';
-import { Alert, Box, Button, Checkbox, CircularProgress, FormControlLabel, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Checkbox, FormControlLabel, Stack, TextField, Typography } from '@mui/material';
+import RateReviewIcon from '@mui/icons-material/RateReview';
 import { ReviewCard } from './ReviewCard';
+import { LoadingState } from './states/LoadingState';
+import { ErrorState } from './states/ErrorState';
+import { EmptyState } from './states/EmptyState';
 
 const PAGE_SIZE = 20;
 
@@ -18,8 +22,11 @@ export const MovieReviews = ({ movieId, refreshKey, onForYou, onMyRating }) => {
     const [draft, setDraft] = useState({ text: '', containsSpoilers: false });
     const [isSaving, setIsSaving] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
+    // The first page could not be loaded (a failed "Load more" keeps the list).
+    const [loadError, setLoadError] = useState(false);
 
     const load = useCallback(async (nextPage = 1) => {
+        if (nextPage === 1) setLoadError(false);
         try {
             const res = await api.get(`/api/v1/reviews/movie/${movieId}`, { params: { page: nextPage, pageSize: PAGE_SIZE } });
             setData(res.data);
@@ -34,9 +41,10 @@ export const MovieReviews = ({ movieId, refreshKey, onForYou, onMyRating }) => {
                 setIsEditing(!res.data.mine);
             }
         } catch {
-            setData((prev) => prev ?? { reviews: [], totalCount: 0 });
+            if (nextPage === 1) setLoadError(true);
+            else showSnackbar(t('reviews.loadFailed'), 'error');
         }
-    }, [movieId, onForYou, onMyRating]);
+    }, [movieId, onForYou, onMyRating, showSnackbar, t]);
 
     useEffect(() => { load(1); }, [load, refreshKey]);
 
@@ -66,7 +74,15 @@ export const MovieReviews = ({ movieId, refreshKey, onForYou, onMyRating }) => {
         }
     };
 
-    if (!data) return <CircularProgress sx={{ my: 3 }} />;
+    if (loadError) {
+        return (
+            <Box sx={{ mt: 5, textAlign: 'left' }} data-testid="movie-reviews">
+                <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2 }}>{t('reviews.title')}</Typography>
+                <ErrorState compact message={t('reviews.loadFailed')} onRetry={() => load(1)} />
+            </Box>
+        );
+    }
+    if (!data) return <LoadingState compact sx={{ my: 3 }} />;
 
     return (
         <Box sx={{ mt: 5, textAlign: 'left' }} data-testid="movie-reviews">
@@ -111,7 +127,7 @@ export const MovieReviews = ({ movieId, refreshKey, onForYou, onMyRating }) => {
                 {reviews.map((r) => <ReviewCard key={r.id} review={r} />)}
             </Stack>
             {reviews.length === 0 && (
-                <Typography color="text.secondary">{t('reviews.empty')}</Typography>
+                <EmptyState compact icon={RateReviewIcon} title={t('reviews.empty')} />
             )}
             {reviews.length < data.totalCount && (
                 <Button sx={{ mt: 2 }} onClick={() => load(page + 1)}>{t('common.loadMore')}</Button>

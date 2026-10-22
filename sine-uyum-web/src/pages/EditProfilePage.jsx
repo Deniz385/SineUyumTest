@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import api, { mediaUrl } from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Avatar, Box, TextField, Button, Typography, CircularProgress, Stack } from '@mui/material';
+import { LoadingState } from '../components/states/LoadingState';
+import { ErrorState } from '../components/states/ErrorState';
 import { useSnackbar } from '../context/SnackbarProvider';
 import { PrivacySettings } from '../components/PrivacySettings';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
@@ -53,11 +55,15 @@ export const EditProfilePage = () => {
         profileImageUrl: ''
     });
     const [isLoading, setIsLoading] = useState(true);
+    // Without the current profile the form would save an empty bio over it.
+    const [loadError, setLoadError] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
 
     const fetchProfileData = useCallback(async () => {
         if (!user) return;
+        setIsLoading(true);
+        setLoadError(false);
         try {
             const response = await api.get(`/api/v1/profile/${user.id}`);
             const profile = response.data;
@@ -66,11 +72,11 @@ export const EditProfilePage = () => {
                 profileImageUrl: profile.profileImageUrl || ''
             });
         } catch {
-            showSnackbar(t('editProfile.loadFailed'), 'error');
+            setLoadError(true);
         } finally {
             setIsLoading(false);
         }
-    }, [user, showSnackbar, t]);
+    }, [user]);
 
     useEffect(() => {
         fetchProfileData();
@@ -126,7 +132,10 @@ export const EditProfilePage = () => {
     };
 
     if (isLoading) {
-        return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
+        return <LoadingState />;
+    }
+    if (loadError) {
+        return <ErrorState message={t('editProfile.loadFailed')} onRetry={fetchProfileData} />;
     }
 
     return (

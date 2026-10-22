@@ -15,6 +15,10 @@ export const parseIsoDay = (iso) => {
     return new Date(year, month - 1, day);
 };
 
+// A "yyyy-MM-dd" day in the given language, e.g. "Mar 12, 2025" / "12 Mar 2025".
+export const formatIsoDay = (iso, language, options = { day: 'numeric', month: 'short', year: 'numeric' }) =>
+    parseIsoDay(iso).toLocaleDateString(language, options);
+
 // Month names in the given language, January first; style is an
 // Intl month style ('short': "Jan", "Oca"...; 'narrow': "J", "O"...).
 export const monthNames = (language, style) => {

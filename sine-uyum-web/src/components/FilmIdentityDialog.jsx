@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api/axiosConfig';
 import { useSnackbar } from '../context/SnackbarProvider';
-import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, LinearProgress, Typography } from '@mui/material';
+import { Box, Button, Dialog, DialogActions, DialogContent, LinearProgress, Typography } from '@mui/material';
 import ShareIcon from '@mui/icons-material/Share';
 import { shareIdentityImage } from './identityImage';
+import { LoadingState } from './states/LoadingState';
+import { ErrorState } from './states/ErrorState';
 
 // Film identity: the taste profile and title derived from ratings; shareable as an image.
 export const FilmIdentityDialog = ({ open, onClose, userId, isMine }) => {
@@ -13,6 +15,8 @@ export const FilmIdentityDialog = ({ open, onClose, userId, isMine }) => {
     const [identity, setIdentity] = useState(null);
     const [error, setError] = useState('');
     const [isSharing, setIsSharing] = useState(false);
+    // Bumped by "Try again" to load once more.
+    const [attempt, setAttempt] = useState(0);
 
     const fmt = (n) => Number(n).toLocaleString(i18n.language, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
@@ -23,7 +27,7 @@ export const FilmIdentityDialog = ({ open, onClose, userId, isMine }) => {
         api.get(`/api/v1/profile/${userId}/identity`)
             .then((res) => setIdentity(res.data))
             .catch((e) => setError(e.response?.data?.title || t('identity.loadFailed')));
-    }, [open, userId, t]);
+    }, [open, userId, t, attempt]);
 
     const share = async () => {
         setIsSharing(true);
@@ -44,8 +48,8 @@ export const FilmIdentityDialog = ({ open, onClose, userId, isMine }) => {
     return (
         <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
             <DialogContent sx={{ p: 0 }}>
-                {error && <Typography color="error" sx={{ p: 3 }}>{error}</Typography>}
-                {!identity && !error && <Box sx={{ p: 4, textAlign: 'center' }}><CircularProgress /></Box>}
+                {error && <ErrorState compact message={error} onRetry={() => setAttempt((n) => n + 1)} sx={{ py: 3 }} />}
+                {!identity && !error && <LoadingState compact sx={{ py: 4 }} />}
                 {identity && (
                     <Box data-testid="film-identity" sx={{ p: 3, color: '#fff', background: 'linear-gradient(135deg, #1b1038, #0d2a4a)' }}>
                         <Typography variant="overline" sx={{ color: '#9fb3ff' }}>{t('identity.header', { userName: identity.userName })}</Typography>

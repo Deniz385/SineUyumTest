@@ -1,8 +1,11 @@
 // sine-uyum-web/src/components/FollowListModal.jsx
 import React from 'react';
-import { Modal, Box, Typography, List, ListItem, ListItemText, CircularProgress, Divider } from '@mui/material';
+import { Modal, Box, Typography, List, ListItem, ListItemText, Divider } from '@mui/material';
+import PeopleOutlineIcon from '@mui/icons-material/PeopleOutline';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { LoadingState } from './states/LoadingState';
+import { EmptyState } from './states/EmptyState';
 
 const style = {
   position: 'absolute',
@@ -26,17 +29,12 @@ export const FollowListModal = ({ open, onClose, title, list, isLoading }) => {
         <Typography variant="h6" component="h2">{title}</Typography>
         <Divider sx={{ my: 2 }} />
         {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-            <CircularProgress />
-          </Box>
+          <LoadingState compact />
+        ) : list.length === 0 ? (
+          <EmptyState compact icon={PeopleOutlineIcon} title={t('follow.empty')} />
         ) : (
           <List>
-            {list.length === 0 ? (
-              <ListItem>
-                <ListItemText primary={t('follow.empty')} />
-              </ListItem>
-            ) : (
-              list.map(user => (
+            {list.map(user => (
                 <ListItem 
                   key={user.id} 
                   component={Link} 
@@ -46,8 +44,7 @@ export const FollowListModal = ({ open, onClose, title, list, isLoading }) => {
                 >
                   <ListItemText primary={user.userName} />
                 </ListItem>
-              ))
-            )}
+            ))}
           </List>
         )}
       </Box>

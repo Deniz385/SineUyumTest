@@ -2,9 +2,13 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { Box, Typography, CircularProgress, Paper, Avatar, AvatarGroup, Alert, Grid, Card, CardContent, CardMedia, CardActions, Button, Chip } from '@mui/material';
+import { Box, Typography, Paper, Avatar, AvatarGroup, Alert, Grid, Card, CardContent, CardMedia, CardActions, Button, Chip } from '@mui/material';
 import EventIcon from '@mui/icons-material/Event';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
+import EventBusyIcon from '@mui/icons-material/EventBusy';
+import { LoadingState } from '../components/states/LoadingState';
+import { EmptyState } from '../components/states/EmptyState';
+import { ErrorState } from '../components/states/ErrorState';
 import api, { mediaUrl } from '../api/axiosConfig';
 
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
@@ -155,11 +159,7 @@ export const MyEventPage = () => {
     };
     
     if (!user) {
-        return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
-                <CircularProgress />
-            </Box>
-        );
+        return <LoadingState />;
     }
     
     if (!user.isSubscribed) {
@@ -168,14 +168,10 @@ export const MyEventPage = () => {
 
     const renderContent = () => {
         if (isLoading) {
-            return (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-                    <CircularProgress />
-                </Box>
-            );
+            return <LoadingState />;
         }
         if (!statusData) {
-            return <Alert severity="warning" sx={{ mt: 4 }}>{t('event.statusUnavailable')}</Alert>;
+            return <ErrorState message={t('event.statusUnavailable')} onRetry={fetchEventStatus} />;
         }
 
         switch (statusData.status) {
@@ -186,9 +182,9 @@ export const MyEventPage = () => {
             case 'MATCHED':
                 return <MatchedEvent data={statusData} onVote={handleVote} />;
             case 'NONE':
-                return <Alert severity="info" sx={{ mt: 4 }}>{t('event.none')}</Alert>;
+                return <EmptyState icon={EventBusyIcon} title={t('event.none')} />;
             default:
-                return <Alert severity="error" sx={{ mt: 4 }}>{t('event.loadError')}</Alert>;
+                return <ErrorState message={t('event.loadError')} onRetry={fetchEventStatus} />;
         }
     };
 

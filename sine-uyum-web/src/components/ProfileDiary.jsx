@@ -1,16 +1,21 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Alert, Box, Button, CircularProgress, IconButton, LinearProgress, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, Button, IconButton, LinearProgress, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ReplayIcon from '@mui/icons-material/Replay';
 import StarIcon from '@mui/icons-material/Star';
+import LockIcon from '@mui/icons-material/Lock';
+import EditCalendarIcon from '@mui/icons-material/EditCalendar';
 import api from '../api/axiosConfig';
 import { useSnackbar } from '../context/SnackbarProvider';
 import { ConfirmationDialog } from './ConfirmationDialog';
 import { DiaryEntryDialog } from './DiaryEntryDialog';
 import { monthNames, parseIsoDay } from './diaryDates';
+import { LoadingState } from './states/LoadingState';
+import { EmptyState } from './states/EmptyState';
+import { ErrorState } from './states/ErrorState';
 
 const PAGE_SIZE = 20;
 const POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w92';
@@ -205,6 +210,8 @@ export const ProfileDiary = ({ userId, isMine }) => {
         }
     };
 
+    // A private (403) or unavailable (404) diary is not something to retry.
+    const isRestricted = loadError?.status === 403 || loadError?.status === 404;
     const errorMessage = loadError && (loadError.title || (
         loadError.status === 403 ? t('diary.private')
             : loadError.status === 404 ? t('diary.unavailable')
@@ -232,10 +239,12 @@ export const ProfileDiary = ({ userId, isMine }) => {
                 )}
             </Box>
 
-            {errorMessage ? (
-                <Alert severity="info" sx={{ mt: 2 }}>{errorMessage}</Alert>
+            {loadError && isRestricted ? (
+                <EmptyState compact icon={LockIcon} title={errorMessage} sx={{ mt: 1 }} />
+            ) : loadError ? (
+                <ErrorState compact message={errorMessage} onRetry={() => { setLoadError(null); load(summary?.year ?? null); }} sx={{ mt: 1 }} />
             ) : !summary ? (
-                <Box sx={{ textAlign: 'center', my: 3 }}><CircularProgress /></Box>
+                <LoadingState compact sx={{ my: 1 }} />
             ) : (
                 <Box sx={{ opacity: isLoading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
                     <LinearProgress sx={{ mt: 1, visibility: isLoading ? 'visible' : 'hidden' }} />
@@ -247,9 +256,12 @@ export const ProfileDiary = ({ userId, isMine }) => {
                     <MonthChart year={year} months={summary.months} language={language} />
 
                     {entries.length === 0 ? (
-                        <Typography color="text.secondary" sx={{ my: 2 }}>
-                            {isMine ? t('diary.emptyMine', { year }) : t('diary.empty', { year })}
-                        </Typography>
+                        <EmptyState
+                            compact
+                            icon={EditCalendarIcon}
+                            title={t('diary.empty', { year })}
+                            description={isMine ? t('diary.emptyMineHint') : undefined}
+                        />
                     ) : (
                         groupByMonth(entries).map((group) => (
                             <Box key={group.month} sx={{ mt: 3 }}>

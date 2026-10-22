@@ -2,11 +2,15 @@ import React, { useEffect, useState, useCallback } from 'react';
 import api, { mediaUrl } from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { useSnackbar } from '../context/SnackbarProvider';
-import { Box, Typography, CircularProgress, Grid, Card, CardContent, Button, Modal, TextField, Chip, Avatar, Stack } from '@mui/material';
+import { Box, Typography, Grid, Card, CardContent, Button, Modal, TextField, Chip, Avatar, Stack } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import AddIcon from '@mui/icons-material/Add';
 import GroupIcon from '@mui/icons-material/Group';
+import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
+import { LoadingState } from '../components/states/LoadingState';
+import { EmptyState } from '../components/states/EmptyState';
+import { ErrorState } from '../components/states/ErrorState';
 
 const modalStyle = {
   position: 'absolute',
@@ -68,7 +72,10 @@ export const WatchlistPage = () => {
 
     const fetchWatchlists = useCallback(async ({ silent = false } = {}) => {
         if (!user) return;
-        if (!silent) setIsLoading(true);
+        if (!silent) {
+            setIsLoading(true);
+            setError('');
+        }
         try {
             const response = await api.get(`/api/v1/watchlist`);
             setWatchlists(response.data);
@@ -106,7 +113,8 @@ export const WatchlistPage = () => {
             setNewListDesc('');
             fetchWatchlists();
         } catch {
-            setError(t('watchlist.createFailed'));
+            // The lists are still fine, so this is a message, not an error page.
+            showSnackbar(t('watchlist.createFailed'), 'error');
         }
     };
 
@@ -139,8 +147,8 @@ export const WatchlistPage = () => {
         }
     };
 
-    if (isLoading) return <CircularProgress />;
-    if (error) return <Typography color="error">{error}</Typography>;
+    if (isLoading) return <LoadingState />;
+    if (error) return <ErrorState message={error} onRetry={() => fetchWatchlists()} />;
 
     return (
         <>
@@ -170,7 +178,11 @@ export const WatchlistPage = () => {
                 </Box>
 
                 {watchlists.length === 0 ? (
-                    <Typography>{t('watchlist.empty')}</Typography>
+                    <EmptyState
+                        icon={PlaylistAddIcon}
+                        title={t('watchlist.emptyTitle')}
+                        description={t('watchlist.emptyBody')}
+                    />
                 ) : (
                     <Grid container spacing={3}>
                         {watchlists.map(list => (

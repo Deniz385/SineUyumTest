@@ -4,7 +4,11 @@ import { useTranslation } from 'react-i18next';
 import api, { mediaUrl } from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
-import { Box, Typography, CircularProgress, List, ListItem, ListItemText, ListItemAvatar, Avatar, Divider } from '@mui/material';
+import { Box, Typography, List, ListItem, ListItemText, ListItemAvatar, Avatar, Divider } from '@mui/material';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import { LoadingState } from '../components/states/LoadingState';
+import { EmptyState } from '../components/states/EmptyState';
+import { ErrorState } from '../components/states/ErrorState';
 
 export const MessagesPage = () => {
     const { t } = useTranslation();
@@ -43,21 +47,25 @@ export const MessagesPage = () => {
         };
     }, [subscribeToMessages, subscribeToReconnect, fetchConversations]);
 
-    if (isLoading) return <CircularProgress />;
-    if (error) return <Typography color="error">{error}</Typography>;
+    const retry = () => {
+        setError('');
+        setIsLoading(true);
+        fetchConversations();
+    };
+
+    if (isLoading) return <LoadingState />;
+    if (error) return <ErrorState message={error} onRetry={retry} />;
 
     return (
         <Box className="page-container" sx={{ maxWidth: '800px' }}>
             <Typography variant="h4" component="h1" gutterBottom>
                 {t('messages.title')}
             </Typography>
-            <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
-                {conversations.length === 0 ? (
-                    <ListItem>
-                        <ListItemText primary={t('messages.empty')} />
-                    </ListItem>
-                ) : (
-                    conversations.map((convo, index) => (
+            {conversations.length === 0 ? (
+                <EmptyState icon={ChatBubbleOutlineIcon} title={t('messages.empty')} description={t('messages.emptyHint')} />
+            ) : (
+                <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
+                    {conversations.map((convo, index) => (
                         <React.Fragment key={convo.otherUserId}>
                             <ListItem 
                                 alignItems="flex-start" 
@@ -88,9 +96,9 @@ export const MessagesPage = () => {
                             </ListItem>
                             {index < conversations.length - 1 && <Divider variant="inset" component="li" />}
                         </React.Fragment>
-                    ))
-                )}
-            </List>
+                    ))}
+                </List>
+            )}
         </Box>
     );
 };

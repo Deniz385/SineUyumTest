@@ -18,6 +18,9 @@
     "delete": "Sil",
     "send": "Gönder"
   },
+  "states": {
+    "loadFailed": "Bu içerik yüklenemedi."
+  },
   "language": {
     "label": "Dil",
     "change": "Dili değiştir"
@@ -31,12 +34,19 @@
     "logout": "Çıkış Yap",
     "openMenu": "Menüyü aç",
     "toggleTheme": "Temayı değiştir",
-    "notifications": "Bildirimler"
+    "notifications": "Bildirimler",
+    "account": "Hesap",
+    "signedInAs": "@{{userName}} olarak giriş yapıldı",
+    "editProfile": "Profili düzenle",
+    "privacy": "Gizlilik ayarları",
+    "darkTheme": "Koyu tema",
+    "lightTheme": "Açık tema"
   },
   "notifications": {
     "title": "Bildirimler",
     "markAllRead": "Tümünü Okundu İşaretle",
     "empty": "Yeni bildirim yok.",
+    "loadError": "Bildirimler yüklenemedi.",
     "justNow": "şimdi"
   },
   "search": {
@@ -47,6 +57,7 @@
     "noBio": "Kullanıcının bir biyografisi yok.",
     "goToProfile": "Profile Git",
     "noResults": "'{{query}}' için sonuç bulunamadı.",
+    "noResultsHint": "Yazımı kontrol edin ya da kullanıcı adının bir kısmıyla arayın.",
     "error": "Kullanıcılar aranırken bir hata oluştu."
   },
   "errorBoundary": {
@@ -81,7 +92,8 @@
   "home": {
     "title": "Keşfet",
     "popular": "Popüler Filmler",
-    "nowPlaying": "Vizyondakiler"
+    "nowPlaying": "Vizyondakiler",
+    "loadError": "Filmler yüklenemedi."
   },
   "feed": {
     "title": "Akış",
@@ -113,6 +125,7 @@
     "discard": "Vazgeç",
     "post": "Paylaş",
     "empty": "Henüz başka inceleme yok. İlk yazan sen ol.",
+    "loadFailed": "İncelemeler yüklenemedi.",
     "compatibilityTooltip": "Bu kişiyle film zevkinizin uyumu",
     "compatibilityChip": "%{{compatibility}} uyumlu",
     "spoilerReveal": "Spoiler içeriyor — göster",
@@ -156,6 +169,7 @@
   },
   "recommendations": {
     "title": "{{userName}} ile Ortak Zevkinize Göre Film Önerileri",
+    "emptyTitle": "Henüz öneri yok",
     "empty": "İkinize de uygun bir öneri bulunamadı. Daha fazla ortak filmi yüksek puanla oylamayı deneyin."
   },
   "follow": {
@@ -211,6 +225,7 @@
     "dateInFuture": "Tarih ileri bir gün olamaz.",
     "dateTooEarly": "Tarih 1900'den önce olamaz.",
     "rewatch": "Yeniden izleme",
+    "lastLogged": "En son {{date}} tarihinde günlüğüne eklemiştin",
     "note": "Not (isteğe bağlı)",
     "noteCounter": "{{length}}/{{max}}",
     "ratingOptional": "Puanın (isteğe bağlı)",
@@ -234,7 +249,7 @@
     "monthCount_one": "{{month}}: {{count}} film",
     "monthCount_other": "{{month}}: {{count}} film",
     "empty": "{{year}} yılında henüz kaydedilmiş film yok.",
-    "emptyMine": "{{year}} yılında henüz film kaydetmedin. Bir filmin sayfasındaki \"Günlüğe ekle\" düğmesiyle ekleyebilirsin.",
+    "emptyMineHint": "Bir filmin sayfasındaki \"Günlüğe ekle\" düğmesiyle ekleyebilirsin.",
     "private": "Bu kullanıcı film günlüğünü gizli tutuyor.",
     "unavailable": "Bu günlük görüntülenemiyor.",
     "loadFailed": "Günlük yüklenemedi."
@@ -311,6 +326,7 @@
     "getRecommendations": "Ortak Film Önerileri Alın",
     "topRated": "✨ 10/10 Verdiği Filmler",
     "allRated": "Oylanan Tüm Filmler ({{count}})",
+    "noRatings": "Henüz puanlanmış film yok.",
     "givenRating": "Verilen Puan: {{rating}}/10",
     "posterAlt": "{{title}} afişi",
     "userFallback": "Kullanıcı",
@@ -320,7 +336,8 @@
   "watchlist": {
     "title": "İzleme Listelerim",
     "create": "Yeni Liste Oluştur",
-    "empty": "Henüz hiç izleme listeniz yok. Hemen bir tane oluşturun!",
+    "emptyTitle": "Henüz hiç izleme listeniz yok",
+    "emptyBody": "İzlemek istediğiniz filmleri tek başınıza ya da arkadaşlarınızla takip etmek için bir liste oluşturun.",
     "movieCount_one": "{{count}} film",
     "movieCount_other": "{{count}} film",
     "name": "Liste Adı",
@@ -332,6 +349,7 @@
     "edit": "Listeyi Düzenle",
     "delete": "Listeyi Sil",
     "noMovies": "Bu listede henüz film yok.",
+    "noMoviesHint": "Film sayfasındaki \"Listeye Ekle\" düğmesiyle bu listeye film ekleyebilirsiniz.",
     "removeMovie": "Filmi kaldır",
     "removeMovieTitle": "Filmi Kaldır?",
     "removeMovieBody": "Bu filmi listeden kalıcı olarak kaldırmak istediğinize emin misiniz?",
@@ -402,10 +420,13 @@
   "messages": {
     "title": "Mesajlar",
     "empty": "Hiç konuşmanız yok.",
+    "emptyHint": "Konuşma başlatmak için birinin profilini açıp \"Mesaj Gönder\"i seçin.",
     "loadError": "Konuşmalar yüklenirken bir hata oluştu."
   },
   "conversation": {
     "fallbackTitle": "Sohbet",
+    "loadError": "Mesajlar yüklenemedi.",
+    "empty": "Henüz mesaj yok. Bir merhaba de!",
     "movieSuggestion": "Film Önerisi:",
     "watchlist": "İzleme Listesi:",
     "seen": "Görüldü {{time}}",
@@ -414,7 +435,8 @@
     "placeholder": "Mesaj yaz...",
     "sendFailed": "Mesaj gönderilemedi.",
     "whichList": "Hangi Listeyi Paylaşacaksın?",
-    "noListsToShare": "Henüz paylaşacak listeniz yok."
+    "noListsToShare": "Henüz paylaşacak listeniz yok.",
+    "listsLoadFailed": "Listeleriniz yüklenemedi."
   },
   "event": {
     "title": "Etkinliğim",
@@ -430,7 +452,7 @@
     "voteCount_other": "{{count}} Oy",
     "joinFailed": "Etkinliğe katılırken bir hata oluştu.",
     "voteFailed": "Oyunuz kaydedilirken bir sorun oluştu.",
-    "statusUnavailable": "Etkinlik durumu alınamadı. Lütfen sayfayı yenileyin.",
+    "statusUnavailable": "Etkinlik durumu alınamadı.",
     "none": "Katılabileceğin yeni bir etkinlik bulunmuyor. Lütfen daha sonra tekrar kontrol et.",
     "loadError": "Etkinlik bilgileri yüklenirken bir hata oluştu."
   },
@@ -455,6 +477,7 @@
     "eventDate": "Etkinlik Tarihi ve Saati",
     "groupSize": "Grup Büyüklüğü",
     "existingEvents": "Mevcut Etkinlikler",
+    "noEvents": "Henüz etkinlik yok.",
     "eventSummary": "Tarih: {{date}} - Katılımcı: {{participants}} - Grup: {{groupSize}} kişi",
     "match": "Eşleştir",
     "loadFailed": "Etkinlikler yüklenemedi.",

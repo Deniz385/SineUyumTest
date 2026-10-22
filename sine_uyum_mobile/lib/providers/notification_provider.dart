@@ -12,6 +12,7 @@ import 'chat_provider.dart';
 import 'locale_provider.dart';
 import 'repository_providers.dart';
 import 'session_provider.dart';
+import 'watchlist_provider.dart';
 
 class NotificationState {
   const NotificationState({
@@ -133,6 +134,12 @@ class NotificationNotifier extends Notifier<NotificationState> {
   /// marked on the server.
   @visibleForTesting
   void onNotification(AppNotification notification) {
+    // Shared lists: an invitation (`/watchlist`) or someone joining my list
+    // (`/watchlist/{id}`) changes what the lists screen shows.
+    final url = notification.relatedUrl ?? '';
+    if (url == '/watchlist') ref.invalidate(watchlistInvitationsProvider);
+    if (url.startsWith('/watchlist/')) ref.invalidate(myWatchlistsProvider);
+
     final active = ref.read(activeConversationProvider);
     if (active != null && notification.relatedUrl == '/messages/$active') {
       state = state.copyWith(

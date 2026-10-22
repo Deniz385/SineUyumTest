@@ -89,10 +89,6 @@ final myWatchlistsProvider = FutureProvider<List<WatchlistSummary>>(
   (ref) => ref.watch(watchlistRepositoryProvider).myLists(),
 );
 
-final watchlistDetailProvider = FutureProvider.family<WatchlistDetail, int>(
-  (ref, listId) => ref.watch(watchlistRepositoryProvider).detail(listId),
-);
-
 final conversationsProvider = FutureProvider<List<Conversation>>(
   (ref) => ref.watch(messageRepositoryProvider).conversations(),
 );

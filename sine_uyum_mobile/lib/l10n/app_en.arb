@@ -554,5 +554,138 @@
         "type": "String"
       }
     }
-  }
+  },
+  "watchlistInvitationsHeader": "{count, plural, =1{Pending invitation} other{Pending invitations ({count})}}",
+  "@watchlistInvitationsHeader": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "watchlistInvitedBy": "@{username} invited you",
+  "@watchlistInvitedBy": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "watchlistAccept": "Accept",
+  "watchlistDecline": "Decline",
+  "watchlistJoined": "You joined \"{name}\".",
+  "@watchlistJoined": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "watchlistInvitationDeclined": "Invitation declined.",
+  "watchlistPeopleCount": "{count, plural, =1{1 person} other{{count} people}}",
+  "@watchlistPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "watchlistPendingCount": "{count, plural, =1{1 pending invitation} other{{count} pending invitations}}",
+  "@watchlistPendingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "watchlistByOwner": "by @{username}",
+  "@watchlistByOwner": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "watchlistMembers": "Members",
+  "watchlistOwnerRole": "Owner",
+  "watchlistMemberAccepted": "Member",
+  "watchlistMemberPending": "Invitation pending",
+  "watchlistRemoveMember": "Remove from list",
+  "watchlistCancelInvitation": "Cancel invitation",
+  "watchlistRemoveMemberTitle": "Remove @{username}?",
+  "@watchlistRemoveMemberTitle": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "watchlistRemoveMemberBody": "They will no longer see this list or add movies to it.",
+  "watchlistMemberRemoved": "@{username} was removed from the list.",
+  "@watchlistMemberRemoved": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "watchlistInvitationCancelled": "The invitation to @{username} was cancelled.",
+  "@watchlistInvitationCancelled": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "watchlistInviteHint": "Invite by username...",
+  "watchlistInvite": "Invite",
+  "watchlistInvited": "@{username} was invited.",
+  "@watchlistInvited": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "watchlistAlreadyInList": "Already in the list",
+  "watchlistNoMembersYet": "Invite friends to plan what to watch together.",
+  "watchlistLeave": "Leave list",
+  "watchlistLeaveTitle": "Leave \"{name}\"?",
+  "@watchlistLeaveTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "watchlistLeaveBody": "To join again you'll need a new invitation from the owner.",
+  "watchlistLeft": "You left \"{name}\".",
+  "@watchlistLeft": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "watchlistAddedBy": "added by @{username}",
+  "@watchlistAddedBy": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "watchlistWatchedBy": "Watched by {names}",
+  "@watchlistWatchedBy": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "watchlistWatched": "Watched",
+  "watchlistFilterUnwatchedShared": "Unwatched by all of us",
+  "watchlistFilterUnwatched": "Not watched yet",
+  "watchlistAllWatchedShared": "Every movie here has been watched by at least one of you.",
+  "watchlistAllWatched": "You've watched every movie in this list."
 }

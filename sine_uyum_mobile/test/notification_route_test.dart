@@ -23,6 +23,10 @@ void main() {
       expect(notificationRouteFor('/movie/550'), '/movie/550');
     });
 
+    test('"joined your list" opens that list', () {
+      expect(notificationRouteFor('/watchlist/7'), '/watchlist/7');
+    });
+
     test('returns null for unknown and empty routes', () {
       expect(notificationRouteFor('/admin'), isNull);
       expect(notificationRouteFor(''), isNull);

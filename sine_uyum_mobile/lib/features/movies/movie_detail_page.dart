@@ -9,6 +9,7 @@ import '../../widgets/movie_widgets.dart';
 import '../../widgets/poster_image.dart';
 import '../../widgets/state_views.dart';
 import '../../providers/social_provider.dart';
+import '../../providers/watchlist_provider.dart';
 import '../social/movie_reviews_section.dart';
 
 class MovieDetailPage extends ConsumerWidget {

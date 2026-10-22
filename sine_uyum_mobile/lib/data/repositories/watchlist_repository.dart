@@ -69,4 +69,43 @@ class WatchlistRepository {
       '/api/v1/watchlist/$listId/movies/$movieId',
     );
   }
+
+  // --- Shared lists ---
+
+  /// Lists I was invited to and have not answered yet.
+  Future<List<WatchlistInvitation>> invitations() async {
+    final data = await _client.get<List<dynamic>>(
+      '/api/v1/watchlist/invitations',
+    );
+    return data
+        .map(
+          (item) => WatchlistInvitation.fromJson(
+            (item as Map).cast<String, dynamic>(),
+          ),
+        )
+        .toList();
+  }
+
+  /// Owner only. Returns the new (pending) member.
+  Future<WatchlistMember> invite(int listId, String userId) async {
+    final data = await _client.post<Map<String, dynamic>>(
+      '/api/v1/watchlist/$listId/members',
+      body: {'userId': userId},
+    );
+    return WatchlistMember.fromJson(data);
+  }
+
+  Future<void> accept(int listId) async {
+    await _client.post<Map<String, dynamic>>(
+      '/api/v1/watchlist/$listId/accept',
+    );
+  }
+
+  /// The owner removes a member or cancels an invitation; with my own id it
+  /// leaves the list or declines the invitation.
+  Future<void> removeMember(int listId, String memberId) async {
+    await _client.delete<Map<String, dynamic>>(
+      '/api/v1/watchlist/$listId/members/${Uri.encodeComponent(memberId)}',
+    );
+  }
 }

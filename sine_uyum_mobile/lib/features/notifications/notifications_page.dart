@@ -100,6 +100,8 @@ String? _toMobileRoute(String? webUrl) {
   }
   if (webUrl.startsWith('/profile/')) return webUrl;
   if (webUrl.startsWith('/movie/')) return webUrl;
+  // Someone joined my shared list.
+  if (RegExp(r'^/watchlist/\d+$').hasMatch(webUrl)) return webUrl;
 
   return null;
 }

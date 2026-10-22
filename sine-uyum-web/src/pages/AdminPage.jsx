@@ -170,10 +170,10 @@ export const AdminPage = () => {
                 </Typography>
                 
                 <Grid container spacing={4}>
-                    <Grid xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <EventForm onFormSubmit={handleCreateEvent} isLoading={isSubmitting} />
                     </Grid>
-                    <Grid xs={12} md={8}>
+                    <Grid size={{ xs: 12, md: 8 }}>
                         <Paper sx={{ p: 2 }}>
                             <Typography variant="h5" component="h2" gutterBottom>{t('admin.existingEvents')}</Typography>
                             {isLoading ? <CircularProgress /> : (

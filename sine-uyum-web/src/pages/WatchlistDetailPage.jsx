@@ -261,7 +261,7 @@ export const WatchlistDetailPage = () => {
                 ) : (
                     <Grid container spacing={3}>
                         {visibleItems.map(item => (
-                            <Grid item xs={6} sm={4} md={3} key={item.movieId}>
+                            <Grid size={{ xs: 6, sm: 4, md: 3 }} key={item.movieId}>
                                 <Box sx={{ position: 'relative' }}>
                                     <Link to={`/movie/${item.movieId}`}>
                                         <img src={item.posterPath ? `${IMAGE_BASE_URL}${item.posterPath}` : '/vite.svg'} alt={item.title} style={{ width: '100%', borderRadius: '8px', display: 'block' }}/>

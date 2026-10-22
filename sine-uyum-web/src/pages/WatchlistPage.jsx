@@ -174,7 +174,7 @@ export const WatchlistPage = () => {
                 ) : (
                     <Grid container spacing={3}>
                         {watchlists.map(list => (
-                            <Grid item xs={12} sm={6} md={4} key={list.id}>
+                            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={list.id}>
                                 <Card component={Link} to={`/watchlist/${list.id}`} sx={{ textDecoration: 'none', height: '100%', display: 'block' }}>
                                     <CardContent>
                                         <Typography variant="h6">{list.name}</Typography>

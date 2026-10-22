@@ -39,7 +39,7 @@ export const RecommendationModal = ({ open, onClose, recommendations, isLoading,
         ) : (
           <Grid container spacing={2} sx={{ mt: 2 }}>
             {recommendations.map(movie => (
-              <Grid item xs={4} sm={3} md={2} key={movie.id}>
+              <Grid size={{ xs: 4, sm: 3, md: 2 }} key={movie.id}>
                 <Link to={`/movie/${movie.id}`} onClick={onClose}>
                   <img
                     src={movie.poster_path ? `${IMAGE_BASE_URL}${movie.poster_path}` : '/vite.svg'}

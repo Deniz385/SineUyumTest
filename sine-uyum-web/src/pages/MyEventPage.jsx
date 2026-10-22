@@ -74,7 +74,7 @@ const MatchedEvent = ({ data, onVote }) => {
             <Typography variant="h5" component="h2" sx={{ mb: 3 }}>{t('event.movieVote')}</Typography>
             <Grid container spacing={3} justifyContent="center">
                 {suggestedMovies.map(movie => (
-                    <Grid item xs={12} sm={6} md={4} key={movie.id}>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={movie.id}>
                         <Card sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                             <CardMedia component="img" height="350" image={movie.posterPath ? `${IMAGE_BASE_URL}${movie.posterPath}` : '/vite.svg'} alt={movie.title} />
                             <CardContent sx={{ flexGrow: 1 }}><Typography gutterBottom variant="h6" component="div">{movie.title}</Typography></CardContent>

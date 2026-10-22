@@ -18,7 +18,7 @@ import { useSnackbar } from '../context/SnackbarProvider';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
 
 const StatCard = ({ icon, value, label }) => (
-    <Grid item xs={6} sm={4}>
+    <Grid size={{ xs: 6, sm: 4 }}>
         <Paper elevation={2} sx={{ p: 2, textAlign: 'center' }}>
             {icon}
             <Typography variant="h5" component="p" sx={{ fontWeight: 'bold' }}>{value}</Typography>

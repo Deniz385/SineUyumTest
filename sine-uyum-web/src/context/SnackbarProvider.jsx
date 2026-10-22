@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { Snackbar, Alert } from '@mui/material';
 
 const SnackbarContext = createContext(null);
@@ -18,18 +18,21 @@ export const SnackbarProvider = ({ children }) => {
         severity: 'info', // 'success', 'error', 'warning', 'info'
     });
 
-    const showSnackbar = (message, severity = 'info') => {
+    // Stable identity: consumers list showSnackbar in effect dependencies
+    // (e.g. the SignalR connection), so a new function per render would
+    // re-run those effects every time a snackbar opens.
+    const showSnackbar = useCallback((message, severity = 'info') => {
         setSnackbar({ open: true, message, severity });
-    };
+    }, []);
 
     const handleClose = (event, reason) => {
         if (reason === 'clickaway') {
             return;
         }
-        setSnackbar({ ...snackbar, open: false });
+        setSnackbar((current) => ({ ...current, open: false }));
     };
 
-    const value = { showSnackbar };
+    const value = useMemo(() => ({ showSnackbar }), [showSnackbar]);
 
     return (
         <SnackbarContext.Provider value={value}>

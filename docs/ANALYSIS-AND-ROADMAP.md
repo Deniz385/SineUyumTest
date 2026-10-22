@@ -357,7 +357,7 @@ its behaviour.
 > bands (both ≥8 or both ≤3). Result: two users who give exactly the same rating
 > in the middle band (4-7) cannot get more than 66.7% compatibility — only full
 > agreement on extreme ratings gives 100%. This is probably an unintended side
-> effect; if it is fixed, the existing tests (`AyniPuan_BandaGoreSkorVerir`)
+> effect; if it is fixed, the existing tests (`SameRating_ScoresByBand`)
 > must be updated.
 
 ### M5 — N+1 queries and in-memory processing — ✅ closed

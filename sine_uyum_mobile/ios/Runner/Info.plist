@@ -61,7 +61,8 @@
 			</array>
 		</dict>
 	</dict>
-	<!-- Permission prompts for picking a profile photo (image_picker). -->
+	<!-- Permission prompts for picking a profile photo (image_picker).
+	     Localized in en.lproj / tr.lproj InfoPlist.strings; keep them in sync. -->
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>SineUyum needs access to your photos so you can choose a profile photo.</string>
 	<key>NSCameraUsageDescription</key>

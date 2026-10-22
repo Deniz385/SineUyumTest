@@ -1,0 +1,7 @@
+/* Permission prompts (Info.plist usage descriptions), English. */
+
+/* Picking a profile photo from the photo library (image_picker). */
+"NSPhotoLibraryUsageDescription" = "SineUyum needs access to your photos so you can choose a profile photo.";
+
+/* Taking a profile photo with the camera (image_picker). */
+"NSCameraUsageDescription" = "SineUyum needs access to the camera so you can take a profile photo.";

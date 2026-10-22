@@ -48,6 +48,8 @@ mono_crash.*
 
 Build results
 [Dd]ebug/
+# The Flutter Android debug source set is source code, not build output
+!sine_uyum_mobile/android/app/src/debug/
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/

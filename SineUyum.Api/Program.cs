@@ -255,9 +255,18 @@ builder.Services.AddMemoryCache(options => options.SizeLimit = 2048);
 // --- CONTROLLERS & SWAGGER ---
 // All API routes live under "api/v1/..." (see ApiV1RouteConvention).
 // DataAnnotations error messages are locale keys (see JsonStringLocalizerFactory).
+// Framework messages (implicit [Required], binding errors, unreadable JSON)
+// and field names are localized as well (ValidationLocalization); JSON parser
+// messages are not passed to the client.
 builder.Services.AddControllers(options =>
-    options.Conventions.Add(new SineUyum.Api.Conventions.ApiV1RouteConvention()))
+    {
+        options.Conventions.Add(new SineUyum.Api.Conventions.ApiV1RouteConvention());
+        ValidationLocalization.Configure(options);
+    })
+    .AddJsonOptions(options => options.AllowInputFormatterExceptionMessages = false)
     .AddDataAnnotationsLocalization();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Mvc.DataAnnotations.IValidationAttributeAdapterProvider, LocalizedAttributeAdapterProvider>();
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.ApiBehaviorOptions>(ValidationLocalization.Configure);
 builder.Services.AddSignalR();
 builder.Services.AddHealthChecks();
 builder.Services.AddEndpointsApiExplorer();

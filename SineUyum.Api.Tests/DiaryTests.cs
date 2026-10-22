@@ -145,6 +145,27 @@ public class DiaryTests : IClassFixture<TestWebAppFactory>
         Assert.Equal(2, empty.GetProperty("availableYears").GetArrayLength());
     }
 
+    // The "Add to diary" form asks for my entries of a movie to pre-select "Rewatch".
+    [Fact]
+    public async Task MineForMovie_OnlyMyEntriesOfThatMovie_NewestFirst()
+    {
+        var me = await RegisterAsync();
+        var other = await RegisterAsync();
+        var movie = await NewMovieAsync();
+        var otherMovie = await NewMovieAsync();
+        await LogAsync(me, movie, "2025-02-01");
+        await LogAsync(me, movie, "2025-06-01", rewatch: true);
+        await LogAsync(me, otherMovie, "2025-03-01");
+        await LogAsync(other, movie, "2025-04-01");
+
+        var mine = await JsonAsync(await SendAsync(HttpMethod.Get, $"/api/v1/diary/movie/{movie}", me));
+        Assert.Equal(["2025-06-01", "2025-02-01"], mine.EnumerateArray().Select(e => e.GetProperty("watchedOn").GetString()));
+        Assert.All(mine.EnumerateArray(), e => Assert.Equal(movie, e.GetProperty("movie").GetProperty("id").GetInt32()));
+
+        var none = await JsonAsync(await SendAsync(HttpMethod.Get, $"/api/v1/diary/movie/{await NewMovieAsync()}", me));
+        Assert.Empty(none.EnumerateArray());
+    }
+
     [Fact]
     public async Task YearFilter_OnlyThatYear_InvalidYear400()
     {

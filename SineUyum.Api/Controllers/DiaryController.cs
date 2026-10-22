@@ -108,6 +108,15 @@ namespace SineUyum.Api.Controllers
         }
 
         // A user's entries, newest first; optionally only one year.
+        // My entries for one movie, newest first: the "Add to diary" form
+        // pre-selects "Rewatch" when the movie is already logged.
+        [HttpGet("movie/{movieId:int}")]
+        public async Task<ActionResult<List<DiaryEntryDto>>> MineForMovie(int movieId) =>
+            Ok(await ToDtosAsync(_context.DiaryEntries
+                .Where(d => d.UserId == Me && d.MovieId == movieId)
+                .OrderByDescending(d => d.WatchedOn).ThenByDescending(d => d.Id)
+                .Take(50)));
+
         [HttpGet("user/{userId}")]
         public async Task<ActionResult<DiaryPageDto>> ForUser(string userId, [FromQuery] int? year = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {

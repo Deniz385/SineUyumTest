@@ -145,6 +145,46 @@ public class LocalizationTests : IClassFixture<LocalizationTests.Factory>
         Assert.Contains(message, messages);
     }
 
+    // Generic messages carry the localized field name.
+    [Theory]
+    [InlineData("en", "Recipient is required.")]
+    [InlineData("tr", "Alıcı alanı zorunludur.")]
+    public async Task GenericValidationMessages_UseLocalizedFieldNames(string language, string expected)
+    {
+        var me = await RegisterAsync(_client, "loc_");
+        var res = await _client.SendAsync(Authed(HttpMethod.Post, "/api/v1/messages", me.Token,
+            new { recipientId = (string?)null, content = "hi" }, language));
+
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+        Assert.Equal(expected, (await JsonAsync(res)).GetProperty("errors").GetProperty("RecipientId")[0].GetString());
+    }
+
+    // Framework messages: an attribute without our key ([EnumDataType]), a
+    // value that cannot be read (JSON) - localized, and no parser details leak.
+    [Theory]
+    [InlineData("en", "Profile visibility has an invalid value.", "Movie has an invalid value.")]
+    [InlineData("tr", "Profil görünürlüğü alanının değeri geçersiz.", "Film alanının değeri geçersiz.")]
+    public async Task FrameworkValidationMessages_AreLocalized(string language, string invalidEnum, string unreadable)
+    {
+        var me = await RegisterAsync(_client, "loc_");
+
+        var enumRes = await _client.SendAsync(Authed(HttpMethod.Put, "/api/v1/account/privacy", me.Token,
+            new { profileVisibility = 99, messagePermission = "Everyone" }, language));
+        Assert.Equal(HttpStatusCode.BadRequest, enumRes.StatusCode);
+        Assert.Equal(invalidEnum, (await JsonAsync(enumRes)).GetProperty("errors").GetProperty("ProfileVisibility")[0].GetString());
+
+        var jsonRes = await _client.SendAsync(Authed(HttpMethod.Post, "/api/v1/ratings", me.Token,
+            new { movieId = "abc", rating = 5 }, language));
+        Assert.Equal(HttpStatusCode.BadRequest, jsonRes.StatusCode);
+        var body = await jsonRes.Content.ReadAsStringAsync();
+        var messages = JsonDocument.Parse(body).RootElement.GetProperty("errors").EnumerateObject()
+            .SelectMany(e => e.Value.EnumerateArray().Select(m => m.GetString())).ToList();
+        Assert.Contains(unreadable, messages);
+        Assert.DoesNotContain("could not be converted", body);
+        Assert.DoesNotContain("The input was not valid.", body);
+        Assert.DoesNotContain("createRatingDto", body);
+    }
+
     [Theory]
     [InlineData("en", "Passwords must have at least one digit ('0'-'9').")]
     [InlineData("tr", "Şifre en az bir rakam ('0'-'9') içermelidir.")]

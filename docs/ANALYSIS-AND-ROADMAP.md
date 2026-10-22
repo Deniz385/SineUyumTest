@@ -895,10 +895,11 @@ movie lovers; the core differentiating feature is the compatibility score.
     - Along the way: the catalog cached movie details without credits under the
       same key as the details page, so a details page could come back without
       the cast; both now use the same request.
-    - **Known gaps:** a few framework validation messages (invalid enum value,
-      implicit required for non-nullable strings) are English only; generic
-      Turkish validation messages show the raw field name; iOS permission
-      prompts are English only (a `tr.lproj/InfoPlist.strings` needs Xcode).
+    - Framework validation messages (implicit `[Required]`, `[EnumDataType]`,
+      model binding errors, unreadable JSON) are localized too, and generic
+      messages use localized field names ("Alıcı alanı zorunludur." instead of
+      "RecipientId alanı zorunludur."); JSON parser details are no longer sent
+      to the client.
 32. Shared watchlists — ✅
     - The owner invites people (at most 20); invitees accept or decline, accepted
       members add and remove movies, the owner removes members, members can
@@ -920,5 +921,5 @@ movie lovers; the core differentiating feature is the compatibility score.
     - Web: "Add to diary" dialog on the movie page, diary section with a month
       chart on the profile. Mobile: add sheet on the movie page, diary page
       (`/profile/:userId/diary`), readable offline.
-    - **Follow-up:** pre-select "Rewatch" when the movie is already in the diary
-      (needs a lookup endpoint for the user's entries of one movie).
+    - `GET /diary/movie/{movieId}`: my entries of one movie, so the "Add to
+      diary" form pre-selects "Rewatch" when the movie is already logged.

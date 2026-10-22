@@ -14,6 +14,15 @@
   "common": {
     "someone": "Biri"
   },
+  "diary": {
+    "duplicate": "Bu filmi bu tarihte zaten günlüğüne eklemişsin.",
+    "watchedOnInFuture": "İzleme tarihi gelecekte olamaz.",
+    "watchedOnTooEarly": "İzleme tarihi 1900'den önce olamaz.",
+    "invalidYear": "Geçersiz yıl.",
+    "noteLength": "Günlük notu en fazla 500 karakter olabilir.",
+    "notFound": "Günlük kaydı bulunamadı.",
+    "deleted": "Günlük kaydı silindi."
+  },
   "errors": {
     "eventNotFound": "Etkinlik bulunamadı.",
     "userNotFound": "Kullanıcı bulunamadı.",

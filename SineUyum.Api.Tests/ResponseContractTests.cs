@@ -215,6 +215,18 @@ public class ResponseContractTests : IClassFixture<ResponseContractTests.Factory
         await Call("reviews.deleteComment", HttpMethod.Delete, $"/api/v1/reviews/comments/{comment.GetProperty("id").GetInt32()}", a);
         await Call("reviews.unlike", HttpMethod.Delete, $"/api/v1/reviews/{reviewId}/like", a);
 
+        // Film diary: an entry with the (unchanged) rating, one for a movie fetched
+        // from TMDb without a rating (rating: null), edit, list, summary, delete.
+        var diaryEntry = await Post("diary.create", "/api/v1/diary", a,
+            new { movieId = 550, watchedOn = "2025-03-10", rewatch = false, note = "First time", rating = 9 });
+        var diaryRewatch = await Post("diary.create(noRating)", "/api/v1/diary", a,
+            new { movieId = 553, watchedOn = "2025-04-01", rewatch = true });
+        await Call("diary.update", HttpMethod.Put, $"/api/v1/diary/{diaryEntry.GetProperty("id").GetInt32()}", a,
+            new { watchedOn = "2025-03-11", rewatch = false, note = "Edited" });
+        await Get("diary.list", $"/api/v1/diary/user/{aId}?year=2025", b);
+        await Get("diary.summary", $"/api/v1/diary/user/{aId}/summary?year=2025", b);
+        await Call("diary.delete", HttpMethod.Delete, $"/api/v1/diary/{diaryRewatch.GetProperty("id").GetInt32()}", a);
+
         // Watchlist.
         var list = await Post("watchlist.create", "/api/v1/watchlist", a, new { name = "List", description = "Description" });
         var listId = list.GetProperty("id").GetInt32();

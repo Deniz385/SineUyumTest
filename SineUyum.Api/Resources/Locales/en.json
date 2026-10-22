@@ -14,6 +14,15 @@
   "common": {
     "someone": "Someone"
   },
+  "diary": {
+    "duplicate": "You have already logged this movie in your diary on this date.",
+    "watchedOnInFuture": "The watch date cannot be in the future.",
+    "watchedOnTooEarly": "The watch date cannot be before 1900.",
+    "invalidYear": "Invalid year.",
+    "noteLength": "A diary note can be at most 500 characters long.",
+    "notFound": "Diary entry not found.",
+    "deleted": "Diary entry deleted."
+  },
   "errors": {
     "eventNotFound": "Event not found.",
     "userNotFound": "User not found.",

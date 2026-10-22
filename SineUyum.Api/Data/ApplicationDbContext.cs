@@ -31,6 +31,7 @@
         public DbSet<DeviceToken> DeviceTokens { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
         public DbSet<UserBlock> UserBlocks { get; set; }
+        public DbSet<DiaryEntry> DiaryEntries { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -187,6 +188,33 @@
                 .WithMany()
                 .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Film diary: a user's entries are listed by date.
+            builder.Entity<DiaryEntry>()
+                .HasIndex(d => new { d.UserId, d.WatchedOn });
+
+            // Rewatches are separate entries, but the same movie twice on the
+            // same day is a duplicate (also guards against concurrent requests).
+            builder.Entity<DiaryEntry>()
+                .HasIndex(d => new { d.UserId, d.MovieId, d.WatchedOn })
+                .IsUnique();
+
+            builder.Entity<DiaryEntry>()
+                .Property(d => d.Note)
+                .HasMaxLength(500);
+
+            builder.Entity<DiaryEntry>()
+                .HasOne(d => d.User)
+                .WithMany()
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Movies are never deleted (history depends on them).
+            builder.Entity<DiaryEntry>()
+                .HasOne(d => d.Movie)
+                .WithMany()
+                .HasForeignKey(d => d.MovieId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<ReviewLike>()
                 .HasKey(l => new { l.ReviewId, l.UserId });

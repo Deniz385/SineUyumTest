@@ -1,10 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
-using SineUyum.Api.Data;
 using SineUyum.Api.Dtos;
-using SineUyum.Api.Models;
 using SineUyum.Api.Services;
 using System.Security.Claims;
 
@@ -13,10 +10,10 @@ namespace SineUyum.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class RatingsController(ApplicationDbContext context, MovieCatalogService movieCatalog, IStringLocalizer localizer) : ControllerBase
+    public class RatingsController(MovieCatalogService movieCatalog, RatingService ratings, IStringLocalizer localizer) : ControllerBase
     {
-        private readonly ApplicationDbContext _context = context;
         private readonly MovieCatalogService _movieCatalog = movieCatalog;
+        private readonly RatingService _ratings = ratings;
         private readonly IStringLocalizer _t = localizer;
 
         [HttpPost]
@@ -29,45 +26,9 @@ namespace SineUyum.Api.Controllers
                 return Unauthorized();
             }
 
-            // A movie missing locally is fetched from TMDb and added (metadata
-            // comes from the server, not the client). No separate "add first" call needed.
-            await _movieCatalog.EnsureMovieAsync(createRatingDto.MovieId);
-
-            var existingRating = await _context.UserRatings
-                .FirstOrDefaultAsync(r => r.UserId == userId && r.MovieId == createRatingDto.MovieId);
-
-            if (existingRating != null)
-            {
-                // Changing a rating does not move it up in the feed.
-                existingRating.Rating = createRatingDto.Rating;
-                await _context.SaveChangesAsync();
-            }
-            else
-            {
-                var now = DateTime.UtcNow;
-                _context.UserRatings.Add(new UserRating
-                {
-                    MovieId = createRatingDto.MovieId,
-                    UserId = userId,
-                    Rating = createRatingDto.Rating,
-                    CreatedAt = now,
-                    ActivityAt = now
-                });
-                try
-                {
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateException)
-                {
-                    // A concurrent second request created the same rating (unique index): update it.
-                    _context.ChangeTracker.Clear();
-                    var raced = await _context.UserRatings
-                        .FirstOrDefaultAsync(r => r.UserId == userId && r.MovieId == createRatingDto.MovieId);
-                    if (raced == null) throw;
-                    raced.Rating = createRatingDto.Rating;
-                    await _context.SaveChangesAsync();
-                }
-            }
+            // A movie missing locally is fetched from TMDb and added by the
+            // service. No separate "add first" call needed.
+            await _ratings.UpsertAsync(userId, createRatingDto.MovieId, createRatingDto.Rating);
 
             return Ok(new StatusMessageDto(_t["ratings.saved"]));
         }

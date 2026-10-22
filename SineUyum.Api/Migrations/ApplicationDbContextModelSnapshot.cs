@@ -316,6 +316,46 @@ namespace SineUyum.Api.Migrations
                     b.ToTable("DeviceTokens");
                 });
 
+            modelBuilder.Entity("SineUyum.Api.Models.DiaryEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MovieId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("Rewatch")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly>("WatchedOn")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MovieId");
+
+                    b.HasIndex("UserId", "WatchedOn");
+
+                    b.HasIndex("UserId", "MovieId", "WatchedOn")
+                        .IsUnique();
+
+                    b.ToTable("DiaryEntries");
+                });
+
             modelBuilder.Entity("SineUyum.Api.Models.EventGroup", b =>
                 {
                     b.Property<int>("Id")
@@ -1079,6 +1119,25 @@ namespace SineUyum.Api.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SineUyum.Api.Models.DiaryEntry", b =>
+                {
+                    b.HasOne("SineUyum.Api.Models.Movie", "Movie")
+                        .WithMany()
+                        .HasForeignKey("MovieId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SineUyum.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Movie");
 
                     b.Navigation("User");
                 });

@@ -161,6 +161,7 @@ builder.Services.AddSingleton<GenreBackfillWorker>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<GenreBackfillWorker>());
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<MovieCatalogService>();
+builder.Services.AddScoped<RatingService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<SubscriptionService>();
 builder.Services.AddScoped<PrivacyService>();

@@ -282,6 +282,79 @@
   likeCount: number
   liked: bool
 
+## diary.create  POST /api/v1/diary -> 201
+  $: object
+  createdAt: string
+  id: number
+  movie.id: number
+  movie.posterPath: string
+  movie.title: string
+  movie: object
+  note: string
+  rating: number
+  rewatch: bool
+  watchedOn: string
+
+## diary.create(noRating)  POST /api/v1/diary -> 201
+  $: object
+  createdAt: string
+  id: number
+  movie.id: number
+  movie.posterPath: string
+  movie.title: string
+  movie: object
+  note: null
+  rating: null
+  rewatch: bool
+  watchedOn: string
+
+## diary.update  PUT /api/v1/diary/{id} -> 200
+  $: object
+  createdAt: string
+  id: number
+  movie.id: number
+  movie.posterPath: string
+  movie.title: string
+  movie: object
+  note: string
+  rating: number
+  rewatch: bool
+  watchedOn: string
+
+## diary.list  GET /api/v1/diary/user/{id} -> 200
+  $: object
+  items: array
+  items[].createdAt: string
+  items[].id: number
+  items[].movie.id: number
+  items[].movie.posterPath: string
+  items[].movie.title: string
+  items[].movie: object
+  items[].note: null
+  items[].note: string
+  items[].rating: null
+  items[].rating: number
+  items[].rewatch: bool
+  items[].watchedOn: string
+  items[]: object
+  totalCount: number
+
+## diary.summary  GET /api/v1/diary/user/{id}/summary -> 200
+  $: object
+  availableYears: array
+  availableYears[]: number
+  months: array
+  months[].count: number
+  months[].month: number
+  months[]: object
+  rewatchCount: number
+  totalCount: number
+  year: number
+
+## diary.delete  DELETE /api/v1/diary/{id} -> 200
+  $: object
+  message: string
+
 ## watchlist.create  POST /api/v1/watchlist -> 201
   $: object
   description: string

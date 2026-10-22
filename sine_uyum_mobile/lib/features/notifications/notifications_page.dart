@@ -94,6 +94,8 @@ String? _toMobileRoute(String? webUrl) {
   if (webUrl == null || webUrl.isEmpty) return null;
 
   if (webUrl == '/my-event') return '/event';
+  // Shared-list invitation: the invitations are on the Lists tab.
+  if (webUrl == '/watchlist') return '/watchlists';
   if (webUrl.startsWith('/messages/')) {
     final userId = webUrl.substring('/messages/'.length);
     return userId.isEmpty ? '/messages' : '/conversation/$userId';

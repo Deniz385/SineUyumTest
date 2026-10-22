@@ -23,8 +23,9 @@ void main() {
       expect(notificationRouteFor('/movie/550'), '/movie/550');
     });
 
-    test('"joined your list" opens that list', () {
+    test('shared-list notifications open the list or the Lists tab', () {
       expect(notificationRouteFor('/watchlist/7'), '/watchlist/7');
+      expect(notificationRouteFor('/watchlist'), '/watchlists');
     });
 
     test('returns null for unknown and empty routes', () {

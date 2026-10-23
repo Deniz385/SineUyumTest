@@ -475,6 +475,7 @@ class _Scores extends ConsumerWidget {
             Expanded(
               child: ScoreTile(
                 label: 'TMDb',
+                capitals: false,
                 score: vote,
                 caption: context.l10n.tmdbScoreCaption,
               ),

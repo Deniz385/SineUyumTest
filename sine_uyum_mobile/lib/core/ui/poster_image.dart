@@ -169,7 +169,9 @@ class UserAvatar extends StatelessWidget {
     final avatar = url == null
         ? CircleAvatar(
             radius: radius,
-            backgroundColor: colors.surfaceOverlay,
+            backgroundColor: colors.isDark
+                ? colors.surfaceOverlay
+                : colors.surfaceRaised,
             foregroundColor: colors.primary,
             child: Text(
               initial,
@@ -183,7 +185,9 @@ class UserAvatar extends StatelessWidget {
           )
         : CircleAvatar(
             radius: radius,
-            backgroundColor: colors.surfaceOverlay,
+            backgroundColor: colors.isDark
+                ? colors.surfaceOverlay
+                : colors.surfaceRaised,
             backgroundImage: CachedNetworkImageProvider(url),
             onBackgroundImageError: (_, _) {},
           );

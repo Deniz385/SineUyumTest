@@ -241,12 +241,16 @@ class ScoreTile extends StatelessWidget {
     required this.score,
     this.caption,
     this.highlight = false,
+    this.capitals = true,
   });
 
   final String label;
   final double score;
   final String? caption;
   final bool highlight;
+
+  /// Overline capitals; off for names spelled their own way ("TMDb").
+  final bool capitals;
 
   @override
   Widget build(BuildContext context) {
@@ -277,7 +281,7 @@ class ScoreTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              l10n.upper(label),
+              capitals ? l10n.upper(label) : label,
               style: context.type.overline.copyWith(
                 color: highlight ? colors.primary : colors.textSecondary,
               ),

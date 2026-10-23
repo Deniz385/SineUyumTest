@@ -1,15 +1,9 @@
-/* ==========================================================================
-   1. General styles and resets
-   ========================================================================== */
+/* Global base styles. Colours, typography and component styles come from the
+   MUI theme (src/theme.js); only resets the theme cannot express live here. */
 
-/* The body background and colours are managed by the MUI theme;
-  only the base font settings live here.
-*/
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* No underline on links */
@@ -18,19 +12,27 @@ a {
   color: inherit;
 }
 
+/* Scores and counts line up (design system: tabular numbers). */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
 
-/* ==========================================================================
-   2. Layout containers
-   ========================================================================== */
+/* Horizontal carousels hide their scrollbar; they scroll with the keyboard,
+   touch, wheel, drag and the arrow buttons. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar { display: none; }
 
-/* .page-container takes its colours from the MUI theme (`background.paper`),
-  so only sizing and alignment are defined here.
-*/
+.active-drag { cursor: grabbing; user-select: none; }
+
+/* Legacy page styles, removed as the pages move to the design system. */
 .page-container {
   width: 100%;
   max-width: 1200px;
-  margin: 40px auto;
-  padding: 30px;
+  margin: 0 auto;
+  padding: 24px;
   text-align: center;
   border-radius: 12px;
 }

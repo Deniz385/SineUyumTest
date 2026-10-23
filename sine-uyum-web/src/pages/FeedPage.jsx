@@ -79,7 +79,7 @@ export const FeedPage = () => {
                     icon={DynamicFeedIcon}
                     title={t('feed.emptyTitle')}
                     description={t('feed.emptyBody')}
-                    action={<Button component={Link} to="/home" variant="contained">{t('feed.browseMovies')}</Button>}
+                    action={<Button component={Link} to="/discover" variant="contained">{t("feed.browseMovies")}</Button>}
                 />
             ) : (
                 <Stack spacing={2}>

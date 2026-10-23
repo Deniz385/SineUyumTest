@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../api/axiosConfig';
-import { Autocomplete, TextField, CircularProgress, Box, InputAdornment } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
+import { Autocomplete, TextField, CircularProgress, Box, InputAdornment, Typography } from '@mui/material';
+import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import { useAuth } from '../context/AuthContext';
+import { PosterImage } from './ui/PosterImage';
 
-export const MovieSearchBar = ({ onMovieSelect }) => {
+// Movie search with suggestions. Without `onMovieSelect` choosing a film
+// opens its page (top bar); `onNavigate` runs after that (closes the phone
+// search sheet). `autoFocus` focuses the box on mount.
+export const MovieSearchBar = ({ onMovieSelect, onNavigate, autoFocus = false, size = 'small' }) => {
   const [open, setOpen] = useState(false);
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -51,6 +55,7 @@ export const MovieSearchBar = ({ onMovieSelect }) => {
         onMovieSelect(value);
       } else {
         navigate(`/movie/${value.id}`);
+        onNavigate?.();
       }
       setOpen(false);
       setOptions([]);
@@ -72,51 +77,55 @@ export const MovieSearchBar = ({ onMovieSelect }) => {
       isOptionEqualToValue={(option, value) => option.id === value.id}
       getOptionLabel={(option) => option.title || ""}
       options={options}
+      // The server already searched (original titles too); don't filter again.
+      filterOptions={(x) => x}
       loading={loading}
+      loadingText={t('common.loadingEllipsis')}
+      noOptionsText={inputValue ? t('search.noMovies') : t('search.typeToSearch')}
       freeSolo
       disableClearable
+      slotProps={{ paper: { sx: { mt: 0.5 } } }}
       renderInput={(params) => (
         <TextField
           {...params}
+          autoFocus={autoFocus}
           placeholder={t('search.moviesPlaceholder')}
-          inputProps={{ ...params.inputProps, 'aria-label': t('search.moviesPlaceholder') }}
+          inputProps={{ ...params.inputProps, 'aria-label': t('search.moviesPlaceholder'), enterKeyHint: 'search' }}
           variant="outlined"
-          size="small"
+          size={size}
           InputProps={{
             ...params.InputProps,
-            style: onMovieSelect ? {} : { color: 'white' },
-            // In the navbar it matches the user search box next to it.
             startAdornment: onMovieSelect ? params.InputProps.startAdornment : (
               <InputAdornment position="start">
-                <SearchIcon fontSize="small" sx={{ color: '#adb5bd' }} />
+                <SearchRoundedIcon fontSize="small" sx={{ color: 'text.secondary' }} />
               </InputAdornment>
             ),
             endAdornment: (
               <>
-                {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                {loading ? <CircularProgress color="inherit" size={18} /> : null}
                 {params.InputProps.endAdornment}
               </>
             ),
           }}
-          sx={onMovieSelect ? {} : {
-            '& .MuiOutlinedInput-root': {
-              '& fieldset': { borderColor: '#6c757d' },
-              '&:hover fieldset': { borderColor: 'white' },
-            },
-          }}
+          sx={onMovieSelect ? {} : { '& .MuiOutlinedInput-root': { borderRadius: 999, pl: 1.5 } }}
         />
       )}
-      renderOption={(props, option) => (
-        <Box component="li" sx={{ '& > img': { mr: 2, flexShrink: 0 } }} {...props} key={option.id}>
-          <img
-            loading="lazy"
-            width="40"
-            src={option.poster_path ? `https://image.tmdb.org/t/p/w200${option.poster_path}`: '/vite.svg'}
-            alt=""
-          />
-          {option.title} ({option.release_date?.split('-')[0]})
-        </Box>
-      )}
+      renderOption={(props, option) => {
+        const { key, ...optionProps } = props;
+        return (
+          <Box component="li" key={option.id ?? key} {...optionProps} sx={{ gap: 1.5 }}>
+            <Box sx={{ width: 32, flexShrink: 0 }}>
+              <PosterImage path={option.poster_path} title={option.title} width={32} radius="sm" decorative />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="body1" noWrap sx={{ fontWeight: 600 }}>{option.title}</Typography>
+              {option.release_date && (
+                <Typography variant="body2" color="text.secondary" className="tabular-nums">{option.release_date.split('-')[0]}</Typography>
+              )}
+            </Box>
+          </Box>
+        );
+      }}
     />
   );
 };

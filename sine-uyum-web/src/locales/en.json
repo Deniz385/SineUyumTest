@@ -41,7 +41,22 @@
     "privacy": "Privacy settings",
     "darkTheme": "Dark theme",
     "lightTheme": "Light theme",
-    "lists": "Lists"
+    "lists": "Lists",
+    "home": "Home",
+    "homeLink": "SineUyum home",
+    "discover": "Discover",
+    "event": "Event",
+    "profile": "Profile",
+    "myLists": "My lists",
+    "diary": "Diary",
+    "yearInReview": "Year in review",
+    "settings": "Settings",
+    "search": "Search movies",
+    "admin": "Admin panel",
+    "mainNav": "Main navigation",
+    "skipToContent": "Skip to content",
+    "notificationsUnread_one": "Notifications, {{count}} unread",
+    "notificationsUnread_other": "Notifications, {{count}} unread"
   },
   "notifications": {
     "title": "Notifications",
@@ -59,7 +74,9 @@
     "goToProfile": "Go to Profile",
     "noResults": "No results found for '{{query}}'.",
     "noResultsHint": "Check the spelling or try part of the username.",
-    "error": "Something went wrong while searching for users."
+    "error": "Something went wrong while searching for users.",
+    "noMovies": "No films found",
+    "typeToSearch": "Type a film title"
   },
   "errorBoundary": {
     "updatedTitle": "The app has been updated",
@@ -144,7 +161,11 @@
   },
   "rating": {
     "title": "Rate \"{{title}}\"",
-    "save": "Save Rating"
+    "save": "Save Rating",
+    "outOf": "{{value}} out of 10",
+    "none": "Not rated yet",
+    "inputLabel": "Your rating",
+    "hint": "Tap a star, drag, or use the arrow keys."
   },
   "movie": {
     "loadError": "Something went wrong while loading the movie details.",
@@ -174,15 +195,22 @@
     "empty": "No recommendations suit you both yet. Try giving high ratings to more of the movies you have in common."
   },
   "follow": {
-    "empty": "No one to show."
+    "empty": "No one to show.",
+    "follow": "Follow",
+    "following": "Following",
+    "followUser": "Follow @{{userName}}",
+    "unfollowUser": "Following @{{userName}}. Unfollow",
+    "failed": "Couldn't update the follow. Try again?"
   },
   "compatibility": {
-    "askDraft": "I gave \"{{title}}\" a {{myRating}} and you gave it a {{theirRating}}. Why? \ud83d\ude04",
+    "askDraft": "I gave \"{{title}}\" a {{myRating}} and you gave it a {{theirRating}}. Why? 😄",
     "sharedFavorite": "Your shared favorite",
     "sharedFavoriteRatings": "You {{myRating}}, {{userName}} {{theirRating}}",
     "debateMovie": "Debate movie",
     "debateRatings": "You gave it {{myRating}}, {{userName}} gave it {{theirRating}}. Go on, ask them why.",
-    "askThem": "Ask them"
+    "askThem": "Ask them",
+    "badge": "{{score}}% compatible",
+    "percent": "{{score}}%"
   },
   "identity": {
     "header": "Film identity · @{{userName}}",
@@ -474,7 +502,7 @@
     "compatibilityBasis_one": "(based on {{count}} movie in common)",
     "compatibilityBasis_other": "(based on {{count}} movies in common)",
     "getRecommendations": "Get Shared Movie Recommendations",
-    "topRated": "\u2728 Movies Rated 10/10",
+    "topRated": "✨ Movies Rated 10/10",
     "allRated": "All Rated Movies ({{count}})",
     "noRatings": "No rated movies yet.",
     "givenRating": "Rating: {{rating}}/10",
@@ -719,5 +747,39 @@
     "matchStarting": "Starting matching...",
     "matchInProgress": "Matching is still running; try again shortly to see the result.",
     "matchFailed": "An unknown error occurred during matching."
+  },
+  "ui": {
+    "seeAll": "See all",
+    "scrollLeft": "Scroll left",
+    "scrollRight": "Scroll right"
+  },
+  "people": {
+    "commonFilms_one": "{{count}} film in common",
+    "commonFilms_other": "{{count}} films in common",
+    "followers_one": "{{count}} follower",
+    "followers_other": "{{count}} followers",
+    "tasteTitle": "People like you",
+    "tasteHint": "Picked by how closely your ratings match.",
+    "popularTitle": "Popular on SineUyum",
+    "popularHint": "Rate a few more films and suggestions will follow your taste.",
+    "loadError": "Couldn't load suggestions.",
+    "emptyTitle": "No suggestions right now",
+    "emptyBody": "Search by username above, or check back after rating more films."
+  },
+  "discover": {
+    "title": "Discover",
+    "subtitle": "Films to watch, lists to borrow and people who share your taste.",
+    "tabsLabel": "Discover sections",
+    "tabs": {
+      "movies": "Movies",
+      "lists": "Lists",
+      "people": "People"
+    },
+    "movies": {
+      "popular": "Popular now",
+      "nowPlaying": "Now playing",
+      "topRated": "Top rated",
+      "back": "Back to Discover"
+    }
   }
 }

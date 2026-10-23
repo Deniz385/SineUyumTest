@@ -41,7 +41,22 @@
     "privacy": "Gizlilik ayarları",
     "darkTheme": "Koyu tema",
     "lightTheme": "Açık tema",
-    "lists": "Listeler"
+    "lists": "Listeler",
+    "home": "Ana sayfa",
+    "homeLink": "SineUyum ana sayfa",
+    "discover": "Keşfet",
+    "event": "Etkinlik",
+    "profile": "Profil",
+    "myLists": "Listelerim",
+    "diary": "Günlüğüm",
+    "yearInReview": "Yıl özeti",
+    "settings": "Ayarlar",
+    "search": "Film ara",
+    "admin": "Yönetim paneli",
+    "mainNav": "Ana menü",
+    "skipToContent": "İçeriğe geç",
+    "notificationsUnread_one": "Bildirimler, {{count}} okunmamış",
+    "notificationsUnread_other": "Bildirimler, {{count}} okunmamış"
   },
   "notifications": {
     "title": "Bildirimler",
@@ -59,7 +74,9 @@
     "goToProfile": "Profile Git",
     "noResults": "'{{query}}' için sonuç bulunamadı.",
     "noResultsHint": "Yazımı kontrol edin ya da kullanıcı adının bir kısmıyla arayın.",
-    "error": "Kullanıcılar aranırken bir hata oluştu."
+    "error": "Kullanıcılar aranırken bir hata oluştu.",
+    "noMovies": "Film bulunamadı",
+    "typeToSearch": "Bir film adı yaz"
   },
   "errorBoundary": {
     "updatedTitle": "Uygulama güncellendi",
@@ -144,7 +161,11 @@
   },
   "rating": {
     "title": "\"{{title}}\" filmini puanla",
-    "save": "Puanı Kaydet"
+    "save": "Puanı Kaydet",
+    "outOf": "10 üzerinden {{value}}",
+    "none": "Henüz puan yok",
+    "inputLabel": "Puanın",
+    "hint": "Bir yıldıza dokun, kaydır ya da ok tuşlarını kullan."
   },
   "movie": {
     "loadError": "Film detayları yüklenirken bir hata oluştu.",
@@ -174,7 +195,12 @@
     "empty": "İkinize de uygun bir öneri bulunamadı. Daha fazla ortak filmi yüksek puanla oylamayı deneyin."
   },
   "follow": {
-    "empty": "Gösterilecek kimse yok."
+    "empty": "Gösterilecek kimse yok.",
+    "follow": "Takip et",
+    "following": "Takiptesin",
+    "followUser": "@{{userName}} adlı kişiyi takip et",
+    "unfollowUser": "@{{userName}} takiptesin. Takibi bırak",
+    "failed": "Takip güncellenemedi. Tekrar dener misin?"
   },
   "compatibility": {
     "askDraft": "\"{{title}}\" filmine ben {{myRating}}, sen {{theirRating}} vermişsin. Neden? 😄",
@@ -182,7 +208,9 @@
     "sharedFavoriteRatings": "Sen {{myRating}}, {{userName}} {{theirRating}}",
     "debateMovie": "Tartışma filmi",
     "debateRatings": "Sen {{myRating}} verdin, {{userName}} {{theirRating}}. Sor bakalım neden?",
-    "askThem": "Ona sor"
+    "askThem": "Ona sor",
+    "badge": "%{{score}} uyumlu",
+    "percent": "%{{score}}"
   },
   "identity": {
     "header": "Film kimliği · @{{userName}}",
@@ -719,5 +747,39 @@
     "matchStarting": "Eşleştirme işlemi başlatılıyor...",
     "matchInProgress": "Eşleştirme sürüyor; sonucu birazdan tekrar deneyerek görebilirsiniz.",
     "matchFailed": "Eşleştirme sırasında bilinmeyen bir hata oluştu."
+  },
+  "ui": {
+    "seeAll": "Tümünü gör",
+    "scrollLeft": "Sola kaydır",
+    "scrollRight": "Sağa kaydır"
+  },
+  "people": {
+    "commonFilms_one": "{{count}} ortak film",
+    "commonFilms_other": "{{count}} ortak film",
+    "followers_one": "{{count}} takipçi",
+    "followers_other": "{{count}} takipçi",
+    "tasteTitle": "Sana benzeyenler",
+    "tasteHint": "Puanlarınız ne kadar örtüşüyorsa o kadar üstte.",
+    "popularTitle": "SineUyum'da öne çıkanlar",
+    "popularHint": "Birkaç film daha puanla, öneriler zevkine göre gelsin.",
+    "loadError": "Öneriler yüklenemedi.",
+    "emptyTitle": "Şu an öneri yok",
+    "emptyBody": "Yukarıdan kullanıcı adıyla ara ya da birkaç film puanladıktan sonra tekrar bak."
+  },
+  "discover": {
+    "title": "Keşfet",
+    "subtitle": "İzlenecek filmler, göz atılacak listeler ve zevkini paylaşan insanlar.",
+    "tabsLabel": "Keşfet bölümleri",
+    "tabs": {
+      "movies": "Filmler",
+      "lists": "Listeler",
+      "people": "Kişiler"
+    },
+    "movies": {
+      "popular": "Şu an popüler",
+      "nowPlaying": "Vizyonda",
+      "topRated": "En beğenilenler",
+      "back": "Keşfet'e dön"
+    }
   }
 }

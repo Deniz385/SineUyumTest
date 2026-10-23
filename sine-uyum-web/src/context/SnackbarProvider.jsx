@@ -42,8 +42,20 @@ export const SnackbarProvider = ({ children }) => {
                 autoHideDuration={6000}
                 onClose={handleClose}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                // Above the bottom navigation on phones.
+                sx={{ bottom: { xs: 'calc(80px + env(safe-area-inset-bottom))', md: 24 } }}
             >
-                <Alert onClose={handleClose} severity={snackbar.severity} sx={{ width: '100%' }}>
+                {/* Errors interrupt (role alert); other messages are a polite live region. */}
+                <Alert
+                    onClose={handleClose}
+                    severity={snackbar.severity}
+                    role={snackbar.severity === 'error' ? 'alert' : 'status'}
+                    aria-live={snackbar.severity === 'error' ? 'assertive' : 'polite'}
+                    sx={{
+                        width: '100%', bgcolor: 'surface.overlay', color: 'text.primary', border: 1, borderColor: 'divider',
+                        boxShadow: '0 12px 32px rgba(0,0,0,.35)', maxWidth: 560,
+                    }}
+                >
                     {snackbar.message}
                 </Alert>
             </Snackbar>

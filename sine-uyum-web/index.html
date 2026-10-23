@@ -5,8 +5,18 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0B0C10" />
     <title>SineUyum</title>
+    <script>
+      // Paint the saved theme's background before the app loads (no white flash).
+      (function () {
+        var mode = 'dark';
+        try { if (localStorage.getItem('themeMode') === 'light') mode = 'light'; } catch (e) {}
+        document.documentElement.style.backgroundColor = mode === 'light' ? '#F7F6F3' : '#0B0C10';
+        document.documentElement.style.colorScheme = mode;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

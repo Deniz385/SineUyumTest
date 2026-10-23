@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
@@ -21,7 +21,7 @@ const SearchResultsPage = page(() => import('./pages/SearchResultsPage'), 'Searc
 const MovieDetailPage = page(() => import('./pages/MovieDetailPage'), 'MovieDetailPage');
 const WatchlistPage = page(() => import('./pages/WatchlistPage'), 'WatchlistPage');
 const WatchlistDetailPage = page(() => import('./pages/WatchlistDetailPage'), 'WatchlistDetailPage');
-const DiscoverListsPage = page(() => import('./pages/DiscoverListsPage'), 'DiscoverListsPage');
+const DiscoverPage = page(() => import('./pages/DiscoverPage'), 'DiscoverPage');
 const EditProfilePage = page(() => import('./pages/EditProfilePage'), 'EditProfilePage');
 const MessagesPage = page(() => import('./pages/MessagesPage'), 'MessagesPage');
 const ConversationPage = page(() => import('./pages/ConversationPage'), 'ConversationPage');
@@ -30,6 +30,14 @@ const SubscriptionPage = page(() => import('./pages/SubscriptionPage'), 'Subscri
 const AdminPage = page(() => import('./pages/AdminPage'), 'AdminPage');
 const FeedPage = page(() => import('./pages/FeedPage'), 'FeedPage');
 const YearInReviewPage = page(() => import('./pages/YearInReviewPage'), 'YearInReviewPage');
+
+// The old list discovery address opens Discover › Lists (sort and search kept).
+const ListsRedirect = () => {
+  const { search } = useLocation();
+  const params = new URLSearchParams(search);
+  params.set('tab', 'lists');
+  return <Navigate to={`/discover?${params}`} replace />;
+};
 
 function App() {
   return (
@@ -61,7 +69,7 @@ function App() {
                       <Layout />
                     </ProtectedRoute>
                   }
-                >                
+                >
                   <Route path="/home" element={<HomePage />} />
                   <Route path="/feed" element={<FeedPage />} />
                   <Route path="/profile/:userId" element={<ProfilePage />} />
@@ -69,13 +77,14 @@ function App() {
                   <Route path="/movie/:movieId" element={<MovieDetailPage />} />
                   <Route path="/watchlist" element={<WatchlistPage />} />
                   <Route path="/watchlist/:listId" element={<WatchlistDetailPage />} />
-                  <Route path="/lists" element={<DiscoverListsPage />} />
+                  <Route path="/discover" element={<DiscoverPage />} />
+                  <Route path="/lists" element={<ListsRedirect />} />
                   <Route path="/profile/edit" element={<EditProfilePage />} />
                   <Route path="/messages" element={<MessagesPage />} />
                   <Route path="/messages/:otherUserId" element={<ConversationPage />} />
                   <Route path="/my-event" element={<MyEventPage />} />
-                  <Route path="/subscription" element={<SubscriptionPage />} />                
-                           <Route element={<AdminRoute />}>
+                  <Route path="/subscription" element={<SubscriptionPage />} />
+                  <Route element={<AdminRoute />}>
                     <Route path="/admin" element={<AdminPage />} />
                   </Route>
                 </Route>

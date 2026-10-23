@@ -2,17 +2,18 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-    Avatar, Box, Button, Card, CardActionArea, CardActions, CardContent, Chip, Grid, Link as MuiLink, Stack, Tooltip, Typography,
+    Avatar, Box, Button, Card, CardActionArea, CardActions, CardContent, Grid, Link as MuiLink, Stack, Tooltip, Typography,
 } from '@mui/material';
-import FavoriteIcon from '@mui/icons-material/Favorite';
-import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
-import BookmarkIcon from '@mui/icons-material/Bookmark';
-import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
-import MovieIcon from '@mui/icons-material/Movie';
-import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
-import ThumbUpAltIcon from '@mui/icons-material/ThumbUpAlt';
+import FavoriteIcon from '@mui/icons-material/FavoriteRounded';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorderRounded';
+import BookmarkIcon from '@mui/icons-material/BookmarkRounded';
+import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorderRounded';
+import MovieIcon from '@mui/icons-material/MovieRounded';
+import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlayRounded';
 import { mediaUrl } from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
+import { CompatibilityBadge } from './ui/CompatibilityBadge';
+import { posterHairline } from './ui/posterUtils';
 
 const POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w342';
 
@@ -20,8 +21,8 @@ const PosterCell = ({ path }) => {
     const [failed, setFailed] = useState(false);
     if (!path || failed) {
         return (
-            <Box data-testid="poster-placeholder" sx={{ bgcolor: 'action.hover', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 0, minHeight: 0 }}>
-                <MovieIcon aria-hidden="true" sx={{ color: 'text.disabled', fontSize: 32 }} />
+            <Box data-testid="poster-placeholder" sx={{ bgcolor: 'surface.raised', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 0, minHeight: 0 }}>
+                <MovieIcon aria-hidden="true" sx={{ color: 'text.muted', fontSize: 28, opacity: 0.7 }} />
             </Box>
         );
     }
@@ -41,8 +42,8 @@ const PosterCell = ({ path }) => {
 export const PosterCollage = ({ posters = [] }) => {
     if (posters.length === 0) {
         return (
-            <Box data-testid="poster-collage" sx={{ aspectRatio: '1 / 1', bgcolor: 'action.hover', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <PlaylistPlayIcon aria-hidden="true" sx={{ color: 'text.disabled', fontSize: 64 }} />
+            <Box data-testid="poster-collage" sx={{ aspectRatio: '1 / 1', bgcolor: 'surface.raised', borderRadius: 1.5, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', '&::after': posterHairline }}>
+                <PlaylistPlayIcon aria-hidden="true" sx={{ color: 'text.muted', fontSize: 56 }} />
             </Box>
         );
     }
@@ -50,7 +51,7 @@ export const PosterCollage = ({ posters = [] }) => {
     return (
         <Box
             data-testid="poster-collage"
-            sx={{ aspectRatio: '1 / 1', display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '2px', bgcolor: 'divider', overflow: 'hidden' }}
+            sx={{ aspectRatio: '1 / 1', display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '2px', bgcolor: 'background.default', overflow: 'hidden', borderRadius: 1.5, position: 'relative', '&::after': posterHairline }}
         >
             {cells.map((path, i) => <PosterCell key={i} path={path} />)}
         </Box>
@@ -94,7 +95,7 @@ export const ListReactions = ({ list, onToggle, size = 'small' }) => {
                 <Button
                     size={size}
                     variant={size === 'small' ? 'text' : (liked ? 'contained' : 'outlined')}
-                    color={liked ? 'error' : 'inherit'}
+                    color={liked ? 'secondary' : 'inherit'}
                     startIcon={liked ? <FavoriteIcon /> : <FavoriteBorderIcon />}
                     aria-pressed={liked}
                     aria-label={`${liked ? t('lists.unlike') : t('lists.like')} (${t('lists.likeCount', { count: likeCount })})`}
@@ -141,7 +142,8 @@ export const OwnerLink = ({ owner, size = 24 }) => (
 
 const clamp = (lines) => ({ display: '-webkit-box', WebkitLineClamp: lines, WebkitBoxOrient: 'vertical', overflow: 'hidden' });
 
-// A public list in discovery, on a profile or among saved lists.
+// A public list in discovery, on a profile or among saved lists: a 2×2
+// poster collage, name, owner chip, film count, compatibility, like/save.
 export const PublicListCard = ({ list, onToggle }) => {
     const { t } = useTranslation();
     const { user } = useAuth();
@@ -149,11 +151,11 @@ export const PublicListCard = ({ list, onToggle }) => {
     const compatibility = typeof list.ownerCompatibility === 'number' ? Math.round(list.ownerCompatibility) : null;
 
     return (
-        <Card variant="outlined" data-testid="list-card" sx={{ height: '100%', display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
-            <CardActionArea component={Link} to={`/watchlist/${list.id}`} sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start' }}>
+        <Card data-testid="list-card" sx={{ height: '100%', display: 'flex', flexDirection: 'column', textAlign: 'left', overflow: 'hidden', transition: (theme) => `background-color ${theme.motion.fast}ms`, '&:hover': { bgcolor: 'surface.raised' } }}>
+            <CardActionArea component={Link} to={`/watchlist/${list.id}`} sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', p: 1.25, pb: 0, borderRadius: 0 }}>
                 <PosterCollage posters={list.posters} />
-                <CardContent sx={{ pb: 1 }}>
-                    <Typography variant="subtitle1" component="h3" fontWeight="bold" sx={{ ...clamp(2), lineHeight: 1.3 }}>{list.name}</Typography>
+                <CardContent sx={{ px: 0.75, pt: 1.5, pb: 1 }}>
+                    <Typography variant="title" component="h3" sx={{ ...clamp(2), display: '-webkit-box' }}>{list.name}</Typography>
                     {list.description && (
                         <Typography variant="body2" color="text.secondary" sx={{ ...clamp(2), mt: 0.5 }}>{list.description}</Typography>
                     )}
@@ -162,20 +164,13 @@ export const PublicListCard = ({ list, onToggle }) => {
             <Box sx={{ px: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <OwnerLink owner={list.owner} />
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                    <Typography variant="body2" color="text.secondary">{t('lists.filmCount', { count: list.itemCount ?? 0 })}</Typography>
+                    <Typography variant="body2" color="text.secondary" className="tabular-nums">{t('lists.filmCount', { count: list.itemCount ?? 0 })}</Typography>
                     {compatibility !== null && !isMine && (
-                        <Chip
-                            size="small"
-                            color="secondary"
-                            variant="outlined"
-                            icon={<ThumbUpAltIcon />}
-                            label={t('lists.compatible', { score: compatibility })}
-                            data-testid="compat-chip"
-                        />
+                        <CompatibilityBadge value={compatibility} size="sm" text={t('lists.compatible', { score: compatibility })} data-testid="compat-chip" />
                     )}
                 </Box>
             </Box>
-            <CardActions sx={{ px: 1.5, pt: 0.5 }}>
+            <CardActions sx={{ px: 1, pt: 0.5, pb: 1 }}>
                 <ListReactions list={list} onToggle={isMine ? undefined : onToggle} />
             </CardActions>
         </Card>

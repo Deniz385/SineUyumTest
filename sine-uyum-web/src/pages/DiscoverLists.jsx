@@ -2,13 +2,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Box, Button, IconButton, InputAdornment, Tab, Tabs, TextField, Typography } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import ClearIcon from '@mui/icons-material/Clear';
-import SearchOffIcon from '@mui/icons-material/SearchOff';
-import WhatshotIcon from '@mui/icons-material/Whatshot';
-import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
-import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
-import { LoadingState } from '../components/states/LoadingState';
+import SearchIcon from '@mui/icons-material/SearchRounded';
+import ClearIcon from '@mui/icons-material/CloseRounded';
+import SearchOffIcon from '@mui/icons-material/SearchOffRounded';
+import WhatshotIcon from '@mui/icons-material/WhatshotRounded';
+import PlaylistAddIcon from '@mui/icons-material/PlaylistAddRounded';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorderRounded';
+import { ListGridSkeleton } from '../components/ui/Skeletons';
+import { segmentedTabsSx } from '../components/ui/segmentedTabs';
 import { EmptyState } from '../components/states/EmptyState';
 import { ErrorState } from '../components/states/ErrorState';
 import { ListCardGrid } from '../components/ListCard';
@@ -17,9 +18,9 @@ import { DISCOVER_SORTS, usePagedLists, useListReactions } from '../components/p
 const SEARCH_DEBOUNCE_MS = 400;
 
 // Public lists by others: this week's trending, all-time popular, newly
-// published, and lists by people with a similar taste. The tab and the
-// search live in the URL, so going back keeps them.
-export const DiscoverListsPage = () => {
+// published, and lists by people with a similar taste (Discover › Lists).
+// The sort and the search live in the URL, so going back keeps them.
+export const DiscoverLists = () => {
     const { t } = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
     const sortParam = searchParams.get('sort');
@@ -69,7 +70,7 @@ export const DiscoverListsPage = () => {
                     icon={SearchOffIcon}
                     title={t('lists.discover.noResults', { query })}
                     description={t('lists.discover.noResultsHint')}
-                    action={<Button variant="outlined" onClick={clearSearch}>{t('lists.discover.clearSearch')}</Button>}
+                    action={<Button variant="tonal" onClick={clearSearch}>{t('lists.discover.clearSearch')}</Button>}
                 />
             );
         }
@@ -79,7 +80,7 @@ export const DiscoverListsPage = () => {
                     icon={FavoriteBorderIcon}
                     title={t('lists.discover.empty.forYouTitle')}
                     description={t('lists.discover.empty.forYouBody')}
-                    action={<Button variant="contained" component={Link} to="/home">{t('lists.discover.empty.forYouAction')}</Button>}
+                    action={<Button variant="contained" component={Link} to="/discover">{t('lists.discover.empty.forYouAction')}</Button>}
                 />
             );
         }
@@ -89,7 +90,7 @@ export const DiscoverListsPage = () => {
                     icon={WhatshotIcon}
                     title={t('lists.discover.empty.trendingTitle')}
                     description={t('lists.discover.empty.trendingBody')}
-                    action={<Button variant="outlined" onClick={() => changeSort(null, 'popular')}>{t('lists.discover.empty.trendingAction')}</Button>}
+                    action={<Button variant="tonal" onClick={() => changeSort(null, 'popular')}>{t('lists.discover.empty.trendingAction')}</Button>}
                 />
             );
         }
@@ -104,11 +105,8 @@ export const DiscoverListsPage = () => {
     };
 
     return (
-        <Box className="page-container" sx={{ maxWidth: '1200px' }}>
-            <Box sx={{ textAlign: 'left', mb: 2 }}>
-                <Typography variant="h4" component="h1">{t('lists.discover.title')}</Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>{t('lists.discover.subtitle')}</Typography>
-            </Box>
+        <Box data-testid="discover-lists">
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>{t('lists.discover.subtitle')}</Typography>
 
             <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', md: 'center' }, flexDirection: { xs: 'column', md: 'row' }, gap: 2, mb: 1 }}>
                 <Tabs
@@ -118,10 +116,10 @@ export const DiscoverListsPage = () => {
                     scrollButtons="auto"
                     allowScrollButtonsMobile
                     aria-label={t('lists.discover.tabsLabel')}
-                    sx={{ flex: '1 1 auto', minWidth: 0 }}
+                    sx={[segmentedTabsSx, { flex: '1 1 auto', minWidth: 0 }]}
                 >
                     {DISCOVER_SORTS.map((value) => (
-                        <Tab key={value} value={value} label={t(`lists.discover.tabs.${value}`)} sx={{ textTransform: 'none', fontSize: '1rem' }} />
+                        <Tab key={value} value={value} label={t(`lists.discover.tabs.${value}`)} />
                     ))}
                 </Tabs>
                 <TextField
@@ -147,12 +145,12 @@ export const DiscoverListsPage = () => {
                     }}
                 />
             </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'left', mb: 3 }} data-testid="sort-hint">
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }} data-testid="sort-hint">
                 {t(`lists.discover.hints.${sort}`)}
             </Typography>
 
             {status === 'loading' ? (
-                <LoadingState />
+                <ListGridSkeleton />
             ) : status === 'error' ? (
                 <ErrorState message={t('lists.discover.loadError')} onRetry={reload} />
             ) : items.length === 0 ? (
@@ -161,7 +159,7 @@ export const DiscoverListsPage = () => {
                 <>
                     <ListCardGrid lists={items} onToggle={toggle} />
                     {hasMore && (
-                        <Button variant="outlined" onClick={loadMore} disabled={isLoadingMore} sx={{ mt: 3 }}>
+                        <Button variant="tonal" onClick={loadMore} disabled={isLoadingMore} sx={{ mt: 3, display: 'flex', mx: 'auto' }}>
                             {isLoadingMore ? t('common.loadingEllipsis') : t('common.loadMore')}
                         </Button>
                     )}

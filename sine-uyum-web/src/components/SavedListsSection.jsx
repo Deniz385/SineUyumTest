@@ -26,7 +26,7 @@ export const SavedListsSection = () => {
         <Box component="section" sx={{ mt: 6 }} aria-labelledby="saved-lists-title" data-testid="saved-lists">
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 2 }}>
                 <Typography id="saved-lists-title" variant="h5" component="h2">{t('lists.saved.title')}</Typography>
-                <Button component={Link} to="/lists" startIcon={<ExploreIcon />}>{t('lists.saved.discover')}</Button>
+                <Button component={Link} to="/discover?tab=lists" startIcon={<ExploreIcon />}>{t('lists.saved.discover')}</Button>
             </Box>
             {status === 'loading' ? (
                 <LoadingState compact />

@@ -957,3 +957,20 @@ movie lovers; the core differentiating feature is the compatibility score.
       notifies the owner (at most once a day per person). `GET /watchlist/saved`
       and `GET /watchlist/user/{id}` (a profile's public lists). Blocking removes
       likes and saves between the two users.
+36. Cinematic redesign and first-run welcome — ✅
+    - A shared design system (`docs/DESIGN-SYSTEM.md`): dark-first cinematic
+      look with a light alternative, AA-checked colour tokens, bundled fonts
+      (Bricolage Grotesque + Inter), spacing, motion, components and
+      accessibility rules, implemented on web and mobile.
+    - Navigation: web top bar Feed · Discover · Event · Messages + account
+      menu (bottom navigation below 900px); mobile tabs Home · Discover ·
+      Event · Messages · Profile. Discover gathers movies, lists and people.
+    - First-run welcome for new accounts (`onboardingCompleted`, `POST
+      /account/onboarding/complete`): welcome + language, rate 5 films (TMDb
+      top rated / popular), follow people like you (`GET /people/suggestions`).
+    - Key screens redesigned: home/feed, movie (backdrop hero, scores side by
+      side, one action row), profile (cover, identity pill, stats, tabs incl.
+      reviews via `GET /reviews/user/{id}`), lists, messages, event,
+      settings, sign-in (poster wall from `GET /movies/showcase`).
+    - Accessibility: axe-core finds no WCAG A/AA violations on the web key
+      screens; mobile has semantics labels and a 1.3× text-scale overflow test.

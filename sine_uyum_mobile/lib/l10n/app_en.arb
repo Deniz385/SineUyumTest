@@ -1093,5 +1093,61 @@
   },
   "recapBannerBody": "Relive your year in movies and share it.",
   "recapBannerOpen": "See my recap",
-  "recapBannerDismiss": "Hide"
+  "recapBannerDismiss": "Hide",
+  "watchlistPublicSwitch": "Public list",
+  "watchlistPublicHint": "Anyone who can see your profile can find, like and save it.",
+  "watchlistPrivateHint": "Only you and the people you invite can see it.",
+  "watchlistPublicBadge": "Public",
+  "watchlistLikeCount": "{count, plural, =1{1 like} other{{count} likes}}",
+  "@watchlistLikeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "watchlistSaveCount": "{count, plural, =1{Saved once} other{Saved {count} times}}",
+  "@watchlistSaveCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "watchlistLike": "Like",
+  "watchlistUnlike": "Remove like",
+  "watchlistSave": "Save list",
+  "watchlistUnsave": "Remove from saved",
+  "watchlistOpenEditable": "Open the editable list",
+  "publicListEmpty": "This list has no movies yet.",
+  "discoverListsTitle": "Discover lists",
+  "discoverListsSubtitle": "See the lists other film lovers have put together.",
+  "discoverSortTrending": "This week",
+  "discoverSortPopular": "Popular",
+  "discoverSortNew": "New",
+  "discoverSortForYou": "For you",
+  "discoverSearchHint": "Search lists...",
+  "discoverEmptyTrending": "Nothing is trending this week yet. Check back soon!",
+  "discoverEmptyPopular": "No popular lists yet.",
+  "discoverEmptyNew": "No lists have been made public lately.",
+  "discoverEmptyForYou": "Rate more movies and we'll find lists from people with a taste like yours.",
+  "discoverEmptySearch": "No lists match \"{query}\".",
+  "@discoverEmptySearch": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "listOwnerCompatibility": "{percent} compatible",
+  "@listOwnerCompatibility": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "publicListsTitle": "Public lists",
+  "savedListsTitle": "Saved lists",
+  "savedListsShowMore": "Show more"
 }

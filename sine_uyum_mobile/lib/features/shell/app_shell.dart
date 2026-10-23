@@ -31,6 +31,13 @@ class AppShell extends ConsumerWidget {
       appBar: AppBar(
         title: Text(_titles(l10n)[navigationShell.currentIndex]),
         actions: [
+          // The Lists tab: discover others' public lists.
+          if (navigationShell.currentIndex == 2)
+            IconButton(
+              tooltip: l10n.discoverListsTitle,
+              icon: const Icon(Icons.explore_outlined),
+              onPressed: () => context.push('/lists/discover'),
+            ),
           IconButton(
             tooltip: l10n.searchMoviesTooltip,
             icon: const Icon(Icons.search),

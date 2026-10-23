@@ -313,6 +313,14 @@ class _SharedWatchlistCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Opens my list, or the read-only view of someone else's.
+    return InkWell(
+      onTap: () => context.push('/watchlist/${watchlist.id}'),
+      child: _content(context),
+    );
+  }
+
+  Widget _content(BuildContext context) {
     return Row(
       children: [
         Icon(Icons.bookmark_outline, color: foreground),

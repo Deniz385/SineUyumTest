@@ -6,10 +6,12 @@ import '../../data/models/profile.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/session_provider.dart';
+import '../../providers/watchlist_provider.dart';
 import '../../providers/year_in_review_provider.dart';
 import '../../widgets/movie_widgets.dart';
 import '../../widgets/poster_image.dart';
 import '../../widgets/state_views.dart';
+import '../watchlists/list_cards.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key, required this.userId});
@@ -55,6 +57,7 @@ class ProfilePage extends ConsumerWidget {
             ref.invalidate(userProfileProvider(userId));
             ref.invalidate(followStatusProvider(userId));
             ref.invalidate(compatibilityProvider(userId));
+            ref.invalidate(userPublicListsProvider(userId));
             await ref.read(userProfileProvider(userId).future);
           },
           child: ListView(
@@ -115,6 +118,7 @@ class ProfilePage extends ConsumerWidget {
                   const SizedBox(height: 20),
                   _SocialActions(userId: userId, userName: profile.userName),
                 ],
+                _PublicLists(userId: userId),
                 const SizedBox(height: 24),
                 ..._ratings(context, profile),
               ],
@@ -530,6 +534,45 @@ class _Insights extends StatelessWidget {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The profile's public lists in a horizontal carousel. Hidden while
+/// loading, when there are none and when the server refuses them (403/404:
+/// the same rule as the profile details).
+class _PublicLists extends ConsumerWidget {
+  const _PublicLists({required this.userId});
+
+  final String userId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final page = ref.watch(userPublicListsProvider(userId)).value;
+    if (page == null || page.items.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.publicListsTitle,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: WatchlistCardCompact.width + 52,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: page.items.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              itemBuilder: (context, index) =>
+                  WatchlistCardCompact(card: page.items[index]),
+            ),
+          ),
         ],
       ),
     );

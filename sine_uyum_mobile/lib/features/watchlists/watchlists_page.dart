@@ -8,6 +8,7 @@ import '../../providers/repository_providers.dart';
 import '../../providers/watchlist_provider.dart';
 import '../../widgets/poster_image.dart';
 import '../../widgets/state_views.dart';
+import 'list_cards.dart';
 
 class WatchlistsPage extends ConsumerWidget {
   const WatchlistsPage({super.key});
@@ -23,6 +24,7 @@ class WatchlistsPage extends ConsumerWidget {
     Future<void> refresh() async {
       ref.invalidate(myWatchlistsProvider);
       ref.invalidate(watchlistInvitationsProvider);
+      ref.invalidate(savedListsProvider);
       await ref.read(myWatchlistsProvider.future);
     }
 
@@ -31,38 +33,37 @@ class WatchlistsPage extends ConsumerWidget {
         loading: () => const LoadingView(),
         error: (error, _) =>
             ErrorView(message: error.toString(), onRetry: refresh),
-        data: (lists) => lists.isEmpty && invitations.isEmpty
-            ? EmptyView(
-                icon: Icons.bookmark_outline,
-                message: l10n.watchlistsEmpty,
-                action: FilledButton.icon(
-                  onPressed: () => _showEditor(context, ref),
-                  icon: const Icon(Icons.add),
-                  label: Text(l10n.createList),
+        data: (lists) => RefreshIndicator(
+          onRefresh: refresh,
+          child: ListView(
+            // Room for the FAB under the last list.
+            padding: const EdgeInsets.only(bottom: 88),
+            children: [
+              const _DiscoverEntry(),
+              if (invitations.isNotEmpty)
+                _InvitationsSection(invitations: invitations),
+              if (lists.isEmpty)
+                EmptyView(
+                  icon: Icons.bookmark_outline,
+                  message: l10n.watchlistsEmpty,
+                  action: invitations.isEmpty
+                      ? FilledButton.icon(
+                          onPressed: () => _showEditor(context, ref),
+                          icon: const Icon(Icons.add),
+                          label: Text(l10n.createList),
+                        )
+                      : null,
                 ),
-              )
-            : RefreshIndicator(
-                onRefresh: refresh,
-                child: ListView(
-                  // Room for the FAB under the last list.
-                  padding: const EdgeInsets.only(bottom: 88),
-                  children: [
-                    if (invitations.isNotEmpty)
-                      _InvitationsSection(invitations: invitations),
-                    if (lists.isEmpty)
-                      EmptyView(
-                        icon: Icons.bookmark_outline,
-                        message: l10n.watchlistsEmpty,
-                      ),
-                    for (final list in lists)
-                      _WatchlistTile(
-                        list: list,
-                        onEdit: () => _showEditor(context, ref, existing: list),
-                        onDelete: () => _confirmDelete(context, ref, list),
-                      ),
-                  ],
+              for (final list in lists)
+                _WatchlistTile(
+                  list: list,
+                  onEdit: () => _showEditor(context, ref, existing: list),
+                  onDelete: () => _confirmDelete(context, ref, list),
                 ),
-              ),
+              const _SavedListsSection(),
+            ],
+          ),
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showEditor(context, ref),
@@ -77,76 +78,29 @@ class WatchlistsPage extends ConsumerWidget {
     WidgetRef ref, {
     WatchlistSummary? existing,
   }) async {
-    final nameController = TextEditingController(text: existing?.name ?? '');
-    final descriptionController = TextEditingController(
-      text: existing?.description ?? '',
-    );
-    final formKey = GlobalKey<FormState>();
-    final l10n = context.l10n;
-
-    final saved = await showDialog<bool>(
+    final result = await showDialog<_ListDraft>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(existing == null ? l10n.newList : l10n.editList),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: nameController,
-                autofocus: true,
-                maxLength: 100,
-                decoration: InputDecoration(labelText: l10n.listNameLabel),
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? l10n.listNameRequired
-                    : null,
-              ),
-              TextFormField(
-                controller: descriptionController,
-                maxLength: 500,
-                decoration: InputDecoration(labelText: l10n.descriptionLabel),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(l10n.commonCancel),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (formKey.currentState!.validate()) {
-                Navigator.of(context).pop(true);
-              }
-            },
-            child: Text(l10n.commonSave),
-          ),
-        ],
-      ),
+      builder: (_) => _ListEditorDialog(existing: existing),
     );
-
-    final name = nameController.text.trim();
-    final description = descriptionController.text.trim();
-    nameController.dispose();
-    descriptionController.dispose();
-
-    if (saved != true) return;
+    if (result == null) return;
 
     final repository = ref.read(watchlistRepositoryProvider);
     try {
       if (existing == null) {
-        await repository.create(name: name, description: description);
+        await repository.create(
+          name: result.name,
+          description: result.description,
+          visibility: result.visibility,
+        );
       } else {
         await repository.update(
           existing.id,
-          name: name,
-          description: description,
+          name: result.name,
+          description: result.description,
+          visibility: result.visibility,
         );
-        ref.invalidate(watchlistDetailProvider(existing.id));
       }
-      ref.invalidate(myWatchlistsProvider);
+      refreshMyWatchlists(ref, listId: existing?.id);
     } catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context)
@@ -183,13 +137,110 @@ class WatchlistsPage extends ConsumerWidget {
 
     try {
       await ref.read(watchlistRepositoryProvider).remove(list.id);
-      ref.invalidate(myWatchlistsProvider);
+      refreshMyWatchlists(ref);
     } catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(error.toString())));
       }
     }
+  }
+}
+
+typedef _ListDraft = ({
+  String name,
+  String description,
+  WatchlistVisibility visibility,
+});
+
+/// Name, description and visibility of a new or edited list. It owns its
+/// text controllers, so they live as long as the dialog (including its
+/// closing animation).
+class _ListEditorDialog extends StatefulWidget {
+  const _ListEditorDialog({this.existing});
+
+  final WatchlistSummary? existing;
+
+  @override
+  State<_ListEditorDialog> createState() => _ListEditorDialogState();
+}
+
+class _ListEditorDialogState extends State<_ListEditorDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final _name = TextEditingController(text: widget.existing?.name ?? '');
+  late final _description = TextEditingController(
+    text: widget.existing?.description ?? '',
+  );
+  late bool _isPublic = widget.existing?.isPublic ?? false;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _description.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.of(context).pop<_ListDraft>((
+      name: _name.text.trim(),
+      description: _description.text.trim(),
+      visibility: _isPublic
+          ? WatchlistVisibility.public
+          : WatchlistVisibility.private,
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(widget.existing == null ? l10n.newList : l10n.editList),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _name,
+                autofocus: true,
+                maxLength: 100,
+                decoration: InputDecoration(labelText: l10n.listNameLabel),
+                validator: (value) => (value == null || value.trim().isEmpty)
+                    ? l10n.listNameRequired
+                    : null,
+              ),
+              TextFormField(
+                controller: _description,
+                maxLength: 500,
+                decoration: InputDecoration(labelText: l10n.descriptionLabel),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                secondary: Icon(_isPublic ? Icons.public : Icons.lock_outline),
+                title: Text(l10n.watchlistPublicSwitch),
+                // One line on what the choice means.
+                subtitle: Text(
+                  _isPublic
+                      ? l10n.watchlistPublicHint
+                      : l10n.watchlistPrivateHint,
+                ),
+                value: _isPublic,
+                onChanged: (value) => setState(() => _isPublic = value),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.commonCancel),
+        ),
+        FilledButton(onPressed: _save, child: Text(l10n.commonSave)),
+      ],
+    );
   }
 }
 
@@ -228,6 +279,10 @@ class _WatchlistTile extends StatelessWidget {
           if (list.isShared) ...[
             const SizedBox(width: 8),
             WatchlistPeopleBadge(count: list.memberCount),
+          ],
+          if (list.isPublic) ...[
+            const SizedBox(width: 8),
+            const PublicListBadge(),
           ],
         ],
       ),
@@ -406,6 +461,121 @@ class _InvitationCardState extends ConsumerState<_InvitationCard> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The way into list discovery, above my lists.
+class _DiscoverEntry extends StatelessWidget {
+  const _DiscoverEntry();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+      color: scheme.secondaryContainer,
+      child: ListTile(
+        leading: Icon(
+          Icons.explore_outlined,
+          color: scheme.onSecondaryContainer,
+        ),
+        title: Text(l10n.discoverListsTitle),
+        subtitle: Text(l10n.discoverListsSubtitle),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => context.push('/lists/discover'),
+      ),
+    );
+  }
+}
+
+/// Others' public lists I saved, below my lists. Hidden while loading, when
+/// it fails (e.g. offline without a stored copy) and when empty. Unsaving
+/// takes a list out right away (it comes back if that fails).
+class _SavedListsSection extends ConsumerWidget {
+  const _SavedListsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final saved = ref.watch(savedListsProvider).value;
+    final reactions = ref.watch(listReactionsProvider);
+    if (saved == null) return const SizedBox.shrink();
+    final cards = saved.items
+        .where((card) => reactions[card.id]?.saved ?? card.savedByMe)
+        .toList();
+    if (cards.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+            child: Text(
+              l10n.savedListsTitle,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ),
+          for (final card in cards)
+            _SavedListTile(key: ValueKey(card.id), card: card),
+          if (saved.hasMore)
+            Center(
+              child: TextButton(
+                onPressed: saved.isLoadingMore
+                    ? null
+                    : () => ref.read(savedListsProvider.notifier).loadMore(),
+                child: Text(l10n.savedListsShowMore),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SavedListTile extends ConsumerWidget {
+  const _SavedListTile({super.key, required this.card});
+
+  final WatchlistCard card;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final reaction =
+        ref.watch(listReactionsProvider.select((all) => all[card.id])) ??
+        ListReaction.ofCard(card);
+
+    Future<void> unsave() async {
+      final messenger = ScaffoldMessenger.of(context);
+      try {
+        await ref
+            .read(listReactionsProvider.notifier)
+            .toggleSave(card.id, reaction);
+      } catch (error) {
+        messenger.showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    }
+
+    return ListTile(
+      leading: PosterCollage(posters: card.posters, size: 48),
+      title: Text(card.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: Text(
+        '@${card.owner.userName} · ${l10n.movieCount(card.itemCount)}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: IconButton(
+        tooltip: l10n.watchlistUnsave,
+        icon: Icon(
+          Icons.bookmark,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        onPressed: unsave,
+      ),
+      onTap: () => openListCard(context, ref, card),
     );
   }
 }

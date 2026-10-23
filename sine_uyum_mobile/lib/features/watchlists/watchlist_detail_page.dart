@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/network/api_exception.dart';
 import '../../data/models/watchlist.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/watchlist_provider.dart';
 import '../../widgets/poster_image.dart';
 import '../../widgets/state_views.dart';
+import 'list_cards.dart';
+import 'public_watchlist_page.dart';
 import 'watchlist_members_sheet.dart';
 
 class WatchlistDetailPage extends ConsumerStatefulWidget {
@@ -86,6 +89,14 @@ class _WatchlistDetailPageState extends ConsumerState<WatchlistDetailPage> {
     final detail = ref.watch(watchlistDetailProvider(_listId));
     final list = detail.value;
 
+    // Not one of my lists (or I left it): someone else's public list, or one
+    // sent to me in a message, opens read-only. Notifications and links use
+    // this route for both.
+    final error = detail.error;
+    if (!detail.isLoading && error is ApiException && error.isNotFound) {
+      return PublicWatchlistPage(listId: _listId);
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(list?.name ?? l10n.watchlistFallbackTitle),
@@ -125,7 +136,7 @@ class _WatchlistDetailPageState extends ConsumerState<WatchlistDetailPage> {
         : list.items;
     final images = {for (final p in list.people) p.userName: p.imageUrl};
 
-    if (list.items.isEmpty && !showHeader) {
+    if (list.items.isEmpty && !showHeader && !list.isPublic) {
       return EmptyView(
         icon: Icons.movie_outlined,
         message: l10n.watchlistEmpty,
@@ -139,6 +150,7 @@ class _WatchlistDetailPageState extends ConsumerState<WatchlistDetailPage> {
       },
       child: ListView(
         children: [
+          if (list.isPublic) _PublicHeader(list: list),
           if (showHeader) _PeopleHeader(list: list, onTap: _openMembers),
           if (list.items.isNotEmpty)
             Padding(
@@ -174,6 +186,49 @@ class _WatchlistDetailPageState extends ConsumerState<WatchlistDetailPage> {
               images: images,
               onRemove: () => _removeMovie(item),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A public list: the badge, and how many people liked and saved it.
+class _PublicHeader extends StatelessWidget {
+  const _PublicHeader({required this.list});
+
+  final WatchlistDetail list;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final small = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 6,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          const PublicListBadge(),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.favorite_border, size: 16, color: small?.color),
+              const SizedBox(width: 4),
+              Text(l10n.watchlistLikeCount(list.likeCount), style: small),
+            ],
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.bookmark_border, size: 16, color: small?.color),
+              const SizedBox(width: 4),
+              Text(l10n.watchlistSaveCount(list.saveCount), style: small),
+            ],
+          ),
         ],
       ),
     );

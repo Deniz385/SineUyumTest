@@ -29,6 +29,14 @@ class ResponseCache {
     RegExp(r'^/api/v1/messages/thread/[^/]+$'),
     RegExp(r'^/api/v1/watchlist$'),
     RegExp(r'^/api/v1/watchlist/(public/)?\d+$'),
+    // Public lists. My saved lists and a profile's public lists are short,
+    // stable and read like "my lists" and the profile, so their pages are
+    // kept for offline reading (the providers refetch after every save or
+    // edit, which refreshes the copy; a 403/404 is never masked). Discovery
+    // (`/watchlist/discover`) is not: a ranked feed that changes all the
+    // time, and every tab, search text and page would be a key of its own,
+    // growing without bound like search. Likes and saves work online only.
+    RegExp(r'^/api/v1/watchlist/(saved|user/[^/]+)$'),
     RegExp(r'^/api/v1/profile/[^/]+$'),
     RegExp(r'^/api/v1/compatibility/[^/]+$'),
     RegExp(r'^/api/v1/follow/[^/]+/status$'),

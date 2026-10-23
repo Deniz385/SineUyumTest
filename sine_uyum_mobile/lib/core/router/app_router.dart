@@ -21,6 +21,8 @@ import '../../features/shell/app_shell.dart';
 import '../../features/shell/splash_page.dart';
 import '../../features/subscription/subscription_page.dart';
 import '../../features/users/user_search_page.dart';
+import '../../features/watchlists/discover_lists_page.dart';
+import '../../features/watchlists/public_watchlist_page.dart';
 import '../../features/watchlists/watchlist_detail_page.dart';
 import '../../features/watchlists/watchlists_page.dart';
 import '../../features/year_in_review/year_in_review_page.dart';
@@ -145,11 +147,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) =>
             ProfilePage(userId: state.pathParameters['userId'] ?? ''),
       ),
+      // My list (owner or member); any other list falls back to the
+      // read-only view.
       GoRoute(
         path: '/watchlist/:listId',
         builder: (context, state) => WatchlistDetailPage(
           listId: int.tryParse(state.pathParameters['listId'] ?? '') ?? 0,
         ),
+      ),
+      // Someone else's list, read-only (from discovery, profiles, saved).
+      GoRoute(
+        path: '/watchlist/:listId/view',
+        builder: (context, state) => PublicWatchlistPage(
+          listId: int.tryParse(state.pathParameters['listId'] ?? '') ?? 0,
+        ),
+      ),
+      GoRoute(
+        path: '/lists/discover',
+        builder: (_, _) => const DiscoverListsPage(),
       ),
       GoRoute(
         path: '/conversation/:userId',

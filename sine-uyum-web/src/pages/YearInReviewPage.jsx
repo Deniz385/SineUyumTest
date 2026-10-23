@@ -14,6 +14,7 @@ import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import MovieIcon from '@mui/icons-material/Movie';
 import api, { mediaUrl } from '../api/axiosConfig';
+import { FONT_DISPLAY, gradients, tokens } from '../theme';
 import { darkTheme } from '../theme';
 import { useSnackbar } from '../context/SnackbarProvider';
 import { LoadingState } from '../components/states/LoadingState';
@@ -26,18 +27,19 @@ const SLIDE_MS = 6000;
 // A press longer than this pauses the story instead of changing the slide.
 const HOLD_MS = 250;
 const POSTER = 'https://image.tmdb.org/t/p/w342';
-const GOLD = '#ffd54f';
-const SOFT = '#c9d3ff';
+// Colours and fonts follow the design system tokens (dark theme).
+const GOLD = tokens.dark.primary;
+const SOFT = tokens.dark.textSecondary;
 
 const fill = keyframes`from { width: 0%; } to { width: 100%; }`;
 const fadeIn = keyframes`from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; }`;
 
 const BACKGROUNDS = [
-    'radial-gradient(120% 80% at 85% 10%, #ff704366 0%, transparent 60%), linear-gradient(160deg, #2a0f45 0%, #120a2a 55%, #06243f 100%)',
-    'radial-gradient(100% 70% at 10% 90%, #00e5ff40 0%, transparent 60%), linear-gradient(200deg, #0b1f3a 0%, #0a0f24 60%, #1d0b33 100%)',
-    'radial-gradient(110% 70% at 90% 90%, #ff4f8b55 0%, transparent 60%), linear-gradient(170deg, #1a0b2e 0%, #2b0d3d 50%, #0b0b1f 100%)',
-    'radial-gradient(120% 80% at 15% 15%, #7c4dff66 0%, transparent 60%), linear-gradient(190deg, #120a2a 0%, #071a33 100%)',
-    'radial-gradient(120% 70% at 50% 0%, #ffb30055 0%, transparent 60%), linear-gradient(180deg, #1f1206 0%, #120a2a 60%, #050510 100%)',
+    'radial-gradient(120% 80% at 85% 10%, #FF8A6555 0%, transparent 60%), linear-gradient(160deg, #1C1F27 0%, #14161C 55%, #0B0C10 100%)',
+    'radial-gradient(100% 70% at 10% 90%, #6CB4FF40 0%, transparent 60%), linear-gradient(200deg, #14161C 0%, #0B0C10 60%, #1C1F27 100%)',
+    'radial-gradient(110% 70% at 90% 90%, #FF5A5F4D 0%, transparent 60%), linear-gradient(170deg, #1C1F27 0%, #14161C 50%, #0B0C10 100%)',
+    'radial-gradient(120% 80% at 15% 15%, #3DD68C33 0%, transparent 60%), linear-gradient(190deg, #14161C 0%, #0B0C10 100%)',
+    'radial-gradient(120% 70% at 50% 0%, #F5B84155 0%, transparent 60%), linear-gradient(180deg, #1F1708 0%, #14161C 60%, #0B0C10 100%)',
 ];
 
 const usePrefersReducedMotion = () => {
@@ -80,13 +82,13 @@ const Heading = ({ children }) => (
 );
 
 const Big = ({ children, sx }) => (
-    <Typography component="p" sx={[{ fontWeight: 900, lineHeight: 1, letterSpacing: '-0.03em' }, ...(Array.isArray(sx) ? sx : [sx])]}>
+    <Typography component="p" sx={[{ fontFamily: FONT_DISPLAY, fontVariantNumeric: 'tabular-nums', fontWeight: 800, lineHeight: 1, letterSpacing: '-0.03em' }, ...(Array.isArray(sx) ? sx : [sx])]}>
         {children}
     </Typography>
 );
 
 const gradientText = {
-    background: `linear-gradient(90deg, ${GOLD}, #ff6e9c)`,
+    background: gradients.marquee,
     WebkitBackgroundClip: 'text',
     backgroundClip: 'text',
     color: 'transparent',
@@ -158,8 +160,8 @@ const buildSlides = (data, { t, language, isCurrentYear, onShare, isSharing, onR
                                         width: '100%',
                                         height: count ? `${Math.max(5, (count / max) * 100)}%` : 3,
                                         borderRadius: '6px 6px 2px 2px',
-                                        background: month === busiest.month ? `linear-gradient(180deg, ${GOLD}, #ff8a65)`
-                                            : count ? 'linear-gradient(180deg, #8ea2ff, #5c6bc0)' : 'rgba(255,255,255,0.2)',
+                                        background: month === busiest.month ? `linear-gradient(180deg, ${GOLD}, #FF8A65)`
+                                            : count ? 'linear-gradient(180deg, #6CB4FF, #3E7CC4)' : 'rgba(255,255,255,0.2)',
                                     }} />
                                 </Box>
                                 <Typography variant="caption" aria-hidden="true" sx={{ mt: 0.5, fontWeight: month === busiest.month ? 800 : 400 }}>
@@ -194,7 +196,7 @@ const buildSlides = (data, { t, language, isCurrentYear, onShare, isSharing, onR
                                 <Typography sx={{ fontWeight: 800, color: i === 0 ? GOLD : '#fff' }}>{t('yearInReview.genres.share', { share: g.share })}</Typography>
                             </Box>
                             <Box sx={{ height: 10, borderRadius: 5, bgcolor: 'rgba(255,255,255,0.12)', mt: 0.5, overflow: 'hidden' }}>
-                                <Box sx={{ height: '100%', width: `${Math.max(3, g.share)}%`, borderRadius: 5, background: i === 0 ? `linear-gradient(90deg, ${GOLD}, #ff8a65)` : 'linear-gradient(90deg, #8ea2ff, #b388ff)' }} />
+                                <Box sx={{ height: '100%', width: `${Math.max(3, g.share)}%`, borderRadius: 5, background: i === 0 ? `linear-gradient(90deg, ${GOLD}, #FF8A65)` : 'linear-gradient(90deg, #6CB4FF, #A9ADBA)' }} />
                             </Box>
                             <Typography variant="body2" sx={{ color: SOFT, mt: 0.5 }}>{t('yearInReview.genres.stat', { count: g.count, average: fmt1(g.average) })}</Typography>
                         </Box>
@@ -345,7 +347,7 @@ const buildSlides = (data, { t, language, isCurrentYear, onShare, isSharing, onR
             content: (
                 <Box sx={{ textAlign: 'center' }}>
                     <Heading>{t(v('yearInReview.mate.headingMine', 'yearInReview.mate.headingTheirs'))}</Heading>
-                    <Avatar src={mediaUrl(mate.user.profileImageUrl)} alt="" sx={{ width: 128, height: 128, mx: 'auto', fontSize: '3.5rem', border: `4px solid ${GOLD}`, bgcolor: '#5c6bc0', color: '#fff' }}>
+                    <Avatar src={mediaUrl(mate.user.profileImageUrl)} alt="" sx={{ width: 128, height: 128, mx: 'auto', fontSize: '3.5rem', border: `4px solid ${GOLD}`, bgcolor: '#262A34', color: '#fff' }}>
                         {mate.user.userName?.charAt(0).toUpperCase()}
                     </Avatar>
                     <Typography sx={{ fontWeight: 800, fontSize: '1.6rem', mt: 2 }}>@{mate.user.userName}</Typography>
@@ -368,7 +370,7 @@ const buildSlides = (data, { t, language, isCurrentYear, onShare, isSharing, onR
                 <Typography component="p" sx={[gradientText, { fontWeight: 900, fontSize: { xs: '2.6rem', sm: '2.9rem' }, lineHeight: 1.05, mt: 1 }]}>
                     {identity.title}
                 </Typography>
-                {identity.titleDescription && <Typography sx={{ fontSize: '1.1rem', mt: 2, color: '#e3e8ff' }}>{identity.titleDescription}</Typography>}
+                {identity.titleDescription && <Typography sx={{ fontSize: '1.1rem', mt: 2, color: tokens.dark.text }}>{identity.titleDescription}</Typography>}
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5, mt: 5 }}>
                     <Button variant="contained" color="warning" size="large" startIcon={<ShareIcon />} onClick={onShare} disabled={isSharing}
                         sx={{ pointerEvents: 'auto', borderRadius: 999, px: 4, fontWeight: 800 }}>
@@ -484,7 +486,7 @@ export const YearInReviewPage = () => {
     return (
         <ThemeProvider theme={darkTheme}>
             <Box sx={{
-                position: 'fixed', inset: 0, zIndex: 1200, bgcolor: '#05030c', color: '#fff',
+                position: 'fixed', inset: 0, zIndex: 1200, bgcolor: tokens.dark.bg, color: tokens.dark.text, '& h1, & h2': { fontFamily: FONT_DISPLAY },
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
                 <Box data-testid="yir-frame" sx={{

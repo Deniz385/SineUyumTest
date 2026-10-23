@@ -66,9 +66,9 @@ const render = (recap, poster) => {
     const ctx = canvas.getContext('2d');
 
     const bg = ctx.createLinearGradient(0, 0, W * 0.4, H);
-    bg.addColorStop(0, '#2a0f45');
-    bg.addColorStop(0.55, '#120a2a');
-    bg.addColorStop(1, '#06243f');
+    bg.addColorStop(0, '#1C1F27');
+    bg.addColorStop(0.55, '#14161C');
+    bg.addColorStop(1, '#0B0C10');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
     const glow = ctx.createRadialGradient(W * 0.85, H * 0.12, 0, W * 0.85, H * 0.12, W * 0.8);
@@ -78,8 +78,8 @@ const render = (recap, poster) => {
     ctx.fillRect(0, 0, W, H);
 
     const label = (text, x, y) => {
-        ctx.fillStyle = '#9fb3ff';
-        ctx.font = '600 32px system-ui, sans-serif';
+        ctx.fillStyle = '#A9ADBA';
+        ctx.font = '600 32px "Inter Variable", system-ui, sans-serif';
         ctx.fillText(text, x, y);
     };
 
@@ -87,27 +87,27 @@ const render = (recap, poster) => {
     label(t('yearInReview.card.header'), PAD, y);
     y += 74;
     ctx.fillStyle = '#ffffff';
-    ctx.font = '500 44px system-ui, sans-serif';
+    ctx.font = '500 44px "Inter Variable", system-ui, sans-serif';
     ctx.fillText(`@${recap.userName}`, PAD, y);
 
     // The year, big, in a warm gradient.
     y += 210;
-    ctx.font = 'bold 220px system-ui, sans-serif';
+    ctx.font = 'bold 220px "Bricolage Grotesque Variable", system-ui, sans-serif';
     const yearFill = ctx.createLinearGradient(PAD, y - 200, PAD + 620, y);
-    yearFill.addColorStop(0, '#ffd54f');
-    yearFill.addColorStop(1, '#ff6e9c');
+    yearFill.addColorStop(0, '#F5B841');
+    yearFill.addColorStop(1, '#FF5A5F');
     ctx.fillStyle = yearFill;
     ctx.fillText(String(recap.year), PAD - 8, y);
 
     // Total movies.
     y += 180;
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 160px system-ui, sans-serif';
+    ctx.font = 'bold 160px "Bricolage Grotesque Variable", system-ui, sans-serif';
     const total = recap.totals.movies.toLocaleString(i18n.language);
     ctx.fillText(total, PAD - 4, y);
     const totalWidth = ctx.measureText(total).width;
-    ctx.fillStyle = '#e3e8ff';
-    ctx.font = '500 46px system-ui, sans-serif';
+    ctx.fillStyle = '#F2F2F5';
+    ctx.font = '500 46px "Inter Variable", system-ui, sans-serif';
     const filmsLines = fitLines(ctx, t(mine ? 'yearInReview.card.filmsMine' : 'yearInReview.card.filmsTheirs', { count: recap.totals.movies }),
         W - 2 * PAD - totalWidth - 30, 2);
     drawLines(ctx, filmsLines, PAD + totalWidth + 30, y - (filmsLines.length === 2 ? 58 : 6), 58);
@@ -118,12 +118,12 @@ const render = (recap, poster) => {
         y += 100;
         label(t(mine ? 'yearInReview.card.titleMine' : 'yearInReview.card.titleTheirs'), PAD, y);
         y += 90;
-        ctx.fillStyle = '#ffd54f';
-        ctx.font = 'bold 80px system-ui, sans-serif';
+        ctx.fillStyle = '#F5B841';
+        ctx.font = 'bold 80px "Bricolage Grotesque Variable", system-ui, sans-serif';
         y = drawLines(ctx, fitLines(ctx, identity.title, W - 2 * PAD, 2), PAD, y, 90);
         if (identity.titleDescription) {
-            ctx.fillStyle = '#e3e8ff';
-            ctx.font = '400 38px system-ui, sans-serif';
+            ctx.fillStyle = '#F2F2F5';
+            ctx.font = '400 38px "Inter Variable", system-ui, sans-serif';
             y = drawLines(ctx, fitLines(ctx, identity.titleDescription, W - 2 * PAD, 3), PAD, y + 4, 52);
         }
     }
@@ -147,10 +147,10 @@ const render = (recap, poster) => {
         label(t(mine ? 'identity.card.favoriteMine' : 'identity.card.favoriteTheirs'), textX, ty);
         ty += 76;
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 60px system-ui, sans-serif';
+        ctx.font = 'bold 60px "Bricolage Grotesque Variable", system-ui, sans-serif';
         ty = drawLines(ctx, fitLines(ctx, favorite.title, textWidth, 3), textX, ty, 70);
-        ctx.fillStyle = '#ffd54f';
-        ctx.font = '600 48px system-ui, sans-serif';
+        ctx.fillStyle = '#F5B841';
+        ctx.font = '600 48px "Inter Variable", system-ui, sans-serif';
         ctx.fillText(t('yearInReview.card.rating', { rating: favorite.rating }), textX, ty + 10);
         y = Math.max(poster ? y + posterH : 0, ty + 10);
     }
@@ -169,18 +169,18 @@ const render = (recap, poster) => {
         const colWidth = (W - 2 * PAD - 60) / 2;
         columns.forEach(([title, value], i) => {
             const x = PAD + i * (colWidth + 60);
-            ctx.font = '600 32px system-ui, sans-serif';
+            ctx.font = '600 32px "Inter Variable", system-ui, sans-serif';
             const titleLines = fitLines(ctx, title, colWidth, 2);
-            ctx.fillStyle = '#9fb3ff';
+            ctx.fillStyle = '#A9ADBA';
             const vy = drawLines(ctx, titleLines, x, y, 42);
             ctx.fillStyle = '#ffffff';
-            ctx.font = '600 46px system-ui, sans-serif';
+            ctx.font = '600 46px "Inter Variable", system-ui, sans-serif';
             drawLines(ctx, fitLines(ctx, value, colWidth, 2), x, vy + 22, 56);
         });
     }
 
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.font = '500 32px system-ui, sans-serif';
+    ctx.font = '500 32px "Inter Variable", system-ui, sans-serif';
     wrap(ctx, t('identity.card.footer'), PAD, H - 96, W - 2 * PAD, 40);
     return canvas;
 };

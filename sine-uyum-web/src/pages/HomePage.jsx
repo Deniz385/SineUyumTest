@@ -10,7 +10,8 @@ import { TasteTwinCard } from '../components/TasteTwinCard';
 import { YearInReviewBanner } from '../components/YearInReviewBanner';
 import { ErrorState } from '../components/states/ErrorState';
 import { Page, PageHeader } from '../components/ui/Page';
-import { MovieRow } from '../components/ui/MovieRow';
+import { MovieRow, SectionHeader } from '../components/ui/MovieRow';
+import { PosterCard } from '../components/ui/PosterCard';
 import { FeedSkeleton } from '../components/ui/Skeletons';
 import { PosterImage } from '../components/ui/PosterImage';
 import { savePosterWall } from '../components/ui/posterWallCache';
@@ -57,6 +58,21 @@ const DiscoverRows = () => {
             <MovieRow title={t('discover.movies.nowPlaying')} movies={rows.now_playing} loading={loading} seeAllTo="/discover?section=now_playing" testId="row-now_playing" />
             <MovieRow title={t('discover.movies.topRated')} movies={rows.top_rated} loading={loading} seeAllTo="/discover?section=top_rated" testId="row-top_rated" />
         </Box>
+    );
+};
+
+// Desktop side column: a few popular films next to a busy feed.
+const SidePopular = () => {
+    const { t } = useTranslation();
+    const { status, rows } = useMovieCollections(['popular']);
+    if (status !== 'ready' || !rows.popular?.length) return null;
+    return (
+        <Card component="section" aria-labelledby="side-popular" sx={{ p: 2, display: { xs: 'none', lg: 'block' } }}>
+            <SectionHeader id="side-popular" title={t('discover.movies.popular')} variant="h3" component="h2" seeAllTo="/discover" sx={{ mb: 1 }} />
+            <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
+                {rows.popular.slice(0, 6).map((m) => <li key={m.id}><PosterCard movie={m} size="S" fluid /></li>)}
+            </Box>
+        </Card>
     );
 };
 
@@ -108,12 +124,14 @@ export const HomePage = () => {
                 title={t(`home.greeting.${greeting}`, { userName: user?.username })}
                 subtitle={t('home.subtitle')}
             />
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 2, '&:has(> *)': { mb: 4 } }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: `minmax(0, ${layout.readingWidth}px) minmax(280px, 1fr)` }, gap: { xs: 3, lg: 5 }, alignItems: 'start' }}>
+            <Box sx={{ order: { xs: 1, lg: 2 }, display: 'flex', flexDirection: 'column', gap: 2, position: { lg: 'sticky' }, top: { lg: 88 }, '&:empty': { display: 'none' } }}>
                 <TasteTwinCard />
                 <YearInReviewBanner />
+                {items !== null && !thin && <SidePopular />}
             </Box>
 
-            <Box component="section" aria-labelledby="feed-heading" sx={{ maxWidth: layout.readingWidth }}>
+            <Box component="section" aria-labelledby="feed-heading" sx={{ order: { xs: 2, lg: 1 }, minWidth: 0 }}>
                 <Typography id="feed-heading" variant="h2" component="h2" sx={{ mb: 2 }}>{t('feed.title')}</Typography>
                 {items === null ? (
                     <FeedSkeleton />
@@ -150,6 +168,7 @@ export const HomePage = () => {
                         {isLoadingMore ? t('common.loadingEllipsis') : t('common.loadMore')}
                     </Button>
                 )}
+            </Box>
             </Box>
 
             {thin && <DiscoverRows />}

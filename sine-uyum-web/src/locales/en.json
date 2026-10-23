@@ -190,7 +190,7 @@
     "forYouMatch": "{{userName}} ({{compatibility}}%) {{rating}}",
     "forYou": "For you",
     "rateThis": "Rate",
-    "addToList": "Add to List",
+    "addToList": "Add to list",
     "runtimeLabel": "Runtime:",
     "runtime_one": "{{count}} minute",
     "runtime_other": "{{count}} minutes",
@@ -208,7 +208,7 @@
     "tmdbSr": "TMDb: {{score}} out of 10"
   },
   "recommendations": {
-    "title": "Movie Recommendations Based on Your Shared Taste with {{userName}}",
+    "title": "Films for you and {{userName}}",
     "emptyTitle": "No recommendations yet",
     "empty": "No recommendations suit you both yet. Try giving high ratings to more of the movies you have in common."
   },
@@ -517,11 +517,11 @@
     "statAverage": "Average",
     "statInLists": "Movies in Lists",
     "compatibilityScore": "You're {{score}}% compatible",
-    "compatibilityBasis_one": "(based on {{count}} movie in common)",
-    "compatibilityBasis_other": "(based on {{count}} movies in common)",
-    "getRecommendations": "Get Shared Movie Recommendations",
+    "compatibilityBasis_one": "Based on {{count}} film in common",
+    "compatibilityBasis_other": "Based on {{count}} films in common",
+    "getRecommendations": "Films for both of you",
     "topRated": "Rated 10/10",
-    "allRated": "All Rated Movies ({{count}})",
+    "allRated": "All ratings ({{count}})",
     "noRatings": "No rated movies yet.",
     "givenRating": "Rating: {{rating}}/10",
     "posterAlt": "{{title}} poster",
@@ -537,8 +537,9 @@
       "reviews": "Reviews"
     },
     "noReviews": "No reviews yet.",
-    "reviewsFollowTitle": "Follow @{{userName}} to see their reviews here",
-    "reviewsFollowBody": "Their reviews also appear on each film's page."
+    "reviewsHidden": "Reviews are private on this profile.",
+    "noReviewsMine": "You haven't written a review yet",
+    "noReviewsMineHint": "Rate a film, then share a few words on its page."
   },
   "watchlist": {
     "title": "My Watchlists",

@@ -34,8 +34,8 @@ export const clearTokens = () => {
 };
 
 // These endpoints take no Authorization header, and a 401 from them must not
-// trigger another refresh attempt.
-const AUTH_PATHS = ['/api/v1/account/login', '/api/v1/account/register', '/api/v1/account/refresh'];
+// trigger another refresh attempt (the showcase posters are public).
+const AUTH_PATHS = ['/api/v1/account/login', '/api/v1/account/register', '/api/v1/account/refresh', '/api/v1/movies/showcase'];
 const isAuthPath = (url = '') => AUTH_PATHS.some((path) => url.startsWith(path));
 
 // If several requests get a 401 at once, only one refresh request is sent.

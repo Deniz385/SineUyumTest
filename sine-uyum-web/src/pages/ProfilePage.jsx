@@ -11,6 +11,7 @@ import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import BlockRoundedIcon from '@mui/icons-material/BlockRounded';
 import RateReviewRoundedIcon from '@mui/icons-material/RateReviewRounded';
 import MovieFilterRoundedIcon from '@mui/icons-material/MovieFilterRounded';
+import LockRoundedIcon from '@mui/icons-material/LockRounded';
 import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { RecommendationModal } from '../components/RecommendationModal';
@@ -35,7 +36,7 @@ import { tmdbImage } from '../components/ui/posterUtils';
 import { apiErrorMessage } from '../components/ui/apiError';
 
 const PROFILE_TABS = ['ratings', 'diary', 'lists', 'reviews'];
-const REVIEW_PAGES = 3;
+const REVIEW_PAGE_SIZE = 20;
 
 const Stat = ({ value, label, onClick, testId }) => {
     const content = (
@@ -44,52 +45,61 @@ const Stat = ({ value, label, onClick, testId }) => {
             <Typography component="span" variant="body2" sx={{ color: 'text.secondary', display: 'block', mt: 0.25 }}>{label}</Typography>
         </>
     );
-    const sx = { textAlign: 'left', minWidth: 72, borderRadius: 1, px: 0.5, py: 0.25 };
+    const sx = { textAlign: 'left', minWidth: 72, borderRadius: 1, px: 0.5, py: 0.25, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' };
     return onClick ? (
         <ButtonBase onClick={onClick} data-testid={testId} sx={[sx, { '&:hover .MuiTypography-root:last-of-type': { color: 'text.primary' } }]}>{content}</ButtonBase>
     ) : <Box data-testid={testId} sx={sx}>{content}</Box>;
 };
 
-// Reviews shown on a profile. The API lists reviews per film, so they are
-// gathered from the feed (your own and the people you follow).
-const ProfileReviews = ({ userId, userName, canSee }) => {
+// A profile's reviews, newest first (GET /api/v1/reviews/user/{id}).
+// Hidden like the other profile details (403/404).
+const ProfileReviews = ({ userId, isMine }) => {
     const { t } = useTranslation();
-    const [reviews, setReviews] = useState(null);
-    const [error, setError] = useState(false);
+    const { showSnackbar } = useSnackbar();
+    const [state, setState] = useState({ items: null, page: 0, hasMore: false, error: null });
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [attempt, setAttempt] = useState(0);
 
     useEffect(() => {
-        if (!canSee) return undefined;
         let cancelled = false;
-        (async () => {
-            setReviews(null);
-            setError(false);
-            try {
-                const found = [];
-                let cursor = null;
-                for (let i = 0; i < REVIEW_PAGES; i++) {
-                    const { data } = await api.get('/api/v1/feed', { params: { limit: 50, ...(cursor ? { cursor } : {}) } });
-                    found.push(...(data.items || []).filter((item) => item.review && item.author?.id === userId).map((item) => item.review));
-                    cursor = data.nextCursor;
-                    if (!cursor) break;
-                }
-                if (!cancelled) setReviews(found);
-            } catch {
-                if (!cancelled) setError(true);
-            }
-        })();
+        setState({ items: null, page: 0, hasMore: false, error: null });
+        api.get(`/api/v1/reviews/user/${userId}`, { params: { page: 1, pageSize: REVIEW_PAGE_SIZE } })
+            .then(({ data }) => { if (!cancelled) setState({ items: data?.items || [], page: 1, hasMore: Boolean(data?.hasMore), error: null }); })
+            .catch((err) => { if (!cancelled) setState({ items: [], page: 0, hasMore: false, error: err.response?.status ?? 'failed' }); });
         return () => { cancelled = true; };
-    }, [userId, canSee, attempt]);
+    }, [userId, attempt]);
 
-    if (!canSee) {
-        return <EmptyState compact icon={RateReviewRoundedIcon} title={t('profile.reviewsFollowTitle', { userName })} description={t('profile.reviewsFollowBody')} />;
+    const loadMore = async () => {
+        setIsLoadingMore(true);
+        try {
+            const { data } = await api.get(`/api/v1/reviews/user/${userId}`, { params: { page: state.page + 1, pageSize: REVIEW_PAGE_SIZE } });
+            setState((current) => {
+                const known = new Set(current.items.map((r) => r.id));
+                return { ...current, items: [...current.items, ...(data?.items || []).filter((r) => !known.has(r.id))], page: current.page + 1, hasMore: Boolean(data?.hasMore) };
+            });
+        } catch (err) {
+            showSnackbar(apiErrorMessage(err, t('reviews.loadFailed')), 'error');
+        } finally {
+            setIsLoadingMore(false);
+        }
+    };
+
+    if (state.error === 403 || state.error === 404) {
+        return <EmptyState compact icon={LockRoundedIcon} title={t('profile.reviewsHidden')} />;
     }
-    if (error) return <ErrorState compact message={t('reviews.loadFailed')} onRetry={() => setAttempt((n) => n + 1)} />;
-    if (reviews === null) return <FeedSkeleton count={2} />;
-    if (!reviews.length) return <EmptyState compact icon={RateReviewRoundedIcon} title={t('profile.noReviews')} />;
+    if (state.error) return <ErrorState compact message={t('reviews.loadFailed')} onRetry={() => setAttempt((n) => n + 1)} />;
+    if (state.items === null) return <FeedSkeleton count={2} />;
+    if (!state.items.length) {
+        return <EmptyState compact icon={RateReviewRoundedIcon} title={isMine ? t('profile.noReviewsMine') : t('profile.noReviews')} description={isMine ? t('profile.noReviewsMineHint') : undefined} />;
+    }
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 680 }} data-testid="profile-reviews">
-            {reviews.map((r) => <ReviewCard key={r.id} review={r} showMovie />)}
+            {state.items.map((r) => <ReviewCard key={r.id} review={r} showMovie />)}
+            {state.hasMore && (
+                <Button variant="tonal" onClick={loadMore} disabled={isLoadingMore} sx={{ alignSelf: 'center' }}>
+                    {isLoadingMore ? t('common.loadingEllipsis') : t('common.loadMore')}
+                </Button>
+            )}
         </Box>
     );
 };
@@ -375,7 +385,7 @@ export const ProfilePage = () => {
 
                 {!isRestricted && (
                     <>
-                        <Tabs value={tab} onChange={changeTab} aria-label={t('profile.tabsLabel')} variant="scrollable" scrollButtons={false} sx={{ mt: 4, mb: 3, borderBottom: 1, borderColor: 'divider' }}>
+                        <Tabs value={tab} onChange={changeTab} aria-label={t('profile.tabsLabel')} variant="scrollable" scrollButtons={false} sx={{ mt: 4, mb: 3, borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { px: { xs: 1.25, sm: 2 } } }}>
                             {PROFILE_TABS.map((value) => (
                                 <Tab key={value} value={value} label={t(`profile.tabs.${value}`)} id={`profile-tab-${value}`} aria-controls={`profile-panel-${value}`} />
                             ))}
@@ -402,7 +412,7 @@ export const ProfilePage = () => {
                                 <ProfilePublicLists key={`lists-${userId}`} userId={userId} isMine={isMyProfile} enabled={!isRestricted} userName={profileData?.userName} showEmpty />
                             )}
                             {tab === 'reviews' && (
-                                <ProfileReviews userId={userId} userName={profileData?.userName} canSee={isMyProfile || followStatus.isFollowing} />
+                                <ProfileReviews key={`reviews-${userId}`} userId={userId} isMine={isMyProfile} />
                             )}
                         </Box>
                     </>

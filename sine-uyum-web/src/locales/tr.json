@@ -190,7 +190,7 @@
     "forYouMatch": "{{userName}} (%{{compatibility}}) {{rating}}",
     "forYou": "Sana göre",
     "rateThis": "Puanla",
-    "addToList": "Listeye Ekle",
+    "addToList": "Listeye ekle",
     "runtimeLabel": "Süre:",
     "runtime_one": "{{count}} dakika",
     "runtime_other": "{{count}} dakika",
@@ -208,7 +208,7 @@
     "tmdbSr": "TMDb: 10 üzerinden {{score}}"
   },
   "recommendations": {
-    "title": "{{userName}} ile Ortak Zevkinize Göre Film Önerileri",
+    "title": "{{userName}} ile ikinize uygun filmler",
     "emptyTitle": "Henüz öneri yok",
     "empty": "İkinize de uygun bir öneri bulunamadı. Daha fazla ortak filmi yüksek puanla oylamayı deneyin."
   },
@@ -500,8 +500,8 @@
     "editProfile": "Profili düzenle",
     "unblock": "Engeli Kaldır",
     "sendMessage": "Mesaj gönder",
-    "follow": "Takip Et",
-    "unfollow": "Takipten Çık",
+    "follow": "Takip et",
+    "unfollow": "Takibi bırak",
     "block": "Engelle",
     "followerCount_one": "<strong>{{count}}</strong> Takipçi",
     "followerCount_other": "<strong>{{count}}</strong> Takipçi",
@@ -517,11 +517,11 @@
     "statAverage": "Ortalama",
     "statInLists": "Listelerindeki Film",
     "compatibilityScore": "%{{score}} uyumlusunuz",
-    "compatibilityBasis_one": "({{count}} ortak filme göre hesaplandı)",
-    "compatibilityBasis_other": "({{count}} ortak filme göre hesaplandı)",
-    "getRecommendations": "Ortak Film Önerileri Alın",
+    "compatibilityBasis_one": "{{count}} ortak filme göre",
+    "compatibilityBasis_other": "{{count}} ortak filme göre",
+    "getRecommendations": "İkinize uygun filmler",
     "topRated": "10/10 verdikleri",
-    "allRated": "Oylanan Tüm Filmler ({{count}})",
+    "allRated": "Tüm puanlar ({{count}})",
     "noRatings": "Henüz puanlanmış film yok.",
     "givenRating": "Verilen Puan: {{rating}}/10",
     "posterAlt": "{{title}} afişi",
@@ -537,8 +537,9 @@
       "reviews": "İncelemeler"
     },
     "noReviews": "Henüz inceleme yok.",
-    "reviewsFollowTitle": "İncelemelerini burada görmek için @{{userName}} adlı kişiyi takip et",
-    "reviewsFollowBody": "İncelemeleri her filmin sayfasında da görünür."
+    "reviewsHidden": "Bu profilde incelemeler gizli.",
+    "noReviewsMine": "Henüz inceleme yazmadın",
+    "noReviewsMineHint": "Bir filmi puanla, sonra sayfasında birkaç kelime paylaş."
   },
   "watchlist": {
     "title": "İzleme Listelerim",

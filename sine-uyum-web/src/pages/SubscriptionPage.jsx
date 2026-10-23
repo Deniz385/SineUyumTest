@@ -1,8 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Alert, Box, Typography, Button, Paper, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { Alert, Box, Typography, Button, Card, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import { Page } from '../components/ui/Page';
+import { gradients, marqueeText } from '../theme';
+import CheckCircleIcon from '@mui/icons-material/CheckCircleRounded';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axiosConfig';
 import { LoadingState } from '../components/states/LoadingState';
@@ -15,6 +18,7 @@ const formatDate = (iso, language) => new Date(iso).toLocaleDateString(language,
 // only activated by a verified payment or by an admin.
 export const SubscriptionPage = () => {
     const { t, i18n } = useTranslation();
+    const theme = useTheme();
     const { user, refreshSession } = useAuth();
     const [status, setStatus] = useState(null);
     const [error, setError] = useState('');
@@ -39,25 +43,25 @@ export const SubscriptionPage = () => {
     }, [load]);
 
     return (
-        <Box className="page-container" sx={{ maxWidth: '700px' }}>
-            <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
-                <Typography variant="h4" component="h1" gutterBottom>
-                    SineUyum Premium
+        <Page width="reading">
+            <Card sx={{ p: { xs: 3, md: 5 }, textAlign: 'center', position: 'relative', overflow: 'hidden', '&::before': { content: '""', position: 'absolute', inset: '0 0 auto 0', height: 3, background: gradients.marquee } }}>
+                <Typography variant="display" component="h1" sx={{ fontSize: { xs: '2rem', md: '2.5rem' } }}>
+                    SineUyum <Box component="span" sx={marqueeText(theme.palette.mode)}>Premium</Box>
                 </Typography>
-                <Typography variant="h6" color="text.secondary" sx={{ mb: 3 }}>
+                <Typography variant="body1" color="text.secondary" sx={{ mt: 1, mb: 3, fontSize: '1.0625rem' }}>
                     {t('subscription.tagline')}
                 </Typography>
                 <List sx={{ textAlign: 'left', display: 'inline-block', mb: 3 }}>
                     <ListItem>
-                        <ListItemIcon><CheckCircleIcon color="success" /></ListItemIcon>
+                        <ListItemIcon><CheckCircleIcon sx={{ color: "success.main" }} /></ListItemIcon>
                         <ListItemText primary={t('subscription.featureGroups')} />
                     </ListItem>
                     <ListItem>
-                        <ListItemIcon><CheckCircleIcon color="success" /></ListItemIcon>
+                        <ListItemIcon><CheckCircleIcon sx={{ color: "success.main" }} /></ListItemIcon>
                         <ListItemText primary={t('subscription.featureVoting')} />
                     </ListItem>
                     <ListItem>
-                        <ListItemIcon><CheckCircleIcon color="success" /></ListItemIcon>
+                        <ListItemIcon><CheckCircleIcon sx={{ color: "success.main" }} /></ListItemIcon>
                         <ListItemText primary={t('subscription.featureEvents')} />
                     </ListItem>
                 </List>
@@ -83,7 +87,7 @@ export const SubscriptionPage = () => {
                             : t('subscription.preparing')}
                     </Alert>
                 )}
-            </Paper>
-        </Box>
+            </Card>
+        </Page>
     );
 };

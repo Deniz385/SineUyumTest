@@ -197,6 +197,12 @@ changed with `RateLimit__GlobalPermitLimit`, `RateLimit__TmdbPermitLimit`,
 `TRUSTED_PROXIES` (e.g. `172.18.0.0/16`) must be set; otherwise the per-IP
 limits throttle all users together.
 
+## Design
+
+The web and mobile apps share one design language (colours, type, spacing,
+motion, components, navigation and accessibility rules):
+[docs/DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md).
+
 ## Localization
 
 The apps support multiple languages (Turkish and English to start).

@@ -781,5 +781,45 @@
       "topRated": "En beğenilenler",
       "back": "Keşfet'e dön"
     }
+  },
+  "welcome": {
+    "stepOf": "Adım {{step}} / {{total}}",
+    "skipAll": "Kurulumu atla",
+    "skipStep": "Atla",
+    "continue": "Devam",
+    "intro": {
+      "title": "Senin gibi izleyen insanları bul",
+      "subtitle": "SineUyum, puanlarına bakarak seni zevkine yakın sinemaseverlerle buluşturur. Bir dakikalık kurulum, akışın canlansın.",
+      "benefit1Title": "İzlediğini puanla",
+      "benefit1Body": "On üzerinden puan, yarım yıldızlar ve her izleyişin günlüğü.",
+      "benefit2Title": "Uyumunu gör",
+      "benefit2Body": "Birinin zevki seninkine ne kadar yakın? Tek bir sayı söylüyor.",
+      "benefit3Title": "Zevk ikizlerinle tanış",
+      "benefit3Body": "Onları takip et, liste paylaş, etkinliklerde birlikte izle.",
+      "start": "Hadi başlayalım"
+    },
+    "rate": {
+      "title": "Birkaç film puanla",
+      "subtitle_one": "İzlediklerine dokun. Sana benzeyenleri bulmak için {{count}} puan yeter.",
+      "subtitle_other": "İzlediklerine dokun. Sana benzeyenleri bulmak için {{count}} puan yeter.",
+      "progress": "{{count}} / {{goal}} puanlandı",
+      "rateLabel": "{{title}} filmini puanla",
+      "ratedLabel": "{{title}}, 10 üzerinden {{value}} puan. Puanı değiştir",
+      "loadError": "Puanlanacak filmler yüklenemedi."
+    },
+    "people": {
+      "title": "Sana benzeyenler",
+      "tasteSubtitle": "Az önce puanladığın filmlere göre eşleşti. Akışın dolsun diye birkaçını takip et.",
+      "popularSubtitle": "Başlangıç için sevilen sinemaseverler. Daha çok puanladıkça öneriler zevkine göre gelir."
+    },
+    "done": {
+      "title": "Her şey hazır",
+      "body": "Takip ettiğin kişiler puanladıkça ve inceleme yazdıkça akışın dolar. İzledikçe puanla, eşleşmelerin netleşsin.",
+      "rated_one": "{{count}} film puanlandı",
+      "rated_other": "{{count}} film puanlandı",
+      "followed_one": "{{count}} kişiyi takip ediyorsun",
+      "followed_other": "{{count}} kişiyi takip ediyorsun",
+      "cta": "Ana sayfaya git"
+    }
   }
 }

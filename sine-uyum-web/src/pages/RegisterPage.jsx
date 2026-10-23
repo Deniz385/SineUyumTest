@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { TextField, Button, Box, Typography, CircularProgress } from '@mui/material';
 import { useSnackbar } from '../context/SnackbarProvider';
+import { useAuth } from '../context/AuthContext';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import api from '../api/axiosConfig';
 
@@ -18,6 +19,7 @@ export const RegisterPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
+  const { loginAction } = useAuth();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -40,11 +42,19 @@ export const RegisterPage = () => {
         password: formData.password,
       });
 
-      showSnackbar(t('auth.register.success'), 'success');
-      
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000);
+      // Signed straight in: a new account continues to the first-run welcome.
+      try {
+        const login = await api.post(`/api/v1/account/login`, {
+          username: formData.username,
+          password: formData.password,
+        });
+        loginAction(login.data);
+      } catch {
+        showSnackbar(t('auth.register.success'), 'success');
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
+      }
 
     } catch (err) {
       const errorMessages = err.response?.data?.errors

@@ -781,5 +781,45 @@
       "topRated": "Top rated",
       "back": "Back to Discover"
     }
+  },
+  "welcome": {
+    "stepOf": "Step {{step}} of {{total}}",
+    "skipAll": "Skip setup",
+    "skipStep": "Skip",
+    "continue": "Continue",
+    "intro": {
+      "title": "Find the people who watch like you do",
+      "subtitle": "SineUyum matches you with film lovers by how you rate. A minute of setup and your feed comes alive.",
+      "benefit1Title": "Rate what you watch",
+      "benefit1Body": "Ten points, half stars, a diary of every viewing.",
+      "benefit2Title": "See your compatibility",
+      "benefit2Body": "How close is anyone's taste to yours? One number tells you.",
+      "benefit3Title": "Meet your taste twins",
+      "benefit3Body": "Follow them, share lists and watch together at events.",
+      "start": "Let's start"
+    },
+    "rate": {
+      "title": "Rate a few films",
+      "subtitle_one": "Tap the ones you have seen. {{count}} rating is enough to find people like you.",
+      "subtitle_other": "Tap the ones you have seen. {{count}} ratings are enough to find people like you.",
+      "progress": "{{count}} / {{goal}} rated",
+      "rateLabel": "Rate {{title}}",
+      "ratedLabel": "{{title}}, rated {{value}} out of 10. Change rating",
+      "loadError": "Couldn't load films to rate."
+    },
+    "people": {
+      "title": "People like you",
+      "tasteSubtitle": "Matched by the films you just rated. Follow a few to fill your feed.",
+      "popularSubtitle": "Popular film lovers to start with. Suggestions follow your taste as you rate more."
+    },
+    "done": {
+      "title": "You're all set",
+      "body": "Your feed fills up as the people you follow rate and review. Rate as you watch and your matches get sharper.",
+      "rated_one": "{{count}} film rated",
+      "rated_other": "{{count}} films rated",
+      "followed_one": "following {{count}} person",
+      "followed_other": "following {{count}} people",
+      "cta": "Go to home"
+    }
   }
 }

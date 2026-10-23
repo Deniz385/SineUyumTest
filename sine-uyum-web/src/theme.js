@@ -48,7 +48,17 @@ export const tokens = {
 
 export const gradients = {
     marquee: 'linear-gradient(120deg, #FFD54F 0%, #FF8A65 50%, #FF5A5F 100%)',
+    // The same hues darkened for text on the light theme (AA on paper).
+    marqueeOnLight: 'linear-gradient(120deg, #8A5600 0%, #B4400F 50%, #B3202A 100%)',
 };
+
+// Marquee-gradient text for headlines in either theme.
+export const marqueeText = (mode) => ({
+    background: mode === 'light' ? gradients.marqueeOnLight : gradients.marquee,
+    WebkitBackgroundClip: 'text',
+    backgroundClip: 'text',
+    color: 'transparent',
+});
 
 // Text over artwork: bg from transparent at the top to opaque at the bottom,
 // on top of a 40% bg overlay.

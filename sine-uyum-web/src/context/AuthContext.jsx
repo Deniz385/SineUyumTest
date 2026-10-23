@@ -29,6 +29,39 @@ const getUserFromToken = (token) => {
   }
 };
 
+// Whether the first-run welcome is done, remembered per user and device so
+// returning users never wait for /account/me (or see the welcome again).
+const onboardingKey = (userId) => `onboardingDone:${userId}`;
+const readOnboardingDone = (userId) => {
+  try {
+    return localStorage.getItem(onboardingKey(userId)) === '1';
+  } catch {
+    return false;
+  }
+};
+const rememberOnboardingDone = (userId) => {
+  try {
+    localStorage.setItem(onboardingKey(userId), '1');
+  } catch {
+    // Ignore: /account/me answers again next time.
+  }
+};
+
+// The token carries the identity; the user summary (login/refresh response,
+// /account/me) adds the rest. onboardingCompleted: true / false, or
+// undefined while unknown (null if /account/me could not be loaded).
+const withSummary = (user, summary) => {
+  if (!user) return user;
+  const next = { ...user };
+  if (summary) {
+    if (typeof summary.onboardingCompleted === 'boolean') next.onboardingCompleted = summary.onboardingCompleted;
+    if (summary.profileImageUrl !== undefined) next.profileImageUrl = summary.profileImageUrl;
+  }
+  if (next.onboardingCompleted === undefined && readOnboardingDone(user.id)) next.onboardingCompleted = true;
+  if (next.onboardingCompleted === true) rememberOnboardingDone(user.id);
+  return next;
+};
+
 // Tells the server which language to use for notifications and pushes.
 // Fire-and-forget: the UI language does not depend on it.
 const syncLanguageToServer = (language) => {
@@ -37,7 +70,7 @@ const syncLanguageToServer = (language) => {
 
 export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
-  const [user, setUser] = useState(() => getUserFromToken(localStorage.getItem(TOKEN_KEY)));
+  const [user, setUser] = useState(() => withSummary(getUserFromToken(localStorage.getItem(TOKEN_KEY))));
   // If the access token has expired on startup but a refresh token exists, a
   // refresh is attempted before deciding. An expired token used to count as
   // "not logged in" straight away: since the access token lives 60 minutes
@@ -53,7 +86,7 @@ export const AuthProvider = ({ children }) => {
     refreshAccessTokenOnce().then((newToken) => {
       if (cancelled) return;
       const restored = getUserFromToken(newToken);
-      if (restored) setUser(restored);
+      if (restored) setUser(withSummary(restored));
       else clearTokens();
       setIsRestoring(false);
     });
@@ -70,7 +103,8 @@ export const AuthProvider = ({ children }) => {
   // refreshed too (the subscription claim may have changed, for example).
   const handleTokenRefreshed = useCallback((newToken) => {
     const userData = getUserFromToken(newToken);
-    if (userData) setUser(userData);
+    // Keep what the summary added (onboarding state, photo).
+    if (userData) setUser((prev) => withSummary({ ...prev, ...userData }));
   }, []);
 
   // Hand the callbacks to the interceptors; they are only replaced when the
@@ -79,9 +113,31 @@ export const AuthProvider = ({ children }) => {
     setupInterceptors(logoutAction, handleTokenRefreshed);
   }, [logoutAction, handleTokenRefreshed]);
 
+  // The user summary (onboarding state, photo) when the token alone does
+  // not tell, e.g. on app start; a failure never blocks the app.
+  const userId = user?.id;
+  const needsSummary = Boolean(userId) && (user?.onboardingCompleted === undefined || user?.profileImageUrl === undefined);
+  useEffect(() => {
+    if (!needsSummary) return undefined;
+    let cancelled = false;
+    api.get('/api/v1/account/me')
+      .then((res) => {
+        if (cancelled) return;
+        setUser((prev) => {
+          if (!prev) return prev;
+          const next = withSummary(prev, res.data);
+          // Never ask twice: missing fields count as unknown (null).
+          return { ...next, onboardingCompleted: next.onboardingCompleted ?? null, profileImageUrl: next.profileImageUrl ?? null };
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setUser((prev) => (prev && prev.onboardingCompleted === undefined ? { ...prev, onboardingCompleted: null, profileImageUrl: prev.profileImageUrl ?? null } : prev));
+      });
+    return () => { cancelled = true; };
+  }, [needsSummary]);
+
   // Once per login (or app start while logged in), and on every language
   // change after that, the server learns the user's language.
-  const userId = user?.id;
   useEffect(() => {
     if (!userId) return undefined;
     syncLanguageToServer(i18n.language);
@@ -95,12 +151,15 @@ export const AuthProvider = ({ children }) => {
     const token = typeof authResponse === 'string' ? authResponse : authResponse?.token;
     const refreshToken = typeof authResponse === 'string' ? null : authResponse?.refreshToken;
 
-    const userData = getUserFromToken(token);
+    const userData = withSummary(getUserFromToken(token), typeof authResponse === 'string' ? null : authResponse?.user);
     if (userData) {
       saveTokens({ token, refreshToken });
       setUser(userData);
 
-      if (userData.roles.includes('Admin')) {
+      // New accounts start with the first-run welcome (shown once).
+      if (userData.onboardingCompleted === false) {
+        navigate('/welcome');
+      } else if (userData.roles.includes('Admin')) {
         navigate('/admin');
       } else {
         navigate('/home');
@@ -118,14 +177,34 @@ export const AuthProvider = ({ children }) => {
   const refreshSession = useCallback(async () => {
     const newToken = await refreshAccessTokenOnce();
     const refreshed = getUserFromToken(newToken);
-    if (refreshed) setUser(refreshed);
+    if (refreshed) setUser((prev) => withSummary({ ...prev, ...refreshed }));
     return refreshed;
+  }, []);
+
+  // Finishing or skipping the welcome (POST /account/onboarding/complete).
+  // The welcome is not shown again on this device even if the call fails;
+  // the server asks again on the next sign-in in that case.
+  const completeOnboarding = useCallback(async () => {
+    setUser((prev) => (prev ? withSummary({ ...prev, onboardingCompleted: true }) : prev));
+    try {
+      await api.post('/api/v1/account/onboarding/complete');
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // A changed profile photo shows in the top bar at once.
+  const updateUserSummary = useCallback((summary) => {
+    setUser((prev) => (prev ? withSummary(prev, summary) : prev));
   }, []);
 
   const authContextValue = {
     user,
     isRestoring,
     refreshSession,
+    completeOnboarding,
+    updateUserSummary,
     loginAction,
     logoutAction,
   };

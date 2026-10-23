@@ -59,7 +59,7 @@ export const FollowButton = ({ user, following: initialFollowing = false, onChan
             aria-pressed={following}
             aria-label={following ? t('follow.unfollowUser', { userName: user.userName }) : t('follow.followUser', { userName: user.userName })}
             data-testid="follow-button"
-            sx={[{ flexShrink: 0 }, ...(Array.isArray(sx) ? sx : [sx])]}
+            sx={[{ flexShrink: 0, '& .MuiButton-startIcon': { display: { xs: 'none', sm: 'inherit' } }, px: { xs: 1.5, sm: 1.75 } }, ...(Array.isArray(sx) ? sx : [sx])]}
         >
             {following ? t('follow.following') : t('follow.follow')}
         </Button>
@@ -76,7 +76,7 @@ export const UserRow = ({ user, subtitle, detail, compatibility, action, avatarS
         sx={[{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1.25, minWidth: 0 }, ...(Array.isArray(sx) ? sx : [sx])]}
     >
         <Box component={Link} to={`/profile/${user.id}`} tabIndex={-1} aria-hidden="true" sx={{ borderRadius: '50%', flexShrink: 0 }}>
-            <UserAvatar user={user} size={avatarSize} />
+            <UserAvatar user={user} size={avatarSize} sx={{ width: { xs: Math.min(avatarSize, 40), sm: avatarSize }, height: { xs: Math.min(avatarSize, 40), sm: avatarSize } }} />
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
@@ -91,7 +91,7 @@ export const UserRow = ({ user, subtitle, detail, compatibility, action, avatarS
                 </Typography>
                 {compatibility != null && <CompatibilityBadge value={compatibility} size="sm" />}
             </Box>
-            {subtitle && <Typography variant="body2" color="text.secondary" noWrap>{subtitle}</Typography>}
+            {subtitle && <Typography variant="body2" color="text.secondary" className="tabular-nums">{subtitle}</Typography>}
             {detail && <Typography variant="body2" color="text.secondary" sx={{ ...clampLines(2), mt: 0.25 }}>{detail}</Typography>}
         </Box>
         {action}

@@ -8,7 +8,7 @@ import { ErrorState } from './states/ErrorState';
 import { EmptyState } from './states/EmptyState';
 
 // A suggested person (GET /api/v1/people/suggestions item) with a follow button.
-export const PersonSuggestionRow = ({ person }) => {
+export const PersonSuggestionRow = ({ person, onFollowChange }) => {
     const { t } = useTranslation();
     const parts = [];
     if (person.commonMovieCount) parts.push(t('people.commonFilms', { count: person.commonMovieCount }));
@@ -19,19 +19,19 @@ export const PersonSuggestionRow = ({ person }) => {
             compatibility={person.compatibility}
             subtitle={parts.join(' · ')}
             detail={person.bio}
-            action={<FollowButton user={person.user} />}
+            action={<FollowButton user={person.user} onChange={onFollowChange} />}
         />
     );
 };
 
-export const PeopleList = ({ status, items, reload }) => {
+export const PeopleList = ({ status, items, reload, onFollowChange }) => {
     const { t } = useTranslation();
     if (status === 'loading') return <UserListSkeleton />;
     if (status === 'error') return <ErrorState compact message={t('people.loadError')} onRetry={reload} />;
     if (!items.length) return <EmptyState compact icon={GroupRoundedIcon} title={t('people.emptyTitle')} description={t('people.emptyBody')} />;
     return (
         <Box component="ul" data-testid="people-list" sx={{ listStyle: 'none', m: 0, p: 0, '& > li + li': { borderTop: 1, borderColor: 'divider' } }}>
-            {items.map((person) => <li key={person.user.id}><PersonSuggestionRow person={person} /></li>)}
+            {items.map((person) => <li key={person.user.id}><PersonSuggestionRow person={person} onFollowChange={onFollowChange} /></li>)}
         </Box>
     );
 };

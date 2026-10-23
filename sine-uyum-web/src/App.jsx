@@ -30,6 +30,7 @@ const SubscriptionPage = page(() => import('./pages/SubscriptionPage'), 'Subscri
 const AdminPage = page(() => import('./pages/AdminPage'), 'AdminPage');
 const FeedPage = page(() => import('./pages/FeedPage'), 'FeedPage');
 const YearInReviewPage = page(() => import('./pages/YearInReviewPage'), 'YearInReviewPage');
+const WelcomePage = page(() => import('./pages/WelcomePage'), 'WelcomePage');
 
 // The old list discovery address opens Discover › Lists (sort and search kept).
 const ListsRedirect = () => {
@@ -54,6 +55,15 @@ function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/" element={<LoginPage />} />
+                {/* The first-run welcome is a full-screen flow outside the layout. */}
+                <Route
+                  path="/welcome"
+                  element={
+                    <ProtectedRoute>
+                      <WelcomePage />
+                    </ProtectedRoute>
+                  }
+                />
                 {/* The yearly recap is a full-screen story, so it has no navbar. */}
                 <Route
                   path="/profile/:userId/year/:year?"
@@ -65,7 +75,7 @@ function App() {
                 />
                 <Route
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute onboarding>
                       <Layout />
                     </ProtectedRoute>
                   }

@@ -928,3 +928,17 @@ movie lovers; the core differentiating feature is the compatibility score.
       (`/profile/:userId/diary`), readable offline.
     - `GET /diary/movie/{movieId}`: my entries of one movie, so the "Add to
       diary" form pre-selects "Rewatch" when the movie is already logged.
+34. Year in review — ✅
+    - `GET /year-in-review/user/{id}?year=` (default: the year so far): the
+      year's movies are the diary entries of that year plus the movies first
+      rated that year. Totals (movies, rewatches, ratings, reviews, likes and
+      comments received), activity per month, busiest month, favourite
+      weekday, the year's film identity (title, top genres, favourite,
+      contrarian take), top 5, average compared with the previous year, first
+      and last movie, most rewatched, and a "taste mate" (the most compatible
+      person the user follows, at least 5 movies in common). Not "ready" below
+      3 movies. Same visibility rule as profile details.
+    - Web and mobile: a story (tap through ~10 slides, auto-advance, year
+      picker) and a shareable 1080×1920 image; a button on the profile and a
+      feed banner in December and early January (only when the recap is
+      ready).

@@ -6,6 +6,7 @@ import '../../data/models/watchlist.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/session_provider.dart';
 import '../../providers/watchlist_provider.dart';
+import '../../core/theme/tokens.dart';
 import '../../core/ui/poster_image.dart';
 
 /// Opens a public list: my own in the editable view, someone else's in the
@@ -43,17 +44,17 @@ class PosterCollage extends StatelessWidget {
         : Container(
             width: cell,
             height: cell,
-            color: scheme.surfaceContainerHighest,
+            color: scheme.surfaceContainerHigh,
           );
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(AppRadii.md),
       child: SizedBox(
         width: size,
         height: size,
         child: posters.isEmpty
             ? Container(
-                color: scheme.surfaceContainerHighest,
+                color: scheme.surfaceContainerHigh,
                 alignment: Alignment.center,
                 child: Icon(
                   Icons.movie_filter_rounded,
@@ -126,9 +127,7 @@ class OwnerCompatibilityChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final color = score >= 70
-        ? Colors.green
-        : Theme.of(context).colorScheme.onSurfaceVariant;
+    final color = context.colors.compatibility(score);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
@@ -140,10 +139,14 @@ class OwnerCompatibilityChip extends StatelessWidget {
         children: [
           Icon(Icons.favorite_rounded, size: 12, color: color),
           const SizedBox(width: 4),
-          Text(
-            l10n.listOwnerCompatibility(l10n.percent(score)),
-            style: Theme.of(context).textTheme.labelSmall
-                ?.copyWith(color: color),
+          Flexible(
+            child: Text(
+              l10n.listOwnerCompatibility(l10n.percent(score)),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall
+                  ?.copyWith(color: color),
+            ),
           ),
         ],
       ),
@@ -194,7 +197,7 @@ class ListReactionButtons extends ConsumerWidget {
               reaction.liked
                   ? Icons.favorite_rounded
                   : Icons.favorite_border_rounded,
-              color: reaction.liked ? Colors.redAccent : null,
+              color: reaction.liked ? context.colors.accent : null,
             ),
             label: Text(
               '${reaction.likeCount}',
@@ -357,7 +360,7 @@ class WatchlistCardCompact extends ConsumerWidget {
     return SizedBox(
       width: width,
       child: InkWell(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadii.md),
         onTap: () => openListCard(context, ref, card),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

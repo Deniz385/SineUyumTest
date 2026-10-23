@@ -152,7 +152,9 @@ final keyScreens = <KeyScreen>[
     '/welcome',
     user: _newUser,
     interact: (tester) async {
-      await tester.tap(find.byType(FilledButton).last);
+      final start = find.byType(FilledButton);
+      await tester.scrollUntilVisible(start, 200);
+      await tester.tap(start);
       await AppHarness.settle(tester);
     },
   ),

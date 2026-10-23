@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:intl/intl.dart';
 
 import '../../data/models/year_in_review.dart';
@@ -17,9 +18,9 @@ class YearInReviewShareCard extends StatelessWidget {
   static const size = Size(360, 640);
   static const pixelRatio = 3.0;
 
-  static const _gold = Color(0xFFFFD54F);
+  static const _gold = Color(0xFFF5B841); // AppColors.dark.primary
   static const _label = TextStyle(
-    color: Color(0xFF9FB3FF),
+    color: Color(0xFFF5B841),
     fontSize: 11,
     fontWeight: FontWeight.w700,
     letterSpacing: 1.4,
@@ -68,7 +69,7 @@ class YearInReviewShareCard extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF1B1038), Color(0xFF3A1C71), Color(0xFF0D2A4A)],
+            colors: [Color(0xFF3A2A0C), Color(0xFF14161C), Color(0xFF3B1214)],
           ),
         ),
         // Its own text defaults, wherever it is placed.

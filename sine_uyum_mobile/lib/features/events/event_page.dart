@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/network/api_exception.dart';
+import '../../core/theme/tokens.dart';
 import '../../data/models/event.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
@@ -282,21 +283,41 @@ class _EventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Card(
+    final colors = context.colors;
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.4)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colors.primary.withValues(alpha: colors.isDark ? 0.14 : 0.08),
+            colors.surface,
+          ],
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpace.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              event.locationName,
-              style: Theme.of(context).textTheme.titleMedium,
+              l10n.upper(l10n.cinemaEventFallback),
+              style: context.type.overline.copyWith(color: colors.primary),
             ),
+            const SizedBox(height: AppSpace.xxs),
+            Text(event.locationName, style: context.type.h2),
             if (event.eventDate != null) ...[
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Icon(Icons.calendar_today_rounded, size: 16),
+                  Icon(
+                    Icons.calendar_today_rounded,
+                    size: 18,
+                    color: colors.primary,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     DateFormat.yMMMMd(l10n.localeName)
@@ -311,7 +332,7 @@ class _EventCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.place_rounded, size: 16),
+                  Icon(Icons.place_rounded, size: 18, color: colors.primary),
                   const SizedBox(width: 6),
                   Expanded(child: Text(event.address!)),
                 ],
@@ -321,7 +342,7 @@ class _EventCard extends StatelessWidget {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  const Icon(Icons.groups_rounded, size: 16),
+                  Icon(Icons.groups_rounded, size: 18, color: colors.primary),
                   const SizedBox(width: 6),
                   Text(l10n.eventGroupSize(event.groupSize)),
                 ],

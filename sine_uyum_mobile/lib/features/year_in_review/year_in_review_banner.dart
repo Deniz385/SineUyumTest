@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme/tokens.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/session_provider.dart';
 import '../../providers/year_in_review_provider.dart';
@@ -9,6 +10,9 @@ import '../../providers/year_in_review_provider.dart';
 /// Feed card offering the signed-in user's recap from December 1 to
 /// January 15 (in January, of the year that just ended). Shown only once the
 /// recap is ready; hiding it is remembered for that year.
+/// Text on the marquee gradient (AA on all of its stops).
+const _ink = Color(0xFF1A1300);
+
 class YearInReviewBanner extends ConsumerWidget {
   const YearInReviewBanner({super.key});
 
@@ -33,15 +37,11 @@ class YearInReviewBanner extends ConsumerWidget {
 
     final l10n = context.l10n;
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: AppSpace.sm),
       padding: const EdgeInsets.fromLTRB(16, 12, 4, 16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF3A1C71), Color(0xFF9E4A6C)],
-        ),
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        gradient: AppGradients.marquee,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,10 +51,7 @@ class YearInReviewBanner extends ConsumerWidget {
             children: [
               const Padding(
                 padding: EdgeInsets.only(top: 10),
-                child: Icon(
-                  Icons.auto_awesome_rounded,
-                  color: Color(0xFFFFD54F),
-                ),
+                child: Icon(Icons.auto_awesome_rounded, color: _ink),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -62,17 +59,13 @@ class YearInReviewBanner extends ConsumerWidget {
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
                     l10n.recapBannerTitle(year),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: context.type.h2.copyWith(color: _ink),
                   ),
                 ),
               ),
               IconButton(
                 tooltip: l10n.recapBannerDismiss,
-                icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                icon: const Icon(Icons.close_rounded, color: _ink),
                 onPressed: () => ref
                     .read(recapBannerDismissedProvider(dismissedKey).notifier)
                     .dismiss(),
@@ -83,15 +76,14 @@ class YearInReviewBanner extends ConsumerWidget {
             padding: const EdgeInsets.only(right: 12),
             child: Text(
               l10n.recapBannerBody,
-              style: const TextStyle(color: Color(0xFFE3E8FF)),
+              style: context.type.body.copyWith(color: _ink),
             ),
           ),
           const SizedBox(height: 12),
           FilledButton.icon(
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFFFD54F),
-              foregroundColor: Colors.black,
-              minimumSize: const Size(0, 44),
+              backgroundColor: AppColors.dark.bg,
+              foregroundColor: AppColors.dark.text,
             ),
             onPressed: () =>
                 context.push('/profile/$userId/year-in-review?year=$year'),

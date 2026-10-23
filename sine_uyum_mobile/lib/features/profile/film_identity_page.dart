@@ -120,7 +120,7 @@ class _IdentityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     const label = TextStyle(
-      color: Color(0xFF9FB3FF),
+      color: Color(0xFFF5B841),
       fontSize: 12,
       fontWeight: FontWeight.w600,
       letterSpacing: 1.2,
@@ -136,7 +136,7 @@ class _IdentityCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1B1038), Color(0xFF0D2A4A)],
+          colors: [Color(0xFF3A2A0C), Color(0xFF0B0C10)],
         ),
       ),
       child: Column(
@@ -149,7 +149,7 @@ class _IdentityCard extends StatelessWidget {
           Text(
             identity.title,
             style: const TextStyle(
-              color: Color(0xFFFFD54F),
+              color: Color(0xFFF5B841),
               fontSize: 30,
               fontWeight: FontWeight.bold,
             ),
@@ -157,7 +157,7 @@ class _IdentityCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             identity.titleDescription,
-            style: const TextStyle(color: Color(0xFFE3E8FF), fontSize: 14),
+            style: const TextStyle(color: Color(0xFFF2F2F5), fontSize: 14),
           ),
           const SizedBox(height: 14),
           Text(
@@ -188,7 +188,7 @@ class _IdentityCard extends StatelessWidget {
                           value: g.share / 100,
                           minHeight: 10,
                           backgroundColor: Colors.white24,
-                          color: const Color(0xFF7C9CFF),
+                          color: const Color(0xFFF5B841),
                         ),
                       ),
                     ),

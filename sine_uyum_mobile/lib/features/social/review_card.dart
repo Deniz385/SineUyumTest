@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/theme/tokens.dart';
+import '../../core/ui/compatibility_badge.dart';
+import '../../core/ui/poster_image.dart';
 import '../../data/models/social.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
-import '../../core/ui/poster_image.dart';
 
-/// Author row: avatar, name, rating and compatibility badge.
+/// Author row: avatar, name and when; under it the rating and the
+/// compatibility badge.
 class AuthorRow extends StatelessWidget {
   const AuthorRow({
     super.key,
@@ -17,6 +20,7 @@ class AuthorRow extends StatelessWidget {
     this.compatibility,
     this.subtitle,
     this.when,
+    this.avatarRadius = 18,
   });
 
   final Author author;
@@ -24,6 +28,7 @@ class AuthorRow extends StatelessWidget {
   final double? compatibility;
   final String? subtitle;
   final DateTime? when;
+  final double avatarRadius;
 
   @override
   Widget build(BuildContext context) {
@@ -35,46 +40,54 @@ class AuthorRow extends StatelessWidget {
         DateFormat.yMMMd(l10n.localeName).format(when!.toLocal()),
     ].join(' · ');
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        GestureDetector(
+        InkWell(
+          borderRadius: BorderRadius.circular(AppRadii.sm),
           onTap: () => context.push('/profile/${author.id}'),
-          child: UserAvatar(
-            userName: author.userName,
-            imageUrl: author.imageUrl,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Text(author.userName, style: theme.textTheme.titleSmall),
-              if (details.isNotEmpty)
-                Text(details, style: theme.textTheme.bodySmall),
+              UserAvatar(
+                userName: author.userName,
+                imageUrl: author.imageUrl,
+                radius: avatarRadius,
+              ),
+              const SizedBox(width: AppSpace.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      author.userName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall,
+                    ),
+                    if (details.isNotEmpty)
+                      Text(
+                        details,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
-        if (rating != null)
-          Chip(
-            avatar: const Icon(
-              Icons.star_rounded,
-              size: 16,
-              color: Colors.amber,
-            ),
-            label: Text(l10n.ratingOutOfTen(rating!)),
-            visualDensity: VisualDensity.compact,
-          ),
-        if (compatibility != null) ...[
-          const SizedBox(width: 4),
-          Chip(
-            label: Text(l10n.compatibilityMatch(l10n.percent(compatibility!))),
-            visualDensity: VisualDensity.compact,
-            side: BorderSide(
-              color: compatibility! >= 70
-                  ? Colors.green
-                  : theme.colorScheme.outlineVariant,
-            ),
+        if (rating != null || compatibility != null) ...[
+          const SizedBox(height: AppSpace.xs),
+          Wrap(
+            spacing: AppSpace.xs,
+            runSpacing: AppSpace.xxs,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (rating != null) RatingPill(rating: rating!),
+              if (compatibility != null)
+                CompatibilityBadge(score: compatibility!, label: true),
+            ],
           ),
         ],
       ],
@@ -82,7 +95,141 @@ class AuthorRow extends StatelessWidget {
   }
 }
 
-/// A review: spoiler hiding, likes and comments.
+/// "★ 9/10" in the rating gold.
+class RatingPill extends StatelessWidget {
+  const RatingPill({super.key, required this.rating});
+
+  final int rating;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final l10n = context.l10n;
+    return Semantics(
+      label: l10n.ratingSpoken(rating),
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: colors.surfaceRaised,
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.star_rounded, size: 16, color: colors.primary),
+            const SizedBox(width: 4),
+            Text(
+              l10n.ratingOutOfTen(rating),
+              style: context.type.number.copyWith(
+                fontSize: 13,
+                height: 18 / 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The feed's poster-led card: the poster on the left, who did what, the
+/// movie title, the scores and an optional body on the right.
+class PosterLedCard extends StatelessWidget {
+  const PosterLedCard({
+    super.key,
+    required this.movie,
+    required this.author,
+    this.subtitle,
+    this.when,
+    this.rating,
+    this.compatibility,
+    this.body,
+    this.footer,
+  });
+
+  final ReviewMovie movie;
+  final Author author;
+  final String? subtitle;
+  final DateTime? when;
+  final int? rating;
+  final double? compatibility;
+  final Widget? body;
+  final Widget? footer;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpace.sm),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onTap: () => context.push('/movie/${movie.id}'),
+                  child: PosterImage(
+                    posterPath: movie.posterPath,
+                    title: movie.title,
+                    width: 84,
+                    size: 'w185',
+                  ),
+                ),
+                const SizedBox(width: AppSpace.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AuthorRow(
+                        author: author,
+                        subtitle: subtitle,
+                        when: when,
+                        avatarRadius: 14,
+                      ),
+                      const SizedBox(height: AppSpace.xs),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(AppRadii.sm),
+                        onTap: () => context.push('/movie/${movie.id}'),
+                        child: Text(
+                          movie.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.type.h3,
+                        ),
+                      ),
+                      if (rating != null || compatibility != null) ...[
+                        const SizedBox(height: AppSpace.xs),
+                        Wrap(
+                          spacing: AppSpace.xs,
+                          runSpacing: AppSpace.xxs,
+                          children: [
+                            if (rating != null) RatingPill(rating: rating!),
+                            if (compatibility != null)
+                              CompatibilityBadge(
+                                score: compatibility!,
+                                label: true,
+                              ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (body != null) ...[const SizedBox(height: AppSpace.sm), body!],
+            ?footer,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A review: spoiler hiding, likes and comments. With [showMovie] (the
+/// feed) it is poster-led.
 class ReviewCard extends ConsumerStatefulWidget {
   const ReviewCard({
     super.key,
@@ -157,12 +304,64 @@ class _ReviewCardState extends ConsumerState<ReviewCard> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final colors = context.colors;
     final theme = Theme.of(context);
     final hidden = _review.containsSpoilers && !_revealed && !_review.isMine;
 
+    final body = hidden
+        ? Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: OutlinedButton.icon(
+              onPressed: () => setState(() => _revealed = true),
+              icon: const Icon(Icons.visibility_rounded),
+              label: Text(l10n.spoilerReveal),
+            ),
+          )
+        : Text(_review.text, style: theme.textTheme.bodyMedium);
+
+    final actions = Row(
+      children: [
+        TextButton.icon(
+          style: TextButton.styleFrom(foregroundColor: colors.textSecondary),
+          onPressed: _toggleLike,
+          icon: Icon(
+            _review.likedByMe
+                ? Icons.favorite_rounded
+                : Icons.favorite_border_rounded,
+            color: _review.likedByMe ? colors.accent : null,
+          ),
+          label: Text('${_review.likeCount}'),
+        ),
+        TextButton.icon(
+          style: TextButton.styleFrom(foregroundColor: colors.textSecondary),
+          onPressed: _openComments,
+          icon: const Icon(Icons.chat_bubble_outline_rounded),
+          label: Text(l10n.commentCount(_review.commentCount)),
+        ),
+      ],
+    );
+
+    if (widget.showMovie) {
+      return PosterLedCard(
+        movie: _review.movie,
+        author: _review.author,
+        subtitle: widget.subtitle,
+        when: _review.createdAt,
+        rating: _review.rating,
+        compatibility: _review.authorCompatibility,
+        body: body,
+        footer: actions,
+      );
+    }
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.md,
+          AppSpace.md,
+          AppSpace.md,
+          AppSpace.xxs,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -173,57 +372,10 @@ class _ReviewCardState extends ConsumerState<ReviewCard> {
               subtitle: widget.subtitle,
               when: _review.createdAt,
             ),
-            if (widget.showMovie) ...[
-              const SizedBox(height: 10),
-              InkWell(
-                onTap: () => context.push('/movie/${_review.movie.id}'),
-                child: Row(
-                  children: [
-                    PosterImage(
-                      posterPath: _review.movie.posterPath,
-                      width: 40,
-                      height: 60,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _review.movie.title,
-                        style: theme.textTheme.titleMedium,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 10),
-            if (hidden)
-              OutlinedButton.icon(
-                onPressed: () => setState(() => _revealed = true),
-                icon: const Icon(Icons.visibility_rounded),
-                label: Text(l10n.spoilerReveal),
-              )
-            else
-              Text(_review.text, style: theme.textTheme.bodyMedium),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                TextButton.icon(
-                  onPressed: _toggleLike,
-                  icon: Icon(
-                    _review.likedByMe
-                        ? Icons.favorite_rounded
-                        : Icons.favorite_border_rounded,
-                    color: _review.likedByMe ? Colors.redAccent : null,
-                  ),
-                  label: Text('${_review.likeCount}'),
-                ),
-                TextButton.icon(
-                  onPressed: _openComments,
-                  icon: const Icon(Icons.chat_bubble_outline_rounded),
-                  label: Text(l10n.commentCount(_review.commentCount)),
-                ),
-              ],
-            ),
+            const SizedBox(height: AppSpace.sm),
+            body,
+            const SizedBox(height: AppSpace.xxs),
+            actions,
           ],
         ),
       ),

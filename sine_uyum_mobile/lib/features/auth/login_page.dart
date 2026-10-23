@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme/tokens.dart';
+import '../../core/ui/wordmark.dart';
 import '../../l10n/l10n.dart';
+import 'auth_backdrop.dart';
 import '../../providers/session_provider.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -55,101 +58,91 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Icon(
-                      Icons.movie_filter_rounded,
-                      size: 56,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      l10n.appName,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l10n.loginTagline,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    const SizedBox(height: 32),
-                    TextFormField(
-                      controller: _usernameController,
-                      textInputAction: TextInputAction.next,
-                      autofillHints: const [AutofillHints.username],
-                      decoration: InputDecoration(
-                        labelText: l10n.usernameLabel,
-                        prefixIcon: const Icon(Icons.person_outline_rounded),
+      body: AuthBackdrop(
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Wordmark(size: 44),
+                      const SizedBox(height: AppSpace.sm),
+                      Text(l10n.loginTagline, style: context.type.h2),
+                      const SizedBox(height: AppSpace.xxl),
+                      TextFormField(
+                        controller: _usernameController,
+                        textInputAction: TextInputAction.next,
+                        autofillHints: const [AutofillHints.username],
+                        decoration: InputDecoration(
+                          labelText: l10n.usernameLabel,
+                          prefixIcon: const Icon(Icons.person_outline_rounded),
+                        ),
+                        validator: (value) =>
+                            (value == null || value.trim().isEmpty)
+                            ? l10n.usernameRequired
+                            : null,
                       ),
-                      validator: (value) =>
-                          (value == null || value.trim().isEmpty)
-                          ? l10n.usernameRequired
-                          : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      textInputAction: TextInputAction.done,
-                      autofillHints: const [AutofillHints.password],
-                      onFieldSubmitted: (_) => _submit(),
-                      decoration: InputDecoration(
-                        labelText: l10n.passwordLabel,
-                        prefixIcon: const Icon(Icons.lock_outline_rounded),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_rounded
-                                : Icons.visibility_off_rounded,
-                          ),
-                          onPressed: () => setState(
-                            () => _obscurePassword = !_obscurePassword,
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        textInputAction: TextInputAction.done,
+                        autofillHints: const [AutofillHints.password],
+                        onFieldSubmitted: (_) => _submit(),
+                        decoration: InputDecoration(
+                          labelText: l10n.passwordLabel,
+                          prefixIcon: const Icon(Icons.lock_outline_rounded),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_rounded
+                                  : Icons.visibility_off_rounded,
+                            ),
+                            onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            ),
                           ),
                         ),
+                        validator: (value) => (value == null || value.isEmpty)
+                            ? l10n.passwordRequired
+                            : null,
                       ),
-                      validator: (value) => (value == null || value.isEmpty)
-                          ? l10n.passwordRequired
-                          : null,
-                    ),
-                    if (_error != null) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        _error!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
+                      if (_error != null) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          _error!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
                         ),
+                      ],
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: _isSubmitting ? null : _submit,
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(l10n.loginSubmit),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: _isSubmitting
+                            ? null
+                            : () => context.push('/register'),
+                        child: Text(l10n.loginNoAccount),
                       ),
                     ],
-                    const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: _isSubmitting ? null : _submit,
-                      child: _isSubmitting
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(l10n.loginSubmit),
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton(
-                      onPressed: _isSubmitting
-                          ? null
-                          : () => context.push('/register'),
-                      child: Text(l10n.loginNoAccount),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),

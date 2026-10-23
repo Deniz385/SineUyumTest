@@ -217,7 +217,7 @@ class _IntroStep extends ConsumerWidget {
         benefit(Icons.local_activity_rounded, l10n.welcomeBenefitEvents),
         const SizedBox(height: AppSpace.lg),
         Text(
-          context.l10n.welcomeLanguage.toUpperCase(),
+          context.l10n.upper(context.l10n.welcomeLanguage),
           style: context.type.overline,
         ),
         const SizedBox(height: AppSpace.xs),
@@ -509,10 +509,14 @@ class _MoreTile extends StatelessWidget {
                     children: [
                       Icon(Icons.add_rounded, color: colors.primary),
                       const SizedBox(height: 4),
-                      Text(
-                        context.l10n.welcomeMoreFilms,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.labelLarge,
+                      Flexible(
+                        child: Text(
+                          context.l10n.welcomeMoreFilms,
+                          textAlign: TextAlign.center,
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
                       ),
                     ],
                   ),

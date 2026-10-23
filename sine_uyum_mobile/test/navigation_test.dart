@@ -112,6 +112,8 @@ void main() {
       await tester.tap(navItem('Profile'));
       await AppHarness.settle(tester);
       expect(find.byType(ProfilePage), findsOneWidget);
+      await tester.tap(find.widgetWithText(Tab, 'Lists'));
+      await AppHarness.settle(tester);
 
       await tester.scrollUntilVisible(
         find.text('Weekend picks'),

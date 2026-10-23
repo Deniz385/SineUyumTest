@@ -19,8 +19,10 @@ import '../../core/ui/poster_image.dart';
 import '../profile/film_identity_page.dart' show imageSharerProvider;
 import 'year_in_review_share_card.dart';
 
-const _gold = Color(0xFFFFD54F);
-const _soft = Color(0xFFE3E8FF);
+// Story colours come from the design tokens (always the dark set: the
+// story is a cinema screen in either theme).
+const _gold = Color(0xFFF5B841); // AppColors.dark.primary
+const _soft = Color(0xFFF2F2F5); // AppColors.dark.text
 
 /// The slides of a recap, in order. Slides without data are skipped.
 enum RecapSlide {
@@ -37,16 +39,16 @@ enum RecapSlide {
 
   /// Background gradient of each slide (dark, so white text stays legible).
   List<Color> get colors => switch (this) {
-    intro => const [Color(0xFF1B1038), Color(0xFF0D2A4A)],
-    totals => const [Color(0xFF2A0845), Color(0xFF6441A5)],
-    rhythm => const [Color(0xFF0F2027), Color(0xFF2C5364)],
-    genres => const [Color(0xFF3A1C71), Color(0xFF9E4A6C)],
-    topMovies => const [Color(0xFF141E30), Color(0xFF243B55)],
-    contrarian => const [Color(0xFF42275A), Color(0xFF734B6D)],
-    bookends => const [Color(0xFF16222A), Color(0xFF3A6073)],
-    rating => const [Color(0xFF1F1C2C), Color(0xFF5C5884)],
-    tasteMate => const [Color(0xFF2C3E50), Color(0xFF9C4A5B)],
-    finale => const [Color(0xFF1B1038), Color(0xFF6A2BB8)],
+    intro => const [Color(0xFF3A2A0C), Color(0xFF0B0C10)],
+    totals => const [Color(0xFF3B1214), Color(0xFF0B0C10)],
+    rhythm => const [Color(0xFF0F2436), Color(0xFF0B0C10)],
+    genres => const [Color(0xFF2B1A2E), Color(0xFF0B0C10)],
+    topMovies => const [Color(0xFF3A2A0C), Color(0xFF14161C)],
+    contrarian => const [Color(0xFF3B1214), Color(0xFF14161C)],
+    bookends => const [Color(0xFF0F2436), Color(0xFF14161C)],
+    rating => const [Color(0xFF221B3A), Color(0xFF0B0C10)],
+    tasteMate => const [Color(0xFF14302A), Color(0xFF0B0C10)],
+    finale => const [Color(0xFF4A3008), Color(0xFF3B1214)],
   };
 
   static List<RecapSlide> forRecap(YearInReview recap) {
@@ -118,11 +120,11 @@ class _YearInReviewPageState extends ConsumerState<YearInReviewPage> {
           body: recap.when(
             skipLoadingOnReload: true,
             loading: () => const _Frame(
-              colors: [Color(0xFF1B1038), Color(0xFF0D2A4A)],
+              colors: [Color(0xFF3A2A0C), Color(0xFF0B0C10)],
               child: Center(child: CircularProgressIndicator()),
             ),
             error: (error, _) => _Frame(
-              colors: const [Color(0xFF1B1038), Color(0xFF0D2A4A)],
+              colors: const [Color(0xFF3A2A0C), Color(0xFF0B0C10)],
               child: _Message(
                 icon: _isAccessDenied(error)
                     ? Icons.lock_outline_rounded
@@ -630,14 +632,21 @@ class _ProgressBars extends StatelessWidget {
 // --- Slides ---
 
 const _titleStyle = TextStyle(
+  fontFamily: AppFonts.display,
   color: Colors.white,
   fontSize: 30,
   fontWeight: FontWeight.w800,
   height: 1.15,
 );
-const _bodyStyle = TextStyle(color: _soft, fontSize: 17, height: 1.35);
+const _bodyStyle = TextStyle(
+  fontFamily: AppFonts.text,
+  color: _soft,
+  fontSize: 17,
+  height: 1.35,
+);
 const _labelStyle = TextStyle(
-  color: Color(0xFF9FB3FF),
+  fontFamily: AppFonts.text,
+  color: _gold,
   fontSize: 13,
   fontWeight: FontWeight.w700,
   letterSpacing: 1.2,
@@ -699,7 +708,8 @@ class _IntroSlide extends StatelessWidget {
           style: const TextStyle(
             color: _gold,
             fontSize: 112,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w800,
+            fontFamily: AppFonts.display,
             height: 1,
           ),
         ),
@@ -754,7 +764,8 @@ class _TotalsSlide extends StatelessWidget {
                     style: const TextStyle(
                       color: _gold,
                       fontSize: 40,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w800,
+                      fontFamily: AppFonts.display,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1213,7 +1224,8 @@ class _RatingSlide extends StatelessWidget {
                 style: const TextStyle(
                   color: _gold,
                   fontSize: 112,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w800,
+                  fontFamily: AppFonts.display,
                   height: 1,
                 ),
               ),
@@ -1276,7 +1288,8 @@ class _TasteMateSlide extends StatelessWidget {
                 style: const TextStyle(
                   color: _gold,
                   fontSize: 30,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w800,
+                  fontFamily: AppFonts.display,
                 ),
               ),
               if (mate.commonCount > 0)

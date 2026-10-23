@@ -80,6 +80,12 @@ void main() {
     );
   });
 
+  test('overline capitals follow the UI language (Turkish İ)', () {
+    expect(lookupAppLocalizations(tr).upper('Dil ayarı'), 'DİL AYARI');
+    expect(lookupAppLocalizations(tr).upper('ılık'), 'ILIK');
+    expect(lookupAppLocalizations(en).upper('Line'), 'LINE');
+  });
+
   group('theme setting', () {
     test('dark is the default when nothing is saved', () {
       final container = ProviderContainer(

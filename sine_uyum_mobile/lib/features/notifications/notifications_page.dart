@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/theme/tokens.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/notification_provider.dart';
 import '../../core/ui/state_views.dart';
@@ -46,17 +47,32 @@ class NotificationsPage extends ConsumerWidget {
             onRefresh: notifier.load,
             child: ListView.separated(
               itemCount: state.items.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
+              separatorBuilder: (_, _) => const Divider(height: 1, indent: 72),
               itemBuilder: (context, index) {
                 final notification = state.items[index];
+                final colors = context.colors;
                 return ListTile(
-                  leading: Icon(
-                    notification.isRead
-                        ? Icons.notifications_none_rounded
-                        : Icons.notifications_active_rounded,
-                    color: notification.isRead
-                        ? null
-                        : Theme.of(context).colorScheme.primary,
+                  tileColor: notification.isRead
+                      ? null
+                      : colors.primary.withValues(alpha: 0.06),
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: notification.isRead
+                          ? colors.surfaceRaised
+                          : colors.primary.withValues(alpha: 0.18),
+                    ),
+                    child: Icon(
+                      notification.isRead
+                          ? Icons.notifications_none_rounded
+                          : Icons.notifications_active_rounded,
+                      size: 20,
+                      color: notification.isRead
+                          ? colors.textSecondary
+                          : colors.primary,
+                    ),
                   ),
                   title: Text(
                     notification.message,

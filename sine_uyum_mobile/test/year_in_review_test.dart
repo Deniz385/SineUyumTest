@@ -24,6 +24,7 @@ import 'package:sine_uyum_mobile/providers/year_in_review_provider.dart';
 
 import 'support/fake_network.dart';
 import 'support/localized_app.dart';
+import 'support/movie_rows.dart';
 
 class FakeSession extends SessionNotifier {
   @override
@@ -834,6 +835,8 @@ void main() {
             preferencesStorageProvider.overrideWithValue(preferences),
             clockProvider.overrideWithValue(() => now),
             storySlideDurationProvider.overrideWithValue(null),
+            // The feed is thin here: its movie rows stay empty.
+            ...noMovieRows,
             // My own profile also lists my lists.
             myWatchlistsProvider.overrideWith((ref) async => const []),
           ],

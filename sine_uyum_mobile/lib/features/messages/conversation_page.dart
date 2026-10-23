@@ -202,21 +202,28 @@ class _MessageBubble extends StatelessWidget {
     final l10n = context.l10n;
     final time = DateFormat.Hm(l10n.localeName);
     final scheme = Theme.of(context).colorScheme;
-    final background = isMine ? scheme.primaryContainer : scheme.surface;
-    final foreground = isMine ? scheme.onPrimaryContainer : scheme.onSurface;
+    // Mine in marquee gold, theirs on a raised surface (both AA).
+    final background = isMine ? scheme.primary : scheme.surfaceContainerHigh;
+    final foreground = isMine ? scheme.onPrimary : scheme.onSurface;
+    const round = Radius.circular(18);
+    const tail = Radius.circular(4);
 
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         constraints: BoxConstraints(
           maxWidth: MediaQuery.sizeOf(context).width * 0.75,
         ),
         decoration: BoxDecoration(
           color: background,
-          borderRadius: BorderRadius.circular(14),
-          border: isMine ? null : Border.all(color: scheme.outlineVariant),
+          borderRadius: BorderRadius.only(
+            topLeft: round,
+            topRight: round,
+            bottomLeft: isMine ? round : tail,
+            bottomRight: isMine ? tail : round,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

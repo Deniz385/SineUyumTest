@@ -12,6 +12,7 @@ import 'package:sine_uyum_mobile/providers/social_provider.dart';
 import 'package:sine_uyum_mobile/providers/year_in_review_provider.dart';
 
 import 'support/localized_app.dart';
+import 'support/movie_rows.dart';
 
 Review review({
   int id = 1,
@@ -38,6 +39,10 @@ FeedItem item(int movieId) => FeedItem(
   movie: ReviewMovie(id: movieId, title: 'Movie $movieId'),
   rating: 7,
 );
+
+/// The like button's icon (the compatibility badge has a heart too).
+Finder likeIcon(IconData icon) =>
+    find.descendant(of: find.byType(TextButton), matching: find.byIcon(icon));
 
 class FakeSocial implements SocialRepository {
   final pages = <String?, FeedPage>{};
@@ -218,6 +223,8 @@ void main() {
           // Outside the yearly recap season: no recap banner (it would
           // need a session); covered in year_in_review_test.dart.
           clockProvider.overrideWithValue(() => DateTime(2026, 3, 10)),
+          // A thin feed adds movie rows; empty here, so they stay hidden.
+          ...noMovieRows,
         ],
         child: localizedApp(
           locale: locale,
@@ -256,16 +263,16 @@ void main() {
       'rolled back on error', (tester) async {
     final social = await pump(tester, ReviewCard(review: review(likes: 3)));
 
-    await tester.tap(find.byIcon(Icons.favorite_border_rounded));
+    await tester.tap(likeIcon(Icons.favorite_border_rounded));
     await tester.pumpAndSettle();
     expect(social.likes, [(1, true)]);
-    expect(find.byIcon(Icons.favorite_rounded), findsOneWidget);
+    expect(likeIcon(Icons.favorite_rounded), findsOneWidget);
     expect(find.text('5'), findsOneWidget); // the server's count
 
     social.likeError = ApiException('Too many requests.');
-    await tester.tap(find.byIcon(Icons.favorite_rounded));
+    await tester.tap(likeIcon(Icons.favorite_rounded));
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.favorite_rounded), findsOneWidget); // rolled back
+    expect(likeIcon(Icons.favorite_rounded), findsOneWidget); // rolled back
     expect(find.text('5'), findsOneWidget);
     expect(find.text('Too many requests.'), findsOneWidget);
   });
@@ -319,7 +326,7 @@ void main() {
   testWidgets('the "for you" badge only appears with data', (tester) async {
     final none = FakeSocial();
     await pump(tester, const ForYouBadge(movieId: 10), fake: none);
-    expect(find.textContaining('sana göre'), findsNothing);
+    expect(find.text('SANA GÖRE'), findsNothing);
 
     final some = FakeSocial()
       ..reviews = const MovieReviews(
@@ -328,11 +335,13 @@ void main() {
     await pump(tester, const ForYouBadge(movieId: 10), fake: some);
     // Turkish uses a decimal comma.
     expect(find.text('8,7'), findsOneWidget);
-    expect(find.text(' sana göre (3 uyumlu kişi)'), findsOneWidget);
+    expect(find.text('SANA GÖRE'), findsOneWidget);
+    expect(find.text('3 uyumlu kişiye göre'), findsOneWidget);
 
     await pump(tester, const ForYouBadge(movieId: 10), fake: some, locale: en);
     expect(find.text('8.7'), findsOneWidget);
-    expect(find.text(' for you (3 matching people)'), findsOneWidget);
+    expect(find.text('FOR YOU'), findsOneWidget);
+    expect(find.text('From 3 matching people'), findsOneWidget);
   });
 
   testWidgets('taste twin above the feed; can be followed', (tester) async {

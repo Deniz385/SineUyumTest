@@ -19,6 +19,16 @@ extension L10nNumbers on AppLocalizations {
         decimalDigits: digits,
       ).format(value);
 
+  /// Capitals in the UI language: Dart's `toUpperCase` ignores the locale,
+  /// so Turkish "i" would become "I" instead of "İ" (overline labels).
+  String upper(String text) {
+    final language = localeName.split(RegExp('[-_]')).first;
+    if (language == 'tr' || language == 'az') {
+      return text.replaceAll('i', 'İ').replaceAll('ı', 'I').toUpperCase();
+    }
+    return text.toUpperCase();
+  }
+
   /// [value] is on a 0-100 scale: `82` → "82%" (en) / "%82" (tr).
   String percent(num value, {int digits = 0}) {
     final format = NumberFormat.percentPattern(localeName)

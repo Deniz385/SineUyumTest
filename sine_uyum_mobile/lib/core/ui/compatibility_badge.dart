@@ -14,6 +14,7 @@ class CompatibilityBadge extends StatelessWidget {
     this.commonMovieCount,
     this.ring = false,
     this.ringSize = 56,
+    this.label = false,
   });
 
   final double score;
@@ -22,6 +23,9 @@ class CompatibilityBadge extends StatelessWidget {
   /// A ring with the number inside (profile headers) instead of a pill.
   final bool ring;
   final double ringSize;
+
+  /// "82% match" instead of the bare "82%" (pill only).
+  final bool label;
 
   /// The scale colour for [score] in the current theme.
   static Color colorFor(BuildContext context, double score) =>
@@ -85,9 +89,17 @@ class CompatibilityBadge extends StatelessWidget {
           children: [
             Icon(Icons.favorite_rounded, size: 14, color: color),
             const SizedBox(width: 4),
-            Text(
-              percent,
-              style: context.type.number.copyWith(fontSize: 14, color: color),
+            Flexible(
+              child: Text(
+                label ? l10n.compatibilityMatch(percent) : percent,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.type.number.copyWith(
+                  fontSize: 13,
+                  height: 18 / 13,
+                  color: colors.isDark ? color : colors.text,
+                ),
+              ),
             ),
             if (common != null && common > 0) ...[
               const SizedBox(width: 6),

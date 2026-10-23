@@ -62,6 +62,11 @@ class _DiscoverListsViewState extends State<DiscoverListsView> {
             width: double.infinity,
             child: SegmentedButton<DiscoverSort>(
               showSelectedIcon: false,
+              // Four sorts on a phone: tighter segments keep the labels whole.
+              style: SegmentedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                textStyle: Theme.of(context).textTheme.labelMedium,
+              ),
               segments: [
                 for (final sort in DiscoverSort.values)
                   ButtonSegment(

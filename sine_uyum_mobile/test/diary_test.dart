@@ -558,6 +558,17 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    /// Scrolls the action row into a tappable spot (not under the pinned
+    /// app bar of the movie hero).
+    Future<void> revealAction(WidgetTester tester, String label) async {
+      await tester.scrollUntilVisible(
+        find.text(label).hitTestable(),
+        80,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+    }
+
     /// Body of the last diary POST (refreshes follow it after a save).
     Object? postedBody() =>
         server.bodies[server.requests.lastIndexOf('POST /api/v1/diary')];
@@ -577,7 +588,7 @@ void main() {
       await pumpMovie(tester);
       final today = DateTime.now();
 
-      await tester.ensureVisible(find.text('Günlüğe ekle'));
+      await revealAction(tester, 'Günlüğe ekle');
       await tester.tap(find.text('Günlüğe ekle'));
       await tester.pumpAndSettle();
 
@@ -650,7 +661,7 @@ void main() {
       );
       server.routes['POST /api/v1/diary'] = (201, _entryJson(rewatch: true));
 
-      await tester.ensureVisible(find.text('Günlüğe ekle'));
+      await revealAction(tester, 'Günlüğe ekle');
       await tester.tap(find.text('Günlüğe ekle'));
       await tester.pumpAndSettle();
 
@@ -675,7 +686,7 @@ void main() {
       );
       server.routes['POST /api/v1/diary'] = (201, _entryJson());
 
-      await tester.ensureVisible(find.text('Add to diary'));
+      await revealAction(tester, 'Add to diary');
       await tester.tap(find.text('Add to diary'));
       await tester.pumpAndSettle();
 
@@ -700,7 +711,7 @@ void main() {
       );
       server.routes['POST /api/v1/diary'] = (201, _entryJson());
 
-      await tester.ensureVisible(find.text('Günlüğe ekle'));
+      await revealAction(tester, 'Günlüğe ekle');
       await tester.tap(find.text('Günlüğe ekle'));
       await tester.pumpAndSettle();
 
@@ -720,7 +731,7 @@ void main() {
       await pumpMovie(tester, locale: en);
       server.routes['POST /api/v1/diary'] = (201, _entryJson());
 
-      await tester.ensureVisible(find.text('Add to diary'));
+      await revealAction(tester, 'Add to diary');
       await tester.tap(find.text('Add to diary'));
       await tester.pumpAndSettle();
       await tapInSheet(tester, inSheet(find.text('Rate it too')));

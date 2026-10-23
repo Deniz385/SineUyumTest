@@ -256,8 +256,8 @@ class AppTextStyles extends ThemeExtension<AppTextStyles> {
   final TextStyle bodySmall;
   final TextStyle caption;
 
-  /// Caption in capitals; call `toUpperCase()` on the text with the UI
-  /// locale (Turkish "i" → "İ").
+  /// Caption in capitals; use `l10n.upper` (not `toUpperCase`) so the UI
+  /// language applies (Turkish "i" → "İ").
   final TextStyle overline;
 
   /// Scores and counts: display font with tabular figures. Set the size at

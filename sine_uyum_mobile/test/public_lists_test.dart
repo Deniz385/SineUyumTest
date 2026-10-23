@@ -680,10 +680,13 @@ void main() {
       final lists = FakeLists()
         ..userListsError = ApiException(null, statusCode: 403);
       await pump(tester, const ProfilePage(userId: 'u2'), lists: lists);
+      expect(find.textContaining('Puanladığı filmler'), findsOneWidget);
 
+      // The lists live in the profile's Lists tab.
+      await tester.tap(find.widgetWithText(Tab, 'Listeler'));
+      await tester.pumpAndSettle();
       expect(lists.userListsCalls, ['u2']);
       expect(find.text('Herkese açık listeler'), findsNothing);
-      expect(find.textContaining('Puanladığı filmler'), findsOneWidget);
     });
 
     testWidgets('profile: public lists in a carousel (en)', (tester) async {
@@ -700,6 +703,8 @@ void main() {
         lists: lists,
         locale: en,
       );
+      await tester.tap(find.widgetWithText(Tab, 'Lists'));
+      await tester.pumpAndSettle();
 
       expect(find.text('Public lists'), findsOneWidget);
       expect(find.text('Horror nights'), findsOneWidget);

@@ -86,13 +86,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         branches: [
           StatefulShellBranch(
             routes: [
-              GoRoute(
-                path: '/home',
-                builder: (context, _) => TabScaffold(
-                  title: context.l10n.appName,
-                  body: const HomePage(),
-                ),
-              ),
+              GoRoute(path: '/home', builder: (_, _) => const HomePage()),
             ],
           ),
           StatefulShellBranch(

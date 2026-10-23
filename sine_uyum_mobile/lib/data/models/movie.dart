@@ -14,6 +14,7 @@ class Movie {
     this.voteAverage,
     this.genres = const [],
     this.runtime,
+    this.cast = const [],
   });
 
   final int id;
@@ -25,6 +26,9 @@ class Movie {
   final double? voteAverage;
   final List<String> genres;
   final int? runtime;
+
+  /// Top-billed cast (movie details only: TMDb `credits.cast`).
+  final List<CastMember> cast;
 
   String? get year {
     if (releaseDate == null || releaseDate!.length < 4) return null;
@@ -57,6 +61,13 @@ class Movie {
               .toList() ??
           const [],
       runtime: (json['runtime'] as num?)?.toInt(),
+      cast: [
+        for (final c
+            in ((json['credits'] as Map?)?['cast'] as List? ?? const [])
+                .whereType<Map>()
+                .take(20))
+          CastMember.fromJson(c.cast<String, dynamic>()),
+      ],
     );
   }
 
@@ -65,6 +76,21 @@ class Movie {
     'title': title,
     'posterPath': posterPath,
   };
+}
+
+/// An actor in a movie's credits.
+class CastMember {
+  const CastMember({required this.name, this.character, this.profilePath});
+
+  final String name;
+  final String? character;
+  final String? profilePath;
+
+  factory CastMember.fromJson(Map<String, dynamic> json) => CastMember(
+    name: json['name'] as String? ?? '',
+    character: json['character'] as String?,
+    profilePath: json['profile_path'] as String?,
+  );
 }
 
 /// A user's rating of a movie (listed on the profile screen).

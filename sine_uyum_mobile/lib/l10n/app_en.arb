@@ -1277,5 +1277,81 @@
   "welcomePeopleHint": "Follow a few people to fill your feed.",
   "welcomeDoneTitle": "You're all set",
   "welcomeDoneBody": "Your feed fills up as the people you follow rate and review films. You can always find more people in Discover.",
-  "welcomeGoHome": "Go to Home"
+  "welcomeGoHome": "Go to Home",
+  "homeGreetingMorning": "Good morning, {name}",
+  "@homeGreetingMorning": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeGreetingAfternoon": "Good afternoon, {name}",
+  "@homeGreetingAfternoon": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeGreetingEvening": "Good evening, {name}",
+  "@homeGreetingEvening": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeGreetingSubtitle": "Here's what your people are watching.",
+  "homeFindPeople": "Find people",
+  "homePopularNow": "Popular now",
+  "movieShareText": "{title} — found on SineUyum: {url}",
+  "@movieShareText": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "shareFailed": "Couldn't open sharing.",
+  "tmdbScoreCaption": "Average on TMDb",
+  "castTitle": "Cast",
+  "forYouLabel": "For you",
+  "forYouBasedOn": "{count, plural, =1{From 1 matching person} other{From {count} matching people}}",
+  "@forYouBasedOn": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "scoreSpoken": "{score} out of 10",
+  "@scoreSpoken": {
+    "placeholders": {
+      "score": {
+        "type": "String"
+      }
+    }
+  },
+  "profileTabRatings": "Ratings",
+  "profileTabDiary": "Diary",
+  "profileTabLists": "Lists",
+  "profileTabReviews": "Reviews",
+  "statFollowers": "Followers",
+  "statFollowing": "Following",
+  "commonMoviesCount": "{count, plural, =1{1 film in common} other{{count} films in common}}",
+  "@commonMoviesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileReviewsEmpty": "No recent reviews to show",
+  "profileReviewsHint": "Reviews by you and the people you follow appear here.",
+  "settingsAccount": "Account",
+  "settingsAbout": "About"
 }

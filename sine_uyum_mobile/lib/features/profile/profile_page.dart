@@ -20,6 +20,7 @@ import '../../providers/social_provider.dart';
 import '../../providers/watchlist_provider.dart';
 import '../../providers/year_in_review_provider.dart';
 import '../social/review_card.dart';
+import '../watchlists/discover_lists_page.dart' show LoadMoreFooter;
 import '../watchlists/profile_lists_section.dart';
 import 'film_identity_page.dart';
 
@@ -59,6 +60,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
     ref.invalidate(compatibilityProvider(userId));
     ref.invalidate(userPublicListsProvider(userId));
     ref.invalidate(filmIdentityProvider(userId));
+    ref.invalidate(userReviewsProvider(userId));
     await ref.read(userProfileProvider(userId).future);
   }
 
@@ -134,13 +136,24 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                     delegate: _TabBarDelegate(
                       TabBar(
                         controller: _tabs,
-                        isScrollable: true,
-                        tabAlignment: TabAlignment.start,
+                        // All four always in view; long labels shrink
+                        // rather than scroll away.
+                        labelPadding: const EdgeInsets.symmetric(
+                          horizontal: AppSpace.xxs,
+                        ),
                         tabs: [
-                          Tab(text: l10n.profileTabRatings),
-                          Tab(text: l10n.profileTabDiary),
-                          Tab(text: l10n.profileTabLists),
-                          Tab(text: l10n.profileTabReviews),
+                          for (final label in [
+                            l10n.profileTabRatings,
+                            l10n.profileTabDiary,
+                            l10n.profileTabLists,
+                            l10n.profileTabReviews,
+                          ])
+                            Tab(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(label, maxLines: 1),
+                              ),
+                            ),
                         ],
                       ),
                       background: context.colors.bg,
@@ -166,12 +179,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                       ),
                     ],
                     _ProfileTab.reviews => [
-                      SliverToBoxAdapter(
-                        child: _ReviewsPreview(
-                          userId: userId,
-                          userName: profile.userName,
-                        ),
-                      ),
+                      _ReviewsTab(userId: userId, isMine: isOwnProfile),
                     ],
                   },
                 ],
@@ -814,49 +822,74 @@ class _DiaryPreview extends ConsumerWidget {
   }
 }
 
-/// The Reviews tab. There is no per-user reviews endpoint yet, so this
-/// shows their reviews among the feed already loaded (you and the people
-/// you follow).
-class _ReviewsPreview extends ConsumerWidget {
-  const _ReviewsPreview({required this.userId, required this.userName});
+/// The Reviews tab: their reviews, newest first, page by page. A private
+/// profile or a block shows the server's message, like the Diary tab.
+class _ReviewsTab extends ConsumerWidget {
+  const _ReviewsTab({required this.userId, required this.isMine});
 
   final String userId;
-  final String userName;
+  final bool isMine;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final feed = ref.watch(feedProvider);
-    final reviews = [
-      for (final item in feed.value?.items ?? const [])
-        if (item.review != null && item.author.id == userId) item.review!,
-    ];
-    if (feed.isLoading && !feed.hasValue) {
-      return const LoadingView(rows: 3, posters: true);
-    }
-    if (reviews.isEmpty) {
-      return EmptyView(
-        icon: Icons.rate_review_rounded,
-        message: l10n.profileReviewsEmpty,
-        hint: l10n.profileReviewsHint,
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpace.gutter,
-        AppSpace.md,
-        AppSpace.gutter,
-        0,
+    final provider = userReviewsProvider(userId);
+    final reviews = ref.watch(provider);
+
+    return reviews.when(
+      loading: () =>
+          const SliverToBoxAdapter(child: LoadingView(rows: 3, posters: true)),
+      error: (error, _) => SliverToBoxAdapter(
+        child:
+            error is ApiException &&
+                (error.statusCode == 403 || error.statusCode == 404)
+            ? EmptyView(
+                icon: Icons.lock_outline_rounded,
+                message: error.message,
+              )
+            : ErrorView(
+                message: error.toString(),
+                onRetry: () => ref.invalidate(provider),
+              ),
       ),
-      child: Column(
-        children: [
-          for (final review in reviews)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpace.sm),
-              child: ReviewCard(review: review, showMovie: true),
+      data: (state) {
+        if (state.items.isEmpty) {
+          return SliverToBoxAdapter(
+            child: EmptyView(
+              icon: Icons.rate_review_rounded,
+              message: l10n.profileReviewsEmpty,
+              hint: isMine ? l10n.profileReviewsHintOwn : null,
             ),
-        ],
-      ),
+          );
+        }
+        return SliverPadding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.gutter,
+            AppSpace.md,
+            AppSpace.gutter,
+            0,
+          ),
+          sliver: SliverList.builder(
+            itemCount: state.items.length + (state.hasMore ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index == state.items.length) {
+                // Built when scrolled near the end: loads the next page.
+                return LoadMoreFooter(
+                  key: ValueKey('reviews-more-${state.page}'),
+                  failed: state.loadMoreFailed,
+                  onLoadMore: () => ref.read(provider.notifier).loadMore(),
+                );
+              }
+              final review = state.items[index];
+              return Padding(
+                key: ValueKey(review.id),
+                padding: const EdgeInsets.only(bottom: AppSpace.sm),
+                child: ReviewCard(review: review, showMovie: true),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

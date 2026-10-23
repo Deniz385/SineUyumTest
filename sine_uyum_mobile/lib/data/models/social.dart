@@ -249,6 +249,30 @@ class TasteTwin {
   );
 }
 
+/// A page of `/api/v1/reviews/user/{userId}` (newest first).
+class ReviewPage {
+  const ReviewPage({
+    this.items = const [],
+    this.page = 1,
+    this.hasMore = false,
+  });
+
+  final List<Review> items;
+  final int page;
+  final bool hasMore;
+
+  factory ReviewPage.fromJson(Map<String, dynamic> json) => ReviewPage(
+    items:
+        (json['items'] as List?)
+            ?.whereType<Map>()
+            .map((e) => Review.fromJson(e.cast<String, dynamic>()))
+            .toList() ??
+        const [],
+    page: (json['page'] as num?)?.toInt() ?? 1,
+    hasMore: json['hasMore'] as bool? ?? false,
+  );
+}
+
 /// One person in `/api/v1/people/suggestions`.
 class PersonSuggestion {
   const PersonSuggestion({

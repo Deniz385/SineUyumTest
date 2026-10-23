@@ -68,6 +68,18 @@ final popularMoviesProvider = FutureProvider<List<Movie>>(
   (ref) => ref.watch(movieRepositoryProvider).popular(),
 );
 
+/// Posters for the sign-in / sign-up wall. Kept in memory for the app run
+/// once loaded (the offline cache is per user and there is no user yet); a
+/// failure leaves the tinted tiles and is retried the next time the wall
+/// is shown.
+final showcasePostersProvider = FutureProvider.autoDispose<List<String>>((
+  ref,
+) async {
+  final posters = await ref.watch(movieRepositoryProvider).showcasePosters();
+  if (posters.isNotEmpty) ref.keepAlive();
+  return posters;
+});
+
 final topRatedMoviesProvider = FutureProvider<List<Movie>>(
   (ref) => ref.watch(movieRepositoryProvider).topRated(),
 );

@@ -443,8 +443,8 @@
   "statFollowers": "Takipçi",
   "statFollowing": "Takip",
   "commonMoviesCount": "{count} ortak film",
-  "profileReviewsEmpty": "Gösterilecek yeni inceleme yok",
-  "profileReviewsHint": "Senin ve takip ettiklerinin incelemeleri burada görünür.",
+  "profileReviewsEmpty": "Henüz inceleme yok",
   "settingsAccount": "Hesap",
-  "settingsAbout": "Hakkında"
+  "settingsAbout": "Hakkında",
+  "profileReviewsHintOwn": "İlk incelemeni bir filmin sayfasından yazabilirsin."
 }

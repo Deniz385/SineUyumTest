@@ -133,6 +133,18 @@ class SocialRepository {
     return MovieReviews.fromJson(data);
   }
 
+  static const reviewsPageSize = 20;
+
+  /// A user's reviews, newest first (the profile's Reviews tab). A private
+  /// profile answers 403, a block 404, like the profile details.
+  Future<ReviewPage> userReviews(String userId, {int page = 1}) async {
+    final data = await _client.get<Map<String, dynamic>>(
+      '/api/v1/reviews/user/${Uri.encodeComponent(userId)}',
+      query: {'page': page, 'pageSize': reviewsPageSize},
+    );
+    return ReviewPage.fromJson(data);
+  }
+
   Future<Review> upsertReview(
     int movieId, {
     required String text,

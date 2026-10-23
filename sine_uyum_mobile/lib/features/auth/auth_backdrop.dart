@@ -1,9 +1,11 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/ui/poster_image.dart';
+import '../../providers/repository_providers.dart';
 
 /// The sign-in and sign-up background: a tilted wall of film posters under
 /// a scrim (the lights going down). Decorative: hidden from screen readers.
@@ -39,21 +41,6 @@ class AuthBackdrop extends StatelessWidget {
   }
 }
 
-/// Posters of well-known films (public TMDb artwork; any that fail to
-/// load leave their tinted tile).
-const _wallPosters = [
-  '/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg',
-  '/3bhkrj58Vtu7enYsRolD1fZdja1.jpg',
-  '/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg',
-  '/qJ2tW6WMUDux911r6m7haRef0WH.jpg',
-  '/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg',
-  '/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg',
-  '/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg',
-  '/d5iIlFn5s0ImszYzBPb8JPIfbXD.jpg',
-  '/arw2vcBveWOVZr6pxd9XTd1TdQa.jpg',
-  '/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg',
-];
-
 /// Tile tints: marquee gold, cinema red and deep night blues.
 const _tints = [
   [Color(0xFF3A2A0C), Color(0xFF12100A)],
@@ -63,11 +50,15 @@ const _tints = [
   [Color(0xFF14302A), Color(0xFF070F0D)],
 ];
 
-class PosterWall extends StatelessWidget {
+/// Posters of this week's popular films from `GET /movies/showcase`
+/// (anonymous). While they load, or when they can't, the tinted tiles
+/// stand alone.
+class PosterWall extends ConsumerWidget {
   const PosterWall({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final posters = ref.watch(showcasePostersProvider).value ?? const [];
     final size = MediaQuery.sizeOf(context);
     final tile = (size.width / 3.4).clamp(90.0, 180.0);
     const gap = 10.0;
@@ -76,8 +67,10 @@ class PosterWall extends StatelessWidget {
 
     Widget poster(int i) {
       final tint = _tints[i % _tints.length];
-      final path = _wallPosters[(i * 7) % _wallPosters.length];
+      // Spread the posters so neighbours differ.
+      final path = posters.isEmpty ? null : posters[(i * 7) % posters.length];
       return ClipRRect(
+        key: path == null ? null : ValueKey('wall-$i-$path'),
         borderRadius: BorderRadius.circular(AppRadii.md),
         child: SizedBox(
           width: tile,
@@ -94,7 +87,7 @@ class PosterWall extends StatelessWidget {
                   ),
                 ),
               ),
-              if (NetworkArtwork.enabled)
+              if (path != null && NetworkArtwork.enabled)
                 CachedNetworkImage(
                   imageUrl: '${AppConfig.tmdbImageBaseUrl}w185$path',
                   fit: BoxFit.cover,

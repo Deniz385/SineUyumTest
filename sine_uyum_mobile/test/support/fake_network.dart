@@ -11,6 +11,10 @@ import 'package:sine_uyum_mobile/core/storage/token_storage.dart';
 class FakeServer implements HttpClientAdapter {
   /// `METHOD /path` → (status, body). 404 when nothing matches.
   final routes = <String, (int, Object?)>{};
+
+  /// `METHOD /path` → an answer built from the query (paged endpoints);
+  /// checked before [routes].
+  final handlers = <String, (int, Object?) Function(Map<String, dynamic>)>{};
   bool offline = false;
   final requests = <String>[];
 
@@ -40,7 +44,10 @@ class FakeServer implements HttpClientAdapter {
         reason: 'no network (test)',
       );
     }
-    final (status, body) = routes[key] ?? (404, {'title': 'not found'});
+    final (status, body) =
+        handlers[key]?.call(options.queryParameters) ??
+        routes[key] ??
+        (404, {'title': 'not found'});
     return ResponseBody.fromString(
       body == null ? '' : jsonEncode(body),
       status,

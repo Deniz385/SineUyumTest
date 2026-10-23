@@ -10,6 +10,18 @@ class MovieRepository {
 
   Future<List<Movie>> popular() => _list('/api/v1/movies/popular');
 
+  /// Poster paths for the sign-in poster wall (anonymous; up to 24, in the
+  /// request language).
+  Future<List<String>> showcasePosters() async {
+    final data = await _client.get<Map<String, dynamic>>(
+      '/api/v1/movies/showcase',
+    );
+    return [
+      for (final p in data['posters'] as List? ?? const [])
+        if (p is String && p.isNotEmpty) p,
+    ];
+  }
+
   /// Well-known films of all time (the server serves pages 1–5).
   Future<List<Movie>> topRated({int page = 1}) =>
       _list('/api/v1/movies/top_rated', query: {'page': page});

@@ -1350,8 +1350,8 @@
       }
     }
   },
-  "profileReviewsEmpty": "No recent reviews to show",
-  "profileReviewsHint": "Reviews by you and the people you follow appear here.",
+  "profileReviewsEmpty": "No reviews yet",
   "settingsAccount": "Account",
-  "settingsAbout": "About"
+  "settingsAbout": "About",
+  "profileReviewsHintOwn": "Write your first one from a movie's page."
 }

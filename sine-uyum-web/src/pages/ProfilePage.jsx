@@ -17,6 +17,7 @@ import { ConfirmationDialog } from '../components/ConfirmationDialog';
 import { CompatibilityInsights } from '../components/CompatibilityInsights';
 import { FilmIdentityDialog } from '../components/FilmIdentityDialog';
 import { ProfileDiary } from '../components/ProfileDiary';
+import { ProfilePublicLists } from '../components/ProfilePublicLists';
 import { useSnackbar } from '../context/SnackbarProvider';
 import { LoadingState } from '../components/states/LoadingState';
 import { EmptyState } from '../components/states/EmptyState';
@@ -269,6 +270,9 @@ export const ProfilePage = () => {
                 )}
 
                 <ProfileDiary key={userId} userId={userId} isMine={isMyProfile} />
+
+                {/* A private profile's lists are hidden too (the API answers 403). */}
+                <ProfilePublicLists key={`lists-${userId}`} userId={userId} isMine={isMyProfile} enabled={!isRestricted} />
 
                 {!isRestricted && (
                     <>

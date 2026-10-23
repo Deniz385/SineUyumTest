@@ -18,6 +18,7 @@ import DynamicFeedIcon from '@mui/icons-material/DynamicFeed';
 import EventIcon from '@mui/icons-material/Event';
 import ChatIcon from '@mui/icons-material/Chat';
 import BookmarksIcon from '@mui/icons-material/Bookmarks';
+import ExploreIcon from '@mui/icons-material/Explore';
 import PersonIcon from '@mui/icons-material/Person';
 import EditIcon from '@mui/icons-material/Edit';
 import LockIcon from '@mui/icons-material/Lock';
@@ -55,6 +56,7 @@ const timeSince = (date, language, justNow) => {
 // the account menu (desktop) or the drawer (mobile).
 const NAV_LINKS = [
   { to: '/feed', labelKey: 'nav.feed', Icon: DynamicFeedIcon },
+  { to: '/lists', labelKey: 'nav.lists', Icon: ExploreIcon },
   { to: '/my-event', labelKey: 'nav.myEvent', Icon: EventIcon },
   { to: '/messages', labelKey: 'nav.messages', Icon: ChatIcon },
   { to: '/watchlist', labelKey: 'nav.myWatchlist', Icon: BookmarksIcon },

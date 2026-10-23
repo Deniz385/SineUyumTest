@@ -8,16 +8,21 @@ import { useTranslation } from 'react-i18next';
 import AddIcon from '@mui/icons-material/Add';
 import GroupIcon from '@mui/icons-material/Group';
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
+import PublicIcon from '@mui/icons-material/Public';
 import { LoadingState } from '../components/states/LoadingState';
 import { EmptyState } from '../components/states/EmptyState';
 import { ErrorState } from '../components/states/ErrorState';
+import { VisibilityControl } from '../components/VisibilityControl';
+import { SavedListsSection } from '../components/SavedListsSection';
+import { VISIBILITY, isPublic } from '../components/publicLists';
 
 const modalStyle = {
   position: 'absolute',
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: 400,
+  width: { xs: 'calc(100% - 32px)', sm: 400 },
+  maxWidth: 400,
   bgcolor: 'background.paper',
   border: '2px solid #000',
   boxShadow: 24,
@@ -69,6 +74,7 @@ export const WatchlistPage = () => {
     const [open, setOpen] = useState(false);
     const [newListName, setNewListName] = useState('');
     const [newListDesc, setNewListDesc] = useState('');
+    const [newListVisibility, setNewListVisibility] = useState(VISIBILITY.private);
 
     const fetchWatchlists = useCallback(async ({ silent = false } = {}) => {
         if (!user) return;
@@ -107,14 +113,15 @@ export const WatchlistPage = () => {
         if (!newListName.trim()) return;
 
         try {
-            await api.post(`/api/v1/watchlist`, { name: newListName, description: newListDesc });
+            await api.post(`/api/v1/watchlist`, { name: newListName, description: newListDesc, visibility: newListVisibility });
             setOpen(false);
             setNewListName('');
             setNewListDesc('');
+            setNewListVisibility(VISIBILITY.private);
             fetchWatchlists();
-        } catch {
+        } catch (err) {
             // The lists are still fine, so this is a message, not an error page.
-            showSnackbar(t('watchlist.createFailed'), 'error');
+            showSnackbar(err.response?.data?.title || t('watchlist.createFailed'), 'error');
         }
     };
 
@@ -198,6 +205,16 @@ export const WatchlistPage = () => {
                                         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{list.description}</Typography>
                                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, flexWrap: 'wrap' }}>
                                             <Typography variant="body2" color="text.secondary">{t('watchlist.movieCount', { count: list.itemCount })}</Typography>
+                                            {isPublic(list) && (
+                                                <Chip
+                                                    size="small"
+                                                    color="success"
+                                                    variant="outlined"
+                                                    icon={<PublicIcon />}
+                                                    label={t('watchlist.visibility.publicChip')}
+                                                    data-testid="public-chip"
+                                                />
+                                            )}
                                             {list.isShared && (
                                                 <Chip
                                                     size="small"
@@ -214,6 +231,8 @@ export const WatchlistPage = () => {
                         ))}
                     </Grid>
                 )}
+
+                <SavedListsSection />
             </Box>
 
             <Modal open={open} onClose={() => setOpen(false)}>
@@ -221,6 +240,7 @@ export const WatchlistPage = () => {
                     <Typography variant="h6" component="h2" sx={{ mb: 2 }}>{t('watchlist.create')}</Typography>
                     <TextField autoFocus required margin="dense" label={t('watchlist.name')} fullWidth variant="outlined" value={newListName} onChange={(e) => setNewListName(e.target.value)} />
                     <TextField margin="dense" label={t('watchlist.description')} fullWidth multiline rows={3} variant="outlined" value={newListDesc} onChange={(e) => setNewListDesc(e.target.value)} />
+                    <VisibilityControl value={newListVisibility} onChange={setNewListVisibility} />
                     <Button type="submit" variant="contained" sx={{ mt: 2 }}>{t('common.create')}</Button>
                 </Box>
             </Modal>

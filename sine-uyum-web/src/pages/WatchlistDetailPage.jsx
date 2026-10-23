@@ -14,12 +14,16 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import CheckIcon from '@mui/icons-material/Check';
 import MovieFilterIcon from '@mui/icons-material/MovieFilter';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
+import PublicIcon from '@mui/icons-material/Public';
 import { LoadingState } from '../components/states/LoadingState';
 import { EmptyState } from '../components/states/EmptyState';
 import { ErrorState } from '../components/states/ErrorState';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
 import { WatchlistMembersDialog } from '../components/WatchlistMembersDialog';
 import { useSnackbar } from '../context/SnackbarProvider';
+import { VisibilityControl } from '../components/VisibilityControl';
+import { ListReactions, OwnerLink } from '../components/ListCard';
+import { VISIBILITY, isPublic, useListReactions } from '../components/publicLists';
 
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
 
@@ -28,7 +32,8 @@ const modalStyle = {
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: 400,
+  width: { xs: 'calc(100% - 32px)', sm: 400 },
+  maxWidth: 400,
   bgcolor: 'background.paper',
   border: '2px solid #000',
   boxShadow: 24,
@@ -45,7 +50,8 @@ export const WatchlistDetailPage = () => {
     const { showSnackbar } = useSnackbar();
     const [watchlist, setWatchlist] = useState(null);
     // 'member': I own the list or am an accepted member (full detail).
-    // 'public': someone else's list opened from a shared message (read only).
+    // 'public': someone else's list opened from a shared message, discovery
+    // or a profile (read only; a public list can be liked and saved).
     const [access, setAccess] = useState('member');
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -53,6 +59,7 @@ export const WatchlistDetailPage = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editedListName, setEditedListName] = useState('');
     const [editedListDesc, setEditedListDesc] = useState('');
+    const [editedVisibility, setEditedVisibility] = useState(VISIBILITY.private);
     const [isMembersOpen, setIsMembersOpen] = useState(false);
     const [onlyUnwatched, setOnlyUnwatched] = useState(false);
 
@@ -78,6 +85,7 @@ export const WatchlistDetailPage = () => {
             setWatchlist(listData);
             setEditedListName(listData.name);
             setEditedListDesc(listData.description || '');
+            setEditedVisibility(listData.visibility || VISIBILITY.private);
         } catch {
             if (!silent) setError(t('watchlist.notFound'));
         } finally {
@@ -88,6 +96,11 @@ export const WatchlistDetailPage = () => {
     useEffect(() => {
         fetchWatchlistDetails();
     }, [fetchWatchlistDetails]);
+
+    const updateList = useCallback((id, update) => {
+        setWatchlist((current) => (current && current.id === id ? update(current) : current));
+    }, []);
+    const toggleReaction = useListReactions(updateList);
 
     const isMemberView = access === 'member';
     const isOwner = isMemberView && Boolean(watchlist?.isOwner);
@@ -182,13 +195,13 @@ export const WatchlistDetailPage = () => {
         if (!editedListName.trim()) return;
         try {
             await api.put(`/api/v1/watchlist/${listId}`,
-                { name: editedListName, description: editedListDesc }
+                { name: editedListName, description: editedListDesc, visibility: editedVisibility }
             );
             showSnackbar(t('watchlist.updated'), 'success');
             setIsEditModalOpen(false);
             fetchWatchlistDetails({ silent: true });
-        } catch {
-            showSnackbar(t('watchlist.updateFailed'), 'error');
+        } catch (err) {
+            showSnackbar(err.response?.data?.title || t('watchlist.updateFailed'), 'error');
         }
     };
 
@@ -202,6 +215,10 @@ export const WatchlistDetailPage = () => {
     const items = watchlist?.items || [];
     const visibleItems = onlyUnwatched ? items.filter((item) => !item.watchedBy?.length) : items;
     const pendingCount = isOwner ? (watchlist?.members || []).filter((m) => !m.accepted).length : 0;
+    const listIsPublic = isPublic(watchlist);
+    // Others' public lists can be liked and saved; my own (canEdit) cannot.
+    const canReact = !isMemberView && listIsPublic && !watchlist?.canEdit;
+    const showCounts = isMemberView && (listIsPublic || watchlist?.likeCount > 0 || watchlist?.saveCount > 0);
 
     return (
         <>
@@ -210,29 +227,45 @@ export const WatchlistDetailPage = () => {
                     <Typography variant="h4" component="h1" gutterBottom>{watchlist?.name}</Typography>
                     <Typography variant="body1" color="text.secondary">{watchlist?.description}</Typography>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, mt: 1, flexWrap: 'wrap' }}>
-                        {people.length > 0 && (
-                            <AvatarGroup max={6} sx={{ '& .MuiAvatar-root': { width: 32, height: 32, fontSize: '0.9rem' } }}>
-                                {people.map((person) => (
-                                    <Tooltip key={person.id} title={`@${person.userName}`}>
-                                        <Avatar src={mediaUrl(person.profileImageUrl)} alt={person.userName}>
-                                            {initial(person.userName)}
-                                        </Avatar>
-                                    </Tooltip>
-                                ))}
-                            </AvatarGroup>
-                        )}
-                        <Box sx={{ textAlign: people.length > 0 ? 'left' : 'center' }}>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                {t('watchlist.createdBy', { userName: ownerName })}
-                            </Typography>
-                            {isShared && (
-                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                    {t('watchlist.peopleCount', { count: people.length })}
-                                </Typography>
-                            )}
+                    {!isMemberView && watchlist?.owner?.id ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, mt: 1.5, flexWrap: 'wrap' }} data-testid="public-view-header">
+                            <OwnerLink owner={watchlist.owner} size={32} />
+                            {canReact && <ListReactions list={watchlist} onToggle={toggleReaction} size="medium" />}
                         </Box>
-                    </Box>
+                    ) : (
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, mt: 1, flexWrap: 'wrap' }}>
+                            {people.length > 0 && (
+                                <AvatarGroup max={6} sx={{ '& .MuiAvatar-root': { width: 32, height: 32, fontSize: '0.9rem' } }}>
+                                    {people.map((person) => (
+                                        <Tooltip key={person.id} title={`@${person.userName}`}>
+                                            <Avatar src={mediaUrl(person.profileImageUrl)} alt={person.userName}>
+                                                {initial(person.userName)}
+                                            </Avatar>
+                                        </Tooltip>
+                                    ))}
+                                </AvatarGroup>
+                            )}
+                            <Box sx={{ textAlign: people.length > 0 ? 'left' : 'center' }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                    {t('watchlist.createdBy', { userName: ownerName })}
+                                </Typography>
+                                {isShared && (
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                        {t('watchlist.peopleCount', { count: people.length })}
+                                    </Typography>
+                                )}
+                            </Box>
+                        </Box>
+                    )}
+
+                    {showCounts && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, mt: 1.5, flexWrap: 'wrap' }} data-testid="list-public-info">
+                            {listIsPublic && (
+                                <Chip size="small" color="success" variant="outlined" icon={<PublicIcon />} label={t('watchlist.visibility.publicChip')} data-testid="public-chip" />
+                            )}
+                            <ListReactions list={watchlist} />
+                        </Box>
+                    )}
 
                     {isOwner && (
                         <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -323,6 +356,7 @@ export const WatchlistDetailPage = () => {
                     <Typography variant="h6" component="h2" sx={{ mb: 2 }}>{t('watchlist.edit')}</Typography>
                     <TextField autoFocus required margin="dense" label={t('watchlist.name')} fullWidth variant="outlined" value={editedListName} onChange={(e) => setEditedListName(e.target.value)} />
                     <TextField margin="dense" label={t('watchlist.description')} fullWidth multiline rows={3} variant="outlined" value={editedListDesc} onChange={(e) => setEditedListDesc(e.target.value)} />
+                    <VisibilityControl value={editedVisibility} onChange={setEditedVisibility} />
                     <Button type="submit" variant="contained" sx={{ mt: 2 }}>{t('common.save')}</Button>
                 </Box>
             </Modal>

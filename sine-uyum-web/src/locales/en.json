@@ -40,7 +40,8 @@
     "editProfile": "Edit profile",
     "privacy": "Privacy settings",
     "darkTheme": "Dark theme",
-    "lightTheme": "Light theme"
+    "lightTheme": "Light theme",
+    "lists": "Lists"
   },
   "notifications": {
     "title": "Notifications",
@@ -564,6 +565,80 @@
       "notWatchedYet": "Not watched yet",
       "noneLeftShared": "Every movie here has been watched by at least one of you.",
       "noneLeftSolo": "You've watched every movie in this list."
+    },
+    "visibility": {
+      "label": "Who can see this list?",
+      "private": "Private",
+      "public": "Public",
+      "privateHelp": "Only you and the people you invite can see it.",
+      "publicHelp": "Shown on your profile and in list discovery. Anyone who can see your profile can like and save it.",
+      "publicChip": "Public"
+    }
+  },
+  "lists": {
+    "like": "Like",
+    "unlike": "Unlike",
+    "save": "Save",
+    "unsave": "Remove from saved",
+    "likeCount_one": "{{count}} like",
+    "likeCount_other": "{{count}} likes",
+    "saveCount_one": "{{count}} save",
+    "saveCount_other": "{{count}} saves",
+    "filmCount_one": "{{count}} film",
+    "filmCount_other": "{{count}} films",
+    "compatible": "{{score}}% compatible",
+    "savedToast": "Saved! You'll find it under My Watchlists.",
+    "likeFailed": "Couldn't update your like. Please try again.",
+    "saveFailed": "Couldn't update your saved lists. Please try again.",
+    "loadMoreFailed": "Couldn't load more lists.",
+    "discover": {
+      "title": "Discover lists",
+      "subtitle": "Public lists by other film lovers. Save the ones you like and pick your next watch.",
+      "tabsLabel": "List order",
+      "tabs": {
+        "trending": "This week",
+        "popular": "Popular",
+        "new": "New",
+        "forYou": "For you"
+      },
+      "hints": {
+        "trending": "The most saved and liked lists of the past 7 days.",
+        "popular": "The most saved and liked lists of all time.",
+        "new": "Lists that were made public most recently.",
+        "forYou": "Lists by people whose taste is close to yours."
+      },
+      "searchPlaceholder": "Search lists",
+      "searchLabel": "Search lists",
+      "clearSearch": "Clear search",
+      "noResults": "No lists match \"{{query}}\"",
+      "noResultsHint": "Try another word, or browse a different tab.",
+      "loadError": "Something went wrong while loading the lists.",
+      "empty": {
+        "forYouTitle": "No lists for you yet",
+        "forYouBody": "Rate more films to get lists from people with your taste.",
+        "forYouAction": "Find films to rate",
+        "trendingTitle": "Nothing is trending this week yet",
+        "trendingBody": "Lists that people save and like this week show up here.",
+        "trendingAction": "See popular lists",
+        "noneTitle": "No public lists yet",
+        "noneBody": "Make one of your lists public and it could be the first one here.",
+        "noneAction": "Go to my watchlists"
+      }
+    },
+    "saved": {
+      "title": "Saved lists",
+      "discover": "Discover lists",
+      "loadError": "Couldn't load your saved lists.",
+      "emptyTitle": "No saved lists yet",
+      "emptyBody": "Save public lists you like and they'll wait for you here.",
+      "removed": "\"{{name}}\" was removed from your saved lists."
+    },
+    "profile": {
+      "title": "Public lists",
+      "loadError": "Couldn't load the public lists.",
+      "emptyMineTitle": "You have no public lists yet",
+      "emptyMineBody": "Make a list public to show it on your profile and in list discovery.",
+      "emptyMineAction": "Go to my watchlists"
     }
   },
   "messages": {

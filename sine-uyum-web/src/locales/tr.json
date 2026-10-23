@@ -40,7 +40,8 @@
     "editProfile": "Profili düzenle",
     "privacy": "Gizlilik ayarları",
     "darkTheme": "Koyu tema",
-    "lightTheme": "Açık tema"
+    "lightTheme": "Açık tema",
+    "lists": "Listeler"
   },
   "notifications": {
     "title": "Bildirimler",
@@ -564,6 +565,80 @@
       "notWatchedYet": "Henüz izlenmemiş olanlar",
       "noneLeftShared": "Buradaki her filmi en az biriniz izlemiş.",
       "noneLeftSolo": "Bu listedeki tüm filmleri izlediniz."
+    },
+    "visibility": {
+      "label": "Bu listeyi kimler görebilir?",
+      "private": "Gizli",
+      "public": "Herkese açık",
+      "privateHelp": "Yalnızca sen ve davet ettiğin kişiler görebilir.",
+      "publicHelp": "Profilinde ve liste keşfinde görünür. Profilini görebilen herkes beğenip kaydedebilir.",
+      "publicChip": "Herkese açık"
+    }
+  },
+  "lists": {
+    "like": "Beğen",
+    "unlike": "Beğenmekten vazgeç",
+    "save": "Kaydet",
+    "unsave": "Kaydettiklerinden çıkar",
+    "likeCount_one": "{{count}} beğeni",
+    "likeCount_other": "{{count}} beğeni",
+    "saveCount_one": "{{count}} kişi kaydetti",
+    "saveCount_other": "{{count}} kişi kaydetti",
+    "filmCount_one": "{{count}} film",
+    "filmCount_other": "{{count}} film",
+    "compatible": "%{{score}} uyumlu",
+    "savedToast": "Kaydedildi! İzleme Listelerim sayfasında bulabilirsin.",
+    "likeFailed": "Beğenin güncellenemedi. Tekrar dener misin?",
+    "saveFailed": "Kaydettiklerin güncellenemedi. Tekrar dener misin?",
+    "loadMoreFailed": "Daha fazla liste yüklenemedi.",
+    "discover": {
+      "title": "Listeleri keşfet",
+      "subtitle": "Diğer sinemaseverlerin herkese açık listeleri. Beğendiklerini kaydet, sıradaki filmini seç.",
+      "tabsLabel": "Liste sıralaması",
+      "tabs": {
+        "trending": "Bu hafta",
+        "popular": "Popüler",
+        "new": "Yeni",
+        "forYou": "Sana özel"
+      },
+      "hints": {
+        "trending": "Son 7 günde en çok kaydedilen ve beğenilen listeler.",
+        "popular": "Tüm zamanların en çok kaydedilen ve beğenilen listeleri.",
+        "new": "En son herkese açık hale gelen listeler.",
+        "forYou": "Zevki seninkine yakın kişilerin listeleri."
+      },
+      "searchPlaceholder": "Listelerde ara",
+      "searchLabel": "Listelerde ara",
+      "clearSearch": "Aramayı temizle",
+      "noResults": "\"{{query}}\" ile eşleşen liste yok",
+      "noResultsHint": "Başka bir kelime dene ya da başka bir sekmeye göz at.",
+      "loadError": "Listeler yüklenirken bir sorun oluştu.",
+      "empty": {
+        "forYouTitle": "Henüz sana özel liste yok",
+        "forYouBody": "Zevkine yakın kişilerin listelerini görmek için daha fazla film puanla.",
+        "forYouAction": "Puanlayacak film bul",
+        "trendingTitle": "Bu hafta henüz öne çıkan bir liste yok",
+        "trendingBody": "Bu hafta kaydedilen ve beğenilen listeler burada görünür.",
+        "trendingAction": "Popüler listelere bak",
+        "noneTitle": "Henüz herkese açık liste yok",
+        "noneBody": "Listelerinden birini herkese açık yap, burada ilk o görünsün.",
+        "noneAction": "Listelerime git"
+      }
+    },
+    "saved": {
+      "title": "Kaydettiğin listeler",
+      "discover": "Listeleri keşfet",
+      "loadError": "Kaydettiğin listeler yüklenemedi.",
+      "emptyTitle": "Henüz kaydettiğin bir liste yok",
+      "emptyBody": "Beğendiğin herkese açık listeleri kaydet, burada seni beklesinler.",
+      "removed": "\"{{name}}\" kaydettiklerinden çıkarıldı."
+    },
+    "profile": {
+      "title": "Herkese açık listeler",
+      "loadError": "Herkese açık listeler yüklenemedi.",
+      "emptyMineTitle": "Henüz herkese açık bir listen yok",
+      "emptyMineBody": "Bir listeni herkese açık yap; profilinde ve liste keşfinde görünsün.",
+      "emptyMineAction": "Listelerime git"
     }
   },
   "messages": {

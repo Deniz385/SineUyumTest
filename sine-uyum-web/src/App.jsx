@@ -21,6 +21,7 @@ const SearchResultsPage = page(() => import('./pages/SearchResultsPage'), 'Searc
 const MovieDetailPage = page(() => import('./pages/MovieDetailPage'), 'MovieDetailPage');
 const WatchlistPage = page(() => import('./pages/WatchlistPage'), 'WatchlistPage');
 const WatchlistDetailPage = page(() => import('./pages/WatchlistDetailPage'), 'WatchlistDetailPage');
+const DiscoverListsPage = page(() => import('./pages/DiscoverListsPage'), 'DiscoverListsPage');
 const EditProfilePage = page(() => import('./pages/EditProfilePage'), 'EditProfilePage');
 const MessagesPage = page(() => import('./pages/MessagesPage'), 'MessagesPage');
 const ConversationPage = page(() => import('./pages/ConversationPage'), 'ConversationPage');
@@ -68,6 +69,7 @@ function App() {
                   <Route path="/movie/:movieId" element={<MovieDetailPage />} />
                   <Route path="/watchlist" element={<WatchlistPage />} />
                   <Route path="/watchlist/:listId" element={<WatchlistDetailPage />} />
+                  <Route path="/lists" element={<DiscoverListsPage />} />
                   <Route path="/profile/edit" element={<EditProfilePage />} />
                   <Route path="/messages" element={<MessagesPage />} />
                   <Route path="/messages/:otherUserId" element={<ConversationPage />} />

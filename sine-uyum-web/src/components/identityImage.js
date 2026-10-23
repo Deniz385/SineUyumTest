@@ -8,7 +8,8 @@ import i18n from '../i18n';
 const W = 1080;
 const H = 1350;
 
-const wrap = (ctx, text, x, y, maxWidth, lineHeight) => {
+// Draws text word-wrapped to maxWidth; returns the y of the line after it.
+export const wrap = (ctx, text, x, y, maxWidth, lineHeight) => {
     const words = text.split(' ');
     let line = '';
     for (const word of words) {
@@ -117,15 +118,10 @@ export const drawIdentityCard = (identity, isMine = true) => {
 
 // Uses the system share sheet when the device supports it (mobile browsers:
 // Instagram, WhatsApp...), otherwise downloads the file.
-export const shareIdentityImage = async (identity, isMine = true) => {
-    const blob = await drawIdentityCard(identity, isMine);
-    const file = new File([blob], `sineuyum-${identity.userName}.png`, { type: 'image/png' });
+export const shareImage = async (blob, fileName, { title, text }) => {
+    const file = new File([blob], fileName, { type: 'image/png' });
     if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({
-            files: [file],
-            title: i18n.t('identity.card.shareTitle'),
-            text: i18n.t('identity.card.shareText', { title: identity.title }),
-        });
+        await navigator.share({ files: [file], title, text });
         return 'shared';
     }
     const url = URL.createObjectURL(blob);
@@ -135,4 +131,12 @@ export const shareIdentityImage = async (identity, isMine = true) => {
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     return 'downloaded';
+};
+
+export const shareIdentityImage = async (identity, isMine = true) => {
+    const blob = await drawIdentityCard(identity, isMine);
+    return shareImage(blob, `sineuyum-${identity.userName}.png`, {
+        title: i18n.t('identity.card.shareTitle'),
+        text: i18n.t('identity.card.shareText', { title: identity.title }),
+    });
 };

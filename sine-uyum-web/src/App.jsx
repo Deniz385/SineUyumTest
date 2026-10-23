@@ -28,6 +28,7 @@ const MyEventPage = page(() => import('./pages/MyEventPage'), 'MyEventPage');
 const SubscriptionPage = page(() => import('./pages/SubscriptionPage'), 'SubscriptionPage');
 const AdminPage = page(() => import('./pages/AdminPage'), 'AdminPage');
 const FeedPage = page(() => import('./pages/FeedPage'), 'FeedPage');
+const YearInReviewPage = page(() => import('./pages/YearInReviewPage'), 'YearInReviewPage');
 
 function App() {
   return (
@@ -44,6 +45,15 @@ function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/" element={<LoginPage />} />
+                {/* The yearly recap is a full-screen story, so it has no navbar. */}
+                <Route
+                  path="/profile/:userId/year/:year?"
+                  element={
+                    <ProtectedRoute>
+                      <YearInReviewPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   element={
                     <ProtectedRoute>

@@ -254,6 +254,153 @@
     "unavailable": "This diary is not available.",
     "loadFailed": "Could not load the diary."
   },
+  "yearInReview": {
+    "year": "Year",
+    "close": "Close recap",
+    "previous": "Previous slide",
+    "next": "Next slide",
+    "slideRole": "slide",
+    "slideLabel": "{{current}} of {{total}}",
+    "unavailable": "This recap isn't available.",
+    "loadFailed": "Could not load the recap.",
+    "rating": "{{rating}}/10",
+    "intro": {
+      "titleMine": "Your {{year}} in film",
+      "titleTheirs": "{{userName}}'s {{year}} in film",
+      "moviesMine_one": "film made your year",
+      "moviesMine_other": "films made your year",
+      "moviesTheirs_one": "film made their year",
+      "moviesTheirs_other": "films made their year",
+      "soFar": "And the year isn't over yet."
+    },
+    "totals": {
+      "headingMine": "Your year in numbers",
+      "headingTheirs": "Their year in numbers",
+      "diaryEntries_one": "diary entry",
+      "diaryEntries_other": "diary entries",
+      "rewatches_one": "rewatch",
+      "rewatches_other": "rewatches",
+      "ratings_one": "rating given",
+      "ratings_other": "ratings given",
+      "reviews_one": "review written",
+      "reviews_other": "reviews written",
+      "likesReceived_one": "like on reviews",
+      "likesReceived_other": "likes on reviews",
+      "commentsReceived_one": "comment on reviews",
+      "commentsReceived_other": "comments on reviews"
+    },
+    "rhythm": {
+      "headingMine": "Your year, month by month",
+      "headingTheirs": "Their year, month by month",
+      "busiestMine_one": "{{month}} was your busiest month, with {{count}} film.",
+      "busiestMine_other": "{{month}} was your busiest month, with {{count}} films.",
+      "busiestTheirs_one": "{{month}} was their busiest month, with {{count}} film.",
+      "busiestTheirs_other": "{{month}} was their busiest month, with {{count}} films.",
+      "weekdayMine_one": "Your go-to movie day: {{weekday}} ({{count}} film).",
+      "weekdayMine_other": "Your go-to movie day: {{weekday}} ({{count}} films).",
+      "weekdayTheirs_one": "Their go-to movie day: {{weekday}} ({{count}} film).",
+      "weekdayTheirs_other": "Their go-to movie day: {{weekday}} ({{count}} films)."
+    },
+    "genres": {
+      "headingMine": "The genres you kept coming back to",
+      "headingTheirs": "The genres they kept coming back to",
+      "share": "{{share}}%",
+      "stat_one": "{{count}} film · avg. {{average}}",
+      "stat_other": "{{count}} films · avg. {{average}}"
+    },
+    "top": {
+      "headingMine": "Your highest rated of {{year}}",
+      "headingTheirs": "Their highest rated of {{year}}",
+      "favorite": "Favorite"
+    },
+    "contrarian": {
+      "headingMine": "Your boldest take",
+      "headingTheirs": "Their boldest take",
+      "everyone": "Everyone (TMDb)",
+      "you": "You",
+      "higherMine": "You saw something everyone else missed.",
+      "higherTheirs": "They saw something everyone else missed.",
+      "lowerMine": "You weren't buying the hype.",
+      "lowerTheirs": "They weren't buying the hype."
+    },
+    "bookends": {
+      "heading": "From the first film to the latest",
+      "first": "First film",
+      "last": "Latest film",
+      "rewatched": "Most rewatched",
+      "timesMine_one": "You watched it {{count}} time",
+      "timesMine_other": "You watched it {{count}} times",
+      "timesTheirs_one": "Watched {{count}} time",
+      "timesTheirs_other": "Watched {{count}} times"
+    },
+    "average": {
+      "headingMine": "Your average rating",
+      "headingTheirs": "Their average rating",
+      "higherMine": "Up from {{previous}} in {{previousYear}}: you were more generous this year.",
+      "higherTheirs": "Up from {{previous}} in {{previousYear}}: they were more generous this year.",
+      "lowerMine": "Down from {{previous}} in {{previousYear}}: you were a tougher critic this year.",
+      "lowerTheirs": "Down from {{previous}} in {{previousYear}}: they were a tougher critic this year.",
+      "sameMine": "Exactly {{previous}}, just like {{previousYear}}: steady as ever.",
+      "sameTheirs": "Exactly {{previous}}, just like {{previousYear}}: steady as ever.",
+      "basisMine_one": "Across the {{count}} film you rated.",
+      "basisMine_other": "Across the {{count}} films you rated.",
+      "basisTheirs_one": "Across the {{count}} film they rated.",
+      "basisTheirs_other": "Across the {{count}} films they rated."
+    },
+    "mate": {
+      "headingMine": "Your taste mate",
+      "headingTheirs": "Their taste mate",
+      "compatibility": "{{compatibility}}% compatible",
+      "common_one": "{{count}} film in common",
+      "common_other": "{{count}} films in common",
+      "viewProfile": "View profile"
+    },
+    "finale": {
+      "kickerMine": "Your {{year}} in one title",
+      "kickerTheirs": "Their {{year}} in one title",
+      "shareMine": "Share your recap",
+      "shareTheirs": "Share this recap",
+      "replay": "Watch again"
+    },
+    "notReady": {
+      "titleMine": "Your {{year}} recap isn't ready yet",
+      "titleTheirs": "{{userName}}'s {{year}} recap isn't ready yet",
+      "bodyMine_one": "Log at least {{count}} film in {{year}} to unlock your recap.",
+      "bodyMine_other": "Log at least {{count}} films in {{year}} to unlock your recap.",
+      "bodyTheirs_one": "Their recap unlocks once they log at least {{count}} film in {{year}}.",
+      "bodyTheirs_other": "Their recap unlocks once they log at least {{count}} films in {{year}}.",
+      "progress": "So far: {{done}} of {{min}}",
+      "toDiary": "Go to your diary"
+    },
+    "banner": {
+      "kicker": "Year in review",
+      "title": "Your {{year}} in film is here",
+      "body": "Relive your year: your top films, favorite genres and the title you earned.",
+      "open": "See your recap",
+      "dismiss": "Dismiss"
+    },
+    "card": {
+      "header": "SINEUYUM · YEAR IN FILM",
+      "filmsMine_one": "film made your year",
+      "filmsMine_other": "films made your year",
+      "filmsTheirs_one": "film made their year",
+      "filmsTheirs_other": "films made their year",
+      "titleMine": "YOUR TITLE OF THE YEAR",
+      "titleTheirs": "THEIR TITLE OF THE YEAR",
+      "rating": "★ {{rating}}/10",
+      "genreMine": "YOUR TOP GENRE",
+      "genreTheirs": "THEIR TOP GENRE",
+      "genreValue": "{{name}} · {{share}}%",
+      "monthMine": "YOUR BUSIEST MONTH",
+      "monthTheirs": "THEIR BUSIEST MONTH",
+      "monthValue_one": "{{month}} · {{count}} film",
+      "monthValue_other": "{{month}} · {{count}} films",
+      "shareTitleMine": "My {{year}} in film",
+      "shareTitleTheirs": "{{userName}}'s {{year}} in film",
+      "shareTextMine": "{{title}}: my {{year}} in film on SineUyum",
+      "shareTextTheirs": "{{userName}}'s {{year}} in film on SineUyum: {{title}}"
+    }
+  },
   "privacy": {
     "title": "Privacy",
     "audience": {
@@ -317,6 +464,8 @@
     "private": "This user keeps their ratings and lists private.",
     "myIdentity": "My film identity",
     "identity": "Film identity",
+    "recapMine": "Your {{year}} recap",
+    "recap": "{{year}} recap",
     "statRated": "Movies Rated",
     "statAverage": "Average Rating",
     "statInLists": "Movies in Lists",

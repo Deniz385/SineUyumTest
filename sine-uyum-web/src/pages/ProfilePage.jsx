@@ -10,6 +10,7 @@ import RateReviewIcon from '@mui/icons-material/RateReview';
 import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
 import PersonOffIcon from '@mui/icons-material/PersonOff';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { RecommendationModal } from '../components/RecommendationModal';
 import { FollowListModal } from '../components/FollowListModal';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
@@ -20,6 +21,7 @@ import { useSnackbar } from '../context/SnackbarProvider';
 import { LoadingState } from '../components/states/LoadingState';
 import { EmptyState } from '../components/states/EmptyState';
 import { ErrorState } from '../components/states/ErrorState';
+import { defaultRecapYear, yearInReviewPath } from '../components/yearInReview';
 
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
 
@@ -57,6 +59,7 @@ export const ProfilePage = () => {
     const [isIdentityOpen, setIsIdentityOpen] = useState(false);
 
     const isMyProfile = user?.id === userId;
+    const recapYear = defaultRecapYear();
 
     const fetchProfileData = useCallback(async () => {
         if (!user) return;
@@ -206,10 +209,23 @@ export const ProfilePage = () => {
                     </Alert>
                 )}
 
-                {stats && stats.totalRatings > 0 && (
-                    <Box sx={{ textAlign: 'center', mt: 2 }}>
-                        <Button variant="outlined" color="secondary" onClick={() => setIsIdentityOpen(true)}>
-                            {isMyProfile ? t('profile.myIdentity') : t('profile.identity')}
+                {/* Film identity and the yearly recap; hidden with the rest of a private profile. */}
+                {!isRestricted && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 1, mt: 2 }}>
+                        {stats && stats.totalRatings > 0 && (
+                            <Button variant="outlined" color="secondary" onClick={() => setIsIdentityOpen(true)}>
+                                {isMyProfile ? t('profile.myIdentity') : t('profile.identity')}
+                            </Button>
+                        )}
+                        <Button
+                            component={Link}
+                            to={yearInReviewPath(userId, recapYear)}
+                            variant="contained"
+                            color="secondary"
+                            startIcon={<AutoAwesomeIcon />}
+                            data-testid="profile-recap"
+                        >
+                            {isMyProfile ? t('profile.recapMine', { year: recapYear }) : t('profile.recap', { year: recapYear })}
                         </Button>
                     </Box>
                 )}

@@ -254,6 +254,153 @@
     "unavailable": "Bu günlük görüntülenemiyor.",
     "loadFailed": "Günlük yüklenemedi."
   },
+  "yearInReview": {
+    "year": "Yıl",
+    "close": "Özeti kapat",
+    "previous": "Önceki slayt",
+    "next": "Sonraki slayt",
+    "slideRole": "slayt",
+    "slideLabel": "{{current}}/{{total}}",
+    "unavailable": "Bu özet görüntülenemiyor.",
+    "loadFailed": "Özet yüklenemedi.",
+    "rating": "{{rating}}/10",
+    "intro": {
+      "titleMine": "{{year}} sinema yılın",
+      "titleTheirs": "@{{userName}} · {{year}} sinema yılı",
+      "moviesMine_one": "film yılına damga vurdu",
+      "moviesMine_other": "film yılına damga vurdu",
+      "moviesTheirs_one": "film yılına damga vurdu",
+      "moviesTheirs_other": "film yılına damga vurdu",
+      "soFar": "Üstelik yıl daha bitmedi."
+    },
+    "totals": {
+      "headingMine": "Rakamlarla yılın",
+      "headingTheirs": "Rakamlarla yılı",
+      "diaryEntries_one": "günlük kaydı",
+      "diaryEntries_other": "günlük kaydı",
+      "rewatches_one": "yeniden izleme",
+      "rewatches_other": "yeniden izleme",
+      "ratings_one": "verilen puan",
+      "ratings_other": "verilen puan",
+      "reviews_one": "yazılan inceleme",
+      "reviews_other": "yazılan inceleme",
+      "likesReceived_one": "inceleme beğenisi",
+      "likesReceived_other": "inceleme beğenisi",
+      "commentsReceived_one": "inceleme yorumu",
+      "commentsReceived_other": "inceleme yorumu"
+    },
+    "rhythm": {
+      "headingMine": "Ay ay yılın",
+      "headingTheirs": "Ay ay yılı",
+      "busiestMine_one": "En yoğun ayın {{month}} oldu: {{count}} film.",
+      "busiestMine_other": "En yoğun ayın {{month}} oldu: {{count}} film.",
+      "busiestTheirs_one": "En yoğun ayı {{month}} oldu: {{count}} film.",
+      "busiestTheirs_other": "En yoğun ayı {{month}} oldu: {{count}} film.",
+      "weekdayMine_one": "En sevdiğin film günü: {{weekday}} ({{count}} film).",
+      "weekdayMine_other": "En sevdiğin film günü: {{weekday}} ({{count}} film).",
+      "weekdayTheirs_one": "En sevdiği film günü: {{weekday}} ({{count}} film).",
+      "weekdayTheirs_other": "En sevdiği film günü: {{weekday}} ({{count}} film)."
+    },
+    "genres": {
+      "headingMine": "Dönüp dolaşıp geldiğin türler",
+      "headingTheirs": "Dönüp dolaşıp geldiği türler",
+      "share": "%{{share}}",
+      "stat_one": "{{count}} film · ort. {{average}}",
+      "stat_other": "{{count}} film · ort. {{average}}"
+    },
+    "top": {
+      "headingMine": "{{year}} yılında en yüksek puan verdiklerin",
+      "headingTheirs": "{{year}} yılında en yüksek puan verdikleri",
+      "favorite": "Favori"
+    },
+    "contrarian": {
+      "headingMine": "En cesur çıkışın",
+      "headingTheirs": "En cesur çıkışı",
+      "everyone": "Herkes (TMDb)",
+      "you": "Sen",
+      "higherMine": "Herkesin kaçırdığı bir şeyi sen gördün.",
+      "higherTheirs": "Herkesin kaçırdığı bir şeyi o gördü.",
+      "lowerMine": "Bu filmin havasına kapılmadın.",
+      "lowerTheirs": "Bu filmin havasına kapılmadı."
+    },
+    "bookends": {
+      "heading": "İlk filmden en sonuncusuna",
+      "first": "İlk film",
+      "last": "En son film",
+      "rewatched": "En çok yeniden izlenen",
+      "timesMine_one": "{{count}} kez izledin",
+      "timesMine_other": "{{count}} kez izledin",
+      "timesTheirs_one": "{{count}} kez izledi",
+      "timesTheirs_other": "{{count}} kez izledi"
+    },
+    "average": {
+      "headingMine": "Ortalama puanın",
+      "headingTheirs": "Ortalama puanı",
+      "higherMine": "{{previousYear}} yılında {{previous}} idi; bu yıl daha cömerttin.",
+      "higherTheirs": "{{previousYear}} yılında {{previous}} idi; bu yıl daha cömertti.",
+      "lowerMine": "{{previousYear}} yılında {{previous}} idi; bu yıl daha zor beğendin.",
+      "lowerTheirs": "{{previousYear}} yılında {{previous}} idi; bu yıl daha zor beğendi.",
+      "sameMine": "{{previousYear}} yılındaki gibi yine {{previous}}: istikrarından hiç şaşmadın.",
+      "sameTheirs": "{{previousYear}} yılındaki gibi yine {{previous}}: istikrarından hiç şaşmadı.",
+      "basisMine_one": "Puan verdiğin {{count}} filmin ortalaması.",
+      "basisMine_other": "Puan verdiğin {{count}} filmin ortalaması.",
+      "basisTheirs_one": "Puan verdiği {{count}} filmin ortalaması.",
+      "basisTheirs_other": "Puan verdiği {{count}} filmin ortalaması."
+    },
+    "mate": {
+      "headingMine": "Zevk ortağın",
+      "headingTheirs": "Zevk ortağı",
+      "compatibility": "%{{compatibility}} uyumlu",
+      "common_one": "{{count}} ortak film",
+      "common_other": "{{count}} ortak film",
+      "viewProfile": "Profile git"
+    },
+    "finale": {
+      "kickerMine": "Tek unvanla {{year}} yılın",
+      "kickerTheirs": "Tek unvanla {{year}} yılı",
+      "shareMine": "Özetini paylaş",
+      "shareTheirs": "Bu özeti paylaş",
+      "replay": "Baştan izle"
+    },
+    "notReady": {
+      "titleMine": "{{year}} özetin henüz hazır değil",
+      "titleTheirs": "@{{userName}} için {{year}} özeti henüz hazır değil",
+      "bodyMine_one": "{{year}} yılında en az {{count}} film kaydet, özetin açılsın.",
+      "bodyMine_other": "{{year}} yılında en az {{count}} film kaydet, özetin açılsın.",
+      "bodyTheirs_one": "{{year}} yılında en az {{count}} film kaydettiğinde özeti açılacak.",
+      "bodyTheirs_other": "{{year}} yılında en az {{count}} film kaydettiğinde özeti açılacak.",
+      "progress": "Şu ana kadar: {{done}}/{{min}}",
+      "toDiary": "Günlüğüne git"
+    },
+    "banner": {
+      "kicker": "Yıl özeti",
+      "title": "{{year}} sinema yılın hazır",
+      "body": "Yılını yeniden yaşa: en sevdiğin filmler, türler ve kazandığın unvan seni bekliyor.",
+      "open": "Özetini gör",
+      "dismiss": "Kapat"
+    },
+    "card": {
+      "header": "SİNEUYUM · SİNEMA YILI",
+      "filmsMine_one": "film yılına damga vurdu",
+      "filmsMine_other": "film yılına damga vurdu",
+      "filmsTheirs_one": "film yılına damga vurdu",
+      "filmsTheirs_other": "film yılına damga vurdu",
+      "titleMine": "YILIN UNVANIN",
+      "titleTheirs": "YILIN UNVANI",
+      "rating": "★ {{rating}}/10",
+      "genreMine": "EN ÇOK İZLEDİĞİN TÜR",
+      "genreTheirs": "EN ÇOK İZLEDİĞİ TÜR",
+      "genreValue": "{{name}} · %{{share}}",
+      "monthMine": "EN YOĞUN AYIN",
+      "monthTheirs": "EN YOĞUN AYI",
+      "monthValue_one": "{{month}} · {{count}} film",
+      "monthValue_other": "{{month}} · {{count}} film",
+      "shareTitleMine": "{{year}} sinema yılım",
+      "shareTitleTheirs": "@{{userName}} · {{year}} sinema yılı",
+      "shareTextMine": "{{title}}: SineUyum'da {{year}} sinema yılım",
+      "shareTextTheirs": "@{{userName}} · SineUyum'da {{year}} sinema yılı: {{title}}"
+    }
+  },
   "privacy": {
     "title": "Gizlilik",
     "audience": {
@@ -317,6 +464,8 @@
     "private": "Bu kullanıcı puanlarını ve listelerini gizli tutuyor.",
     "myIdentity": "Film kimliğim",
     "identity": "Film kimliği",
+    "recapMine": "{{year}} özetin",
+    "recap": "{{year}} özeti",
     "statRated": "Film Oyladı",
     "statAverage": "Puan Ortalaması",
     "statInLists": "Listelerindeki Film",

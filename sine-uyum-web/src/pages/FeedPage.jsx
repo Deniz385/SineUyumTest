@@ -6,6 +6,7 @@ import { Box, Button, Card, CardContent, Stack, Typography } from '@mui/material
 import DynamicFeedIcon from '@mui/icons-material/DynamicFeed';
 import { AuthorLine, ReviewCard } from '../components/ReviewCard';
 import { TasteTwinCard } from '../components/TasteTwinCard';
+import { YearInReviewBanner } from '../components/YearInReviewBanner';
 import { LoadingState } from '../components/states/LoadingState';
 import { EmptyState } from '../components/states/EmptyState';
 import { ErrorState } from '../components/states/ErrorState';
@@ -69,6 +70,7 @@ export const FeedPage = () => {
     return (
         <Box className="page-container" sx={{ maxWidth: 720, width: '100%' }}>
             <Typography variant="h4" component="h1" gutterBottom>{t('feed.title')}</Typography>
+            <YearInReviewBanner />
             <TasteTwinCard />
             {items.length === 0 && error ? (
                 <ErrorState message={t('feed.loadError')} onRetry={retry} />

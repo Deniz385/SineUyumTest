@@ -5,43 +5,34 @@ import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { useSnackbar } from '../context/SnackbarProvider';
-import { Box, Typography, TextField, IconButton, Modal, Card, CardMedia, List, ListItem, ListItemButton, ListItemText, Divider } from '@mui/material';
-import SendIcon from '@mui/icons-material/Send';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
-import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
-import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import { Box, Typography, TextField, IconButton, Dialog, DialogTitle, DialogContent, Card, List, ListItem, ListItemButton, ListItemText, Tooltip } from '@mui/material';
+import SendIcon from '@mui/icons-material/SendRounded';
+import MovieRoundedIcon from '@mui/icons-material/MovieRounded';
+import PlaylistAddIcon from '@mui/icons-material/PlaylistAddRounded';
+import PlaylistPlayRoundedIcon from '@mui/icons-material/PlaylistPlayRounded';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlineRounded';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { MovieSearchBar } from '../components/MovieSearchBar';
 import { LoadingState } from '../components/states/LoadingState';
 import { EmptyState } from '../components/states/EmptyState';
 import { ErrorState } from '../components/states/ErrorState';
-
-const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
-
-const modalStyle = {
-  position: 'absolute',
-  top: '20%',
-  left: '50%',
-  transform: 'translateX(-50%)',
-  width: { xs: '90%', sm: 400 },
-  bgcolor: 'background.paper',
-  p: 2,
-  boxShadow: 24,
-  borderRadius: 2
-};
+import { Page } from '../components/ui/Page';
+import { PosterImage } from '../components/ui/PosterImage';
+import { UserAvatar } from '../components/ui/UserRow';
+import { FeedSkeleton, UserListSkeleton } from '../components/ui/Skeletons';
+import { apiErrorMessage } from '../components/ui/apiError';
+import { prefersReducedMotion } from '../components/ui/a11y';
 
 const MovieRecommendationCard = ({ movie }) => {
     const { t } = useTranslation();
     return (
-        <Card sx={{ display: 'flex', alignItems: 'center', p: 1, textDecoration: 'none', backgroundColor: 'rgba(255,255,255,0.1)' }} component={Link} to={`/movie/${movie.id}`}>
-            <CardMedia
-                component="img"
-                sx={{ width: 60, height: 90, borderRadius: 1 }}
-                image={movie.posterPath ? `${IMAGE_BASE_URL}${movie.posterPath}` : '/vite.svg'}
-                alt={movie.title}
-            />
-            <Box sx={{ ml: 1.5 }}>
-                <Typography variant="body2" sx={{ opacity: 0.8 }}>{t('conversation.movieSuggestion')}</Typography>
-                <Typography fontWeight="bold">{movie.title}</Typography>
+        <Card sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1, pr: 2, textDecoration: 'none', bgcolor: 'surface.raised', '&:hover': { bgcolor: 'surface.overlay' } }} component={Link} to={`/movie/${movie.id}`}>
+            <Box sx={{ width: 48, flexShrink: 0 }}>
+                <PosterImage path={movie.posterPath} title={movie.title} width={48} radius="sm" decorative />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+                <Typography variant="body2" color="text.secondary">{t('conversation.movieSuggestion')}</Typography>
+                <Typography variant="title" component="p" sx={{ color: 'text.primary' }}>{movie.title}</Typography>
             </Box>
         </Card>
     );
@@ -50,12 +41,14 @@ const MovieRecommendationCard = ({ movie }) => {
 const WatchlistShareCard = ({ watchlist }) => {
     const { t } = useTranslation();
     return (
-        <Card sx={{ display: 'flex', alignItems: 'center', p: 1, textDecoration: 'none', backgroundColor: 'rgba(255,255,255,0.1)' }} component={Link} to={`/watchlist/${watchlist.id}`}>
-            <PlaylistAddIcon sx={{ fontSize: 40, mx: 1.5 }} />
-            <Box sx={{ ml: 1.5 }}>
-                <Typography variant="body2" sx={{ opacity: 0.8 }}>{t('conversation.watchlist')}</Typography>
-                <Typography fontWeight="bold">{watchlist.name}</Typography>
-                <Typography variant="caption" sx={{ opacity: 0.7 }}>@{watchlist.ownerUsername}</Typography>
+        <Card sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1, pr: 2, textDecoration: 'none', bgcolor: 'surface.raised', '&:hover': { bgcolor: 'surface.overlay' } }} component={Link} to={`/watchlist/${watchlist.id}`}>
+            <Box aria-hidden="true" sx={{ width: 48, height: 48, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'surface.overlay', color: 'primary.main', flexShrink: 0 }}>
+                <PlaylistPlayRoundedIcon />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+                <Typography variant="body2" color="text.secondary">{t('conversation.watchlist')}</Typography>
+                <Typography variant="title" component="p" sx={{ color: 'text.primary' }}>{watchlist.name}</Typography>
+                <Typography variant="body2" color="text.secondary">@{watchlist.ownerUsername}</Typography>
             </Box>
         </Card>
     );
@@ -82,7 +75,7 @@ export const ConversationPage = () => {
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        messagesEndRef.current?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "end" });
     };
 
     const fetchThread = useCallback(async () => {
@@ -178,7 +171,7 @@ export const ConversationPage = () => {
             appendMessage(response.data);
         } catch (err) {
             // On a privacy/block rejection (403) the server's reason is shown.
-            showSnackbar(err.response?.data?.title || t('conversation.sendFailed'), 'error');
+            showSnackbar(apiErrorMessage(err, t('conversation.sendFailed')), 'error');
         }
     };
     
@@ -229,72 +222,112 @@ export const ConversationPage = () => {
         fetchThread();
     };
 
-    if (isLoading) return <LoadingState />;
-    if (loadError && messages.length === 0) return <ErrorState message={t('conversation.loadError')} onRetry={retry} />;
+    if (isLoading) return <Page width="reading"><UserListSkeleton count={1} /><FeedSkeleton count={2} /></Page>;
+    if (loadError && messages.length === 0) return <Page width="reading"><ErrorState message={t('conversation.loadError')} onRetry={retry} /></Page>;
+
+    const time = (iso) => new Date(iso).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' });
 
     return (
         <>
-            <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', width: '100%', maxWidth: '800px', margin: 'auto' }}>
-                <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-                    <Typography variant="h6" component={Link} to={`/profile/${otherUserId}`} sx={{textDecoration: 'none', color: 'inherit'}}>
-                        {otherUser?.userName || t('conversation.fallbackTitle')}
-                    </Typography>
+            <Box
+                data-testid="conversation"
+                sx={{
+                    display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 680 + 48, mx: 'auto', px: { xs: 0, sm: 3 },
+                    height: { xs: 'calc(100dvh - 64px - 64px - env(safe-area-inset-bottom))', md: 'calc(100dvh - 64px)' },
+                }}
+            >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: { xs: 1, sm: 0 }, py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+                    <Tooltip title={t('conversation.back')}>
+                        <IconButton component={Link} to="/messages" aria-label={t('conversation.back')}><ArrowBackRoundedIcon /></IconButton>
+                    </Tooltip>
+                    <Box component={Link} to={`/profile/${otherUserId}`} sx={{ display: 'flex', alignItems: 'center', gap: 1.25, color: 'text.primary', minWidth: 0, borderRadius: 1 }}>
+                        <UserAvatar user={{ userName: otherUser?.userName, profileImageUrl: otherUser?.profileImageUrl }} size={40} />
+                        <Typography variant="h3" component="h1" noWrap>{otherUser?.userName ? `@${otherUser.userName}` : t('conversation.fallbackTitle')}</Typography>
+                    </Box>
                 </Box>
-                <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box role="log" aria-live="polite" aria-label={t('conversation.history')} sx={{ flexGrow: 1, overflowY: 'auto', px: { xs: 2, sm: 0 }, py: 2, display: 'flex', flexDirection: 'column', gap: 1.25 }}>
                     {messages.length === 0 && (
                         <EmptyState compact icon={ChatBubbleOutlineIcon} title={t('conversation.empty')} sx={{ my: 'auto' }} />
                     )}
-                    {messages.map(msg => (
-                        <Box key={msg.id} sx={{ alignSelf: msg.senderId === user.id ? 'flex-end' : 'flex-start', maxWidth: '70%' }}>
-                            <Box sx={{
-                                bgcolor: msg.senderId === user.id ? 'primary.main' : 'grey.300',
-                                color: msg.senderId === user.id ? 'primary.contrastText' : 'text.primary',
-                                p: (msg.movie || msg.watchlist) ? 0.5 : 1.5,
-                                borderRadius: 2
-                            }}>
-                                {msg.movie ? <MovieRecommendationCard movie={msg.movie} /> :
-                                 msg.watchlist ? <WatchlistShareCard watchlist={msg.watchlist} /> :
-                                 <Typography variant="body1">{msg.content}</Typography>
-                                }
+                    {messages.map(msg => {
+                        const mine = msg.senderId === user.id;
+                        const rich = msg.movie || msg.watchlist;
+                        return (
+                            <Box key={msg.id} data-testid="message" sx={{ alignSelf: mine ? 'flex-end' : 'flex-start', maxWidth: { xs: '85%', sm: '75%' } }}>
+                                <Box sx={{
+                                    bgcolor: rich ? 'transparent' : mine ? 'primary.main' : 'surface.raised',
+                                    color: mine && !rich ? 'primary.contrastText' : 'text.primary',
+                                    px: rich ? 0 : 1.75,
+                                    py: rich ? 0 : 1,
+                                    borderRadius: '18px',
+                                    [mine ? 'borderBottomRightRadius' : 'borderBottomLeftRadius']: rich ? '18px' : '6px',
+                                    border: mine || rich ? 0 : 1,
+                                    borderColor: 'divider',
+                                }}>
+                                    {msg.movie ? <MovieRecommendationCard movie={msg.movie} /> :
+                                     msg.watchlist ? <WatchlistShareCard watchlist={msg.watchlist} /> :
+                                     <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', color: 'inherit' }}>{msg.content}</Typography>
+                                    }
+                                </Box>
+                                <Typography variant="body2" sx={{ display: 'block', textAlign: mine ? 'right' : 'left', color: 'text.secondary', mt: 0.5, fontSize: '0.75rem' }}>
+                                    {time(msg.messageSent)}
+                                    {msg.id === lastSeenId && ` · ${t('conversation.seen', { time: time(msg.dateRead) })}`}
+                                </Typography>
                             </Box>
-                            <Typography variant="caption" sx={{ display: 'block', textAlign: msg.senderId === user.id ? 'right' : 'left', color: 'text.secondary', mt: 0.5 }}>
-                                {new Date(msg.messageSent).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}
-                                {msg.id === lastSeenId && ` · ${t('conversation.seen', { time: new Date(msg.dateRead).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' }) })}`}
-                            </Typography>
-                        </Box>
-                    ))}
+                        );
+                    })}
                     <div ref={messagesEndRef} />
                 </Box>
-                <Box component="form" onSubmit={handleTextSubmit} sx={{ p: 2, borderTop: 1, borderColor: 'divider', display: 'flex', gap: 1 }}>
-                    <IconButton color="primary" onClick={() => setIsMovieModalOpen(true)} title={t('conversation.suggestMovie')} aria-label={t('conversation.suggestMovie')}>
-                        <AddCircleOutlineIcon />
-                    </IconButton>
-                    <IconButton color="primary" onClick={handleOpenWatchlistModal} title={t('conversation.shareList')} aria-label={t('conversation.shareList')}>
-                        <PlaylistAddIcon />
-                    </IconButton>
-                    <TextField fullWidth variant="outlined" placeholder={t('conversation.placeholder')} value={newMessage} onChange={(e) => setNewMessage(e.target.value)} />
-                    <IconButton type="submit" color="primary" aria-label={t('common.send')}><SendIcon /></IconButton>
+                <Box component="form" onSubmit={handleTextSubmit} sx={{ px: { xs: 1, sm: 0 }, py: 1.5, borderTop: 1, borderColor: 'divider', display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                    <Tooltip title={t('conversation.suggestMovie')}>
+                        <IconButton onClick={() => setIsMovieModalOpen(true)} aria-label={t('conversation.suggestMovie')} sx={{ color: 'text.secondary' }}>
+                            <MovieRoundedIcon />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title={t('conversation.shareList')}>
+                        <IconButton onClick={handleOpenWatchlistModal} aria-label={t('conversation.shareList')} sx={{ color: 'text.secondary' }}>
+                            <PlaylistAddIcon />
+                        </IconButton>
+                    </Tooltip>
+                    <TextField
+                        fullWidth
+                        size="small"
+                        variant="outlined"
+                        placeholder={t('conversation.placeholder')}
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        slotProps={{ htmlInput: { 'aria-label': t('conversation.placeholder') } }}
+                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 999, pl: 1 } }}
+                    />
+                    <Tooltip title={t('common.send')}>
+                        <span>
+                            <IconButton type="submit" aria-label={t('common.send')} disabled={!newMessage.trim()} sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', ml: 0.5, '&:hover': { bgcolor: 'primary.main', filter: 'brightness(1.08)' }, '&.Mui-disabled': { bgcolor: 'action.disabledBackground' } }}>
+                                <SendIcon fontSize="small" />
+                            </IconButton>
+                        </span>
+                    </Tooltip>
                 </Box>
             </Box>
 
-            <Modal open={isMovieModalOpen} onClose={() => setIsMovieModalOpen(false)}>
-                <Box sx={modalStyle}>
-                    <Typography variant="h6" sx={{ mb: 2 }}>{t('conversation.suggestMovie')}</Typography>
-                    <MovieSearchBar onMovieSelect={handleMovieSelectAndSend} />
-                </Box>
-            </Modal>
+            <Dialog open={isMovieModalOpen} onClose={() => setIsMovieModalOpen(false)} maxWidth="xs" fullWidth aria-labelledby="suggest-movie-title"
+                slotProps={{ paper: { sx: { alignSelf: 'flex-start', mt: '15vh' } } }}>
+                <DialogTitle id="suggest-movie-title">{t('conversation.suggestMovie')}</DialogTitle>
+                <DialogContent sx={{ pt: 1 }}>
+                    <MovieSearchBar onMovieSelect={handleMovieSelectAndSend} autoFocus />
+                </DialogContent>
+            </Dialog>
 
-            <Modal open={isWatchlistModalOpen} onClose={() => setIsWatchlistModalOpen(false)}>
-                <Box sx={modalStyle}>
-                    <Typography variant="h6" component="h2">{t('conversation.whichList')}</Typography>
-                    <List sx={{ mt: 2 }}>
+            <Dialog open={isWatchlistModalOpen} onClose={() => setIsWatchlistModalOpen(false)} maxWidth="xs" fullWidth aria-labelledby="share-list-title">
+                <DialogTitle id="share-list-title">{t('conversation.whichList')}</DialogTitle>
+                <DialogContent sx={{ px: 1.5 }}>
+                    <List>
                         {listsError ? (
                             <ErrorState compact message={t('conversation.listsLoadFailed')} onRetry={loadUserLists} />
                         ) : userLists === null ? (
                             <LoadingState compact />
                         ) : userLists.length > 0 ? userLists.map((list) => (
                             <ListItem key={list.id} disablePadding>
-                                <ListItemButton onClick={() => handleListSelectAndSend(list.id)}>
+                                <ListItemButton onClick={() => handleListSelectAndSend(list.id)} sx={{ borderRadius: 1 }}>
                                     <ListItemText primary={list.name} secondary={t('watchlist.movieCount', { count: list.itemCount })} />
                                 </ListItemButton>
                             </ListItem>
@@ -302,8 +335,8 @@ export const ConversationPage = () => {
                             <EmptyState compact icon={PlaylistAddIcon} title={t('conversation.noListsToShare')} />
                         )}
                     </List>
-                </Box>
-            </Modal>
+                </DialogContent>
+            </Dialog>
         </>
     );
 };

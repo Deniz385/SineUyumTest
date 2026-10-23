@@ -1,18 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Box, Button, Card, CardContent, IconButton, Typography } from '@mui/material';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import CloseIcon from '@mui/icons-material/Close';
+import { Box, Button, Card, IconButton, Tooltip, Typography } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesomeRounded';
+import CloseIcon from '@mui/icons-material/CloseRounded';
 import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { bannerRecapYear, dismissBanner, isBannerDismissed, yearInReviewPath } from './yearInReview';
+import { gradients, marqueeText } from '../theme';
 
 // Announces your own yearly recap on the feed in December and early January,
 // only once it is ready (enough films), so it never leads to the "not ready"
 // screen. Dismissing it hides it for that year.
-export const YearInReviewBanner = () => {
+export const YearInReviewBanner = ({ sx }) => {
     const { t } = useTranslation();
+    const theme = useTheme();
     const { user } = useAuth();
     const [year] = useState(() => bannerRecapYear());
     const [dismissed, setDismissed] = useState(() => year != null && isBannerDismissed(year));
@@ -36,22 +39,27 @@ export const YearInReviewBanner = () => {
     };
 
     return (
-        <Card data-testid="yir-banner" sx={{ mb: 3, color: '#fff', background: 'linear-gradient(120deg, #2a0f45 0%, #4a1450 45%, #06243f 100%)', position: 'relative' }}>
-            <CardContent sx={{ pr: 6, textAlign: 'left' }}>
-                <Typography variant="overline" sx={{ color: '#ffd54f', display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <AutoAwesomeIcon fontSize="inherit" /> {t('yearInReview.banner.kicker')}
-                </Typography>
-                <Typography variant="h6" component="h2" sx={{ fontWeight: 800 }}>{t('yearInReview.banner.title', { year })}</Typography>
-                <Typography variant="body2" sx={{ color: '#e3e8ff', mt: 0.5 }}>{t('yearInReview.banner.body')}</Typography>
-                <Box sx={{ mt: 2 }}>
-                    <Button component={Link} to={yearInReviewPath(user.id, year)} variant="contained" color="warning">
-                        {t('yearInReview.banner.open')}
-                    </Button>
-                </Box>
-            </CardContent>
-            <IconButton onClick={dismiss} aria-label={t('yearInReview.banner.dismiss')} size="small" sx={{ position: 'absolute', top: 8, right: 8, color: 'rgba(255,255,255,0.8)' }}>
-                <CloseIcon fontSize="small" />
-            </IconButton>
+        <Card
+            data-testid="yir-banner"
+            component="section"
+            aria-labelledby="yir-banner-title"
+            sx={[{ position: 'relative', p: 2.5, pr: 6, height: '100%', overflow: 'hidden', '&::before': { content: '""', position: 'absolute', inset: '0 0 auto 0', height: 3, background: gradients.marquee } }, ...(Array.isArray(sx) ? sx : [sx])]}
+        >
+            <Typography variant="overline" component="p" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <AutoAwesomeIcon fontSize="inherit" sx={{ color: 'primary.main' }} aria-hidden="true" /> {t('yearInReview.banner.kicker')}
+            </Typography>
+            <Typography id="yir-banner-title" variant="h2" component="h2" sx={{ mt: 1 }}>
+                <Box component="span" sx={marqueeText(theme.palette.mode)}>{t('yearInReview.banner.title', { year })}</Box>
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mt: 0.75 }}>{t('yearInReview.banner.body')}</Typography>
+            <Button component={Link} to={yearInReviewPath(user.id, year)} variant="contained" sx={{ mt: 2 }}>
+                {t('yearInReview.banner.open')}
+            </Button>
+            <Tooltip title={t('yearInReview.banner.dismiss')}>
+                <IconButton onClick={dismiss} aria-label={t('yearInReview.banner.dismiss')} size="small" sx={{ position: 'absolute', top: 10, right: 10, color: 'text.secondary' }}>
+                    <CloseIcon fontSize="small" />
+                </IconButton>
+            </Tooltip>
         </Card>
     );
 };

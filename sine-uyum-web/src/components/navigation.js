@@ -27,7 +27,7 @@ export const timeSince = (date, language, justNow) => {
 // they are icons with tooltips; wider, icons with labels. Below 900px the
 // bottom navigation takes over.
 export const NAV_LINKS = [
-  { to: '/feed', labelKey: 'nav.feed', Icon: DynamicFeedRoundedIcon, match: ['/feed', '/home'] },
+  { to: '/home', labelKey: 'nav.feed', Icon: DynamicFeedRoundedIcon, match: ['/feed', '/home'] },
   { to: '/discover', labelKey: 'nav.discover', Icon: ExploreRoundedIcon, match: ['/discover', '/lists', '/search'] },
   { to: '/my-event', labelKey: 'nav.event', Icon: EventRoundedIcon, match: ['/my-event', '/subscription'] },
   { to: '/messages', labelKey: 'nav.messages', Icon: ChatBubbleRoundedIcon, match: ['/messages'] },

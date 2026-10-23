@@ -1,23 +1,29 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { TextField, Button, Box, Typography, CircularProgress } from '@mui/material';
+import { TextField, Button, Box, Typography, CircularProgress, Link as MuiLink } from '@mui/material';
 import api from '../api/axiosConfig';
 import { useSnackbar } from '../context/SnackbarProvider';
-import { LanguageSwitcher } from '../components/LanguageSwitcher';
+import { AuthShell } from '../components/AuthShell';
 
 export const LoginPage = () => {
   const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { loginAction } = useAuth();
+  // Set once this form signs in: loginAction then decides where to go.
+  const [submitted, setSubmitted] = useState(false);
+  const { user, loginAction } = useAuth();
   const { showSnackbar } = useSnackbar();
+
+  // Already signed in (e.g. opening the site again): straight to Home.
+  if (user && !submitted) return <Navigate to="/home" replace />;
 
   const handleLogin = async (event) => {
     event.preventDefault();
     setIsLoading(true);
+    setSubmitted(true);
 
     try {
       const response = await api.post(`/api/v1/account/login`, {
@@ -31,31 +37,24 @@ export const LoginPage = () => {
     } catch (err) {
       const errorMessage = err.response?.data?.message || t('auth.login.failed');
       showSnackbar(errorMessage, 'error');
+      setSubmitted(false);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Box
-      sx={{
-        width: '100%',
-        maxWidth: 400,
-        margin: '80px auto',
-        padding: 4,
-        boxShadow: 3,
-        borderRadius: 2,
-        // Background colour comes from the theme
-        backgroundColor: 'background.paper',
-        textAlign: 'center'
-      }}
+    <AuthShell
+      title={t('auth.login.title')}
+      footer={(
+        <Typography variant="body1" color="text.secondary">
+          {t('auth.login.noAccount')}{' '}
+          <MuiLink component={Link} to="/register" sx={{ color: 'primary.main', fontWeight: 600 }}>
+            {t('auth.login.registerLink')}
+          </MuiLink>
+        </Typography>
+      )}
     >
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: -2, mr: -2 }}>
-        <LanguageSwitcher variant="text" />
-      </Box>
-      <Typography variant="h4" component="h1" gutterBottom>
-        {t('auth.login.title')}
-      </Typography>
       <Box component="form" onSubmit={handleLogin} sx={{ mt: 1 }}>
         <TextField
           margin="normal"
@@ -85,19 +84,13 @@ export const LoginPage = () => {
           type="submit"
           fullWidth
           variant="contained"
-          sx={{ mt: 3, mb: 2, py: 1.5 }}
+          size="large"
+          sx={{ mt: 3 }}
           disabled={isLoading}
         >
-          {isLoading ? <CircularProgress size={24} /> : t('auth.login.submit')}
+          {isLoading ? <CircularProgress size={22} color="inherit" aria-label={t('common.loading')} /> : t('auth.login.submit')}
         </Button>
-        <Typography variant="body2">
-          {t('auth.login.noAccount')}{' '}
-          <Link to="/register" style={{ textDecoration: 'none' }}>
-            {t('auth.login.registerLink')}
-          </Link>
-        </Typography>
       </Box>
-    </Box>
+    </AuthShell>
   );
 };
-

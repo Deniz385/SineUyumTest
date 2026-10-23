@@ -3,8 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api, { mediaUrl } from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
-import { Avatar, Box, TextField, Button, Typography, CircularProgress, Stack } from '@mui/material';
-import { LoadingState } from '../components/states/LoadingState';
+import { Avatar, Box, TextField, Button, Typography, CircularProgress, Stack, Card, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded';
+import LightModeRoundedIcon from '@mui/icons-material/LightModeRounded';
+import { CardSkeleton } from '../components/ui/Skeletons';
+import { Page, PageHeader } from '../components/ui/Page';
+import { useThemeContext } from '../context/ThemeContext';
 import { ErrorState } from '../components/states/ErrorState';
 import { useSnackbar } from '../context/SnackbarProvider';
 import { PrivacySettings } from '../components/PrivacySettings';
@@ -43,7 +47,8 @@ const uploadErrorMessage = (error, t) => {
 
 export const EditProfilePage = () => {
     const { t } = useTranslation();
-    const { user } = useAuth();
+    const { user, updateUserSummary } = useAuth();
+    const { mode, toggleTheme } = useThemeContext();
     const navigate = useNavigate();
     const { showSnackbar } = useSnackbar();
     const fileInput = useRef(null);
@@ -97,6 +102,7 @@ export const EditProfilePage = () => {
             body.append('file', await downscaleForUpload(selected));
             const response = await api.post('/api/v1/profile/photo', body);
             setFormData((current) => ({ ...current, profileImageUrl: response.data.profileImageUrl || '' }));
+            updateUserSummary({ profileImageUrl: response.data.profileImageUrl || null });
             showSnackbar(t('editProfile.photoUpdated'), 'success');
         } catch (error) {
             showSnackbar(uploadErrorMessage(error, t), 'error');
@@ -110,6 +116,7 @@ export const EditProfilePage = () => {
         try {
             await api.delete('/api/v1/profile/photo');
             setFormData((current) => ({ ...current, profileImageUrl: '' }));
+            updateUserSummary({ profileImageUrl: null });
             showSnackbar(t('editProfile.photoRemoved'), 'success');
         } catch {
             showSnackbar(t('editProfile.photoRemoveFailed'), 'error');
@@ -132,68 +139,91 @@ export const EditProfilePage = () => {
     };
 
     if (isLoading) {
-        return <LoadingState />;
+        return <Page width="reading"><PageHeader title={t('settings.title')} /><CardSkeleton lines={4} /></Page>;
     }
     if (loadError) {
-        return <ErrorState message={t('editProfile.loadFailed')} onRetry={fetchProfileData} />;
+        return <Page width="reading"><ErrorState message={t('editProfile.loadFailed')} onRetry={fetchProfileData} /></Page>;
     }
 
+    const sectionSx = { p: { xs: 2, sm: 3 }, mb: 3 };
+
     return (
-        <Box className="page-container" sx={{maxWidth: '700px'}}>
-            <Box component="form" onSubmit={handleSubmit}>
-                <Typography variant="h4" component="h1" gutterBottom>
-                    {t('editProfile.title')}
-                </Typography>
+        <Page width="reading">
+            <PageHeader title={t('settings.title')} subtitle={t('settings.subtitle')} />
 
-                <Stack direction="row" spacing={3} alignItems="center" sx={{ my: 2 }}>
-                    <Avatar src={mediaUrl(formData.profileImageUrl)} sx={{ width: 96, height: 96, fontSize: '2.5rem' }}>
-                        {user?.userName?.charAt(0).toUpperCase()}
-                    </Avatar>
-                    <Stack spacing={1}>
-                        <input
-                            ref={fileInput}
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            hidden
-                            onChange={handleFileSelected}
-                        />
-                        <Button variant="outlined" onClick={() => fileInput.current?.click()} disabled={isUploading}>
-                            {isUploading ? <CircularProgress size={20} /> : t('editProfile.uploadPhoto')}
-                        </Button>
-                        {formData.profileImageUrl && (
-                            <Button color="error" onClick={handleRemovePhoto} disabled={isUploading}>
-                                {t('editProfile.removePhoto')}
-                            </Button>
-                        )}
-                        <Typography variant="caption" color="text.secondary">
-                            {t('editProfile.photoHint')}
-                        </Typography>
+            <Card component="section" aria-labelledby="settings-profile" sx={sectionSx}>
+                <Box component="form" onSubmit={handleSubmit}>
+                    <Typography id="settings-profile" variant="h2" component="h2" sx={{ mb: 2 }}>{t('editProfile.title')}</Typography>
+                    <Stack direction="row" spacing={2.5} alignItems="center" sx={{ mb: 2 }}>
+                        <Avatar src={mediaUrl(formData.profileImageUrl)} alt="" sx={{ width: 88, height: 88, fontSize: '2.25rem' }}>
+                            {user?.username?.charAt(0).toUpperCase()}
+                        </Avatar>
+                        <Stack spacing={1} sx={{ minWidth: 0 }}>
+                            <input
+                                ref={fileInput}
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                hidden
+                                onChange={handleFileSelected}
+                            />
+                            <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
+                                <Button variant="tonal" size="small" onClick={() => fileInput.current?.click()} disabled={isUploading}>
+                                    {isUploading ? <CircularProgress size={18} aria-label={t('common.loading')} /> : t('editProfile.uploadPhoto')}
+                                </Button>
+                                {formData.profileImageUrl && (
+                                    <Button color="secondary" size="small" onClick={handleRemovePhoto} disabled={isUploading}>
+                                        {t('editProfile.removePhoto')}
+                                    </Button>
+                                )}
+                            </Stack>
+                            <Typography variant="body2" color="text.secondary">
+                                {t('editProfile.photoHint')}
+                            </Typography>
+                        </Stack>
                     </Stack>
-                </Stack>
 
-                <TextField
-                    label={t('editProfile.bio')}
-                    name="bio"
-                    multiline
-                    rows={4}
-                    value={formData.bio}
-                    onChange={handleChange}
-                    fullWidth
-                    margin="normal"
-                />
-                <Button
-                    type="submit"
-                    variant="contained"
-                    sx={{ mt: 3 }}
-                    disabled={isSaving || isUploading}
+                    <TextField
+                        label={t('editProfile.bio')}
+                        name="bio"
+                        multiline
+                        rows={4}
+                        value={formData.bio}
+                        onChange={handleChange}
+                        fullWidth
+                        margin="normal"
+                    />
+                    <Button
+                        type="submit"
+                        variant="contained"
+                        sx={{ mt: 2 }}
+                        disabled={isSaving || isUploading}
+                    >
+                        {isSaving ? <CircularProgress size={20} aria-label={t('common.processing')} /> : t('common.save')}
+                    </Button>
+                </Box>
+            </Card>
+
+            <Card component="section" aria-labelledby="settings-appearance" sx={sectionSx}>
+                <Typography id="settings-appearance" variant="h2" component="h2" sx={{ mb: 2 }}>{t('settings.appearance')}</Typography>
+                <Typography id="settings-theme-label" variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('settings.theme')}</Typography>
+                <ToggleButtonGroup
+                    exclusive
+                    value={mode}
+                    onChange={(e, next) => { if (next && next !== mode) toggleTheme(); }}
+                    aria-labelledby="settings-theme-label"
+                    size="small"
                 >
-                    {isSaving ? <CircularProgress size={24} /> : t('common.save')}
-                </Button>
-            </Box>
-            {/* The language applies (and is saved) immediately; it is not part of the form. */}
-            <LanguageSwitcher variant="select" sx={{ mt: 4, textAlign: 'left' }} />
+                    <ToggleButton value="dark" sx={{ px: 2, gap: 1, borderRadius: 999 }} data-testid="theme-dark"><DarkModeRoundedIcon fontSize="small" />{t('nav.darkTheme')}</ToggleButton>
+                    <ToggleButton value="light" sx={{ px: 2, gap: 1, borderRadius: 999 }} data-testid="theme-light"><LightModeRoundedIcon fontSize="small" />{t('nav.lightTheme')}</ToggleButton>
+                </ToggleButtonGroup>
+                {/* The language applies (and is saved) immediately; it is not part of the form. */}
+                <LanguageSwitcher variant="select" sx={{ mt: 3 }} />
+            </Card>
+
             {/* Privacy settings save themselves; they are not part of the form. */}
-            <PrivacySettings />
-        </Box>
+            <Card component="section" sx={sectionSx}>
+                <PrivacySettings />
+            </Card>
+        </Page>
     );
 };

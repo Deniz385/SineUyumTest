@@ -60,6 +60,10 @@ export const NotificationProvider = ({ children }) => {
         let cancelled = false;
         let connection = null;
 
+        // Load the list right away too: if the live connection cannot start
+        // (offline hub, blocked websocket), the notifications still show.
+        fetchNotifications();
+
         // Handlers are registered BEFORE start; otherwise events arriving the
         // moment the connection opens would be lost.
         const subscribe = (hub) => {

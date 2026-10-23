@@ -2,10 +2,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Box, Button, IconButton, LinearProgress, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import ReplayIcon from '@mui/icons-material/Replay';
-import StarIcon from '@mui/icons-material/Star';
+import EditIcon from '@mui/icons-material/EditRounded';
+import DeleteIcon from '@mui/icons-material/DeleteOutlineRounded';
+import ReplayIcon from '@mui/icons-material/ReplayRounded';
 import LockIcon from '@mui/icons-material/Lock';
 import EditCalendarIcon from '@mui/icons-material/EditCalendar';
 import api from '../api/axiosConfig';
@@ -13,12 +12,13 @@ import { useSnackbar } from '../context/SnackbarProvider';
 import { ConfirmationDialog } from './ConfirmationDialog';
 import { DiaryEntryDialog } from './DiaryEntryDialog';
 import { monthNames, parseIsoDay } from './diaryDates';
-import { LoadingState } from './states/LoadingState';
+import { CardSkeleton } from './ui/Skeletons';
+import { PosterImage } from './ui/PosterImage';
+import { RatingStars } from './ui/RatingInput';
 import { EmptyState } from './states/EmptyState';
 import { ErrorState } from './states/ErrorState';
 
 const PAGE_SIZE = 20;
-const POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w92';
 const CHART_HEIGHT = 72;
 
 // Entries arrive newest first, so a month's entries are always adjacent.
@@ -78,32 +78,25 @@ const DiaryEntryRow = ({ entry, language, isMine, onEdit, onDelete }) => {
     const { title } = entry.movie;
 
     return (
-        <Paper variant="outlined" data-testid="diary-entry" sx={{ display: 'flex', gap: { xs: 1, sm: 2 }, p: 1, alignItems: 'flex-start' }}>
+        <Paper variant="outlined" data-testid="diary-entry" sx={{ display: 'flex', gap: { xs: 1, sm: 2 }, p: 1.25, alignItems: 'flex-start', bgcolor: 'background.paper' }}>
             <Box sx={{ width: 40, flexShrink: 0, textAlign: 'center', pt: 0.5 }}>
-                <Typography variant="h6" component="p" sx={{ fontWeight: 'bold', lineHeight: 1 }}>{day.getDate()}</Typography>
+                <Typography component="p" sx={{ typography: 'number', fontSize: '1.375rem' }}>{day.getDate()}</Typography>
                 <Typography variant="caption" color="text.secondary">{day.toLocaleDateString(language, { weekday: 'short' })}</Typography>
             </Box>
-            <Link to={`/movie/${entry.movie.id}`} style={{ flexShrink: 0 }}>
-                <img
-                    src={entry.movie.posterPath ? `${POSTER_BASE_URL}${entry.movie.posterPath}` : '/vite.svg'}
-                    alt={t('profile.posterAlt', { title })}
-                    style={{ width: 46, height: 69, objectFit: 'cover', borderRadius: 4, display: 'block' }}
-                />
-            </Link>
+            <Box component={Link} to={`/movie/${entry.movie.id}`} sx={{ flexShrink: 0, width: 46, borderRadius: 1 }}>
+                <PosterImage path={entry.movie.posterPath} title={t('profile.posterAlt', { title })} width={46} radius="sm" />
+            </Box>
             <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                     <Typography component={Link} to={`/movie/${entry.movie.id}`} sx={{ fontWeight: 600, color: 'text.primary', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
                         {title}
                     </Typography>
                     {entry.rating != null && (
-                        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }} aria-label={t('diary.ratingValue', { rating: entry.rating })}>
-                            <StarIcon fontSize="small" color="warning" />
-                            <Typography variant="body2">{t('diary.ratingValue', { rating: entry.rating })}</Typography>
-                        </Box>
+                        <RatingStars value={entry.rating} size="small" showNumber />
                     )}
                     {entry.rewatch && (
                         <Tooltip title={t('diary.rewatch')}>
-                            <ReplayIcon fontSize="small" color="secondary" aria-label={t('diary.rewatch')} data-testid="diary-rewatch" />
+                            <ReplayIcon fontSize="small" sx={{ color: 'text.secondary' }} aria-label={t('diary.rewatch')} data-testid="diary-rewatch" />
                         </Tooltip>
                     )}
                 </Box>
@@ -224,7 +217,7 @@ export const ProfileDiary = ({ userId, isMine }) => {
     return (
         <Box component="section" data-testid="profile-diary" sx={{ my: 4, textAlign: 'left' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
-                <Typography variant="h5" component="h3" sx={{ fontWeight: 'bold' }}>{t('diary.title')}</Typography>
+                <Typography variant="h2" component="h2">{t('diary.title')}</Typography>
                 {summary && !loadError && (
                     <TextField
                         select
@@ -244,7 +237,7 @@ export const ProfileDiary = ({ userId, isMine }) => {
             ) : loadError ? (
                 <ErrorState compact message={errorMessage} onRetry={() => { setLoadError(null); load(summary?.year ?? null); }} sx={{ mt: 1 }} />
             ) : !summary ? (
-                <LoadingState compact sx={{ my: 1 }} />
+                <CardSkeleton lines={4} />
             ) : (
                 <Box sx={{ opacity: isLoading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
                     <LinearProgress sx={{ mt: 1, visibility: isLoading ? 'visible' : 'hidden' }} />
@@ -265,7 +258,7 @@ export const ProfileDiary = ({ userId, isMine }) => {
                     ) : (
                         groupByMonth(entries).map((group) => (
                             <Box key={group.month} sx={{ mt: 3 }}>
-                                <Typography variant="subtitle1" component="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                <Typography variant="overline" component="h3" sx={{ display: "block", color: "text.secondary", mb: 1 }}>
                                     {monthFormat.format(new Date(year, group.month - 1, 1))}
                                 </Typography>
                                 <Stack spacing={1}>

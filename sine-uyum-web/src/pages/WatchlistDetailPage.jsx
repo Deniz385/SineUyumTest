@@ -4,41 +4,29 @@ import { useTranslation } from 'react-i18next';
 import api, { mediaUrl } from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import {
-    Box, Typography, Grid, IconButton, Button, Modal, TextField, Avatar, AvatarGroup, Tooltip,
+    Box, Typography, IconButton, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Avatar, AvatarGroup, Tooltip,
     Chip, FormControlLabel, Switch,
 } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
-import GroupIcon from '@mui/icons-material/Group';
-import LogoutIcon from '@mui/icons-material/Logout';
-import CheckIcon from '@mui/icons-material/Check';
-import MovieFilterIcon from '@mui/icons-material/MovieFilter';
-import TaskAltIcon from '@mui/icons-material/TaskAlt';
-import PublicIcon from '@mui/icons-material/Public';
-import { LoadingState } from '../components/states/LoadingState';
+import DeleteIcon from '@mui/icons-material/DeleteOutlineRounded';
+import EditIcon from '@mui/icons-material/EditRounded';
+import GroupIcon from '@mui/icons-material/GroupRounded';
+import LogoutIcon from '@mui/icons-material/LogoutRounded';
+import CheckIcon from '@mui/icons-material/CheckRounded';
+import MovieFilterIcon from '@mui/icons-material/MovieFilterRounded';
+import TaskAltIcon from '@mui/icons-material/TaskAltRounded';
+import PublicIcon from '@mui/icons-material/PublicRounded';
 import { EmptyState } from '../components/states/EmptyState';
 import { ErrorState } from '../components/states/ErrorState';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
 import { WatchlistMembersDialog } from '../components/WatchlistMembersDialog';
 import { useSnackbar } from '../context/SnackbarProvider';
 import { VisibilityControl } from '../components/VisibilityControl';
-import { ListReactions, OwnerLink } from '../components/ListCard';
+import { ListReactions, OwnerLink, PosterCollage } from '../components/ListCard';
 import { VISIBILITY, isPublic, useListReactions } from '../components/publicLists';
-
-const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
-
-const modalStyle = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: { xs: 'calc(100% - 32px)', sm: 400 },
-  maxWidth: 400,
-  bgcolor: 'background.paper',
-  border: '2px solid #000',
-  boxShadow: 24,
-  p: 4,
-};
+import { Page } from '../components/ui/Page';
+import { PosterCard } from '../components/ui/PosterCard';
+import { CardSkeleton, PosterGridSkeleton } from '../components/ui/Skeletons';
+import { apiErrorMessage } from '../components/ui/apiError';
 
 const initial = (name) => name?.charAt(0).toUpperCase();
 
@@ -186,7 +174,7 @@ export const WatchlistDetailPage = () => {
             showSnackbar(t('watchlist.leave.done', { name: watchlist.name }), 'success');
             navigate('/watchlist');
         } catch (err) {
-            showSnackbar(err.response?.data?.title || t('watchlist.leave.failed'), 'error');
+            showSnackbar(apiErrorMessage(err, t('watchlist.leave.failed')), 'error');
         }
     };
 
@@ -201,7 +189,7 @@ export const WatchlistDetailPage = () => {
             setIsEditModalOpen(false);
             fetchWatchlistDetails({ silent: true });
         } catch (err) {
-            showSnackbar(err.response?.data?.title || t('watchlist.updateFailed'), 'error');
+            showSnackbar(apiErrorMessage(err, t('watchlist.updateFailed')), 'error');
         }
     };
 
@@ -209,8 +197,8 @@ export const WatchlistDetailPage = () => {
         setWatchlist((current) => ({ ...current, members }));
     };
 
-    if (isLoading) return <LoadingState />;
-    if (error) return <ErrorState message={error} onRetry={() => fetchWatchlistDetails()} />;
+    if (isLoading) return <Page><CardSkeleton lines={3} /><Box sx={{ mt: 3 }}><PosterGridSkeleton count={8} /></Box></Page>;
+    if (error) return <Page><ErrorState message={error} onRetry={() => fetchWatchlistDetails()} /></Page>;
 
     const items = watchlist?.items || [];
     const visibleItems = onlyUnwatched ? items.filter((item) => !item.watchedBy?.length) : items;
@@ -222,67 +210,76 @@ export const WatchlistDetailPage = () => {
 
     return (
         <>
-            <Box className="page-container" sx={{ maxWidth: '1000px' }}>
-                <Box sx={{ mb: 3 }}>
-                    <Typography variant="h4" component="h1" gutterBottom>{watchlist?.name}</Typography>
-                    <Typography variant="body1" color="text.secondary">{watchlist?.description}</Typography>
+            <Page>
+                <Box component="header" sx={{ display: 'flex', gap: { xs: 2, md: 3 }, alignItems: { xs: 'flex-start', sm: 'flex-end' }, mb: 4, flexDirection: { xs: 'column', sm: 'row' } }}>
+                    <Box sx={{ width: { xs: 120, sm: 168 }, flexShrink: 0 }}>
+                        <PosterCollage posters={items.slice(0, 4).map((item) => item.posterPath)} />
+                    </Box>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="overline" component="p" color="text.secondary">
+                            {listIsPublic ? t('watchlist.visibility.publicChip') : t('watchlist.listLabel')}
+                            {' · '}{t('watchlist.movieCount', { count: items.length })}
+                        </Typography>
+                        <Typography variant="h1" component="h1" sx={{ overflowWrap: 'anywhere' }}>{watchlist?.name}</Typography>
+                        {watchlist?.description && <Typography variant="body1" color="text.secondary" sx={{ mt: 0.75, maxWidth: '65ch' }}>{watchlist.description}</Typography>}
 
-                    {!isMemberView && watchlist?.owner?.id ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, mt: 1.5, flexWrap: 'wrap' }} data-testid="public-view-header">
-                            <OwnerLink owner={watchlist.owner} size={32} />
-                            {canReact && <ListReactions list={watchlist} onToggle={toggleReaction} size="medium" />}
-                        </Box>
-                    ) : (
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, mt: 1, flexWrap: 'wrap' }}>
-                            {people.length > 0 && (
-                                <AvatarGroup max={6} sx={{ '& .MuiAvatar-root': { width: 32, height: 32, fontSize: '0.9rem' } }}>
-                                    {people.map((person) => (
-                                        <Tooltip key={person.id} title={`@${person.userName}`}>
-                                            <Avatar src={mediaUrl(person.profileImageUrl)} alt={person.userName}>
-                                                {initial(person.userName)}
-                                            </Avatar>
-                                        </Tooltip>
-                                    ))}
-                                </AvatarGroup>
-                            )}
-                            <Box sx={{ textAlign: people.length > 0 ? 'left' : 'center' }}>
-                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                    {t('watchlist.createdBy', { userName: ownerName })}
-                                </Typography>
-                                {isShared && (
-                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                        {t('watchlist.peopleCount', { count: people.length })}
-                                    </Typography>
-                                )}
+                        {!isMemberView && watchlist?.owner?.id ? (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1.5, flexWrap: 'wrap' }} data-testid="public-view-header">
+                                <OwnerLink owner={watchlist.owner} size={32} />
+                                {canReact && <ListReactions list={watchlist} onToggle={toggleReaction} size="medium" />}
                             </Box>
-                        </Box>
-                    )}
+                        ) : (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 1.5, flexWrap: 'wrap' }}>
+                                {people.length > 0 && (
+                                    <AvatarGroup max={6} sx={{ '& .MuiAvatar-root': { width: 32, height: 32, fontSize: '0.875rem', borderColor: 'background.default' } }}>
+                                        {people.map((person) => (
+                                            <Tooltip key={person.id} title={`@${person.userName}`}>
+                                                <Avatar src={mediaUrl(person.profileImageUrl)} alt={person.userName}>
+                                                    {initial(person.userName)}
+                                                </Avatar>
+                                            </Tooltip>
+                                        ))}
+                                    </AvatarGroup>
+                                )}
+                                <Box>
+                                    <Typography variant="body2" color="text.secondary" sx={{ display: 'block' }}>
+                                        {t('watchlist.createdBy', { userName: ownerName })}
+                                    </Typography>
+                                    {isShared && (
+                                        <Typography variant="body2" color="text.secondary" sx={{ display: 'block' }}>
+                                            {t('watchlist.peopleCount', { count: people.length })}
+                                        </Typography>
+                                    )}
+                                </Box>
+                            </Box>
+                        )}
 
-                    {showCounts && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, mt: 1.5, flexWrap: 'wrap' }} data-testid="list-public-info">
-                            {listIsPublic && (
-                                <Chip size="small" color="success" variant="outlined" icon={<PublicIcon />} label={t('watchlist.visibility.publicChip')} data-testid="public-chip" />
-                            )}
-                            <ListReactions list={watchlist} />
-                        </Box>
-                    )}
+                        {showCounts && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1.5, flexWrap: 'wrap' }} data-testid="list-public-info">
+                                {listIsPublic && (
+                                    <Chip size="small" variant="outlined" icon={<PublicIcon />} label={t('watchlist.visibility.publicChip')} data-testid="public-chip" />
+                                )}
+                                <ListReactions list={watchlist} />
+                            </Box>
+                        )}
 
-                    {isOwner && (
-                        <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
-                            <Button variant="outlined" startIcon={<GroupIcon />} onClick={() => setIsMembersOpen(true)}>
-                                {pendingCount > 0
-                                    ? t('watchlist.members.buttonWithPending', { count: pendingCount })
-                                    : t('watchlist.members.button')}
-                            </Button>
-                            <Button variant="outlined" startIcon={<EditIcon />} onClick={() => setIsEditModalOpen(true)}>{t('watchlist.edit')}</Button>
-                            <Button variant="contained" color="error" startIcon={<DeleteIcon />} onClick={handleDeleteList}>{t('watchlist.delete')}</Button>
-                        </Box>
-                    )}
-                    {isMemberView && !isOwner && (
-                        <Box sx={{ mt: 2 }}>
-                            <Button variant="outlined" color="error" startIcon={<LogoutIcon />} onClick={handleLeaveList}>{t('watchlist.leave.button')}</Button>
-                        </Box>
-                    )}
+                        {isOwner && (
+                            <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                <Button variant="tonal" startIcon={<GroupIcon />} onClick={() => setIsMembersOpen(true)}>
+                                    {pendingCount > 0
+                                        ? t('watchlist.members.buttonWithPending', { count: pendingCount })
+                                        : t('watchlist.members.button')}
+                                </Button>
+                                <Button variant="tonal" startIcon={<EditIcon />} onClick={() => setIsEditModalOpen(true)}>{t('watchlist.edit')}</Button>
+                                <Button color="secondary" startIcon={<DeleteIcon />} onClick={handleDeleteList}>{t('watchlist.delete')}</Button>
+                            </Box>
+                        )}
+                        {isMemberView && !isOwner && (
+                            <Box sx={{ mt: 2 }}>
+                                <Button variant="tonal" startIcon={<LogoutIcon />} onClick={handleLeaveList}>{t('watchlist.leave.button')}</Button>
+                            </Box>
+                        )}
+                    </Box>
                 </Box>
 
                 {isMemberView && items.length > 0 && (
@@ -298,6 +295,7 @@ export const WatchlistDetailPage = () => {
                         icon={MovieFilterIcon}
                         title={t('watchlist.noMovies')}
                         description={isMemberView ? t('watchlist.noMoviesHint') : undefined}
+                        action={isMemberView ? <Button variant="tonal" component={Link} to="/discover">{t('feed.browseMovies')}</Button> : undefined}
                     />
                 ) : visibleItems.length === 0 ? (
                     <EmptyState
@@ -306,60 +304,66 @@ export const WatchlistDetailPage = () => {
                         title={isShared ? t('watchlist.filter.noneLeftShared') : t('watchlist.filter.noneLeftSolo')}
                     />
                 ) : (
-                    <Grid container spacing={3}>
+                    <Box component="ul" data-testid="list-items" sx={{ listStyle: 'none', m: 0, p: 0, display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(auto-fill, minmax(150px, 1fr))' }, gap: { xs: 2, sm: 2.5 } }}>
                         {visibleItems.map(item => (
-                            <Grid size={{ xs: 6, sm: 4, md: 3 }} key={item.movieId}>
-                                <Box sx={{ position: 'relative' }}>
-                                    <Link to={`/movie/${item.movieId}`}>
-                                        <img src={item.posterPath ? `${IMAGE_BASE_URL}${item.posterPath}` : '/vite.svg'} alt={item.title} style={{ width: '100%', borderRadius: '8px', display: 'block' }}/>
-                                        <Typography variant="subtitle2" align="center" sx={{ mt: 1 }}>{item.title}</Typography>
-                                    </Link>
-                                    {isShared && item.addedByUsername && (
-                                        <Typography variant="caption" color="text.secondary" align="center" sx={{ display: 'block' }}>
-                                            {t('watchlist.addedBy', { userName: item.addedByUsername })}
-                                        </Typography>
-                                    )}
-                                    {isMemberView && item.watchedBy?.length > 0 && (
-                                        isShared ? (
-                                            <Box sx={{ mt: 0.5, display: 'flex', flexWrap: 'wrap', gap: 0.5, justifyContent: 'center', alignItems: 'center' }}>
-                                                <Typography variant="caption" color="text.secondary">{t('watchlist.watchedBy')}</Typography>
-                                                {item.watchedBy.map((name) => (
-                                                    <Chip
-                                                        key={name}
-                                                        size="small"
-                                                        variant="outlined"
-                                                        avatar={<Avatar src={mediaUrl(avatarByName.get(name))} alt={name}>{initial(name)}</Avatar>}
-                                                        label={`@${name}`}
-                                                    />
-                                                ))}
-                                            </Box>
-                                        ) : (
-                                            <Box sx={{ mt: 0.5, display: 'flex', justifyContent: 'center' }}>
-                                                <Chip size="small" color="success" variant="outlined" icon={<CheckIcon />} label={t('watchlist.watched')} />
-                                            </Box>
-                                        )
-                                    )}
-                                    {isMemberView && (
-                                        <IconButton onClick={() => handleRemoveMovie(item.movieId)} sx={{ position: 'absolute', top: 0, right: 0, color: 'white', backgroundColor: 'rgba(0,0,0,0.6)' }} aria-label={t('watchlist.removeMovie')}>
-                                            <DeleteIcon />
+                            <Box component="li" key={item.movieId} sx={{ position: 'relative', minWidth: 0 }}>
+                                <PosterCard
+                                    movie={{ id: item.movieId, title: item.title, posterPath: item.posterPath }}
+                                    fluid
+                                    meta={isShared && item.addedByUsername ? (
+                                        <Typography variant="body2" component="span" color="text.secondary">{t('watchlist.addedBy', { userName: item.addedByUsername })}</Typography>
+                                    ) : null}
+                                />
+                                {isMemberView && item.watchedBy?.length > 0 && (
+                                    isShared ? (
+                                        <Box sx={{ mt: 0.75, display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
+                                            <Typography variant="body2" color="text.secondary">{t('watchlist.watchedBy')}</Typography>
+                                            {item.watchedBy.map((name) => (
+                                                <Chip
+                                                    key={name}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    avatar={<Avatar src={mediaUrl(avatarByName.get(name))} alt={name}>{initial(name)}</Avatar>}
+                                                    label={`@${name}`}
+                                                />
+                                            ))}
+                                        </Box>
+                                    ) : (
+                                        <Chip size="small" variant="outlined" icon={<CheckIcon />} label={t('watchlist.watched')} sx={{ mt: 0.75, '& .MuiChip-icon': { color: 'success.main' } }} />
+                                    )
+                                )}
+                                {isMemberView && (
+                                    <Tooltip title={t('watchlist.removeMovie')}>
+                                        <IconButton
+                                            onClick={() => handleRemoveMovie(item.movieId)}
+                                            size="small"
+                                            sx={{ position: 'absolute', top: 8, right: 8, color: '#F2F2F5', bgcolor: 'rgba(11,12,16,0.72)', backdropFilter: 'blur(4px)', '&:hover': { bgcolor: 'rgba(11,12,16,0.9)' } }}
+                                            aria-label={`${t('watchlist.removeMovie')}: ${item.title}`}
+                                        >
+                                            <DeleteIcon fontSize="small" />
                                         </IconButton>
-                                    )}
-                                </Box>
-                            </Grid>
+                                    </Tooltip>
+                                )}
+                            </Box>
                         ))}
-                    </Grid>
+                    </Box>
                 )}
-            </Box>
+            </Page>
 
-            <Modal open={isEditModalOpen} onClose={() => setIsEditModalOpen(false)}>
-                <Box sx={modalStyle} component="form" onSubmit={handleUpdateList}>
-                    <Typography variant="h6" component="h2" sx={{ mb: 2 }}>{t('watchlist.edit')}</Typography>
-                    <TextField autoFocus required margin="dense" label={t('watchlist.name')} fullWidth variant="outlined" value={editedListName} onChange={(e) => setEditedListName(e.target.value)} />
-                    <TextField margin="dense" label={t('watchlist.description')} fullWidth multiline rows={3} variant="outlined" value={editedListDesc} onChange={(e) => setEditedListDesc(e.target.value)} />
-                    <VisibilityControl value={editedVisibility} onChange={setEditedVisibility} />
-                    <Button type="submit" variant="contained" sx={{ mt: 2 }}>{t('common.save')}</Button>
+            <Dialog open={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} maxWidth="xs" fullWidth aria-labelledby="edit-list-title">
+                <Box component="form" onSubmit={handleUpdateList}>
+                    <DialogTitle id="edit-list-title">{t('watchlist.edit')}</DialogTitle>
+                    <DialogContent>
+                        <TextField autoFocus required margin="dense" label={t('watchlist.name')} fullWidth variant="outlined" value={editedListName} onChange={(e) => setEditedListName(e.target.value)} />
+                        <TextField margin="dense" label={t('watchlist.description')} fullWidth multiline rows={3} variant="outlined" value={editedListDesc} onChange={(e) => setEditedListDesc(e.target.value)} />
+                        <VisibilityControl value={editedVisibility} onChange={setEditedVisibility} />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button color="inherit" onClick={() => setIsEditModalOpen(false)}>{t('common.cancel')}</Button>
+                        <Button type="submit" variant="contained">{t('common.save')}</Button>
+                    </DialogActions>
                 </Box>
-            </Modal>
+            </Dialog>
             {isOwner && (
                 <WatchlistMembersDialog
                     open={isMembersOpen}

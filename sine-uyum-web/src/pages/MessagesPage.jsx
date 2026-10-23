@@ -1,17 +1,21 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import api, { mediaUrl } from '../api/axiosConfig';
+import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
-import { Box, Typography, List, ListItem, ListItemText, ListItemAvatar, Avatar, Divider } from '@mui/material';
-import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
-import { LoadingState } from '../components/states/LoadingState';
+import { Box, Card, Typography } from '@mui/material';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlineRounded';
 import { EmptyState } from '../components/states/EmptyState';
 import { ErrorState } from '../components/states/ErrorState';
+import { Page, PageHeader } from '../components/ui/Page';
+import { UserAvatar } from '../components/ui/UserRow';
+import { UserListSkeleton } from '../components/ui/Skeletons';
+import { timeSince } from '../components/navigation';
+import { srOnly } from '../components/ui/a11y';
 
 export const MessagesPage = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { user } = useAuth();
     const [conversations, setConversations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -53,52 +57,54 @@ export const MessagesPage = () => {
         fetchConversations();
     };
 
-    if (isLoading) return <LoadingState />;
-    if (error) return <ErrorState message={error} onRetry={retry} />;
-
     return (
-        <Box className="page-container" sx={{ maxWidth: '800px' }}>
-            <Typography variant="h4" component="h1" gutterBottom>
-                {t('messages.title')}
-            </Typography>
-            {conversations.length === 0 ? (
+        <Page width="reading">
+            <PageHeader title={t('messages.title')} />
+            {isLoading ? (
+                <UserListSkeleton count={5} />
+            ) : error ? (
+                <ErrorState message={error} onRetry={retry} />
+            ) : conversations.length === 0 ? (
                 <EmptyState icon={ChatBubbleOutlineIcon} title={t('messages.empty')} description={t('messages.emptyHint')} />
             ) : (
-                <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
-                    {conversations.map((convo, index) => (
-                        <React.Fragment key={convo.otherUserId}>
-                            <ListItem 
-                                alignItems="flex-start" 
-                                component={Link} 
-                                to={`/messages/${convo.otherUserId}`}
-                                sx={{ textDecoration: 'none', color: 'inherit' }}
-                            >
-                                <ListItemAvatar>
-                                    <Avatar src={mediaUrl(convo.otherUserProfileImageUrl)}>
-                                        {convo.otherUserUsername?.charAt(0).toUpperCase()}
-                                    </Avatar>
-                                </ListItemAvatar>
-                                <ListItemText
-                                    primary={convo.otherUserUsername}
-                                    secondary={
-                                        <Typography
-                                            sx={{ display: 'inline' }}
-                                            component="span"
-                                            variant="body2"
-                                            color="text.primary"
-                                        >
-                                            {convo.lastMessageContent.length > 100
-                                                ? `${convo.lastMessageContent.substring(0, 100)}…`
-                                                : convo.lastMessageContent}
-                                        </Typography>
-                                    }
-                                />
-                            </ListItem>
-                            {index < conversations.length - 1 && <Divider variant="inset" component="li" />}
-                        </React.Fragment>
-                    ))}
-                </List>
+                <Card component="ul" data-testid="conversations" sx={{ listStyle: 'none', m: 0, p: 0.75 }}>
+                    {conversations.map((convo) => {
+                        const unread = convo.isRead === false;
+                        return (
+                            <li key={convo.otherUserId}>
+                                <Box
+                                    component={Link}
+                                    to={`/messages/${convo.otherUserId}`}
+                                    sx={{ display: 'flex', gap: 1.5, alignItems: 'center', p: 1.25, borderRadius: 1.5, color: 'inherit', '&:hover': { bgcolor: 'action.hover' } }}
+                                >
+                                    <UserAvatar user={{ userName: convo.otherUserUsername, profileImageUrl: convo.otherUserProfileImageUrl }} size={48} />
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+                                            <Typography variant="subtitle1" component="span" noWrap sx={{ flex: 1, minWidth: 0 }}>@{convo.otherUserUsername}</Typography>
+                                            {convo.lastMessageSent && (
+                                                <Typography variant="body2" component="span" color="text.secondary" sx={{ flexShrink: 0 }}>
+                                                    {timeSince(convo.lastMessageSent, i18n.language, t('notifications.justNow'))}
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Typography variant="body1" noWrap sx={{ flex: 1, minWidth: 0, color: unread ? 'text.primary' : 'text.secondary', fontWeight: unread ? 600 : 400 }}>
+                                                {convo.lastMessageContent}
+                                            </Typography>
+                                            {unread && (
+                                                <>
+                                                    <Box aria-hidden="true" sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: 'primary.main', flexShrink: 0 }} />
+                                                    <Box component="span" sx={srOnly}>{t('messages.unread')}</Box>
+                                                </>
+                                            )}
+                                        </Box>
+                                    </Box>
+                                </Box>
+                            </li>
+                        );
+                    })}
+                </Card>
             )}
-        </Box>
+        </Page>
     );
 };

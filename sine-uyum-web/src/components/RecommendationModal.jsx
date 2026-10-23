@@ -1,59 +1,33 @@
 import React from 'react';
-import { Modal, Box, Typography, Grid } from '@mui/material';
-import { Link } from 'react-router-dom';
+import { Box, Dialog, DialogContent, DialogTitle, IconButton, Tooltip } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import MovieFilterIcon from '@mui/icons-material/MovieFilter';
-import { LoadingState } from './states/LoadingState';
+import MovieFilterIcon from '@mui/icons-material/MovieFilterRounded';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import { EmptyState } from './states/EmptyState';
+import { PosterGridSkeleton } from './ui/Skeletons';
+import { PosterCard } from './ui/PosterCard';
+import { fromTmdb } from './ui/posterUtils';
 
-const style = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: '80%',
-  maxWidth: 900,
-  bgcolor: 'background.paper',
-  border: '2px solid #000',
-  boxShadow: 24,
-  p: 4,
-  maxHeight: '80vh',
-  overflowY: 'auto'
-};
-
-const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
-
+// Films both of you would likely enjoy (from the compatibility API).
 export const RecommendationModal = ({ open, onClose, recommendations, isLoading, targetUserName }) => {
   const { t } = useTranslation();
   return (
-    <Modal open={open} onClose={onClose}>
-      <Box sx={style}>
-        <Typography variant="h5" component="h2" gutterBottom>
-          {t('recommendations.title', { userName: targetUserName })}
-        </Typography>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth aria-labelledby="recs-title">
+      <DialogTitle id="recs-title" sx={{ pr: 7 }}>{t('recommendations.title', { userName: targetUserName })}</DialogTitle>
+      <Tooltip title={t('common.close')}>
+        <IconButton onClick={onClose} aria-label={t('common.close')} sx={{ position: 'absolute', right: 12, top: 12 }}><CloseRoundedIcon /></IconButton>
+      </Tooltip>
+      <DialogContent>
         {isLoading ? (
-          <LoadingState compact />
+          <PosterGridSkeleton count={8} min={120} />
         ) : recommendations.length === 0 ? (
           <EmptyState compact icon={MovieFilterIcon} title={t('recommendations.emptyTitle')} description={t('recommendations.empty')} />
         ) : (
-          <Grid container spacing={2} sx={{ mt: 2 }}>
-            {recommendations.map(movie => (
-              <Grid size={{ xs: 4, sm: 3, md: 2 }} key={movie.id}>
-                <Link to={`/movie/${movie.id}`} onClick={onClose}>
-                  <img
-                    src={movie.poster_path ? `${IMAGE_BASE_URL}${movie.poster_path}` : '/vite.svg'}
-                    alt={movie.title}
-                    style={{ width: '100%', borderRadius: '8px' }}
-                  />
-                  <Typography variant="caption" display="block" align="center">
-                    {movie.title}
-                  </Typography>
-                </Link>
-              </Grid>
-            ))}
-          </Grid>
+          <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 2 }} onClick={(e) => { if (e.target.closest('a')) onClose(); }}>
+            {recommendations.map((movie) => <li key={movie.id}><PosterCard movie={fromTmdb(movie)} fluid /></li>)}
+          </Box>
         )}
-      </Box>
-    </Modal>
+      </DialogContent>
+    </Dialog>
   );
 };

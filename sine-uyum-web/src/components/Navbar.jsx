@@ -100,6 +100,12 @@ const NotificationsMenu = ({ anchorEl, onClose }) => {
       ) : (
         <EmptyState compact icon={NotificationsNoneRoundedIcon} title={t('notifications.empty')} />
       )}
+      {notifications.length > 0 && <Divider sx={{ mt: 0.5 }} />}
+      {notifications.length > 0 && (
+        <MenuItem component={Link} to="/notifications" onClick={onClose} sx={{ justifyContent: 'center', color: 'primary.main', fontWeight: 600 }}>
+          {t('notifications.seeAll')}
+        </MenuItem>
+      )}
     </Menu>
   );
 };

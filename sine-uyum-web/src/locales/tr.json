@@ -63,7 +63,9 @@
     "markAllRead": "Tümünü Okundu İşaretle",
     "empty": "Yeni bildirim yok.",
     "loadError": "Bildirimler yüklenemedi.",
-    "justNow": "şimdi"
+    "justNow": "şimdi",
+    "seeAll": "Tüm bildirimleri gör",
+    "unread": "Okunmadı"
   },
   "search": {
     "usersPlaceholder": "Kullanıcı ara...",
@@ -73,7 +75,7 @@
     "noBio": "Kullanıcının bir biyografisi yok.",
     "goToProfile": "Profile Git",
     "noResults": "'{{query}}' için sonuç bulunamadı.",
-    "noResultsHint": "Yazımı kontrol edin ya da kullanıcı adının bir kısmıyla arayın.",
+    "noResultsHint": "Yazımı kontrol et ya da kullanıcı adının bir kısmıyla ara.",
     "error": "Kullanıcılar aranırken bir hata oluştu.",
     "noMovies": "Film bulunamadı",
     "typeToSearch": "Bir film adı yaz"
@@ -91,27 +93,34 @@
     "password": "Şifre",
     "confirmPassword": "Şifre Tekrar",
     "login": {
-      "title": "Giriş Yap",
+      "title": "Giriş yap",
       "submit": "Giriş Yap",
-      "failed": "Giriş yapılırken bir sorun oluştu. Lütfen tekrar deneyin.",
-      "noAccount": "Hesabınız yok mu?",
-      "registerLink": "Hemen Kayıt Olun"
+      "failed": "Giriş yapılırken bir sorun oluştu. Lütfen tekrar dene.",
+      "noAccount": "Hesabın yok mu?",
+      "registerLink": "Kayıt ol"
     },
     "register": {
-      "title": "Kayıt Ol",
+      "title": "Hesabını oluştur",
       "submit": "Kayıt Ol",
       "passwordMismatch": "Şifreler uyuşmuyor.",
-      "success": "Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz...",
+      "success": "Kayıt başarılı! Giriş sayfasına yönlendiriliyorsun...",
       "failed": "Kayıt sırasında bir sunucu hatası oluştu.",
-      "haveAccount": "Zaten bir hesabınız var mı?",
-      "loginLink": "Giriş Yapın"
-    }
+      "haveAccount": "Zaten bir hesabın var mı?",
+      "loginLink": "Giriş yap"
+    },
+    "tagline": "Senin gibi izleyen insanları bul."
   },
   "home": {
     "title": "Keşfet",
     "popular": "Popüler Filmler",
     "nowPlaying": "Vizyondakiler",
-    "loadError": "Filmler yüklenemedi."
+    "loadError": "Filmler yüklenemedi.",
+    "greeting": {
+      "morning": "Günaydın, {{userName}}",
+      "afternoon": "İyi günler, {{userName}}",
+      "evening": "İyi akşamlar, {{userName}}"
+    },
+    "subtitle": "Takip ettiklerin neler izliyor, sırada ne var?"
   },
   "feed": {
     "title": "Akış",
@@ -120,7 +129,9 @@
     "loadError": "Akış yüklenemedi.",
     "emptyTitle": "Akışın henüz boş",
     "emptyBody": "Takip ettiğin kişilerin puanları ve incelemeleri burada görünür. Üstteki kullanıcı aramasıyla sana uyumlu kişileri bul ya da bir filme ilk incelemeyi sen yaz.",
-    "browseMovies": "Filmlere göz at"
+    "browseMovies": "Filmlere göz at",
+    "thinBody": "Zevkine yakın kişileri takip et; puanları ve incelemeleri burada görünsün.",
+    "findPeople": "Kişileri bul"
   },
   "tasteTwin": {
     "heading": "Bu haftanın zevk ikizi",
@@ -169,16 +180,16 @@
   },
   "movie": {
     "loadError": "Film detayları yüklenirken bir hata oluştu.",
-    "listsLoadFailed": "Listeleriniz yüklenemedi.",
+    "listsLoadFailed": "Listelerin yüklenemedi.",
     "addedToList": "Film listeye başarıyla eklendi!",
     "addToListFailed": "Film listeye eklenemedi.",
-    "rated": "'{{title}}' filmine {{rating}} puan verdiniz!",
+    "rated": "'{{title}}' filmine {{rating}} puan verdin!",
     "rateFailed": "Puan kaydedilirken bir hata oluştu.",
     "forYouTooltip_one": "Sana uyumlu {{count}} kişiye göre: {{matches}}",
     "forYouTooltip_other": "Sana uyumlu {{count}} kişiye göre: {{matches}}",
     "forYouMatch": "{{userName}} (%{{compatibility}}) {{rating}}",
     "forYou": "Sana göre",
-    "rateThis": "Bu Filmi Puanla",
+    "rateThis": "Puanla",
     "addToList": "Listeye Ekle",
     "runtimeLabel": "Süre:",
     "runtime_one": "{{count}} dakika",
@@ -187,7 +198,14 @@
     "cast": "Başrol Oyuncuları",
     "whichList": "Hangi Listeye Ekleyeceksin?",
     "noLists": "Henüz listeniz yok.",
-    "manageLists": "Listeleri Yönet veya Yeni Liste Oluştur..."
+    "manageLists": "Listeleri Yönet veya Yeni Liste Oluştur...",
+    "yourRating": "Puanın: {{rating}}",
+    "share": "Paylaş",
+    "linkCopied": "Bağlantı kopyalandı.",
+    "shareFailed": "Bağlantı paylaşılamadı.",
+    "genres": "Türler",
+    "forYouSr": "Sana göre: 10 üzerinden {{score}}",
+    "tmdbSr": "TMDb: 10 üzerinden {{score}}"
   },
   "recommendations": {
     "title": "{{userName}} ile Ortak Zevkinize Göre Film Önerileri",
@@ -439,12 +457,12 @@
       "nobody": "Hiç kimse"
     },
     "profileVisibility": "Puanlarımı ve listelerimi kim görebilir",
-    "alwaysVisible": "Adınız, fotoğrafınız ve biyografiniz her zaman görünür.",
+    "alwaysVisible": "Adın, fotoğrafın ve biyografin her zaman görünür.",
     "messagePermission": "Bana kim mesaj gönderebilir",
     "hiddenFromSearch": "Kullanıcı aramasında görünme",
     "readReceipts": "Okundu bilgisi (kapatırsan başkalarınınkini de göremezsin)",
     "blockedTitle": "Engellenen kullanıcılar",
-    "noBlocked": "Kimseyi engellemediniz. Engellemek için kişinin profilini açın.",
+    "noBlocked": "Kimseyi engellemedin. Birini engellemek için profilini aç.",
     "unblock": "Engeli kaldır",
     "saved": "Gizlilik ayarı kaydedildi.",
     "saveFailed": "Ayar kaydedilemedi.",
@@ -460,7 +478,7 @@
     "photoHint": "JPEG, PNG ya da WebP · en fazla 10 MB · kare kırpılır",
     "photoTooLarge": "Fotoğraf en fazla 10 MB olabilir.",
     "photoUnsupported": "Bu dosya desteklenmiyor. JPEG, PNG ya da WebP seçin.",
-    "tooManyAttempts": "Çok fazla deneme. Biraz sonra tekrar deneyin.",
+    "tooManyAttempts": "Çok fazla deneme. Biraz sonra tekrar dene.",
     "photoUploadFailed": "Fotoğraf yüklenemedi.",
     "photoUpdated": "Profil fotoğrafı güncellendi.",
     "photoRemoved": "Profil fotoğrafı kaldırıldı.",
@@ -479,9 +497,9 @@
     "unblockFailed": "Engel kaldırılamadı.",
     "followers": "Takipçiler",
     "followingList": "Takip Edilenler",
-    "editProfile": "Profili Düzenle",
+    "editProfile": "Profili düzenle",
     "unblock": "Engeli Kaldır",
-    "sendMessage": "Mesaj Gönder",
+    "sendMessage": "Mesaj gönder",
     "follow": "Takip Et",
     "unfollow": "Takipten Çık",
     "block": "Engelle",
@@ -489,33 +507,44 @@
     "followerCount_other": "<strong>{{count}}</strong> Takipçi",
     "followingCount_one": "<strong>{{count}}</strong> Takip",
     "followingCount_other": "<strong>{{count}}</strong> Takip",
-    "blockedByMe": "Bu kullanıcıyı engellediniz. Birbirinizin profilini göremez, mesajlaşamaz ve aynı etkinlik grubuna düşmezsiniz.",
+    "blockedByMe": "Bu kullanıcıyı engelledin. Birbirinizin profilini göremez, mesajlaşamaz ve aynı etkinlik grubuna düşmezsiniz.",
     "private": "Bu kullanıcı puanlarını ve listelerini gizli tutuyor.",
     "myIdentity": "Film kimliğim",
     "identity": "Film kimliği",
     "recapMine": "{{year}} özetin",
     "recap": "{{year}} özeti",
     "statRated": "Film Oyladı",
-    "statAverage": "Puan Ortalaması",
+    "statAverage": "Ortalama",
     "statInLists": "Listelerindeki Film",
-    "compatibilityScore": "Uyum Puanınız: %{{score}}",
+    "compatibilityScore": "%{{score}} uyumlusunuz",
     "compatibilityBasis_one": "({{count}} ortak filme göre hesaplandı)",
     "compatibilityBasis_other": "({{count}} ortak filme göre hesaplandı)",
     "getRecommendations": "Ortak Film Önerileri Alın",
-    "topRated": "✨ 10/10 Verdiği Filmler",
+    "topRated": "10/10 verdikleri",
     "allRated": "Oylanan Tüm Filmler ({{count}})",
     "noRatings": "Henüz puanlanmış film yok.",
     "givenRating": "Verilen Puan: {{rating}}/10",
     "posterAlt": "{{title}} afişi",
     "userFallback": "Kullanıcı",
     "blockConfirmTitle": "{{userName}} engellensin mi?",
-    "blockConfirmBody": "Birbirinizin profilini göremez, mesajlaşamaz ve aynı etkinlik grubuna düşmezsiniz. Karşılıklı takip kaldırılır. Engeli istediğiniz zaman Profili Düzenle > Gizlilik'ten kaldırabilirsiniz."
+    "blockConfirmBody": "Birbirinizin profilini göremez, mesajlaşamaz ve aynı etkinlik grubuna düşmezsiniz. Karşılıklı takip kaldırılır. Engeli istediğin zaman Ayarlar > Gizlilik bölümünden kaldırabilirsin.",
+    "statFilms": "Film",
+    "tabsLabel": "Profil bölümleri",
+    "tabs": {
+      "ratings": "Puanlar",
+      "diary": "Günlük",
+      "lists": "Listeler",
+      "reviews": "İncelemeler"
+    },
+    "noReviews": "Henüz inceleme yok.",
+    "reviewsFollowTitle": "İncelemelerini burada görmek için @{{userName}} adlı kişiyi takip et",
+    "reviewsFollowBody": "İncelemeleri her filmin sayfasında da görünür."
   },
   "watchlist": {
     "title": "İzleme Listelerim",
     "create": "Yeni Liste Oluştur",
-    "emptyTitle": "Henüz hiç izleme listeniz yok",
-    "emptyBody": "İzlemek istediğiniz filmleri tek başınıza ya da arkadaşlarınızla takip etmek için bir liste oluşturun.",
+    "emptyTitle": "Henüz hiç izleme listen yok",
+    "emptyBody": "İzlemek istediğin filmleri tek başına ya da arkadaşlarınla takip etmek için bir liste oluştur.",
     "movieCount_one": "{{count}} film",
     "movieCount_other": "{{count}} film",
     "name": "Liste Adı",
@@ -527,15 +556,15 @@
     "edit": "Listeyi Düzenle",
     "delete": "Listeyi Sil",
     "noMovies": "Bu listede henüz film yok.",
-    "noMoviesHint": "Film sayfasındaki \"Listeye Ekle\" düğmesiyle bu listeye film ekleyebilirsiniz.",
+    "noMoviesHint": "Film sayfasındaki \"Listeye ekle\" düğmesiyle bu listeye film ekleyebilirsin.",
     "removeMovie": "Filmi kaldır",
     "removeMovieTitle": "Filmi Kaldır?",
-    "removeMovieBody": "Bu filmi listeden kalıcı olarak kaldırmak istediğinize emin misiniz?",
+    "removeMovieBody": "Bu filmi listeden kalıcı olarak kaldırmak istediğine emin misin?",
     "movieRemoved": "Film listeden başarıyla kaldırıldı!",
     "removeMovieFailed": "Film kaldırılırken bir hata oluştu.",
     "deleteTitle": "Listeyi Sil?",
-    "deleteBody": "\"{{name}}\" listesini kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
-    "deleted": "Liste başarıyla silindi. Yönlendiriliyorsunuz...",
+    "deleteBody": "\"{{name}}\" listesini kalıcı olarak silmek istediğine emin misin? Bu işlem geri alınamaz.",
+    "deleted": "Liste silindi. Yönlendiriliyorsun...",
     "deleteFailed": "Liste silinirken bir hata oluştu.",
     "updated": "Liste başarıyla güncellendi!",
     "updateFailed": "Liste güncellenirken bir hata oluştu.",
@@ -548,12 +577,12 @@
     "watchedBy": "İzleyenler",
     "watched": "İzlendi",
     "invitations": {
-      "title_one": "Bir davetiniz var",
-      "title_other": "{{count}} davetiniz var",
+      "title_one": "Bir davetin var",
+      "title_other": "{{count}} davetin var",
       "invitedBy": "Davet eden: @{{userName}}",
       "accept": "Kabul Et",
       "decline": "Reddet",
-      "accepted": "\"{{name}}\" listesine katıldınız.",
+      "accepted": "\"{{name}}\" listesine katıldın.",
       "declined": "Davet reddedildi.",
       "acceptFailed": "Davet kabul edilirken bir hata oluştu.",
       "declineFailed": "Davet reddedilirken bir hata oluştu."
@@ -573,26 +602,26 @@
       "removeFailed": "Üye çıkarılırken bir hata oluştu.",
       "inviteLabel": "Birini davet et",
       "invitePlaceholder": "Kullanıcı adıyla ara",
-      "typeToSearch": "Aramak için bir kullanıcı adı yazın",
+      "typeToSearch": "Aramak için bir kullanıcı adı yaz",
       "noResults": "Kullanıcı bulunamadı",
       "alreadyMember": "Zaten üye",
       "alreadyInvited": "Zaten davet edildi",
       "inviteSent": "@{{userName}} kullanıcısına davet gönderildi.",
       "inviteFailed": "Davet gönderilirken bir hata oluştu.",
-      "empty": "Bu listede henüz başka kimse yok. Filmlerinizi birlikte planlamak için birini davet edin."
+      "empty": "Bu listede henüz başka kimse yok. Filmlerinizi birlikte planlamak için birini davet et."
     },
     "leave": {
       "button": "Listeden Ayrıl",
       "title": "Listeden Ayrıl?",
-      "body": "Artık \"{{name}}\" listesini göremeyecek ve listeye film ekleyemeyeceksiniz. Liste sahibi sizi yeniden davet edebilir.",
-      "done": "\"{{name}}\" listesinden ayrıldınız.",
+      "body": "Artık \"{{name}}\" listesini göremeyecek ve listeye film ekleyemeyeceksin. Liste sahibi seni yeniden davet edebilir.",
+      "done": "\"{{name}}\" listesinden ayrıldın.",
       "failed": "Listeden ayrılırken bir hata oluştu."
     },
     "filter": {
       "unwatchedByAll": "Hiçbirimizin izlemediği filmler",
       "notWatchedYet": "Henüz izlenmemiş olanlar",
       "noneLeftShared": "Buradaki her filmi en az biriniz izlemiş.",
-      "noneLeftSolo": "Bu listedeki tüm filmleri izlediniz."
+      "noneLeftSolo": "Bu listedeki tüm filmleri izledin."
     },
     "visibility": {
       "label": "Bu listeyi kimler görebilir?",
@@ -601,7 +630,8 @@
       "privateHelp": "Yalnızca sen ve davet ettiğin kişiler görebilir.",
       "publicHelp": "Profilinde ve liste keşfinde görünür. Profilini görebilen herkes beğenip kaydedebilir.",
       "publicChip": "Herkese açık"
-    }
+    },
+    "listLabel": "Liste"
   },
   "lists": {
     "like": "Beğen",
@@ -666,14 +696,16 @@
       "loadError": "Herkese açık listeler yüklenemedi.",
       "emptyMineTitle": "Henüz herkese açık bir listen yok",
       "emptyMineBody": "Bir listeni herkese açık yap; profilinde ve liste keşfinde görünsün.",
-      "emptyMineAction": "Listelerime git"
+      "emptyMineAction": "Listelerime git",
+      "emptyOtherTitle": "@{{userName}} henüz herkese açık liste paylaşmadı"
     }
   },
   "messages": {
     "title": "Mesajlar",
-    "empty": "Hiç konuşmanız yok.",
-    "emptyHint": "Konuşma başlatmak için birinin profilini açıp \"Mesaj Gönder\"i seçin.",
-    "loadError": "Konuşmalar yüklenirken bir hata oluştu."
+    "empty": "Henüz hiç konuşman yok.",
+    "emptyHint": "Konuşma başlatmak için birinin profilini aç ve \"Mesaj gönder\"i seç.",
+    "loadError": "Konuşmalar yüklenirken bir hata oluştu.",
+    "unread": "Okunmadı"
   },
   "conversation": {
     "fallbackTitle": "Sohbet",
@@ -688,7 +720,9 @@
     "sendFailed": "Mesaj gönderilemedi.",
     "whichList": "Hangi Listeyi Paylaşacaksın?",
     "noListsToShare": "Henüz paylaşacak listeniz yok.",
-    "listsLoadFailed": "Listeleriniz yüklenemedi."
+    "listsLoadFailed": "Listelerin yüklenemedi.",
+    "back": "Mesajlara dön",
+    "history": "Mesajlar"
   },
   "event": {
     "title": "Etkinliğim",
@@ -703,10 +737,11 @@
     "voteCount_one": "{{count}} Oy",
     "voteCount_other": "{{count}} Oy",
     "joinFailed": "Etkinliğe katılırken bir hata oluştu.",
-    "voteFailed": "Oyunuz kaydedilirken bir sorun oluştu.",
+    "voteFailed": "Oyun kaydedilirken bir sorun oluştu.",
     "statusUnavailable": "Etkinlik durumu alınamadı.",
     "none": "Katılabileceğin yeni bir etkinlik bulunmuyor. Lütfen daha sonra tekrar kontrol et.",
-    "loadError": "Etkinlik bilgileri yüklenirken bir hata oluştu."
+    "loadError": "Etkinlik bilgileri yüklenirken bir hata oluştu.",
+    "subtitle": "Zevkini paylaşan insanlarla bir film gecesinde buluş."
   },
   "subscription": {
     "tagline": "Film zevkine en uygun kişilerle tanış ve açık hava sineması etkinliklerine katıl!",
@@ -821,5 +856,11 @@
       "followed_other": "{{count}} kişiyi takip ediyorsun",
       "cta": "Ana sayfaya git"
     }
+  },
+  "settings": {
+    "title": "Ayarlar",
+    "subtitle": "Profilin, uygulamanın görünümü ve kimin neyi görebileceği.",
+    "appearance": "Görünüm",
+    "theme": "Tema"
   }
 }

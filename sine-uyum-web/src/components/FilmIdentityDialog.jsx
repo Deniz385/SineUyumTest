@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import api from '../api/axiosConfig';
 import { useSnackbar } from '../context/SnackbarProvider';
 import { Box, Button, Dialog, DialogActions, DialogContent, LinearProgress, Typography } from '@mui/material';
-import ShareIcon from '@mui/icons-material/Share';
+import ShareIcon from '@mui/icons-material/IosShareRounded';
+import { gradients } from '../theme';
 import { shareIdentityImage } from './identityImage';
 import { LoadingState } from './states/LoadingState';
 import { ErrorState } from './states/ErrorState';
@@ -51,10 +52,10 @@ export const FilmIdentityDialog = ({ open, onClose, userId, isMine }) => {
                 {error && <ErrorState compact message={error} onRetry={() => setAttempt((n) => n + 1)} sx={{ py: 3 }} />}
                 {!identity && !error && <LoadingState compact sx={{ py: 4 }} />}
                 {identity && (
-                    <Box data-testid="film-identity" sx={{ p: 3, color: '#fff', background: 'linear-gradient(135deg, #1b1038, #0d2a4a)' }}>
-                        <Typography variant="overline" sx={{ color: '#9fb3ff' }}>{t('identity.header', { userName: identity.userName })}</Typography>
-                        <Typography variant="h4" sx={{ color: '#ffd54f', fontWeight: 'bold', mt: 1 }}>{identity.title}</Typography>
-                        <Typography sx={{ color: '#e3e8ff', mb: 2 }}>{identity.titleDescription}</Typography>
+                    <Box data-testid="film-identity" sx={{ p: 3, color: '#fff', background: 'radial-gradient(120% 80% at 0% 0%, #2A2210 0%, #14161C 55%, #0B0C10 100%)', borderBottom: '3px solid', borderImage: `${gradients.marquee} 1` }}>
+                        <Typography variant="overline" sx={{ color: '#A9ADBA' }}>{t('identity.header', { userName: identity.userName })}</Typography>
+                        <Typography variant="h1" component="h2" sx={{ color: '#F5B841', mt: 1 }}>{identity.title}</Typography>
+                        <Typography sx={{ color: '#F2F2F5', mb: 2 }}>{identity.titleDescription}</Typography>
                         <Typography sx={{ fontWeight: 600 }}>{t('identity.summary', { count: identity.totalRatings, average: fmt(identity.averageRating) })}</Typography>
                         {identity.topGenres.map((g) => (
                             <Box key={g.name} sx={{ mt: 1.5 }}>
@@ -62,18 +63,18 @@ export const FilmIdentityDialog = ({ open, onClose, userId, isMine }) => {
                                     <Typography variant="body2">{g.name}</Typography>
                                     <Typography variant="body2">{t('identity.genreStat', { share: g.share, average: fmt(g.average) })}</Typography>
                                 </Box>
-                                <LinearProgress variant="determinate" value={g.share} sx={{ height: 8, borderRadius: 4, bgcolor: 'rgba(255,255,255,0.15)' }} />
+                                <LinearProgress variant="determinate" value={g.share} sx={{ height: 8, borderRadius: 4, bgcolor: 'rgba(255,255,255,0.12)', '& .MuiLinearProgress-bar': { bgcolor: '#F5B841' } }} />
                             </Box>
                         ))}
                         {take && (
                             <Box sx={{ mt: 2 }}>
-                                <Typography variant="overline" sx={{ color: '#9fb3ff' }}>{isMine ? t('identity.contrarianMine') : t('identity.contrarianTheirs')}</Typography>
+                                <Typography variant="overline" sx={{ color: '#A9ADBA' }}>{isMine ? t('identity.contrarianMine') : t('identity.contrarianTheirs')}</Typography>
                                 <Typography>{isMine ? t('identity.contrarianLineMine', takeValues) : t('identity.contrarianLineTheirs', takeValues)}</Typography>
                             </Box>
                         )}
                         {identity.favorite && (
                             <Box sx={{ mt: 1 }}>
-                                <Typography variant="overline" sx={{ color: '#9fb3ff' }}>{isMine ? t('identity.favoriteMine') : t('identity.favoriteTheirs')}</Typography>
+                                <Typography variant="overline" sx={{ color: '#A9ADBA' }}>{isMine ? t('identity.favoriteMine') : t('identity.favoriteTheirs')}</Typography>
                                 <Typography>{identity.favorite.title} · {identity.favorite.rating}/10</Typography>
                             </Box>
                         )}
@@ -81,7 +82,7 @@ export const FilmIdentityDialog = ({ open, onClose, userId, isMine }) => {
                 )}
             </DialogContent>
             <DialogActions>
-                <Button onClick={onClose}>{t('common.close')}</Button>
+                <Button onClick={onClose} color="inherit">{t('common.close')}</Button>
                 <Button variant="contained" startIcon={<ShareIcon />} disabled={!identity || isSharing} onClick={share}>
                     {t('identity.share')}
                 </Button>

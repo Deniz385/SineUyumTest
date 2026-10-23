@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, FormHelperText, Rating, Switch, TextField, Typography } from '@mui/material';
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, FormHelperText, Switch, TextField, Typography } from '@mui/material';
+import { RatingInput } from './ui/RatingInput';
+import { apiErrorMessage } from './ui/apiError';
 import api from '../api/axiosConfig';
 import { useSnackbar } from '../context/SnackbarProvider';
 import { EARLIEST_WATCHED_ON, formatIsoDay, todayIsoDay } from './diaryDates';
@@ -80,7 +82,7 @@ const DiaryEntryForm = ({ movie, entry, initialRating, onClose, onSaved }) => {
             onSaved?.(res.data);
             onClose();
         } catch (err) {
-            showSnackbar(err.response?.data?.title || t('diary.saveFailed'), 'error');
+            showSnackbar(apiErrorMessage(err, t('diary.saveFailed')), 'error');
         } finally {
             setIsSaving(false);
         }
@@ -133,21 +135,13 @@ const DiaryEntryForm = ({ movie, entry, initialRating, onClose, onSaved }) => {
                 />
                 {!isEdit && (
                     <Box>
-                        <Typography component="legend" variant="body2" color="text.secondary">{t('diary.ratingOptional')}</Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                            <Rating
-                                name="diary-rating"
-                                value={rating}
-                                max={10}
-                                onChange={(_, value) => setRating(value)}
-                            />
-                            <Typography variant="body2">{rating ? t('diary.ratingValue', { rating }) : t('diary.noRating')}</Typography>
-                        </Box>
+                        <Typography id="diary-rating-label" variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>{t('diary.ratingOptional')}</Typography>
+                        <RatingInput value={rating ?? 0} onChange={setRating} size="medium" label={t('diary.ratingOptional')} />
                     </Box>
                 )}
             </DialogContent>
             <DialogActions>
-                <Button onClick={onClose}>{t('common.cancel')}</Button>
+                <Button onClick={onClose} color="inherit">{t('common.cancel')}</Button>
                 <Button type="submit" variant="contained" disabled={isSaving || Boolean(dateError)}>
                     {isSaving ? t('common.processing') : isEdit ? t('common.save') : t('diary.logIt')}
                 </Button>

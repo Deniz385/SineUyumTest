@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 import api from '../api/axiosConfig';
 import { useSnackbar } from '../context/SnackbarProvider';
 import { Alert, Box, Button, Checkbox, FormControlLabel, Stack, TextField, Typography } from '@mui/material';
-import RateReviewIcon from '@mui/icons-material/RateReview';
+import RateReviewIcon from '@mui/icons-material/RateReviewRounded';
 import { ReviewCard } from './ReviewCard';
-import { LoadingState } from './states/LoadingState';
+import { apiErrorMessage } from './ui/apiError';
+import { FeedSkeleton } from './ui/Skeletons';
 import { ErrorState } from './states/ErrorState';
 import { EmptyState } from './states/EmptyState';
 
@@ -57,7 +58,7 @@ export const MovieReviews = ({ movieId, refreshKey, onForYou, onMyRating }) => {
             setIsEditing(false);
             showSnackbar(t('reviews.saved'), 'success');
         } catch (error) {
-            showSnackbar(error.response?.data?.title || t('reviews.saveFailed'), 'error');
+            showSnackbar(apiErrorMessage(error, t('reviews.saveFailed')), 'error');
         } finally {
             setIsSaving(false);
         }
@@ -77,16 +78,16 @@ export const MovieReviews = ({ movieId, refreshKey, onForYou, onMyRating }) => {
     if (loadError) {
         return (
             <Box sx={{ mt: 5, textAlign: 'left' }} data-testid="movie-reviews">
-                <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2 }}>{t('reviews.title')}</Typography>
+                <Typography variant="h2" component="h2" sx={{ mb: 2 }}>{t('reviews.title')}</Typography>
                 <ErrorState compact message={t('reviews.loadFailed')} onRetry={() => load(1)} />
             </Box>
         );
     }
-    if (!data) return <LoadingState compact sx={{ my: 3 }} />;
+    if (!data) return <Box sx={{ mt: 5 }}><FeedSkeleton count={2} /></Box>;
 
     return (
         <Box sx={{ mt: 5, textAlign: 'left' }} data-testid="movie-reviews">
-            <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2 }}>
+            <Typography variant="h2" component="h2" sx={{ mb: 2 }}>
                 {data.totalCount > 0 ? t('reviews.titleWithCount', { count: data.totalCount }) : t('reviews.title')}
             </Typography>
 
@@ -107,7 +108,7 @@ export const MovieReviews = ({ movieId, refreshKey, onForYou, onMyRating }) => {
                             label={t('reviews.containsSpoilers')}
                         />
                         <Box sx={{ flexGrow: 1 }} />
-                        {data.mine && <Button onClick={() => setIsEditing(false)}>{t('reviews.discard')}</Button>}
+                        {data.mine && <Button color="inherit" onClick={() => setIsEditing(false)}>{t('reviews.discard')}</Button>}
                         <Button type="submit" variant="contained" disabled={isSaving || !draft.text.trim()}>
                             {data.mine ? t('common.update') : t('reviews.post')}
                         </Button>
@@ -117,8 +118,8 @@ export const MovieReviews = ({ movieId, refreshKey, onForYou, onMyRating }) => {
                 <Box sx={{ mb: 3 }}>
                     <ReviewCard review={data.mine} />
                     <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                        <Button size="small" onClick={() => setIsEditing(true)}>{t('common.edit')}</Button>
-                        <Button size="small" color="error" onClick={remove}>{t('common.delete')}</Button>
+                        <Button size="small" variant="tonal" onClick={() => setIsEditing(true)}>{t('common.edit')}</Button>
+                        <Button size="small" color="secondary" onClick={remove}>{t('common.delete')}</Button>
                     </Stack>
                 </Box>
             ) : null}
@@ -130,7 +131,7 @@ export const MovieReviews = ({ movieId, refreshKey, onForYou, onMyRating }) => {
                 <EmptyState compact icon={RateReviewIcon} title={t('reviews.empty')} />
             )}
             {reviews.length < data.totalCount && (
-                <Button sx={{ mt: 2 }} onClick={() => load(page + 1)}>{t('common.loadMore')}</Button>
+                <Button variant="tonal" sx={{ mt: 2 }} onClick={() => load(page + 1)}>{t('common.loadMore')}</Button>
             )}
         </Box>
     );

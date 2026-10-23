@@ -2,20 +2,16 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Box, Button, Card, CardContent, Chip, Stack, Typography } from '@mui/material';
-import ForumIcon from '@mui/icons-material/Forum';
-import FavoriteIcon from '@mui/icons-material/Favorite';
+import ForumIcon from '@mui/icons-material/ForumRounded';
+import FavoriteIcon from '@mui/icons-material/FavoriteRounded';
+import { PosterImage } from './ui/PosterImage';
 
-const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
 
 const MovieRow = ({ movie, children }) => (
     <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', textAlign: 'left' }}>
-        <Link to={`/movie/${movie.movieId}`}>
-            <img
-                src={movie.posterPath ? `${IMAGE_BASE_URL}${movie.posterPath}` : '/vite.svg'}
-                alt={movie.title}
-                style={{ width: 64, borderRadius: 6 }}
-            />
-        </Link>
+        <Box component={Link} to={`/movie/${movie.movieId}`} sx={{ width: 64, flexShrink: 0, borderRadius: 1 }}>
+            <PosterImage path={movie.posterPath} title={movie.title} width={64} radius="sm" />
+        </Box>
         <Box sx={{ flexGrow: 1 }}>{children}</Box>
     </Box>
 );
@@ -39,9 +35,9 @@ export const CompatibilityInsights = ({ insights, otherUserId, otherUserName }) 
             {summary && (
                 <Box>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>{summary}</Typography>
-                    <Stack direction="row" spacing={1} sx={{ mt: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
-                        {sharedGenres.map(g => <Chip key={`s-${g}`} label={g} color="success" size="small" />)}
-                        {divergentGenres.map(g => <Chip key={`d-${g}`} label={g} color="warning" size="small" variant="outlined" />)}
+                    <Stack direction="row" useFlexGap sx={{ mt: 1, flexWrap: 'wrap', gap: 1 }}>
+                        {sharedGenres.map(g => <Chip key={`s-${g}`} label={g} size="small" sx={{ bgcolor: 'transparent', border: 1, borderColor: 'success.main', color: 'text.primary' }} />)}
+                        {divergentGenres.map(g => <Chip key={`d-${g}`} label={g} size="small" variant="outlined" sx={{ borderStyle: 'dashed', color: 'text.secondary' }} />)}
                     </Stack>
                 </Box>
             )}
@@ -51,7 +47,7 @@ export const CompatibilityInsights = ({ insights, otherUserId, otherUserName }) 
                     <CardContent>
                         <MovieRow movie={sharedFavorite}>
                             <Typography variant="overline" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <FavoriteIcon fontSize="inherit" color="error" /> {t('compatibility.sharedFavorite')}
+                                <FavoriteIcon fontSize="inherit" sx={{ color: 'accent.main' }} /> {t('compatibility.sharedFavorite')}
                             </Typography>
                             <Typography variant="subtitle1">{sharedFavorite.title}</Typography>
                             <Typography variant="body2" color="text.secondary">
@@ -63,17 +59,17 @@ export const CompatibilityInsights = ({ insights, otherUserId, otherUserName }) 
             )}
 
             {debateMovie && (
-                <Card variant="outlined" sx={{ borderColor: 'warning.main' }}>
+                <Card variant="outlined">
                     <CardContent>
                         <MovieRow movie={debateMovie}>
                             <Typography variant="overline" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <ForumIcon fontSize="inherit" color="warning" /> {t('compatibility.debateMovie')}
+                                <ForumIcon fontSize="inherit" sx={{ color: 'primary.main' }} /> {t('compatibility.debateMovie')}
                             </Typography>
                             <Typography variant="subtitle1">{debateMovie.title}</Typography>
                             <Typography variant="body2" color="text.secondary">
                                 {t('compatibility.debateRatings', { myRating: debateMovie.currentUserRating, userName: otherUserName, theirRating: debateMovie.targetUserRating })}
                             </Typography>
-                            <Button size="small" startIcon={<ForumIcon />} sx={{ mt: 1 }} onClick={() => askAbout(debateMovie)}>
+                            <Button size="small" variant="tonal" startIcon={<ForumIcon />} sx={{ mt: 1 }} onClick={() => askAbout(debateMovie)}>
                                 {t('compatibility.askThem')}
                             </Button>
                         </MovieRow>

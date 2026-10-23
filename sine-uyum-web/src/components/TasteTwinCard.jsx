@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import api, { mediaUrl } from '../api/axiosConfig';
-import { useSnackbar } from '../context/SnackbarProvider';
-import { Avatar, Box, Button, Card, CardContent, Stack, Typography } from '@mui/material';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import { Box, Button, Card, Typography } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesomeRounded';
+import api from '../api/axiosConfig';
+import { FollowButton, UserAvatar } from './ui/UserRow';
+import { CompatibilityBadge } from './ui/CompatibilityBadge';
+import { clampLines } from './ui/posterUtils';
 
 // This week's taste twin: the most compatible person you don't follow yet.
-export const TasteTwinCard = () => {
+export const TasteTwinCard = ({ sx }) => {
     const { t } = useTranslation();
-    const { showSnackbar } = useSnackbar();
     const [twin, setTwin] = useState(undefined);
 
     useEffect(() => {
@@ -23,42 +25,39 @@ export const TasteTwinCard = () => {
 
     if (!twin) return null;
 
-    const follow = async () => {
-        try {
-            await api.post(`/api/v1/follow/${twin.user.id}`);
-            setTwin((t) => ({ ...t, isFollowing: true }));
-        } catch (error) {
-            showSnackbar(error.response?.data?.title || t('tasteTwin.followFailed'), 'error');
-        }
-    };
-
     return (
-        <Card data-testid="taste-twin" sx={{ mb: 3, background: 'linear-gradient(135deg, #1b1038, #0d2a4a)', color: '#fff' }}>
-            <CardContent>
-                <Typography variant="overline" sx={{ color: '#ffd54f', display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <AutoAwesomeIcon fontSize="inherit" /> {t('tasteTwin.heading')}
-                </Typography>
-                <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 1 }}>
-                    <Avatar src={mediaUrl(twin.user.profileImageUrl)} sx={{ width: 56, height: 56 }}>
-                        {twin.user.userName?.charAt(0).toUpperCase()}
-                    </Avatar>
-                    <Box sx={{ flexGrow: 1, textAlign: 'left' }}>
-                        <Typography variant="h6">{twin.user.userName}</Typography>
-                        <Typography variant="body2" sx={{ color: '#e3e8ff' }}>
-                            {t('tasteTwin.stats', { compatibility: twin.compatibility, count: twin.commonMovieCount })}
-                        </Typography>
-                        {twin.bio && <Typography variant="body2" sx={{ color: '#c5cdf5', fontStyle: 'italic' }}>"{twin.bio}"</Typography>}
-                    </Box>
-                </Stack>
-                <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-                    <Button component={Link} to={`/profile/${twin.user.id}`} variant="outlined" sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.5)' }}>
-                        {t('tasteTwin.viewProfile')}
-                    </Button>
-                    <Button variant="contained" color="warning" disabled={twin.isFollowing} onClick={follow}>
-                        {twin.isFollowing ? t('tasteTwin.following') : t('tasteTwin.follow')}
-                    </Button>
-                </Stack>
-            </CardContent>
+        <Card
+            data-testid="taste-twin"
+            component="section"
+            aria-labelledby="taste-twin-heading"
+            sx={[
+                (theme) => ({
+                    p: 2.5, height: '100%', display: 'flex', flexDirection: 'column',
+                    background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.14)}, ${alpha(theme.palette.accent.main, 0.06)} 60%), ${theme.palette.background.paper}`,
+                }),
+                ...(Array.isArray(sx) ? sx : [sx]),
+            ]}
+        >
+            <Typography id="taste-twin-heading" variant="overline" component="h2" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <AutoAwesomeIcon fontSize="inherit" sx={{ color: 'primary.main' }} aria-hidden="true" /> {t('tasteTwin.heading')}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 1.5 }}>
+                <UserAvatar user={twin.user} size={56} />
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography component={Link} to={`/profile/${twin.user.id}`} variant="h3" sx={{ color: 'text.primary', display: 'block', '&:hover': { textDecoration: 'underline' } }} noWrap>
+                        @{twin.user.userName}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                        {t('people.commonFilms', { count: twin.commonMovieCount })}
+                    </Typography>
+                </Box>
+                <CompatibilityBadge value={twin.compatibility} variant="ring" size="md" />
+            </Box>
+            {twin.bio && <Typography variant="body1" color="text.secondary" sx={{ mt: 1.5, fontStyle: 'italic', ...clampLines(2) }}>“{twin.bio}”</Typography>}
+            <Box sx={{ display: 'flex', gap: 1, mt: 'auto', pt: 2, flexWrap: 'wrap' }}>
+                <Button component={Link} to={`/profile/${twin.user.id}`} variant="tonal" size="small">{t('tasteTwin.viewProfile')}</Button>
+                <FollowButton user={twin.user} following={Boolean(twin.isFollowing)} />
+            </Box>
         </Card>
     );
 };

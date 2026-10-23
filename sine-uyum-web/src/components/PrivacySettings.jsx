@@ -1,12 +1,15 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import api, { mediaUrl } from '../api/axiosConfig';
+import api from '../api/axiosConfig';
 import { useSnackbar } from '../context/SnackbarProvider';
-import { LoadingState } from './states/LoadingState';
+import { CardSkeleton } from './ui/Skeletons';
+import { UserAvatar } from './ui/UserRow';
+import { apiErrorMessage } from './ui/apiError';
+import { prefersReducedMotion } from './ui/a11y';
 import { ErrorState } from './states/ErrorState';
 import {
-    Avatar, Box, Button, Divider, FormControl, FormControlLabel, InputLabel,
+    Box, Button, Divider, FormControl, FormControlLabel, InputLabel,
     List, ListItem, ListItemAvatar, ListItemText, MenuItem, Select, Switch, Typography
 } from '@mui/material';
 
@@ -58,7 +61,7 @@ export const PrivacySettings = () => {
     useEffect(() => {
         if (!settings || location.hash !== '#privacy' || scrolledFor.current === location.key) return;
         scrolledFor.current = location.key;
-        document.getElementById('privacy')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.getElementById('privacy')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
     }, [settings, location.hash, location.key]);
 
     const save = async (patch) => {
@@ -72,7 +75,7 @@ export const PrivacySettings = () => {
             showSnackbar(t('privacy.saved'), 'success');
         } catch (error) {
             setSettings(previous);
-            showSnackbar(error.response?.data?.title || t('privacy.saveFailed'), 'error');
+            showSnackbar(apiErrorMessage(error, t('privacy.saveFailed')), 'error');
         } finally {
             setIsSaving(false);
         }
@@ -89,13 +92,13 @@ export const PrivacySettings = () => {
     };
 
     if (loadError) {
-        return <ErrorState compact message={t('privacy.loadError')} onRetry={load} sx={{ mt: 4 }} />;
+        return <ErrorState compact message={t('privacy.loadError')} onRetry={load} />;
     }
-    if (!settings) return <LoadingState compact sx={{ mt: 4 }} />;
+    if (!settings) return <CardSkeleton lines={4} />;
 
     return (
-        <Box id="privacy" sx={{ mt: 5, textAlign: 'left', scrollMarginTop: 16 }} data-testid="privacy-settings">
-            <Typography variant="h5" component="h2" gutterBottom>{t('privacy.title')}</Typography>
+        <Box id="privacy" component="div" sx={{ scrollMarginTop: 88 }} data-testid="privacy-settings">
+            <Typography variant="h2" component="h2" sx={{ mb: 1 }}>{t('privacy.title')}</Typography>
 
             <FormControl fullWidth margin="normal">
                 <InputLabel id="profile-visibility-label">{t('privacy.profileVisibility')}</InputLabel>
@@ -109,7 +112,7 @@ export const PrivacySettings = () => {
                     {PROFILE_VISIBILITY_OPTIONS.map((o) => <MenuItem key={o.value} value={o.value}>{t(o.labelKey)}</MenuItem>)}
                 </Select>
             </FormControl>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="body2" color="text.secondary">
                 {t('privacy.alwaysVisible')}
             </Typography>
 
@@ -151,7 +154,7 @@ export const PrivacySettings = () => {
             />
 
             <Divider sx={{ my: 3 }} />
-            <Typography variant="h6" component="h3">{t('privacy.blockedTitle')}</Typography>
+            <Typography variant="h3" component="h3">{t('privacy.blockedTitle')}</Typography>
             {blocked.length === 0 ? (
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                     {t('privacy.noBlocked')}
@@ -159,11 +162,11 @@ export const PrivacySettings = () => {
             ) : (
                 <List>
                     {blocked.map((b) => (
-                        <ListItem key={b.id} secondaryAction={<Button onClick={() => unblock(b)}>{t('privacy.unblock')}</Button>}>
+                        <ListItem key={b.id} disableGutters secondaryAction={<Button variant="tonal" size="small" onClick={() => unblock(b)}>{t('privacy.unblock')}</Button>}>
                             <ListItemAvatar>
-                                <Avatar src={mediaUrl(b.profileImageUrl)}>{b.userName?.charAt(0).toUpperCase()}</Avatar>
+                                <UserAvatar user={b} size={40} />
                             </ListItemAvatar>
-                            <ListItemText primary={<Link to={`/profile/${b.id}`}>{b.userName}</Link>} />
+                            <ListItemText primary={<Box component={Link} to={`/profile/${b.id}`} sx={{ color: 'text.primary', fontWeight: 600 }}>@{b.userName}</Box>} />
                         </ListItem>
                     ))}
                 </List>

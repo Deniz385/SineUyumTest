@@ -63,7 +63,9 @@
     "markAllRead": "Mark All as Read",
     "empty": "No new notifications.",
     "loadError": "Could not load notifications.",
-    "justNow": "just now"
+    "justNow": "just now",
+    "seeAll": "See all notifications",
+    "unread": "Unread"
   },
   "search": {
     "usersPlaceholder": "Search users...",
@@ -91,27 +93,34 @@
     "password": "Password",
     "confirmPassword": "Confirm Password",
     "login": {
-      "title": "Log In",
+      "title": "Log in",
       "submit": "Log In",
       "failed": "Something went wrong while logging in. Please try again.",
       "noAccount": "Don't have an account?",
-      "registerLink": "Sign up now"
+      "registerLink": "Sign up"
     },
     "register": {
-      "title": "Sign Up",
+      "title": "Create your account",
       "submit": "Sign Up",
       "passwordMismatch": "Passwords do not match.",
       "success": "Registration successful! Redirecting you to the login page...",
       "failed": "A server error occurred during registration.",
       "haveAccount": "Already have an account?",
       "loginLink": "Log in"
-    }
+    },
+    "tagline": "Find the people who watch like you do."
   },
   "home": {
     "title": "Discover",
     "popular": "Popular Movies",
     "nowPlaying": "Now Playing",
-    "loadError": "Could not load the movies."
+    "loadError": "Could not load the movies.",
+    "greeting": {
+      "morning": "Good morning, {{userName}}",
+      "afternoon": "Good afternoon, {{userName}}",
+      "evening": "Good evening, {{userName}}"
+    },
+    "subtitle": "What the people you follow are watching, and what to watch next."
   },
   "feed": {
     "title": "Feed",
@@ -120,7 +129,9 @@
     "loadError": "Could not load the feed.",
     "emptyTitle": "Your feed is empty for now",
     "emptyBody": "Ratings and reviews from people you follow show up here. Use the user search above to find people who match your taste, or be the first to review a movie.",
-    "browseMovies": "Browse movies"
+    "browseMovies": "Browse movies",
+    "thinBody": "Follow people who share your taste and their ratings and reviews will appear here.",
+    "findPeople": "Find people"
   },
   "tasteTwin": {
     "heading": "This week's taste twin",
@@ -178,7 +189,7 @@
     "forYouTooltip_other": "Based on {{count}} people who share your taste: {{matches}}",
     "forYouMatch": "{{userName}} ({{compatibility}}%) {{rating}}",
     "forYou": "For you",
-    "rateThis": "Rate This Movie",
+    "rateThis": "Rate",
     "addToList": "Add to List",
     "runtimeLabel": "Runtime:",
     "runtime_one": "{{count}} minute",
@@ -187,7 +198,14 @@
     "cast": "Top Cast",
     "whichList": "Which list should it go in?",
     "noLists": "You don't have any lists yet.",
-    "manageLists": "Manage Lists or Create a New One..."
+    "manageLists": "Manage Lists or Create a New One...",
+    "yourRating": "Your rating: {{rating}}",
+    "share": "Share",
+    "linkCopied": "Link copied.",
+    "shareFailed": "Couldn't share the link.",
+    "genres": "Genres",
+    "forYouSr": "For you: {{score}} out of 10",
+    "tmdbSr": "TMDb: {{score}} out of 10"
   },
   "recommendations": {
     "title": "Movie Recommendations Based on Your Shared Taste with {{userName}}",
@@ -479,9 +497,9 @@
     "unblockFailed": "Could not unblock this user.",
     "followers": "Followers",
     "followingList": "Following",
-    "editProfile": "Edit Profile",
+    "editProfile": "Edit profile",
     "unblock": "Unblock",
-    "sendMessage": "Send Message",
+    "sendMessage": "Message",
     "follow": "Follow",
     "unfollow": "Unfollow",
     "block": "Block",
@@ -496,20 +514,31 @@
     "recapMine": "Your {{year}} recap",
     "recap": "{{year}} recap",
     "statRated": "Movies Rated",
-    "statAverage": "Average Rating",
+    "statAverage": "Average",
     "statInLists": "Movies in Lists",
-    "compatibilityScore": "Your Compatibility: {{score}}%",
+    "compatibilityScore": "You're {{score}}% compatible",
     "compatibilityBasis_one": "(based on {{count}} movie in common)",
     "compatibilityBasis_other": "(based on {{count}} movies in common)",
     "getRecommendations": "Get Shared Movie Recommendations",
-    "topRated": "✨ Movies Rated 10/10",
+    "topRated": "Rated 10/10",
     "allRated": "All Rated Movies ({{count}})",
     "noRatings": "No rated movies yet.",
     "givenRating": "Rating: {{rating}}/10",
     "posterAlt": "{{title}} poster",
     "userFallback": "this user",
     "blockConfirmTitle": "Block {{userName}}?",
-    "blockConfirmBody": "You won't be able to see each other's profiles, message each other or end up in the same event group. Any follows between you will be removed. You can unblock them at any time under Edit Profile > Privacy."
+    "blockConfirmBody": "You won't be able to see each other's profiles, message each other or end up in the same event group. Any follows between you will be removed. You can unblock them at any time under Edit Profile > Privacy.",
+    "statFilms": "Films",
+    "tabsLabel": "Profile sections",
+    "tabs": {
+      "ratings": "Ratings",
+      "diary": "Diary",
+      "lists": "Lists",
+      "reviews": "Reviews"
+    },
+    "noReviews": "No reviews yet.",
+    "reviewsFollowTitle": "Follow @{{userName}} to see their reviews here",
+    "reviewsFollowBody": "Their reviews also appear on each film's page."
   },
   "watchlist": {
     "title": "My Watchlists",
@@ -527,7 +556,7 @@
     "edit": "Edit List",
     "delete": "Delete List",
     "noMovies": "There are no movies in this list yet.",
-    "noMoviesHint": "Add movies from a movie's page with the \"Add to List\" button.",
+    "noMoviesHint": "Add films to this list with the \"Add to list\" button on a film's page.",
     "removeMovie": "Remove movie",
     "removeMovieTitle": "Remove Movie?",
     "removeMovieBody": "Are you sure you want to permanently remove this movie from the list?",
@@ -601,7 +630,8 @@
       "privateHelp": "Only you and the people you invite can see it.",
       "publicHelp": "Shown on your profile and in list discovery. Anyone who can see your profile can like and save it.",
       "publicChip": "Public"
-    }
+    },
+    "listLabel": "List"
   },
   "lists": {
     "like": "Like",
@@ -666,14 +696,16 @@
       "loadError": "Couldn't load the public lists.",
       "emptyMineTitle": "You have no public lists yet",
       "emptyMineBody": "Make a list public to show it on your profile and in list discovery.",
-      "emptyMineAction": "Go to my watchlists"
+      "emptyMineAction": "Go to my watchlists",
+      "emptyOtherTitle": "@{{userName}} has no public lists yet"
     }
   },
   "messages": {
     "title": "Messages",
     "empty": "You don't have any conversations yet.",
-    "emptyHint": "Open someone's profile and choose \"Send Message\" to start a conversation.",
-    "loadError": "Something went wrong while loading your conversations."
+    "emptyHint": "Open someone's profile and choose \"Message\" to start a conversation.",
+    "loadError": "Something went wrong while loading your conversations.",
+    "unread": "Unread"
   },
   "conversation": {
     "fallbackTitle": "Chat",
@@ -688,7 +720,9 @@
     "sendFailed": "Could not send the message.",
     "whichList": "Which list do you want to share?",
     "noListsToShare": "You don't have any lists to share yet.",
-    "listsLoadFailed": "Could not load your lists."
+    "listsLoadFailed": "Could not load your lists.",
+    "back": "Back to messages",
+    "history": "Messages"
   },
   "event": {
     "title": "My Event",
@@ -706,7 +740,8 @@
     "voteFailed": "There was a problem saving your vote.",
     "statusUnavailable": "Could not get the event status.",
     "none": "There are no new events you can join. Please check back later.",
-    "loadError": "Something went wrong while loading event information."
+    "loadError": "Something went wrong while loading event information.",
+    "subtitle": "Meet people who share your taste over a film night."
   },
   "subscription": {
     "tagline": "Meet the people who best match your taste in film and join open-air cinema events!",
@@ -821,5 +856,11 @@
       "followed_other": "following {{count}} people",
       "cta": "Go to home"
     }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Your profile, how the app looks and who can see what.",
+    "appearance": "Appearance",
+    "theme": "Theme"
   }
 }

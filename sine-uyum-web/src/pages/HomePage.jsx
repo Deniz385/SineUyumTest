@@ -1,88 +1,158 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Box, Button, Card, Typography } from '@mui/material';
+import GroupAddRoundedIcon from '@mui/icons-material/GroupAddRounded';
 import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
-import { Box, Typography, Card, CardMedia } from '@mui/material';
-import { useDraggableScroll } from '../hooks/useDraggableScroll';
-import { LoadingState } from '../components/states/LoadingState';
+import { AuthorLine, ReviewCard } from '../components/ReviewCard';
+import { TasteTwinCard } from '../components/TasteTwinCard';
+import { YearInReviewBanner } from '../components/YearInReviewBanner';
 import { ErrorState } from '../components/states/ErrorState';
+import { Page, PageHeader } from '../components/ui/Page';
+import { MovieRow } from '../components/ui/MovieRow';
+import { FeedSkeleton } from '../components/ui/Skeletons';
+import { PosterImage } from '../components/ui/PosterImage';
+import { savePosterWall } from '../components/ui/posterWallCache';
+import { useMovieCollections } from './discoverData';
+import { layout } from '../theme';
 
-const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+// Fewer items than this and movie rows fill the page under the feed.
+const THIN_FEED = 3;
 
-const MovieRow = ({ title, movies }) => {
-    const scrollRef = useDraggableScroll();
+const greetingKey = (hour) => (hour >= 5 && hour < 12 ? 'morning' : hour >= 12 && hour < 18 ? 'afternoon' : 'evening');
+
+// "@ayse rated Past Lives ★★★★½ 9": poster-led, like a review card.
+const RatedItem = ({ item }) => {
+    const { t } = useTranslation();
     return (
-        <Box sx={{ my: 4 }}>
-            <Typography variant="h4" component="h2" gutterBottom sx={{ textAlign: 'left', fontWeight: 'bold' }}>
-                {title}
-            </Typography>
-            <Box ref={scrollRef} className="movie-row-container">
-                {movies.map(movie => (
-                    <Link to={`/movie/${movie.id}`} key={movie.id} className="movie-row-link">
-                        <Card className="movie-row-card">
-                            <CardMedia
-                                component="img"
-                                image={movie.poster_path ? `${IMAGE_BASE_URL.replace('w500', 'w300')}${movie.poster_path}` : '/vite.svg'}
-                                alt={movie.title}
-                                className="movie-row-poster"
-                            />
-                        </Card>
-                    </Link>
-                ))}
+        <Card component="article" data-testid="feed-rated" sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+            <Box component={Link} to={`/movie/${item.movie.id}`} tabIndex={-1} aria-hidden="true" sx={{ width: { xs: 64, sm: 84 }, flexShrink: 0, borderRadius: 1 }}>
+                <PosterImage path={item.movie.posterPath} title={item.movie.title} width={84} radius="sm" decorative />
             </Box>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+                <AuthorLine author={item.author} rating={item.rating} compatibility={item.authorCompatibility} when={item.activityAt} relative>
+                    <Typography variant="body2" color="text.secondary" component="span">{t('feed.ratedMovie')}</Typography>
+                </AuthorLine>
+                <Typography component={Link} to={`/movie/${item.movie.id}`} variant="title" sx={{ display: 'block', mt: 1, color: 'text.primary', '&:hover': { textDecoration: 'underline' } }}>
+                    {item.movie.title}
+                </Typography>
+            </Box>
+        </Card>
+    );
+};
+
+// Movie rows for a thin feed (instead of an empty state).
+const DiscoverRows = () => {
+    const { t } = useTranslation();
+    const { status, rows } = useMovieCollections();
+    useEffect(() => {
+        if (status === 'ready') savePosterWall(Object.values(rows).flat().map((m) => m.posterPath));
+    }, [status, rows]);
+    if (status === 'error') return null;
+    const loading = status === 'loading';
+    return (
+        <Box data-testid="home-rows" sx={{ mt: 5 }}>
+            <MovieRow title={t('discover.movies.popular')} movies={rows.popular} loading={loading} seeAllTo="/discover?section=popular" testId="row-popular" />
+            <MovieRow title={t('discover.movies.nowPlaying')} movies={rows.now_playing} loading={loading} seeAllTo="/discover?section=now_playing" testId="row-now_playing" />
+            <MovieRow title={t('discover.movies.topRated')} movies={rows.top_rated} loading={loading} seeAllTo="/discover?section=top_rated" testId="row-top_rated" />
         </Box>
     );
 };
 
+/**
+ * Home: a greeting, this week's taste twin and the yearly recap when there
+ * is one, then the feed (ratings and reviews from the people you follow,
+ * and your own). When the feed is thin, movie rows fill the page.
+ */
 export const HomePage = () => {
     const { t } = useTranslation();
     const { user } = useAuth();
-    const [popularMovies, setPopularMovies] = useState([]);
-    const [nowPlayingMovies, setNowPlayingMovies] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [items, setItems] = useState(null);
+    const [cursor, setCursor] = useState(null);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [error, setError] = useState(false);
+    const [greeting] = useState(() => greetingKey(new Date().getHours()));
 
-    const fetchMovies = useCallback(async () => {
-        if (!user) return;
-
-        setLoading(true);
-        setError(false);
+    const load = useCallback(async (from) => {
         try {
-            const [popularRes, nowPlayingRes] = await Promise.all([
-                api.get('/api/v1/movies/popular'),
-                api.get('/api/v1/movies/now_playing')
-            ]);
-            setPopularMovies(popularRes.data.results || []);
-            setNowPlayingMovies(nowPlayingRes.data.results || []);
-        } catch (error) {
+            const res = await api.get('/api/v1/feed', { params: from ? { cursor: from } : {} });
+            setItems((prev) => (from ? [...(prev ?? []), ...res.data.items] : res.data.items));
+            setCursor(res.data.nextCursor);
+            setError(false);
+        } catch {
             setError(true);
-            console.error("Could not load home page movies:", error);
-        } finally {
-            setLoading(false);
+            setItems((prev) => prev ?? []);
         }
-    }, [user]);
+    }, []);
 
-    useEffect(() => {
-        fetchMovies();
-    }, [fetchMovies]);
+    useEffect(() => { load(null); }, [load]);
+
+    const loadMore = async () => {
+        setIsLoadingMore(true);
+        await load(cursor);
+        setIsLoadingMore(false);
+    };
+
+    const retry = () => {
+        setError(false);
+        setItems(null);
+        load(null);
+    };
+
+    const thin = items !== null && !error && items.length < THIN_FEED && !cursor;
 
     return (
-        <Box sx={{ width: '100%', maxWidth: '1400px', margin: 'auto', px: { xs: 2, md: 4 }, py: 2 }}>
-            <Typography variant="h3" component="h1" gutterBottom align="left">
-                {t('home.title')}
-            </Typography>
-            
-            {loading ? (
-                <LoadingState />
-            ) : error ? (
-                <ErrorState message={t('home.loadError')} onRetry={fetchMovies} />
-            ) : (
-                <>
-                    <MovieRow title={t('home.popular')} movies={popularMovies} />
-                    <MovieRow title={t('home.nowPlaying')} movies={nowPlayingMovies} />
-                </>
-            )}
-        </Box>
+        <Page>
+            <PageHeader
+                title={t(`home.greeting.${greeting}`, { userName: user?.username })}
+                subtitle={t('home.subtitle')}
+            />
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 2, '&:has(> *)': { mb: 4 } }}>
+                <TasteTwinCard />
+                <YearInReviewBanner />
+            </Box>
+
+            <Box component="section" aria-labelledby="feed-heading" sx={{ maxWidth: layout.readingWidth }}>
+                <Typography id="feed-heading" variant="h2" component="h2" sx={{ mb: 2 }}>{t('feed.title')}</Typography>
+                {items === null ? (
+                    <FeedSkeleton />
+                ) : items.length === 0 && error ? (
+                    <ErrorState message={t('feed.loadError')} onRetry={retry} />
+                ) : (
+                    <>
+                        {items.length === 0 && (
+                            <Card data-testid="feed-hint" sx={{ p: 2.5, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                                <Box aria-hidden="true" sx={{ width: 48, height: 48, borderRadius: '50%', bgcolor: 'surface.raised', color: 'primary.main', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <GroupAddRoundedIcon />
+                                </Box>
+                                <Box sx={{ flex: '1 1 240px', minWidth: 0 }}>
+                                    <Typography variant="subtitle1" component="p">{t('feed.emptyTitle')}</Typography>
+                                    <Typography variant="body1" color="text.secondary">{t('feed.thinBody')}</Typography>
+                                </Box>
+                                <Button component={Link} to="/discover?tab=people" variant="contained">{t('feed.findPeople')}</Button>
+                            </Card>
+                        )}
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }} data-testid="feed-list">
+                            {items.map((item) => item.review
+                                ? <ReviewCard key={`r-${item.review.id}`} review={item.review} showMovie relativeTime
+                                    headline={<Typography variant="body2" color="text.secondary" component="span">{t('feed.wroteReview')}</Typography>} />
+                                : <RatedItem key={`p-${item.author.id}-${item.movie.id}`} item={item} />)}
+                        </Box>
+                    </>
+                )}
+                {/* A failed "Load more" keeps what is already shown. */}
+                {error && items?.length > 0 && !isLoadingMore && (
+                    <ErrorState compact message={t('feed.loadError')} onRetry={cursor ? loadMore : retry} sx={{ mt: 2 }} />
+                )}
+                {cursor && (!error || isLoadingMore) && (
+                    <Button variant="tonal" sx={{ mt: 3, display: 'flex', mx: 'auto' }} onClick={loadMore} disabled={isLoadingMore}>
+                        {isLoadingMore ? t('common.loadingEllipsis') : t('common.loadMore')}
+                    </Button>
+                )}
+            </Box>
+
+            {thin && <DiscoverRows />}
+        </Page>
     );
 };

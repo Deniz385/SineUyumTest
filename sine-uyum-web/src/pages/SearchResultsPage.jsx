@@ -1,56 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import api, { mediaUrl } from '../api/axiosConfig';
+import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
-import { Box, Typography, Grid, Card, CardContent, Avatar, Button, Chip } from '@mui/material';
-import PersonSearchIcon from '@mui/icons-material/PersonSearch';
-import { LoadingState } from '../components/states/LoadingState';
+import { Box, Button, Card } from '@mui/material';
+import PersonSearchIcon from '@mui/icons-material/PersonSearchRounded';
 import { EmptyState } from '../components/states/EmptyState';
 import { ErrorState } from '../components/states/ErrorState';
-
-const UserResultCard = ({ user }) => {
-    const { t } = useTranslation();
-    const getChipColor = (score) => {
-        if (score > 75) return "success";
-        if (score > 50) return "warning";
-        return "default";
-    };
-
-    return (
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Card sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <CardContent sx={{ flexGrow: 1, textAlign: 'center' }}>
-                    <Avatar
-                        src={mediaUrl(user.profileImageUrl)}
-                        sx={{ width: 80, height: 80, margin: '0 auto 16px', fontSize: '2.5rem' }}
-                    >
-                        {user.userName.charAt(0).toUpperCase()}
-                    </Avatar>
-                    <Typography variant="h6" component="h3">{user.userName}</Typography>
-                    
-                    {user.compatibilityScore > 0 && (
-                        <Chip 
-                            label={t('search.compatibility', { score: user.compatibilityScore })} 
-                            color={getChipColor(user.compatibilityScore)}
-                            size="small"
-                            sx={{ my: 1 }} 
-                        />
-                    )}
-
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1, minHeight: '40px' }}>
-                        {user.bio ? `"${user.bio.substring(0, 70)}..."` : t('search.noBio')}
-                    </Typography>
-                </CardContent>
-                <Box sx={{ p: 2, pt: 0 }}>
-                    <Button component={Link} to={`/profile/${user.id}`} variant="contained" fullWidth>
-                        {t('search.goToProfile')}
-                    </Button>
-                </Box>
-            </Card>
-        </Grid>
-    );
-};
+import { Page, PageHeader } from '../components/ui/Page';
+import { UserRow } from '../components/ui/UserRow';
+import { UserListSkeleton } from '../components/ui/Skeletons';
+import { UserSearch } from '../components/UserSearch';
 
 export const SearchResultsPage = () => {
     const { t } = useTranslation();
@@ -87,24 +47,29 @@ export const SearchResultsPage = () => {
     }, [fetchUsers]);
 
     return (
-        <div className="page-container">
-            <Typography variant="h4" component="h1" gutterBottom>
-                {t('search.title', { query })}
-            </Typography>
-
+        <Page width="reading">
+            <PageHeader title={t('search.title', { query })} />
+            <UserSearch sx={{ mb: 3 }} />
             {isLoading ? (
-                <LoadingState />
+                <UserListSkeleton />
             ) : error ? (
                 <ErrorState message={t('search.error')} onRetry={fetchUsers} />
             ) : users?.length === 0 ? (
                 <EmptyState icon={PersonSearchIcon} title={t('search.noResults', { query })} description={t('search.noResultsHint')} />
             ) : (
-                <Grid container spacing={3}>
-                    {(users ?? []).map(user => (
-                        <UserResultCard key={user.id} user={user} />
+                <Card component="ul" data-testid="search-results" sx={{ listStyle: 'none', m: 0, px: 2, py: 0.5, '& > li + li': { borderTop: 1, borderColor: 'divider' } }}>
+                    {(users ?? []).map((u) => (
+                        <li key={u.id}>
+                            <UserRow
+                                user={u}
+                                compatibility={u.compatibilityScore > 0 ? u.compatibilityScore : null}
+                                detail={u.bio || t('search.noBio')}
+                                action={<Button component={Link} to={`/profile/${u.id}`} variant="tonal" size="small">{t('search.goToProfile')}</Button>}
+                            />
+                        </li>
                     ))}
-                </Grid>
+                </Card>
             )}
-        </div>
+        </Page>
     );
 };

@@ -73,7 +73,7 @@ export const MovieRow = ({
     if (!movies?.length && !emptyText) return null;
 
     return (
-        <Box component="section" aria-labelledby={headingId} data-testid={testId} sx={[{ mb: 4, minWidth: 0 }, ...(Array.isArray(sx) ? sx : [sx])]}>
+        <Box component="section" data-testid={testId} sx={[{ mb: 4, minWidth: 0 }, ...(Array.isArray(sx) ? sx : [sx])]}>
             <SectionHeader
                 id={headingId}
                 title={title}

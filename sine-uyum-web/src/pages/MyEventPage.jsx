@@ -2,54 +2,75 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { Box, Typography, Paper, Avatar, AvatarGroup, Alert, Grid, Card, CardContent, CardMedia, CardActions, Button, Chip } from '@mui/material';
-import EventIcon from '@mui/icons-material/Event';
-import HowToVoteIcon from '@mui/icons-material/HowToVote';
-import EventBusyIcon from '@mui/icons-material/EventBusy';
-import { LoadingState } from '../components/states/LoadingState';
+import { useSnackbar } from '../context/SnackbarProvider';
+import { Box, Typography, Avatar, AvatarGroup, Card, Button, Tooltip } from '@mui/material';
+import EventIcon from '@mui/icons-material/EventRounded';
+import HowToVoteIcon from '@mui/icons-material/HowToVoteRounded';
+import EventBusyIcon from '@mui/icons-material/EventBusyRounded';
+import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
+import HourglassTopRoundedIcon from '@mui/icons-material/HourglassTopRounded';
+import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import { EmptyState } from '../components/states/EmptyState';
 import { ErrorState } from '../components/states/ErrorState';
+import { Page, PageHeader } from '../components/ui/Page';
+import { CardSkeleton } from '../components/ui/Skeletons';
+import { PosterCard } from '../components/ui/PosterCard';
+import { apiErrorMessage } from '../components/ui/apiError';
+import { gradients } from '../theme';
 import api, { mediaUrl } from '../api/axiosConfig';
-
-const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 
 const EVENT_DATE_FORMAT = { weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
 
-const AvailableEvent = ({ event, onJoin }) => {
-    const { t, i18n } = useTranslation();
+// Where and when, in a card with the marquee edge.
+const EventCard = ({ overline, event, children, testId }) => {
+    const { i18n } = useTranslation();
     return (
-        <Paper elevation={3} sx={{ p: 4, mt: 4, textAlign: 'center' }}>
-            <Typography variant="h5" component="h2" gutterBottom>{t('event.next')}</Typography>
-            <Typography variant="h6">{event.locationName}</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary', my: 2 }}>
-                <EventIcon sx={{ mr: 1 }} />
-                <Typography variant="body1">
-                    {new Date(event.eventDate).toLocaleDateString(i18n.language, EVENT_DATE_FORMAT)}
-                </Typography>
-            </Box>
-            <Button variant="contained" size="large" onClick={() => onJoin(event.id)} sx={{ mt: 2 }}>
+        <Card component="section" data-testid={testId} sx={{ p: { xs: 2.5, md: 3.5 }, position: 'relative', overflow: 'hidden', '&::before': { content: '""', position: 'absolute', inset: '0 0 auto 0', height: 3, background: gradients.marquee } }}>
+            {overline && <Typography variant="overline" component="p" color="text.secondary">{overline}</Typography>}
+            <Typography variant="h1" component="h2" sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <PlaceRoundedIcon sx={{ color: 'primary.main' }} aria-hidden="true" />{event.locationName}
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                <EventIcon fontSize="small" aria-hidden="true" />
+                {new Date(event.eventDate).toLocaleDateString(i18n.language, EVENT_DATE_FORMAT)}
+            </Typography>
+            {children}
+        </Card>
+    );
+};
+
+const AvailableEvent = ({ event, onJoin }) => {
+    const { t } = useTranslation();
+    return (
+        <EventCard overline={t('event.next')} event={event} testId="event-available">
+            <Button variant="contained" size="large" onClick={() => onJoin(event.id)} sx={{ mt: 3 }}>
                 {t('event.join')}
             </Button>
-        </Paper>
+        </EventCard>
     );
 };
 
 const PendingEvent = ({ event }) => {
     const { t } = useTranslation();
     return (
-        <Alert severity="info" sx={{ mt: 4, p: 3 }}>
-            <Typography variant="h6">{t('event.pendingTitle')}</Typography>
-            <Typography>
-                <Trans i18nKey="event.pendingBody" values={{ location: event.locationName }} components={{ strong: <strong /> }} />
-            </Typography>
-        </Alert>
+        <Card sx={{ p: 3, display: 'flex', gap: 2, alignItems: 'flex-start' }} data-testid="event-pending">
+            <Box aria-hidden="true" sx={{ width: 48, height: 48, borderRadius: '50%', bgcolor: 'surface.raised', color: 'info.main', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <HourglassTopRoundedIcon />
+            </Box>
+            <Box>
+                <Typography variant="h2" component="h2">{t('event.pendingTitle')}</Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mt: 0.75 }}>
+                    <Trans i18nKey="event.pendingBody" values={{ location: event.locationName }} components={{ strong: <Box component="strong" sx={{ color: 'text.primary' }} /> }} />
+                </Typography>
+            </Box>
+        </Card>
     );
 };
 
 const MatchedEvent = ({ data, onVote }) => {
-    const { t, i18n } = useTranslation();
+    const { t } = useTranslation();
     const { user } = useAuth();
-    
+
     const group = data.group;
     const event = data.event;
     const votes = data.votes || [];
@@ -61,37 +82,44 @@ const MatchedEvent = ({ data, onVote }) => {
 
     return (
         <>
-            <Paper elevation={3} sx={{ p: 3, mt: 4, mb: 4 }}>
-                <Typography variant="h5" component="h2">{event.locationName}</Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary', my: 2 }}>
-                    <EventIcon sx={{ mr: 1 }} />
-                    <Typography variant="h6">{new Date(event.eventDate).toLocaleDateString(i18n.language, EVENT_DATE_FORMAT)}</Typography>
-                </Box>
-                <Typography variant="h6" component="h3" sx={{ mt: 4, mb: 2 }}>{t('event.yourTable')}</Typography>
-                <AvatarGroup max={10} sx={{ justifyContent: 'center', mb: 2 }}>
+            <EventCard event={event} testId="event-matched">
+                <Typography variant="h3" component="h3" sx={{ mt: 3, mb: 1.5 }}>{t('event.yourTable')}</Typography>
+                <AvatarGroup max={10} sx={{ justifyContent: 'flex-end', flexDirection: 'row-reverse', '& .MuiAvatar-root': { borderColor: 'background.paper' } }}>
                     {groupMembers.map(member => (
-                        <Avatar key={member.id} component={Link} to={`/profile/${member.id}`} alt={member.userName} src={mediaUrl(member.profileImageUrl)} sx={{ width: 64, height: 64, border: '2px solid white' }} title={member.userName} />
+                        <Tooltip key={member.id} title={`@${member.userName}`}>
+                            <Avatar component={Link} to={`/profile/${member.id}`} alt={member.userName} src={mediaUrl(member.profileImageUrl)} sx={{ width: 52, height: 52 }}>
+                                {member.userName?.charAt(0).toUpperCase()}
+                            </Avatar>
+                        </Tooltip>
                     ))}
                 </AvatarGroup>
-            </Paper>
+            </EventCard>
 
-            <Typography variant="h5" component="h2" sx={{ mb: 3 }}>{t('event.movieVote')}</Typography>
-            <Grid container spacing={3} justifyContent="center">
-                {suggestedMovies.map(movie => (
-                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={movie.id}>
-                        <Card sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                            <CardMedia component="img" height="350" image={movie.posterPath ? `${IMAGE_BASE_URL}${movie.posterPath}` : '/vite.svg'} alt={movie.title} />
-                            <CardContent sx={{ flexGrow: 1 }}><Typography gutterBottom variant="h6" component="div">{movie.title}</Typography></CardContent>
-                            <CardActions sx={{ justifyContent: 'space-between', p: 2 }}>
-                                <Button size="small" variant={currentUserVoteId === movie.id ? "contained" : "outlined"} onClick={() => onVote(movie.id)} startIcon={<HowToVoteIcon />}>
-                                    {currentUserVoteId === movie.id ? t('event.myVote') : t('event.vote')}
+            <Typography variant="h2" component="h2" sx={{ mt: 5, mb: 2 }}>{t('event.movieVote')}</Typography>
+            <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(auto-fill, minmax(170px, 1fr))' }, gap: 2.5 }}>
+                {suggestedMovies.map(movie => {
+                    const mine = currentUserVoteId === movie.id;
+                    const count = getVoteCount(movie.id);
+                    return (
+                        <li key={movie.id}>
+                            <PosterCard movie={{ id: movie.id, title: movie.title, posterPath: movie.posterPath }} fluid />
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                                <Button
+                                    size="small"
+                                    variant={mine ? 'contained' : 'tonal'}
+                                    onClick={() => onVote(movie.id)}
+                                    startIcon={mine ? <CheckRoundedIcon /> : <HowToVoteIcon />}
+                                    aria-pressed={mine}
+                                    aria-label={`${mine ? t('event.myVote') : t('event.vote')}: ${movie.title}`}
+                                >
+                                    {mine ? t('event.myVote') : t('event.vote')}
                                 </Button>
-                                <Chip label={t('event.voteCount', { count: getVoteCount(movie.id) })} variant="outlined" />
-                            </CardActions>
-                        </Card>
-                    </Grid>
-                ))}
-            </Grid>
+                                <Typography variant="body2" color="text.secondary" className="tabular-nums">{t('event.voteCount', { count })}</Typography>
+                            </Box>
+                        </li>
+                    );
+                })}
+            </Box>
         </>
     );
 };
@@ -100,6 +128,7 @@ const MatchedEvent = ({ data, onVote }) => {
 export const MyEventPage = () => {
     const { t } = useTranslation();
     const { user } = useAuth();
+    const { showSnackbar } = useSnackbar();
     const navigate = useNavigate();
     const [statusData, setStatusData] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -133,8 +162,7 @@ export const MyEventPage = () => {
             navigate('/subscription');
             return;
         }
-        const data = error.response?.data;
-        alert(data?.message || data?.title || fallback);
+        showSnackbar(apiErrorMessage(error, fallback), 'error');
     };
 
     const handleJoinEvent = async (eventId) => {
@@ -145,30 +173,30 @@ export const MyEventPage = () => {
             handleActionError(error, t('event.joinFailed'));
         }
     };
-    
+
     const handleVote = async (movieId) => {
         try {
-            await api.post('/api/v1/event/vote', { 
-                groupId: statusData.group.id, 
-                movieId: movieId 
+            await api.post('/api/v1/event/vote', {
+                groupId: statusData.group.id,
+                movieId: movieId
             });
             fetchEventStatus();
         } catch (error) {
             handleActionError(error, t('event.voteFailed'));
         }
     };
-    
+
     if (!user) {
-        return <LoadingState />;
+        return <Page><CardSkeleton /></Page>;
     }
-    
+
     if (!user.isSubscribed) {
         return <Navigate to="/subscription" replace />;
     }
 
     const renderContent = () => {
         if (isLoading) {
-            return <LoadingState />;
+            return <CardSkeleton lines={3} height={180} />;
         }
         if (!statusData) {
             return <ErrorState message={t('event.statusUnavailable')} onRetry={fetchEventStatus} />;
@@ -189,9 +217,9 @@ export const MyEventPage = () => {
     };
 
     return (
-        <Box className="page-container">
-            <Typography variant="h4" component="h1" gutterBottom>{t('event.title')}</Typography>
+        <Page>
+            <PageHeader title={t('event.title')} subtitle={t('event.subtitle')} />
             {renderContent()}
-        </Box>
+        </Page>
     );
 };

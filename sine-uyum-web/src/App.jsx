@@ -28,8 +28,8 @@ const ConversationPage = page(() => import('./pages/ConversationPage'), 'Convers
 const MyEventPage = page(() => import('./pages/MyEventPage'), 'MyEventPage');
 const SubscriptionPage = page(() => import('./pages/SubscriptionPage'), 'SubscriptionPage');
 const AdminPage = page(() => import('./pages/AdminPage'), 'AdminPage');
-const FeedPage = page(() => import('./pages/FeedPage'), 'FeedPage');
 const YearInReviewPage = page(() => import('./pages/YearInReviewPage'), 'YearInReviewPage');
+const NotificationsPage = page(() => import('./pages/NotificationsPage'), 'NotificationsPage');
 const WelcomePage = page(() => import('./pages/WelcomePage'), 'WelcomePage');
 
 // The old list discovery address opens Discover › Lists (sort and search kept).
@@ -81,13 +81,15 @@ function App() {
                   }
                 >
                   <Route path="/home" element={<HomePage />} />
-                  <Route path="/feed" element={<FeedPage />} />
+                  {/* The feed lives on Home now. */}
+                  <Route path="/feed" element={<Navigate to="/home" replace />} />
                   <Route path="/profile/:userId" element={<ProfilePage />} />
                   <Route path="/search" element={<SearchResultsPage />} />
                   <Route path="/movie/:movieId" element={<MovieDetailPage />} />
                   <Route path="/watchlist" element={<WatchlistPage />} />
                   <Route path="/watchlist/:listId" element={<WatchlistDetailPage />} />
                   <Route path="/discover" element={<DiscoverPage />} />
+                  <Route path="/notifications" element={<NotificationsPage />} />
                   <Route path="/lists" element={<ListsRedirect />} />
                   <Route path="/profile/edit" element={<EditProfilePage />} />
                   <Route path="/messages" element={<MessagesPage />} />

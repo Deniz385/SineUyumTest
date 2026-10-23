@@ -439,9 +439,12 @@
   id: number
   isOwner: bool
   items: array
+  likeCount: number
   members: array
   name: string
   owner: null
+  saveCount: number
+  visibility: string
 
 ## watchlist.list  GET /api/v1/watchlist -> 200
   $: array
@@ -450,9 +453,12 @@
   [].isOwner: bool
   [].isShared: bool
   [].itemCount: number
+  [].likeCount: number
   [].memberCount: number
   [].name: string
   [].ownerUsername: string
+  [].saveCount: number
+  [].visibility: string
   []: object
 
 ## watchlist.addMovie  POST /api/v1/watchlist/{id}/movies -> 200
@@ -472,15 +478,19 @@
   items[].title: string
   items[].watchedBy: array
   items[]: object
+  likeCount: number
   members: array
   name: string
   owner.id: string
   owner.profileImageUrl: null
   owner.userName: string
   owner: object
+  saveCount: number
+  visibility: string
 
 ## watchlist.public  GET /api/v1/watchlist/public/{id} -> 200
   $: object
+  canEdit: bool
   description: string
   id: number
   items: array
@@ -491,12 +501,93 @@
   items[].title: string
   items[].watchedBy: array
   items[]: object
+  likeCount: number
+  likedByMe: bool
   name: string
+  owner.id: string
+  owner.profileImageUrl: null
+  owner.userName: string
+  owner: object
   ownerUsername: string
+  saveCount: number
+  savedByMe: bool
+  visibility: string
 
 ## watchlist.update  PUT /api/v1/watchlist/{id} -> 200
   $: object
   message: string
+
+## watchlist.like  POST /api/v1/watchlist/{id}/like -> 200
+  $: object
+  likeCount: number
+  liked: bool
+
+## watchlist.save  POST /api/v1/watchlist/{id}/save -> 200
+  $: object
+  saveCount: number
+  saved: bool
+
+## watchlist.discover  GET /api/v1/watchlist/discover -> 200
+  $: object
+  hasMore: bool
+  items: array
+  page: number
+
+## watchlist.userLists  GET /api/v1/watchlist/user/{id} -> 200
+  $: object
+  hasMore: bool
+  items: array
+  items[].description: string
+  items[].id: number
+  items[].itemCount: number
+  items[].likeCount: number
+  items[].likedByMe: bool
+  items[].name: string
+  items[].owner.id: string
+  items[].owner.profileImageUrl: null
+  items[].owner.userName: string
+  items[].owner: object
+  items[].ownerCompatibility: null
+  items[].posters: array
+  items[].posters[]: string
+  items[].publishedAt: string
+  items[].saveCount: number
+  items[].savedByMe: bool
+  items[]: object
+  page: number
+
+## watchlist.saved  GET /api/v1/watchlist/saved -> 200
+  $: object
+  hasMore: bool
+  items: array
+  items[].description: string
+  items[].id: number
+  items[].itemCount: number
+  items[].likeCount: number
+  items[].likedByMe: bool
+  items[].name: string
+  items[].owner.id: string
+  items[].owner.profileImageUrl: null
+  items[].owner.userName: string
+  items[].owner: object
+  items[].ownerCompatibility: null
+  items[].posters: array
+  items[].posters[]: string
+  items[].publishedAt: string
+  items[].saveCount: number
+  items[].savedByMe: bool
+  items[]: object
+  page: number
+
+## watchlist.unsave  DELETE /api/v1/watchlist/{id}/save -> 200
+  $: object
+  saveCount: number
+  saved: bool
+
+## watchlist.unlike  DELETE /api/v1/watchlist/{id}/like -> 200
+  $: object
+  likeCount: number
+  liked: bool
 
 ## messages.create  POST /api/v1/messages -> 200
   $: object

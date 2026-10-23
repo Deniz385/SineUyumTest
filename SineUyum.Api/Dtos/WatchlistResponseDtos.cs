@@ -1,3 +1,5 @@
+using SineUyum.Api.Models;
+
 namespace SineUyum.Api.Dtos
 {
     // A summary in the GET /api/v1/watchlist list.
@@ -13,6 +15,9 @@ namespace SineUyum.Api.Dtos
         public string? OwnerUsername { get; set; }
         // Number of accepted people, owner included.
         public int MemberCount { get; set; } = 1;
+        public WatchlistVisibility Visibility { get; set; }
+        public int LikeCount { get; set; }
+        public int SaveCount { get; set; }
     }
 
     // Details of one of our lists; the create response has this shape too (the
@@ -27,6 +32,9 @@ namespace SineUyum.Api.Dtos
         public UserBriefWithImageDto? Owner { get; set; }
         // Members excluding the owner; pending invitations are visible only to the owner.
         public List<WatchlistMemberDto> Members { get; set; } = new();
+        public WatchlistVisibility Visibility { get; set; }
+        public int LikeCount { get; set; }
+        public int SaveCount { get; set; }
     }
 
     // A (someone else's) list shared in a message: the owner's name is shown too.
@@ -38,6 +46,46 @@ namespace SineUyum.Api.Dtos
         public string? Description { get; set; }
         public List<WatchlistItemDto> Items { get; set; } = new();
         public string? OwnerUsername { get; set; }
+        public UserBriefWithImageDto Owner { get; set; } = new();
+        public WatchlistVisibility Visibility { get; set; }
+        public int LikeCount { get; set; }
+        public int SaveCount { get; set; }
+        public bool LikedByMe { get; set; }
+        public bool SavedByMe { get; set; }
+        // Owner or accepted member: can open the editable view.
+        public bool CanEdit { get; set; }
+    }
+
+    // A public list in discovery, on a profile or among saved lists.
+    public class WatchlistCardDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public UserBriefWithImageDto Owner { get; set; } = new();
+        public int ItemCount { get; set; }
+        public int LikeCount { get; set; }
+        public int SaveCount { get; set; }
+        public bool LikedByMe { get; set; }
+        public bool SavedByMe { get; set; }
+        // Up to 4 posters of the latest movies (request language).
+        public List<string?> Posters { get; set; } = new();
+        public DateTime? PublishedAt { get; set; }
+        // The viewer's compatibility with the owner (enough movies in common).
+        public double? OwnerCompatibility { get; set; }
+    }
+
+    public class WatchlistCardPageDto
+    {
+        public List<WatchlistCardDto> Items { get; set; } = new();
+        public int Page { get; set; }
+        public bool HasMore { get; set; }
+    }
+
+    public class SaveResultDto
+    {
+        public bool Saved { get; set; }
+        public int SaveCount { get; set; }
     }
 
     public class WatchlistItemDto

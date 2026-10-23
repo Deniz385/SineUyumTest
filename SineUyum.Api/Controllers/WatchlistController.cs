@@ -55,44 +55,15 @@ namespace SineUyum.Api.Controllers
                     IsOwner = w.UserId == userId,
                     OwnerUsername = w.User.UserName,
                     MemberCount = 1 + w.Members.Count(m => m.Accepted),
-                    IsShared = w.UserId != userId || w.Members.Any(m => m.Accepted)
+                    IsShared = w.UserId != userId || w.Members.Any(m => m.Accepted),
+                    Visibility = w.Visibility,
+                    LikeCount = w.Likes.Count,
+                    SaveCount = w.Saves.Count
                 })
                 .OrderBy(w => w.Name)
                 .ToListAsync();
 
             return Ok(watchlists);
-        }
-
-        [HttpGet("public/{listId}")]
-        public async Task<ActionResult<PublicWatchlistDto>> GetPublicWatchlistDetails(int listId)
-        {
-            var lang = SupportedLanguages.Current;
-            var watchlist = await _context.Watchlists
-                .Where(w => w.Id == listId)
-                .Select(w => new PublicWatchlistDto
-                {
-                    Id = w.Id,
-                    Name = w.Name,
-                    Description = w.Description,
-                    OwnerUsername = w.User.UserName,
-                    Items = w.Items
-                        .OrderByDescending(i => i.AddedAt)
-                        .Select(i => new WatchlistItemDto
-                        {
-                            MovieId = i.MovieId,
-                            Title = i.Movie.Translations.Where(t => t.Language == lang).Select(t => t.Title).FirstOrDefault() ?? i.Movie.Title,
-                            PosterPath = i.Movie.Translations.Where(t => t.Language == lang).Select(t => t.PosterPath).FirstOrDefault() ?? i.Movie.PosterPath,
-                            AddedAt = i.AddedAt
-                        }).ToList()
-                })
-                .FirstOrDefaultAsync();
-
-            if (watchlist == null)
-            {
-                return NotFound(_t["watchlists.notFound"].Value);
-            }
-
-            return Ok(watchlist);
         }
 
         [HttpGet("{listId}")]
@@ -156,7 +127,10 @@ namespace SineUyum.Api.Controllers
                 Items = items,
                 IsOwner = isOwner,
                 Owner = owner,
-                Members = members
+                Members = members,
+                Visibility = list.Visibility,
+                LikeCount = await _context.WatchlistLikes.CountAsync(l => l.WatchlistId == listId),
+                SaveCount = await _context.WatchlistSaves.CountAsync(v => v.WatchlistId == listId)
             });
         }
 
@@ -166,11 +140,14 @@ namespace SineUyum.Api.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
 
+            var visibility = dto.Visibility ?? WatchlistVisibility.Private;
             var watchlist = new Watchlist
             {
                 Name = dto.Name,
                 Description = dto.Description,
-                UserId = userId
+                UserId = userId,
+                Visibility = visibility,
+                PublishedAt = visibility == WatchlistVisibility.Public ? DateTime.UtcNow : null
             };
 
             _context.Watchlists.Add(watchlist);
@@ -181,7 +158,8 @@ namespace SineUyum.Api.Controllers
             {
                 Id = watchlist.Id,
                 Name = watchlist.Name,
-                Description = watchlist.Description
+                Description = watchlist.Description,
+                Visibility = watchlist.Visibility
             });
         }
 
@@ -200,6 +178,12 @@ namespace SineUyum.Api.Controllers
 
             watchlist.Name = dto.Name;
             watchlist.Description = dto.Description;
+            if (dto.Visibility is { } visibility && visibility != watchlist.Visibility)
+            {
+                watchlist.Visibility = visibility;
+                // Made public (again): shows up as new in discovery.
+                if (visibility == WatchlistVisibility.Public) watchlist.PublishedAt = DateTime.UtcNow;
+            }
 
             _context.Watchlists.Update(watchlist);
             await _context.SaveChangesAsync();

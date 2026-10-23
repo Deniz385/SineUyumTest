@@ -26,6 +26,8 @@
         public DbSet<ReviewComment> ReviewComments { get; set; }
         public DbSet<TasteTwinSuggestion> TasteTwinSuggestions { get; set; }
         public DbSet<WatchlistMember> WatchlistMembers { get; set; }
+        public DbSet<WatchlistLike> WatchlistLikes { get; set; }
+        public DbSet<WatchlistSave> WatchlistSaves { get; set; }
         public DbSet<EventVote> EventVotes { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
@@ -268,6 +270,43 @@
                 .HasOne(t => t.SuggestedUser)
                 .WithMany()
                 .HasForeignKey(t => t.SuggestedUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Discovery: public lists, newest first.
+            builder.Entity<Watchlist>()
+                .HasIndex(w => new { w.Visibility, w.PublishedAt });
+
+            builder.Entity<WatchlistLike>()
+                .HasKey(l => new { l.WatchlistId, l.UserId });
+            builder.Entity<WatchlistLike>()
+                .HasIndex(l => l.CreatedAt);
+            builder.Entity<WatchlistLike>()
+                .HasOne(l => l.Watchlist)
+                .WithMany(w => w.Likes)
+                .HasForeignKey(l => l.WatchlistId)
+                .OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<WatchlistLike>()
+                .HasOne(l => l.User)
+                .WithMany()
+                .HasForeignKey(l => l.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<WatchlistSave>()
+                .HasKey(v => new { v.WatchlistId, v.UserId });
+            // "My saved lists" and "most saved this week".
+            builder.Entity<WatchlistSave>()
+                .HasIndex(v => new { v.UserId, v.CreatedAt });
+            builder.Entity<WatchlistSave>()
+                .HasIndex(v => v.CreatedAt);
+            builder.Entity<WatchlistSave>()
+                .HasOne(v => v.Watchlist)
+                .WithMany(w => w.Saves)
+                .HasForeignKey(v => v.WatchlistId)
+                .OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<WatchlistSave>()
+                .HasOne(v => v.User)
+                .WithMany()
+                .HasForeignKey(v => v.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<WatchlistMember>()

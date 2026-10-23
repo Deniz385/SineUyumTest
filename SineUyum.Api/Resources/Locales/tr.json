@@ -180,7 +180,8 @@
     "tasteTwin": "Bu haftanın zevk ikizi: {0} (%{1:0} uyumlu, {2} ortak film).",
     "allMarkedAsRead": "Tüm bildirimler okundu olarak işaretlendi.",
     "markedAsRead": "Bildirim okundu olarak işaretlendi.",
-    "notFound": "Bildirim bulunamadı veya bu bildirime erişim yetkiniz yok."
+    "notFound": "Bildirim bulunamadı veya bu bildirime erişim yetkiniz yok.",
+    "watchlistSaved": "{0} '{1}' listeni kaydetti."
   },
   "privacy": {
     "profileDetailsHidden": "Bu kullanıcının profil ayrıntıları gizli.",
@@ -263,7 +264,9 @@
     "memberNotFound": "Üye bulunamadı.",
     "onlyOwnerCanRemove": "Yalnızca liste sahibi üye çıkarabilir.",
     "left": "Listeden ayrıldınız.",
-    "memberRemoved": "Üye listeden çıkarıldı."
+    "memberRemoved": "Üye listeden çıkarıldı.",
+    "invalidSort": "Bilinmeyen sıralama. trending, popular, new ya da forYou kullan.",
+    "ownList": "Kendi listeni beğenemez ya da kaydedemezsin."
   },
   "fields": {
     "address": "Adres",

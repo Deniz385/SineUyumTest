@@ -180,7 +180,8 @@
     "tasteTwin": "Your taste twin this week: {0} ({1:0}% compatible, {2} movies in common).",
     "allMarkedAsRead": "All notifications marked as read.",
     "markedAsRead": "Notification marked as read.",
-    "notFound": "Notification not found or you do not have access to it."
+    "notFound": "Notification not found or you do not have access to it.",
+    "watchlistSaved": "{0} saved your list '{1}'."
   },
   "privacy": {
     "profileDetailsHidden": "This user's profile details are private.",
@@ -263,7 +264,9 @@
     "memberNotFound": "Member not found.",
     "onlyOwnerCanRemove": "Only the list's owner can remove members.",
     "left": "You left the list.",
-    "memberRemoved": "Member removed from the list."
+    "memberRemoved": "Member removed from the list.",
+    "invalidSort": "Unknown sort order. Use trending, popular, new or forYou.",
+    "ownList": "You can't like or save your own list."
   },
   "fields": {
     "address": "Address",

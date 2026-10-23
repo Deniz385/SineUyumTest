@@ -230,13 +230,20 @@ public class ResponseContractTests : IClassFixture<ResponseContractTests.Factory
         await Call("diary.delete", HttpMethod.Delete, $"/api/v1/diary/{diaryRewatch.GetProperty("id").GetInt32()}", a);
 
         // Watchlist.
-        var list = await Post("watchlist.create", "/api/v1/watchlist", a, new { name = "List", description = "Description" });
+        var list = await Post("watchlist.create", "/api/v1/watchlist", a, new { name = "List", description = "Description", visibility = "Public" });
         var listId = list.GetProperty("id").GetInt32();
         await Get("watchlist.list", "/api/v1/watchlist", a);
         await Post("watchlist.addMovie", $"/api/v1/watchlist/{listId}/movies", a, new { movieId = 552, title = "Client title", posterPath = "/client.jpg" });
         await Get("watchlist.details", $"/api/v1/watchlist/{listId}", a);
         await Get("watchlist.public", $"/api/v1/watchlist/public/{listId}", b);
         await Call("watchlist.update", HttpMethod.Put, $"/api/v1/watchlist/{listId}", a, new { name = "List 2", description = "x" });
+        await Post("watchlist.like", $"/api/v1/watchlist/{listId}/like", b, null);
+        await Post("watchlist.save", $"/api/v1/watchlist/{listId}/save", b, null);
+        await Get("watchlist.discover", "/api/v1/watchlist/discover?sort=trending", b);
+        await Get("watchlist.userLists", $"/api/v1/watchlist/user/{aId}", b);
+        await Get("watchlist.saved", "/api/v1/watchlist/saved", b);
+        await Call("watchlist.unsave", HttpMethod.Delete, $"/api/v1/watchlist/{listId}/save", b);
+        await Call("watchlist.unlike", HttpMethod.Delete, $"/api/v1/watchlist/{listId}/like", b);
 
         // Messages: plain text, a movie suggestion, a shared list.
         await Post("messages.create", "/api/v1/messages", a, new { recipientId = bId, content = "hi" });

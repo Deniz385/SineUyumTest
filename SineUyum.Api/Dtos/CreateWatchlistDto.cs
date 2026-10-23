@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using SineUyum.Api.Models;
 
 namespace SineUyum.Api.Dtos
 {
@@ -10,5 +11,10 @@ namespace SineUyum.Api.Dtos
 
         [MaxLength(500, ErrorMessage = "validation.maxLength")]
         public string? Description { get; set; }
+
+        // "Private" | "Public". Create: Private when omitted; update: unchanged
+        // when omitted (older clients do not send it).
+        [EnumDataType(typeof(WatchlistVisibility))]
+        public WatchlistVisibility? Visibility { get; set; }
     }
 }

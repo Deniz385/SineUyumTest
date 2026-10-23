@@ -74,6 +74,16 @@ namespace SineUyum.Api.Controllers
                 .ToListAsync();
             _context.WatchlistMembers.RemoveRange(memberships);
 
+            // Likes and saves of each other's lists go as well.
+            _context.WatchlistLikes.RemoveRange(await _context.WatchlistLikes
+                .Where(l => (l.UserId == userId && l.Watchlist.UserId == currentUserId) ||
+                            (l.UserId == currentUserId && l.Watchlist.UserId == userId))
+                .ToListAsync());
+            _context.WatchlistSaves.RemoveRange(await _context.WatchlistSaves
+                .Where(v => (v.UserId == userId && v.Watchlist.UserId == currentUserId) ||
+                            (v.UserId == currentUserId && v.Watchlist.UserId == userId))
+                .ToListAsync());
+
             try
             {
                 await _context.SaveChangesAsync();

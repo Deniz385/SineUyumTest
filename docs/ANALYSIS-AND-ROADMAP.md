@@ -259,8 +259,10 @@ live in one place, `PrivacyService`; clients only display them.
 - Web: Edit Profile > Privacy; Block / Unblock on the profile. Mobile:
   Settings > Privacy; Block in the profile menu.
 
-**Remaining:** the shared watchlist link (`watchlist/public/{id}`) is independent
-of the privacy settings; a list is deliberately shared via a message.
+- ✅ The read-only list view (`watchlist/public/{id}`) used to show any list to
+  anyone (list ids are sequential). It now opens only your own and shared
+  lists, public lists whose owner's details you may see, and lists sent to or
+  by you in a message (Phase 5, item 35).
 
 ### G13 — Missing validation when joining events — ✅ closed (with G4)
 `EventController.JoinEvent` does not check whether the `eventId` exists or
@@ -942,3 +944,16 @@ movie lovers; the core differentiating feature is the compatibility score.
       picker) and a shareable 1080×1920 image; a button on the profile and a
       feed banner in December and early January (only when the recap is
       ready).
+35. Public lists and list discovery — ✅ API
+    - Lists are Private (default; existing lists stay private) or Public. A
+      public list is visible to someone when the owner's profile details are
+      (block, private profile).
+    - `GET /watchlist/discover?sort=trending|popular|new|forYou&q=`: others'
+      public lists with at least 3 movies; trending = saves (×2) and likes in
+      the last 7 days, forYou = lists of owners at least 60% compatible with
+      you (3+ movies in common). Cards carry the latest 4 posters, counts, the
+      viewer's like/save state and the owner's compatibility.
+    - Likes and saves (`POST/DELETE /watchlist/{id}/like|save`); saving
+      notifies the owner (at most once a day per person). `GET /watchlist/saved`
+      and `GET /watchlist/user/{id}` (a profile's public lists). Blocking removes
+      likes and saves between the two users.

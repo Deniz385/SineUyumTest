@@ -39,6 +39,14 @@ namespace SineUyum.Api.Dtos
     }
 
     // GET /api/v1/reviews/movie/{movieId}
+    // GET /api/v1/reviews/user/{userId}
+    public class ReviewPageDto
+    {
+        public List<ReviewDto> Items { get; set; } = new();
+        public int Page { get; set; }
+        public bool HasMore { get; set; }
+    }
+
     public class MovieReviewsDto
     {
         public int? MyRating { get; set; }

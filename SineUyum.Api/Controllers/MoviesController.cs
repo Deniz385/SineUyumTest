@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Localization;
+using SineUyum.Api.Dtos;
 using SineUyum.Api.Localization;
 using SineUyum.Api.RateLimiting;
 using SineUyum.Api.Services;
@@ -95,6 +96,53 @@ namespace SineUyum.Api.Controllers
             // The same for every user of a language; changes slowly.
             var url = $"{TmdbApiBaseUrl}movie/popular?api_key={_tmdbApiKey}&language={Language}&page=1";
             return CachedTmdbJson($"popular:{Language}", url, TimeSpan.FromHours(1));
+        }
+
+        // Poster paths of popular films for the sign-in / sign-up poster wall,
+        // so the clients do not hard-code artwork. Anonymous; same TMDb
+        // request and cache entry as /popular.
+        [HttpGet("showcase")]
+        [AllowAnonymous]
+        public async Task<ActionResult<ShowcaseDto>> GetShowcase()
+        {
+            if (string.IsNullOrEmpty(_tmdbApiKey)) return Ok(new ShowcaseDto());
+
+            var cacheKey = $"popular:{Language}";
+            if (!_cache.TryGetValue(cacheKey, out string? json) || json == null)
+            {
+                var url = $"{TmdbApiBaseUrl}movie/popular?api_key={_tmdbApiKey}&language={Language}&page=1";
+                try
+                {
+                    var response = await _httpClientFactory.CreateClient("TMDb").GetAsync(url);
+                    if (!response.IsSuccessStatusCode) return Ok(new ShowcaseDto());
+                    json = await response.Content.ReadAsStringAsync();
+                    _cache.Set(cacheKey, json, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1), Size = 1 });
+                }
+                catch (HttpRequestException)
+                {
+                    // Decorative only: an empty wall, not an error.
+                    return Ok(new ShowcaseDto());
+                }
+            }
+
+            var posters = new List<string>();
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("results", out var results) && results.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    foreach (var movie in results.EnumerateArray())
+                    {
+                        if (movie.TryGetProperty("poster_path", out var p) && p.GetString() is { Length: > 0 } path) posters.Add(path);
+                        if (posters.Count == 24) break;
+                    }
+                }
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                posters.Clear();
+            }
+            return Ok(new ShowcaseDto { Posters = posters });
         }
 
         // Well-known films of all time: the first-run welcome asks to rate a

@@ -32,7 +32,7 @@ public class MovieCacheTests : IClassFixture<MovieCacheTests.CachingFactory>
             var response = new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(
-                    "{\"results\":[{\"id\":1,\"title\":\"Test\"}]}",
+                    "{\"results\":[{\"id\":1,\"title\":\"Test\",\"poster_path\":\"/t1.jpg\"},{\"id\":2,\"title\":\"No poster\",\"poster_path\":null}]}",
                     System.Text.Encoding.UTF8,
                     "application/json"),
             };
@@ -137,5 +137,28 @@ public class MovieCacheTests : IClassFixture<MovieCacheTests.CachingFactory>
 
         (await TopRated("?page=99")).EnsureSuccessStatusCode();
         Assert.Contains("page=5", _factory.Handler.Urls.Last());
+    }
+
+    // The sign-in poster wall: anonymous, from the same cache entry as /popular.
+    [Fact]
+    public async Task Showcase_Anonymous_UsesThePopularCacheEntry()
+    {
+        var client = _factory.CreateClient();
+
+        var first = await client.GetAsync("/api/v1/movies/showcase");
+        // Another test may have filled the entry already; from here on, no more TMDb calls.
+        var afterFirst = _factory.Handler.CallCount;
+        first.EnsureSuccessStatusCode();
+        using (var doc = JsonDocument.Parse(await first.Content.ReadAsStringAsync()))
+        {
+            Assert.Equal(["/t1.jpg"], doc.RootElement.GetProperty("posters").EnumerateArray().Select(p => p.GetString()));
+        }
+
+        var token = await UserTokenAsync(client);
+        var req = new HttpRequestMessage(HttpMethod.Get, "/api/v1/movies/popular");
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        (await client.SendAsync(req)).EnsureSuccessStatusCode();
+        (await client.GetAsync("/api/v1/movies/showcase")).EnsureSuccessStatusCode();
+        Assert.Equal(afterFirst, _factory.Handler.CallCount);
     }
 }

@@ -369,6 +369,12 @@
   items[].user: object
   items[]: object
 
+## reviews.forUser  GET /api/v1/reviews/user/{id} -> 200
+  $: object
+  hasMore: bool
+  items: array
+  page: number
+
 ## account.onboardingComplete  POST /api/v1/account/onboarding/complete -> 200
   $: object
   onboardingCompleted: bool

@@ -67,6 +67,22 @@ namespace SineUyum.Api.Controllers
             });
         }
 
+        // A user's reviews (profile), newest first; the same rule as profile details.
+        [HttpGet("user/{userId}")]
+        public async Task<ActionResult<ReviewPageDto>> ForUser(string userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 50);
+            await _privacy.EnsureCanViewDetailsAsync(Me, userId, User.IsInRole("Admin"));
+
+            var reviews = await _social.ToDtosAsync(Me, _context.Reviews
+                .Where(r => r.UserId == userId)
+                .OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize + 1));
+            return Ok(new ReviewPageDto { Items = reviews.Take(pageSize).ToList(), Page = page, HasMore = reviews.Count > pageSize });
+        }
+
         // Writes or updates one's own review. A review is the written form of
         // a rating: the rating comes first.
         [HttpPut("movie/{movieId:int}")]

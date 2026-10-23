@@ -32,4 +32,10 @@ namespace SineUyum.Api.Dtos
         public int FollowerCount { get; set; }
         public int FollowingCount { get; set; }
     }
+
+    // GET /api/v1/movies/showcase
+    public class ShowcaseDto
+    {
+        public List<string> Posters { get; set; } = new();
+    }
 }

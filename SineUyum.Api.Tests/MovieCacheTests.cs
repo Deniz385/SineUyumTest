@@ -113,4 +113,29 @@ public class MovieCacheTests : IClassFixture<MovieCacheTests.CachingFactory>
         (await Popular("tr")).EnsureSuccessStatusCode();
         Assert.Equal(before + 2, _factory.Handler.CallCount);
     }
+
+    // Top rated (first-run welcome): cached per language and page, page clamped.
+    [Fact]
+    public async Task TopRated_CachedPerPage_PageClamped()
+    {
+        var client = _factory.CreateClient();
+        var token = await UserTokenAsync(client);
+
+        async Task<HttpResponseMessage> TopRated(string query)
+        {
+            var req = new HttpRequestMessage(HttpMethod.Get, "/api/v1/movies/top_rated" + query);
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            return await client.SendAsync(req);
+        }
+
+        var before = _factory.Handler.CallCount;
+        (await TopRated("?page=2")).EnsureSuccessStatusCode();
+        (await TopRated("?page=2")).EnsureSuccessStatusCode();
+        Assert.Equal(before + 1, _factory.Handler.CallCount);
+        Assert.Contains("movie/top_rated", _factory.Handler.Urls.Last());
+        Assert.Contains("page=2", _factory.Handler.Urls.Last());
+
+        (await TopRated("?page=99")).EnsureSuccessStatusCode();
+        Assert.Contains("page=5", _factory.Handler.Urls.Last());
+    }
 }

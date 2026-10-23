@@ -20,6 +20,10 @@
         // rendered in it. New accounts take the request language; accounts
         // created before localization were migrated to "tr".
         public string Language { get; set; } = Localization.SupportedLanguages.Default;
+        // When the first-run welcome (rate a few films, find people) was
+        // finished or skipped; null shows it. Existing accounts were marked done.
+        public DateTime? OnboardingCompletedAt { get; set; }
+
         public ICollection<UserRating> Ratings { get; set; } = new List<UserRating>();
         // IdentityUser already provides Id, UserName, Email, PasswordHash and
         // many other properties. Extra profile fields such as a birth date

@@ -97,6 +97,16 @@ namespace SineUyum.Api.Controllers
             return CachedTmdbJson($"popular:{Language}", url, TimeSpan.FromHours(1));
         }
 
+        // Well-known films of all time: the first-run welcome asks to rate a
+        // few, and these are more likely to have been seen than this week's.
+        [HttpGet("top_rated")]
+        public Task<IActionResult> GetTopRatedMovies([FromQuery] int page = 1)
+        {
+            page = Math.Clamp(page, 1, 5);
+            var url = $"{TmdbApiBaseUrl}movie/top_rated?api_key={_tmdbApiKey}&language={Language}&page={page}";
+            return CachedTmdbJson($"top_rated:{Language}:{page}", url, TimeSpan.FromHours(6));
+        }
+
         [HttpGet("now_playing")]
         public Task<IActionResult> GetNowPlayingMovies()
         {

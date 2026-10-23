@@ -25,6 +25,14 @@ namespace SineUyum.Api.Dtos
         public List<string> Roles { get; set; } = new();
         // The user's stored language ("en", "tr"); notifications use it.
         public string Language { get; set; } = string.Empty;
+        // False: clients show the first-run welcome.
+        public bool OnboardingCompleted { get; set; }
+    }
+
+    // POST /api/v1/account/onboarding/complete
+    public class OnboardingStateDto
+    {
+        public bool OnboardingCompleted { get; set; }
     }
 
     // PUT /api/v1/account/language request and response.

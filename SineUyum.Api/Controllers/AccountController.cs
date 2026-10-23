@@ -124,7 +124,8 @@ namespace SineUyum.Api.Controllers
                 IsSubscribed = subscription.IsActive,
                 SubscriptionExpires = subscription.ExpiresAt,
                 Roles = roles.ToList(),
-                Language = user.Language
+                Language = user.Language,
+                OnboardingCompleted = user.OnboardingCompletedAt != null
             });
         }
 
@@ -145,6 +146,23 @@ namespace SineUyum.Api.Controllers
             if (!result.Succeeded) return BadRequest(result.Errors);
 
             return Ok(new LanguageDto { Language = language });
+        }
+
+        // The first-run welcome was finished or skipped (idempotent).
+        [HttpPost("onboarding/complete")]
+        [Authorize]
+        public async Task<ActionResult<OnboardingStateDto>> CompleteOnboarding()
+        {
+            var user = await CurrentUserAsync();
+            if (user == null) return Unauthorized();
+
+            if (user.OnboardingCompletedAt == null)
+            {
+                user.OnboardingCompletedAt = DateTime.UtcNow;
+                var result = await _userManager.UpdateAsync(user);
+                if (!result.Succeeded) return BadRequest(result.Errors);
+            }
+            return Ok(new OnboardingStateDto { OnboardingCompleted = true });
         }
 
         // There was no way to change the password in the app; a user who wanted

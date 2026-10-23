@@ -24,6 +24,7 @@
   user.id: string
   user.isSubscribed: bool
   user.language: string
+  user.onboardingCompleted: bool
   user.profileImageUrl: null
   user.roles: array
   user.roles[]: string
@@ -41,6 +42,7 @@
   user.id: string
   user.isSubscribed: bool
   user.language: string
+  user.onboardingCompleted: bool
   user.profileImageUrl: null
   user.roles: array
   user.roles[]: string
@@ -58,6 +60,7 @@
   user.id: string
   user.isSubscribed: bool
   user.language: string
+  user.onboardingCompleted: bool
   user.profileImageUrl: null
   user.roles: array
   user.roles[]: string
@@ -72,6 +75,7 @@
   id: string
   isSubscribed: bool
   language: string
+  onboardingCompleted: bool
   profileImageUrl: null
   roles: array
   roles[]: string
@@ -350,6 +354,24 @@
   rewatchCount: number
   totalCount: number
   year: number
+
+## people.suggestions  GET /api/v1/people/suggestions -> 200
+  $: object
+  basis: string
+  items: array
+  items[].bio: null
+  items[].commonMovieCount: number
+  items[].compatibility: null
+  items[].followerCount: number
+  items[].user.id: string
+  items[].user.profileImageUrl: null
+  items[].user.userName: string
+  items[].user: object
+  items[]: object
+
+## account.onboardingComplete  POST /api/v1/account/onboarding/complete -> 200
+  $: object
+  onboardingCompleted: bool
 
 ## diary.forMovie  GET /api/v1/diary/movie/{id} -> 200
   $: array
@@ -751,6 +773,7 @@
   user.id: string
   user.isSubscribed: bool
   user.language: string
+  user.onboardingCompleted: bool
   user.profileImageUrl: null
   user.roles: array
   user.roles[]: string
@@ -1004,6 +1027,7 @@
   user.id: string
   user.isSubscribed: bool
   user.language: string
+  user.onboardingCompleted: bool
   user.profileImageUrl: string
   user.roles: array
   user.roles[]: string

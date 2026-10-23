@@ -72,7 +72,8 @@ namespace SineUyum.Api.Services
                     IsSubscribed = subscription.IsActive,
                     SubscriptionExpires = subscription.ExpiresAt,
                     Roles = roles.ToList(),
-                    Language = user.Language
+                    Language = user.Language,
+                    OnboardingCompleted = user.OnboardingCompletedAt != null
                 }
             };
         }

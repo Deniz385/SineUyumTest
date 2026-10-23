@@ -225,6 +225,8 @@ public class ResponseContractTests : IClassFixture<ResponseContractTests.Factory
             new { watchedOn = "2025-03-11", rewatch = false, note = "Edited" });
         await Get("diary.list", $"/api/v1/diary/user/{aId}?year=2025", b);
         await Get("diary.summary", $"/api/v1/diary/user/{aId}/summary?year=2025", b);
+        await Get("people.suggestions", "/api/v1/people/suggestions", b);
+        await Post("account.onboardingComplete", "/api/v1/account/onboarding/complete", b, null);
         await Get("diary.forMovie", $"/api/v1/diary/movie/{diaryEntry.GetProperty("movie").GetProperty("id").GetInt32()}", a);
         await Get("yearInReview", $"/api/v1/year-in-review/user/{aId}?year=2025", b);
         await Call("diary.delete", HttpMethod.Delete, $"/api/v1/diary/{diaryRewatch.GetProperty("id").GetInt32()}", a);

@@ -18,12 +18,11 @@ void main() {
   };
 
   // Argument names used in an ICU message: `{name}` and `{count, plural,
-  // ...}`, including those nested in plural branches.
-  Set<String> placeholdersIn(String message) =>
-      RegExp(r'\{\s*(\w+)\s*[,}]')
-          .allMatches(message)
-          .map((m) => m.group(1)!)
-          .toSet();
+  // ...}`, including those nested in plural branches. A branch body such as
+  // `=1{rewatch}` or `other{films}` is text, not an argument.
+  Set<String> placeholdersIn(String message) => RegExp(
+    r'(?<!(?:=\d+|\b(?:zero|one|two|few|many|other))\s*)\{\s*(\w+)\s*[,}]',
+  ).allMatches(message).map((m) => m.group(1)!).toSet();
 
   final translations =
       Directory('lib/l10n')
@@ -36,6 +35,17 @@ void main() {
 
   final english = read(template);
   final englishMessages = messages(english);
+
+  test('plural branch bodies are not counted as placeholders', () {
+    expect(
+      placeholdersIn('{count, plural, =1{rewatch} other{{count} rewatches}}'),
+      {'count'},
+    );
+    expect(placeholdersIn('Hi {name}, {n, plural, one{film} other{films}}'), {
+      'name',
+      'n',
+    });
+  });
 
   test('there is at least one translation besides the template', () {
     expect(translations, contains('lib/l10n/app_tr.arb'));

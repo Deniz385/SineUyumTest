@@ -1,21 +1,34 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Box, Button, Card, CardContent, IconButton, Typography } from '@mui/material';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CloseIcon from '@mui/icons-material/Close';
+import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { bannerRecapYear, dismissBanner, isBannerDismissed, yearInReviewPath } from './yearInReview';
 
-// Announces your own yearly recap on the feed in December and early January.
-// Dismissing it hides it for that year.
+// Announces your own yearly recap on the feed in December and early January,
+// only once it is ready (enough films), so it never leads to the "not ready"
+// screen. Dismissing it hides it for that year.
 export const YearInReviewBanner = () => {
     const { t } = useTranslation();
     const { user } = useAuth();
     const [year] = useState(() => bannerRecapYear());
     const [dismissed, setDismissed] = useState(() => year != null && isBannerDismissed(year));
+    const [ready, setReady] = useState(false);
+    const userId = user?.id;
 
-    if (!user || year == null || dismissed) return null;
+    useEffect(() => {
+        if (!userId || year == null || dismissed) return undefined;
+        let active = true;
+        api.get(`/api/v1/year-in-review/user/${userId}`, { params: { year } })
+            .then((res) => { if (active) setReady(Boolean(res.data?.ready)); })
+            .catch(() => { /* no banner without a recap */ });
+        return () => { active = false; };
+    }, [userId, year, dismissed]);
+
+    if (!user || year == null || dismissed || !ready) return null;
 
     const dismiss = () => {
         dismissBanner(year);

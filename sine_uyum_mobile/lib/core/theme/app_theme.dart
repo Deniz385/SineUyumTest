@@ -178,8 +178,8 @@ class AppTheme {
         style: FilledButton.styleFrom(
           backgroundColor: c.primary,
           foregroundColor: c.onPrimary,
-          disabledBackgroundColor: c.surfaceOverlay,
-          disabledForegroundColor: c.textMuted,
+          disabledBackgroundColor: c.isDark ? c.surfaceOverlay : c.border,
+          disabledForegroundColor: c.isDark ? c.textMuted : c.textSecondary,
           minimumSize: minButton,
           padding: buttonPadding,
           shape: pill,
@@ -399,7 +399,7 @@ class AppTheme {
       dividerTheme: DividerThemeData(color: c.border, thickness: 1, space: 1),
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: c.primary,
-        linearTrackColor: c.surfaceOverlay,
+        linearTrackColor: c.isDark ? c.surfaceOverlay : c.border,
         circularTrackColor: Colors.transparent,
       ),
       sliderTheme: SliderThemeData(

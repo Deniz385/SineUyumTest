@@ -39,6 +39,15 @@ class MovieRepository {
     );
   }
 
+  /// Rates by id only: the server adds a movie it doesn't have yet from
+  /// TMDb (the first-run welcome rates straight from TMDb lists).
+  Future<void> rateById(int movieId, int rating) async {
+    await _client.post<Map<String, dynamic>>(
+      '/api/v1/ratings',
+      body: {'movieId': movieId, 'rating': rating},
+    );
+  }
+
   Future<List<Movie>> _list(String path, {Map<String, dynamic>? query}) async {
     final data = await _client.get<Map<String, dynamic>>(path, query: query);
     final results = data['results'] as List? ?? const [];

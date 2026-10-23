@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'app_harness.dart';
@@ -137,7 +138,24 @@ void _profile(AppHarness app, String id, String name) {
   );
 }
 
+final _newUser = {
+  'id': 'u1',
+  'userName': 'ayse',
+  'roles': ['User'],
+  'onboardingCompleted': false,
+};
+
 final keyScreens = <KeyScreen>[
+  KeyScreen('welcome', '/welcome', user: _newUser),
+  KeyScreen(
+    'welcome-rate',
+    '/welcome',
+    user: _newUser,
+    interact: (tester) async {
+      await tester.tap(find.byType(FilledButton).last);
+      await AppHarness.settle(tester);
+    },
+  ),
   KeyScreen('home', '/home', setUp: _richSocial),
   const KeyScreen('home-thin', '/home'),
   const KeyScreen('discover-movies', '/discover'),

@@ -189,6 +189,32 @@ class SessionNotifier extends Notifier<SessionState> {
     }
   }
 
+  /// Ends the first-run welcome (finished or skipped): tells the server,
+  /// then reloads the user. If the server can't be told (no network), the
+  /// welcome still closes for this session — it must never trap anyone —
+  /// and is offered again on the next start.
+  Future<void> completeOnboarding() async {
+    final user = state.user;
+    if (!state.isAuthenticated || user == null) return;
+    try {
+      await _auth.completeOnboarding();
+      final fresh = await _auth.me();
+      if (!ref.mounted) return;
+      await _remember(fresh);
+      state = SessionState(
+        status: SessionStatus.authenticated,
+        // An older server might still say false right after; trust the POST.
+        user: fresh.copyWith(onboardingCompleted: true),
+      );
+    } catch (_) {
+      if (!ref.mounted) return;
+      state = SessionState(
+        status: SessionStatus.authenticated,
+        user: user.copyWith(onboardingCompleted: true),
+      );
+    }
+  }
+
   void handleSessionExpired() {
     if (state.status == SessionStatus.unauthenticated) return;
     // Session over: the previous user's saved data must not stay on the

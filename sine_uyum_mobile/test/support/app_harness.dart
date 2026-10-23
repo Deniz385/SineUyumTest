@@ -82,6 +82,10 @@ class AppHarness {
     String? initialLocation,
   }) async {
     L10n.locale = locale;
+    // A phone (390 × 844 logical pixels).
+    tester.view.physicalSize = const Size(1170, 2532);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [

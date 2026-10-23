@@ -33,6 +33,13 @@ class AuthRepository {
     return AppUser.fromJson(data);
   }
 
+  /// The first-run welcome was finished or skipped (idempotent).
+  Future<void> completeOnboarding() async {
+    await _client.post<Map<String, dynamic>>(
+      '/api/v1/account/onboarding/complete',
+    );
+  }
+
   Future<void> logout(String refreshToken) async {
     await _client.post<Map<String, dynamic>>(
       '/api/v1/account/logout',

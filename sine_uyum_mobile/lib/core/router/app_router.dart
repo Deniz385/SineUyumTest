@@ -13,6 +13,7 @@ import '../../features/messages/messages_page.dart';
 import '../../features/movies/movie_detail_page.dart';
 import '../../features/movies/movie_search_page.dart';
 import '../../features/notifications/notifications_page.dart';
+import '../../features/onboarding/welcome_page.dart';
 import '../../features/profile/edit_profile_page.dart';
 import '../../features/profile/film_identity_page.dart';
 import '../../features/profile/profile_page.dart';
@@ -31,13 +32,15 @@ import '../../l10n/l10n.dart';
 import '../../providers/session_provider.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  // Bridge the session state to a Listenable so go_router re-evaluates its
-  // redirects.
-  final sessionListenable = ValueNotifier<SessionStatus>(
-    ref.read(sessionProvider).status,
+  // Bridge the session state (signed in or not, first-run welcome done or
+  // not) to a Listenable so go_router re-evaluates its redirects.
+  (SessionStatus, bool) gate(SessionState s) =>
+      (s.status, s.user?.onboardingCompleted ?? true);
+  final sessionListenable = ValueNotifier<(SessionStatus, bool)>(
+    gate(ref.read(sessionProvider)),
   );
   ref.listen<SessionState>(sessionProvider, (previous, next) {
-    sessionListenable.value = next.status;
+    sessionListenable.value = gate(next);
   });
   ref.onDispose(sessionListenable.dispose);
 
@@ -45,7 +48,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/splash',
     refreshListenable: sessionListenable,
     redirect: (context, state) {
-      final status = ref.read(sessionProvider).status;
+      final session = ref.read(sessionProvider);
+      final status = session.status;
       final location = state.matchedLocation;
       final isAuthRoute = location == '/login' || location == '/register';
 
@@ -58,6 +62,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         return isAuthRoute ? null : '/login';
       }
 
+      // Signed in for the first time: the welcome comes first, once.
+      final welcomed = session.user?.onboardingCompleted ?? true;
+      if (!welcomed) return location == '/welcome' ? null : '/welcome';
+      if (location == '/welcome') return '/home';
+
       // Signed in: don't stay on the auth or splash screens.
       if (isAuthRoute || location == '/splash') return '/home';
 
@@ -67,6 +76,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/splash', builder: (_, _) => const SplashPage()),
       GoRoute(path: '/login', builder: (_, _) => const LoginPage()),
       GoRoute(path: '/register', builder: (_, _) => const RegisterPage()),
+      GoRoute(path: '/welcome', builder: (_, _) => const WelcomePage()),
 
       // The five bottom-navigation tabs (docs/DESIGN-SYSTEM.md §7); each
       // keeps its own state. Keep AppShell.tabPaths in the same order.

@@ -1221,5 +1221,61 @@
       }
     }
   },
-  "manageLists": "Manage lists"
+  "manageLists": "Manage lists",
+  "welcomeTitle": "Find the people who watch like you do",
+  "welcomeBenefitMatch": "See how well your taste matches anyone's",
+  "welcomeBenefitFeed": "Follow the ratings and reviews of people like you",
+  "welcomeBenefitEvents": "Meet up at cinema events, in groups that fit",
+  "welcomeLanguage": "Language",
+  "welcomeStart": "Let's start",
+  "welcomeSkip": "Skip",
+  "welcomeStep": "Step {step} of {total}",
+  "@welcomeStep": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "welcomeRateTitle": "Rate a few films",
+  "welcomeRateHint": "Tap the films you've seen and rate {count} so we can learn your taste.",
+  "@welcomeRateHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "welcomeRateProgress": "{count} / {total}",
+  "@welcomeRateProgress": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "welcomeRateProgressSemantics": "{count} of {total} films rated",
+  "@welcomeRateProgressSemantics": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "welcomeMoreFilms": "Show more films",
+  "welcomeContinue": "Continue",
+  "welcomePeopleTitle": "People like you",
+  "welcomePeopleHint": "Follow a few people to fill your feed.",
+  "welcomeDoneTitle": "You're all set",
+  "welcomeDoneBody": "Your feed fills up as the people you follow rate and review films. You can always find more people in Discover.",
+  "welcomeGoHome": "Go to Home"
 }

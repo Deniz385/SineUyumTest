@@ -10,6 +10,7 @@ class AppUser {
     this.isSubscribed = false,
     this.subscriptionExpires,
     this.roles = const [],
+    this.onboardingCompleted = true,
   });
 
   final String id;
@@ -20,6 +21,10 @@ class AppUser {
   final bool isSubscribed;
   final DateTime? subscriptionExpires;
   final List<String> roles;
+
+  /// False: the first-run welcome is shown after sign-in. Servers that don't
+  /// send it yet count as "done", so nobody gets stuck in the welcome.
+  final bool onboardingCompleted;
 
   bool get isAdmin => roles.contains('Admin');
 
@@ -37,8 +42,21 @@ class AppUser {
       roles:
           (json['roles'] as List?)?.map((e) => e.toString()).toList() ??
           const [],
+      onboardingCompleted: json['onboardingCompleted'] as bool? ?? true,
     );
   }
+
+  AppUser copyWith({bool? onboardingCompleted}) => AppUser(
+    id: id,
+    userName: userName,
+    email: email,
+    bio: bio,
+    profileImageUrl: profileImageUrl,
+    isSubscribed: isSubscribed,
+    subscriptionExpires: subscriptionExpires,
+    roles: roles,
+    onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
+  );
 }
 
 /// Shape readable back with [AppUser.fromJson] (for the offline cache).
@@ -52,6 +70,7 @@ extension AppUserJson on AppUser {
     'isSubscribed': isSubscribed,
     'subscriptionExpires': subscriptionExpires?.toIso8601String(),
     'roles': roles,
+    'onboardingCompleted': onboardingCompleted,
   };
 }
 

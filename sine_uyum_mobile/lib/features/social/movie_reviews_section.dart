@@ -114,7 +114,7 @@ class _MovieReviewsSectionState extends ConsumerState<MovieReviewsSection> {
             if (data.myRating == null)
               Card(
                 child: ListTile(
-                  leading: const Icon(Icons.info_outline),
+                  leading: const Icon(Icons.info_outline_rounded),
                   title: Text(l10n.reviewRateFirst),
                 ),
               )
@@ -216,7 +216,11 @@ class ForYouBadge extends ConsumerWidget {
         padding: const EdgeInsets.only(top: 6),
         child: Row(
           children: [
-            Icon(Icons.favorite, size: 16, color: theme.colorScheme.secondary),
+            Icon(
+              Icons.favorite_rounded,
+              size: 16,
+              color: theme.colorScheme.secondary,
+            ),
             const SizedBox(width: 4),
             Text(
               l10n.decimal(forYou.score),

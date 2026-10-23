@@ -73,7 +73,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
                         labelText: l10n.usernameLabel,
-                        prefixIcon: const Icon(Icons.person_outline),
+                        prefixIcon: const Icon(Icons.person_outline_rounded),
                       ),
                       validator: (value) {
                         final text = value?.trim() ?? '';
@@ -89,7 +89,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
                         labelText: l10n.emailLabel,
-                        prefixIcon: const Icon(Icons.mail_outline),
+                        prefixIcon: const Icon(Icons.mail_outline_rounded),
                       ),
                       validator: (value) {
                         final text = value?.trim() ?? '';
@@ -108,7 +108,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       onFieldSubmitted: (_) => _submit(),
                       decoration: InputDecoration(
                         labelText: l10n.passwordLabel,
-                        prefixIcon: const Icon(Icons.lock_outline),
+                        prefixIcon: const Icon(Icons.lock_outline_rounded),
                         // Same rule as the server's Identity settings.
                         helperText: l10n.passwordHelper,
                       ),

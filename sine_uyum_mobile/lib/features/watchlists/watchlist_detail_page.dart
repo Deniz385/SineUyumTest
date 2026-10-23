@@ -6,8 +6,8 @@ import '../../core/network/api_exception.dart';
 import '../../data/models/watchlist.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/watchlist_provider.dart';
-import '../../widgets/poster_image.dart';
-import '../../widgets/state_views.dart';
+import '../../core/ui/poster_image.dart';
+import '../../core/ui/state_views.dart';
 import 'list_cards.dart';
 import 'public_watchlist_page.dart';
 import 'watchlist_members_sheet.dart';
@@ -104,7 +104,7 @@ class _WatchlistDetailPageState extends ConsumerState<WatchlistDetailPage> {
           if (list != null && (list.isOwner || list.isShared))
             IconButton(
               tooltip: l10n.watchlistMembers,
-              icon: const Icon(Icons.group_outlined),
+              icon: const Icon(Icons.group_rounded),
               onPressed: _openMembers,
             ),
           if (list != null && !list.isOwner)
@@ -137,10 +137,7 @@ class _WatchlistDetailPageState extends ConsumerState<WatchlistDetailPage> {
     final images = {for (final p in list.people) p.userName: p.imageUrl};
 
     if (list.items.isEmpty && !showHeader && !list.isPublic) {
-      return EmptyView(
-        icon: Icons.movie_outlined,
-        message: l10n.watchlistEmpty,
-      );
+      return EmptyView(icon: Icons.movie_rounded, message: l10n.watchlistEmpty);
     }
 
     return RefreshIndicator(
@@ -158,7 +155,7 @@ class _WatchlistDetailPageState extends ConsumerState<WatchlistDetailPage> {
               child: Align(
                 alignment: AlignmentDirectional.centerStart,
                 child: FilterChip(
-                  avatar: const Icon(Icons.visibility_off_outlined, size: 18),
+                  avatar: const Icon(Icons.visibility_off_rounded, size: 18),
                   label: Text(
                     shared
                         ? l10n.watchlistFilterUnwatchedShared
@@ -170,10 +167,10 @@ class _WatchlistDetailPageState extends ConsumerState<WatchlistDetailPage> {
               ),
             ),
           if (list.items.isEmpty)
-            EmptyView(icon: Icons.movie_outlined, message: l10n.watchlistEmpty)
+            EmptyView(icon: Icons.movie_rounded, message: l10n.watchlistEmpty)
           else if (visible.isEmpty)
             EmptyView(
-              icon: Icons.task_alt,
+              icon: Icons.task_alt_rounded,
               message: shared
                   ? l10n.watchlistAllWatchedShared
                   : l10n.watchlistAllWatched,
@@ -216,7 +213,11 @@ class _PublicHeader extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.favorite_border, size: 16, color: small?.color),
+              Icon(
+                Icons.favorite_border_rounded,
+                size: 16,
+                color: small?.color,
+              ),
               const SizedBox(width: 4),
               Text(l10n.watchlistLikeCount(list.likeCount), style: small),
             ],
@@ -224,7 +225,11 @@ class _PublicHeader extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.bookmark_border, size: 16, color: small?.color),
+              Icon(
+                Icons.bookmark_border_rounded,
+                size: 16,
+                color: small?.color,
+              ),
               const SizedBox(width: 4),
               Text(l10n.watchlistSaveCount(list.saveCount), style: small),
             ],
@@ -284,7 +289,7 @@ class _PeopleHeader extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
-            const Icon(Icons.chevron_right),
+            const Icon(Icons.chevron_right_rounded),
           ],
         ),
       ),
@@ -338,7 +343,7 @@ class _ItemTile extends StatelessWidget {
                   )
               else
                 Icon(
-                  Icons.check_circle,
+                  Icons.check_circle_rounded,
                   size: 14,
                   color: theme.colorScheme.primary,
                 ),
@@ -369,7 +374,7 @@ class _ItemTile extends StatelessWidget {
             ),
       trailing: IconButton(
         tooltip: l10n.removeFromList,
-        icon: const Icon(Icons.delete_outline),
+        icon: const Icon(Icons.delete_outline_rounded),
         onPressed: onRemove,
       ),
       onTap: () => context.push('/movie/${item.movieId}'),

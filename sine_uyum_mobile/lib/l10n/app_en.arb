@@ -1149,5 +1149,77 @@
   },
   "publicListsTitle": "Public lists",
   "savedListsTitle": "Saved lists",
-  "savedListsShowMore": "Show more"
+  "savedListsShowMore": "Show more",
+  "ratingSpoken": "{rating} out of 10",
+  "@ratingSpoken": {
+    "description": "Screen reader text for a rating.",
+    "placeholders": {
+      "rating": {
+        "type": "int"
+      }
+    }
+  },
+  "ratingInputLabel": "Your rating",
+  "ratingNotRated": "Not rated yet",
+  "ratingInputHint": "Tap or slide across the stars",
+  "seeAll": "See all",
+  "seeAllSemantics": "See all: {section}",
+  "@seeAllSemantics": {
+    "placeholders": {
+      "section": {
+        "type": "String"
+      }
+    }
+  },
+  "posterCardMeta": "{year} · {rating}",
+  "@posterCardMeta": {
+    "description": "Year and score under a poster.",
+    "placeholders": {
+      "year": {
+        "type": "String"
+      },
+      "rating": {
+        "type": "String"
+      }
+    }
+  },
+  "loadingLabel": "Loading",
+  "errorTitle": "Something went wrong",
+  "navProfile": "Profile",
+  "discoverTabMovies": "Movies",
+  "discoverTabLists": "Lists",
+  "discoverTabPeople": "People",
+  "homeTopRated": "Top rated",
+  "peopleSuggestedTaste": "People who watch like you",
+  "peopleSuggestedPopular": "Popular on SineUyum",
+  "peopleSuggestedPopularHint": "Rate a few more films and we'll find people with your taste.",
+  "peopleSuggestionsEmpty": "No suggestions right now. Search by username above.",
+  "peopleTasteLine": "{percent} compatible · {count, plural, =1{1 film in common} other{{count} films in common}}",
+  "@peopleTasteLine": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "unfollowSemantics": "Unfollow {name}",
+  "@unfollowSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "followSemantics": "Follow {name}",
+  "@followSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "manageLists": "Manage lists"
 }

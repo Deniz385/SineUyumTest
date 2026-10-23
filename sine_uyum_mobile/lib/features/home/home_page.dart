@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/movie.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
-import '../../widgets/movie_widgets.dart';
-import '../../widgets/state_views.dart';
+import '../../core/ui/movie_widgets.dart';
+import '../../core/ui/state_views.dart';
 import '../social/feed_view.dart';
 
 /// Home: the feed of followed users and the movie strips.
@@ -110,7 +110,7 @@ class _Section extends StatelessWidget {
       ),
       data: (movies) => movies.isEmpty
           ? const SizedBox.shrink()
-          : MovieCarousel(title: title, movies: movies),
+          : MovieRow(title: title, movies: movies),
     );
   }
 }

@@ -78,8 +78,15 @@ class MemoryTokens extends TokenStorage {
 
 /// In-memory [PreferencesStorage] (no platform channel).
 class MemoryPreferences extends PreferencesStorage {
-  MemoryPreferences({this.language});
+  MemoryPreferences({this.language, this.theme});
   String? language;
+  String? theme;
+
+  @override
+  Future<String?> readThemeMode() async => theme;
+
+  @override
+  Future<void> writeThemeMode(String mode) async => theme = mode;
 
   @override
   Future<String?> readLanguage() async => language;

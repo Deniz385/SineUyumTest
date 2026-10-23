@@ -9,8 +9,8 @@ import '../../providers/chat_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/session_provider.dart';
-import '../../widgets/poster_image.dart';
-import '../../widgets/state_views.dart';
+import '../../core/ui/poster_image.dart';
+import '../../core/ui/state_views.dart';
 
 class ConversationPage extends ConsumerStatefulWidget {
   const ConversationPage({
@@ -112,7 +112,7 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
               ),
               data: (messages) => messages.isEmpty
                   ? EmptyView(
-                      icon: Icons.waving_hand_outlined,
+                      icon: Icons.waving_hand_rounded,
                       message: l10n.conversationEmpty,
                     )
                   : _MessageList(
@@ -144,7 +144,7 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
                   const SizedBox(width: 8),
                   IconButton.filled(
                     onPressed: _isSending ? null : _send,
-                    icon: const Icon(Icons.send),
+                    icon: const Icon(Icons.send_rounded),
                   ),
                 ],
               ),
@@ -323,7 +323,7 @@ class _SharedWatchlistCard extends StatelessWidget {
   Widget _content(BuildContext context) {
     return Row(
       children: [
-        Icon(Icons.bookmark_outline, color: foreground),
+        Icon(Icons.bookmark_outline_rounded, color: foreground),
         const SizedBox(width: 8),
         Flexible(
           child: Column(

@@ -8,8 +8,8 @@ import '../../data/models/event.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/session_provider.dart';
-import '../../widgets/poster_image.dart';
-import '../../widgets/state_views.dart';
+import '../../core/ui/poster_image.dart';
+import '../../core/ui/state_views.dart';
 
 /// Cinema event screen: joining, waiting to be matched, the group and the
 /// movie vote.
@@ -53,7 +53,7 @@ class _NoneView extends StatelessWidget {
       children: [
         SizedBox(height: MediaQuery.sizeOf(context).height * 0.2),
         EmptyView(
-          icon: Icons.event_busy_outlined,
+          icon: Icons.event_busy_rounded,
           message: message ?? context.l10n.eventNoneAvailable,
         ),
       ],
@@ -101,7 +101,7 @@ class _AvailableViewState extends ConsumerState<_AvailableView> {
         const SizedBox(height: 16),
         FilledButton.icon(
           onPressed: _isJoining ? null : _join,
-          icon: const Icon(Icons.how_to_reg_outlined),
+          icon: const Icon(Icons.how_to_reg_rounded),
           label: Text(_isJoining ? l10n.eventJoining : l10n.eventJoin),
         ),
         const SizedBox(height: 8),
@@ -128,7 +128,7 @@ class _PendingView extends StatelessWidget {
       children: [
         if (event != null) _EventCard(event: event!),
         const SizedBox(height: 24),
-        const Icon(Icons.hourglass_top_outlined, size: 40),
+        const Icon(Icons.hourglass_top_rounded, size: 40),
         const SizedBox(height: 12),
         Text(
           l10n.eventAwaitingMatch,
@@ -260,8 +260,8 @@ class _MatchedViewState extends ConsumerState<_MatchedView> {
                 subtitle: Text(l10n.eventVoteCount(voteCounts[movie.id] ?? 0)),
                 trailing: Icon(
                   myVote == movie.id
-                      ? Icons.check_circle
-                      : Icons.radio_button_unchecked,
+                      ? Icons.check_circle_rounded
+                      : Icons.radio_button_unchecked_rounded,
                   color: myVote == movie.id
                       ? Theme.of(context).colorScheme.primary
                       : null,
@@ -296,7 +296,7 @@ class _EventCard extends StatelessWidget {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Icon(Icons.calendar_today_outlined, size: 16),
+                  const Icon(Icons.calendar_today_rounded, size: 16),
                   const SizedBox(width: 6),
                   Text(
                     DateFormat.yMMMMd(l10n.localeName)
@@ -311,7 +311,7 @@ class _EventCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.place_outlined, size: 16),
+                  const Icon(Icons.place_rounded, size: 16),
                   const SizedBox(width: 6),
                   Expanded(child: Text(event.address!)),
                 ],
@@ -321,7 +321,7 @@ class _EventCard extends StatelessWidget {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  const Icon(Icons.groups_outlined, size: 16),
+                  const Icon(Icons.groups_rounded, size: 16),
                   const SizedBox(width: 6),
                   Text(l10n.eventGroupSize(event.groupSize)),
                 ],

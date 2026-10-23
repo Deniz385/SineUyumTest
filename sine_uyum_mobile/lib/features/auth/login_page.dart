@@ -67,7 +67,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Icon(
-                      Icons.movie_filter_outlined,
+                      Icons.movie_filter_rounded,
                       size: 56,
                       color: Theme.of(context).colorScheme.primary,
                     ),
@@ -90,7 +90,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       autofillHints: const [AutofillHints.username],
                       decoration: InputDecoration(
                         labelText: l10n.usernameLabel,
-                        prefixIcon: const Icon(Icons.person_outline),
+                        prefixIcon: const Icon(Icons.person_outline_rounded),
                       ),
                       validator: (value) =>
                           (value == null || value.trim().isEmpty)
@@ -106,12 +106,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       onFieldSubmitted: (_) => _submit(),
                       decoration: InputDecoration(
                         labelText: l10n.passwordLabel,
-                        prefixIcon: const Icon(Icons.lock_outline),
+                        prefixIcon: const Icon(Icons.lock_outline_rounded),
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscurePassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
+                                ? Icons.visibility_rounded
+                                : Icons.visibility_off_rounded,
                           ),
                           onPressed: () => setState(
                             () => _obscurePassword = !_obscurePassword,

@@ -256,16 +256,16 @@ void main() {
       'rolled back on error', (tester) async {
     final social = await pump(tester, ReviewCard(review: review(likes: 3)));
 
-    await tester.tap(find.byIcon(Icons.favorite_border));
+    await tester.tap(find.byIcon(Icons.favorite_border_rounded));
     await tester.pumpAndSettle();
     expect(social.likes, [(1, true)]);
-    expect(find.byIcon(Icons.favorite), findsOneWidget);
+    expect(find.byIcon(Icons.favorite_rounded), findsOneWidget);
     expect(find.text('5'), findsOneWidget); // the server's count
 
     social.likeError = ApiException('Too many requests.');
-    await tester.tap(find.byIcon(Icons.favorite));
+    await tester.tap(find.byIcon(Icons.favorite_rounded));
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.favorite), findsOneWidget); // rolled back
+    expect(find.byIcon(Icons.favorite_rounded), findsOneWidget); // rolled back
     expect(find.text('5'), findsOneWidget);
     expect(find.text('Too many requests.'), findsOneWidget);
   });

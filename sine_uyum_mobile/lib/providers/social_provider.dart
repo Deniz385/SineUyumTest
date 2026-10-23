@@ -71,3 +71,8 @@ class FeedNotifier extends AsyncNotifier<FeedState> {
 final tasteTwinProvider = FutureProvider.autoDispose<TasteTwin?>(
   (ref) => ref.watch(socialRepositoryProvider).tasteTwin(),
 );
+
+/// People worth following (Discover → People, first-run welcome).
+final peopleSuggestionsProvider = FutureProvider.autoDispose<PeopleSuggestions>(
+  (ref) => ref.watch(socialRepositoryProvider).peopleSuggestions(limit: 20),
+);

@@ -6,8 +6,8 @@ import '../../data/models/social.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/social_provider.dart';
-import '../../widgets/poster_image.dart';
-import '../../widgets/state_views.dart';
+import '../../core/ui/poster_image.dart';
+import '../../core/ui/state_views.dart';
 import '../year_in_review/year_in_review_banner.dart';
 import 'review_card.dart';
 
@@ -42,7 +42,7 @@ class FeedView extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
                   EmptyView(
-                    icon: Icons.dynamic_feed_outlined,
+                    icon: Icons.dynamic_feed_rounded,
                     message: context.l10n.feedEmpty,
                   ),
                 ],

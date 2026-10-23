@@ -10,8 +10,8 @@ import '../../data/models/diary.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/diary_provider.dart';
 import '../../providers/session_provider.dart';
-import '../../widgets/poster_image.dart';
-import '../../widgets/state_views.dart';
+import '../../core/ui/poster_image.dart';
+import '../../core/ui/state_views.dart';
 import 'diary_entry_sheet.dart';
 
 /// A user's film diary, one year at a time: a month chart, the totals and
@@ -97,7 +97,10 @@ class _DiaryPageState extends ConsumerState<DiaryPage> {
       body: diary.when(
         loading: () => const LoadingView(),
         error: (error, _) => _isAccessDenied(error)
-            ? EmptyView(icon: Icons.lock_outline, message: error.toString())
+            ? EmptyView(
+                icon: Icons.lock_outline_rounded,
+                message: error.toString(),
+              )
             : ErrorView(
                 message: error.toString(),
                 onRetry: () => ref.invalidate(diaryProvider(_key)),
@@ -145,7 +148,7 @@ class _DiaryPageState extends ConsumerState<DiaryPage> {
               ),
             if (summary.totalCount > 0) _SummaryCard(summary: summary),
             if (emptyMessage != null)
-              EmptyView(icon: Icons.menu_book_outlined, message: emptyMessage)
+              EmptyView(icon: Icons.menu_book_rounded, message: emptyMessage)
             else
               for (final group in _byMonth(state.entries)) ...[
                 _MonthHeader(
@@ -259,7 +262,7 @@ class _SummaryCard extends StatelessWidget {
               Row(
                 children: [
                   Icon(
-                    Icons.replay,
+                    Icons.replay_rounded,
                     size: 14,
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -454,7 +457,11 @@ class _EntryTile extends StatelessWidget {
                     Row(
                       children: [
                         if (rating != null) ...[
-                          const Icon(Icons.star, size: 14, color: Colors.amber),
+                          const Icon(
+                            Icons.star_rounded,
+                            size: 14,
+                            color: Colors.amber,
+                          ),
                           const SizedBox(width: 2),
                           Text(
                             l10n.ratingOutOfTen(rating),
@@ -465,7 +472,11 @@ class _EntryTile extends StatelessWidget {
                         if (entry.rewatch)
                           Tooltip(
                             message: l10n.diaryRewatch,
-                            child: Icon(Icons.replay, size: 16, color: muted),
+                            child: Icon(
+                              Icons.replay_rounded,
+                              size: 16,
+                              color: muted,
+                            ),
                           ),
                       ],
                     ),

@@ -5,8 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../data/models/profile.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
-import '../../widgets/poster_image.dart';
-import '../../widgets/state_views.dart';
+import '../../core/ui/poster_image.dart';
+import '../../core/ui/state_views.dart';
 
 /// Privacy settings (G12). Every change is saved immediately; the settings
 /// are independent. If the server rejects a change, the previous value comes

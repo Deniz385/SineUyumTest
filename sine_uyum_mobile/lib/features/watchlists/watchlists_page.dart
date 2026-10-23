@@ -6,8 +6,8 @@ import '../../data/models/watchlist.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/watchlist_provider.dart';
-import '../../widgets/poster_image.dart';
-import '../../widgets/state_views.dart';
+import '../../core/ui/poster_image.dart';
+import '../../core/ui/state_views.dart';
 import 'list_cards.dart';
 
 class WatchlistsPage extends ConsumerWidget {
@@ -29,6 +29,7 @@ class WatchlistsPage extends ConsumerWidget {
     }
 
     return Scaffold(
+      appBar: AppBar(title: Text(l10n.myListsTitle)),
       body: lists.when(
         loading: () => const LoadingView(),
         error: (error, _) =>
@@ -44,12 +45,12 @@ class WatchlistsPage extends ConsumerWidget {
                 _InvitationsSection(invitations: invitations),
               if (lists.isEmpty)
                 EmptyView(
-                  icon: Icons.bookmark_outline,
+                  icon: Icons.bookmark_outline_rounded,
                   message: l10n.watchlistsEmpty,
                   action: invitations.isEmpty
                       ? FilledButton.icon(
                           onPressed: () => _showEditor(context, ref),
-                          icon: const Icon(Icons.add),
+                          icon: const Icon(Icons.add_rounded),
                           label: Text(l10n.createList),
                         )
                       : null,
@@ -68,7 +69,7 @@ class WatchlistsPage extends ConsumerWidget {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showEditor(context, ref),
         tooltip: l10n.newList,
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.add_rounded),
       ),
     );
   }
@@ -218,7 +219,9 @@ class _ListEditorDialogState extends State<_ListEditorDialog> {
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                secondary: Icon(_isPublic ? Icons.public : Icons.lock_outline),
+                secondary: Icon(
+                  _isPublic ? Icons.public_rounded : Icons.lock_outline_rounded,
+                ),
                 title: Text(l10n.watchlistPublicSwitch),
                 // One line on what the choice means.
                 subtitle: Text(
@@ -271,7 +274,7 @@ class _WatchlistTile extends StatelessWidget {
 
     return ListTile(
       leading: Icon(
-        list.isShared ? Icons.group_outlined : Icons.bookmark_outline,
+        list.isShared ? Icons.group_rounded : Icons.bookmark_outline_rounded,
       ),
       title: Row(
         children: [
@@ -334,7 +337,11 @@ class WatchlistPeopleBadge extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.group, size: 14, color: scheme.onSecondaryContainer),
+            Icon(
+              Icons.group_rounded,
+              size: 14,
+              color: scheme.onSecondaryContainer,
+            ),
             const SizedBox(width: 4),
             Text(
               label,
@@ -478,12 +485,12 @@ class _DiscoverEntry extends StatelessWidget {
       color: scheme.secondaryContainer,
       child: ListTile(
         leading: Icon(
-          Icons.explore_outlined,
+          Icons.explore_rounded,
           color: scheme.onSecondaryContainer,
         ),
         title: Text(l10n.discoverListsTitle),
         subtitle: Text(l10n.discoverListsSubtitle),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: const Icon(Icons.chevron_right_rounded),
         onTap: () => context.push('/lists/discover'),
       ),
     );
@@ -570,7 +577,7 @@ class _SavedListTile extends ConsumerWidget {
       trailing: IconButton(
         tooltip: l10n.watchlistUnsave,
         icon: Icon(
-          Icons.bookmark,
+          Icons.bookmark_rounded,
           color: Theme.of(context).colorScheme.primary,
         ),
         onPressed: unsave,

@@ -6,7 +6,7 @@ import '../../data/models/watchlist.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/session_provider.dart';
 import '../../providers/watchlist_provider.dart';
-import '../../widgets/poster_image.dart';
+import '../../core/ui/poster_image.dart';
 
 /// Opens a public list: my own in the editable view, someone else's in the
 /// read-only one (`/watchlist/{id}` would fall back to it too, after a 404).
@@ -56,7 +56,7 @@ class PosterCollage extends StatelessWidget {
                 color: scheme.surfaceContainerHighest,
                 alignment: Alignment.center,
                 child: Icon(
-                  Icons.movie_filter_outlined,
+                  Icons.movie_filter_rounded,
                   color: scheme.onSurfaceVariant,
                 ),
               )
@@ -100,7 +100,11 @@ class PublicListBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.public, size: 14, color: scheme.onTertiaryContainer),
+          Icon(
+            Icons.public_rounded,
+            size: 14,
+            color: scheme.onTertiaryContainer,
+          ),
           const SizedBox(width: 4),
           Text(
             context.l10n.watchlistPublicBadge,
@@ -134,7 +138,7 @@ class OwnerCompatibilityChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.favorite, size: 12, color: color),
+          Icon(Icons.favorite_rounded, size: 12, color: color),
           const SizedBox(width: 4),
           Text(
             l10n.listOwnerCompatibility(l10n.percent(score)),
@@ -187,7 +191,9 @@ class ListReactionButtons extends ConsumerWidget {
           child: TextButton.icon(
             onPressed: () => run(notifier.toggleLike),
             icon: Icon(
-              reaction.liked ? Icons.favorite : Icons.favorite_border,
+              reaction.liked
+                  ? Icons.favorite_rounded
+                  : Icons.favorite_border_rounded,
               color: reaction.liked ? Colors.redAccent : null,
             ),
             label: Text(
@@ -201,7 +207,9 @@ class ListReactionButtons extends ConsumerWidget {
           child: TextButton.icon(
             onPressed: () => run(notifier.toggleSave),
             icon: Icon(
-              reaction.saved ? Icons.bookmark : Icons.bookmark_border,
+              reaction.saved
+                  ? Icons.bookmark_rounded
+                  : Icons.bookmark_border_rounded,
               color: reaction.saved ? scheme.primary : null,
             ),
             label: Text(

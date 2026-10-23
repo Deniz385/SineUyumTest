@@ -7,9 +7,9 @@ import '../../l10n/l10n.dart';
 import '../../providers/diary_provider.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/session_provider.dart';
-import '../../widgets/movie_widgets.dart';
-import '../../widgets/poster_image.dart';
-import '../../widgets/state_views.dart';
+import '../../core/ui/movie_widgets.dart';
+import '../../core/ui/poster_image.dart';
+import '../../core/ui/state_views.dart';
 import '../../providers/social_provider.dart';
 import '../../providers/watchlist_provider.dart';
 import '../diary/diary_entry_sheet.dart';
@@ -107,7 +107,7 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
             ),
             for (final list in lists)
               ListTile(
-                leading: const Icon(Icons.bookmark_outline),
+                leading: const Icon(Icons.bookmark_outline_rounded),
                 title: Text(list.name),
                 subtitle: Text(l10n.movieCount(list.itemCount)),
                 onTap: () => Navigator.of(context).pop(list),
@@ -193,7 +193,11 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(Icons.star, size: 16, color: Colors.amber),
+                        const Icon(
+                          Icons.star_rounded,
+                          size: 16,
+                          color: Colors.amber,
+                        ),
                         const SizedBox(width: 4),
                         Text(l10n.decimal(_movie.voteAverage!)),
                         Text(
@@ -226,7 +230,7 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
             Expanded(
               child: FilledButton.icon(
                 onPressed: _isBusy ? null : _rate,
-                icon: const Icon(Icons.star_outline),
+                icon: const Icon(Icons.star_outline_rounded),
                 label: Text(l10n.rateMovie),
               ),
             ),
@@ -234,7 +238,7 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: _isBusy ? null : _addToWatchlist,
-                icon: const Icon(Icons.bookmark_add_outlined),
+                icon: const Icon(Icons.bookmark_add_rounded),
                 label: Text(l10n.addToList),
               ),
             ),
@@ -243,7 +247,7 @@ class _MovieDetailBodyState extends ConsumerState<_MovieDetailBody> {
         const SizedBox(height: 8),
         OutlinedButton.icon(
           onPressed: _isBusy ? null : _addToDiary,
-          icon: const Icon(Icons.edit_calendar_outlined),
+          icon: const Icon(Icons.edit_calendar_rounded),
           label: Text(l10n.diaryAdd),
         ),
         if (_movie.overview != null && _movie.overview!.isNotEmpty) ...[

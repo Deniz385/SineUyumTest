@@ -851,6 +851,8 @@ void main() {
             diaryRepositoryProvider.overrideWithValue(_sampleDiary()),
             socialRepositoryProvider.overrideWithValue(FakeProfiles()),
             sessionProvider.overrideWith(FakeSession.new),
+            // My own profile also lists my lists.
+            myWatchlistsProvider.overrideWith((ref) async => const []),
           ],
           child: localizedRouterApp(routerConfig: router),
         ),
@@ -1031,9 +1033,9 @@ void main() {
       await pumpDiary(tester, diary: diary, userId: 'u2');
 
       expect(find.text('Bu kullanıcının profili gizli.'), findsOneWidget);
-      expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+      expect(find.byIcon(Icons.lock_outline_rounded), findsOneWidget);
       // Retrying would not help.
-      expect(find.byIcon(Icons.refresh), findsNothing);
+      expect(find.byIcon(Icons.refresh_rounded), findsNothing);
     });
 
     testWidgets('my empty diary explains how to log (tr)', (tester) async {

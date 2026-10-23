@@ -180,17 +180,17 @@ class _DiaryEntrySheetState extends State<DiaryEntrySheet> {
               const SizedBox(height: 8),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.event_outlined),
+                leading: const Icon(Icons.event_rounded),
                 title: Text(l10n.diaryWatchedOn),
                 subtitle: Text(
                   DateFormat.yMMMMEEEEd(l10n.localeName).format(_watchedOn),
                 ),
-                trailing: const Icon(Icons.edit_calendar_outlined),
+                trailing: const Icon(Icons.edit_calendar_rounded),
                 onTap: _saving ? null : _pickDate,
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                secondary: const Icon(Icons.replay),
+                secondary: const Icon(Icons.replay_rounded),
                 title: Text(l10n.diaryRewatch),
                 subtitle: Text(
                   lastWatchedOn == null
@@ -225,7 +225,7 @@ class _DiaryEntrySheetState extends State<DiaryEntrySheet> {
               if (!_isEdit) ...[
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  secondary: const Icon(Icons.star_outline),
+                  secondary: const Icon(Icons.star_outline_rounded),
                   title: Text(l10n.diaryRateToo),
                   subtitle: Text(l10n.diaryRateTooHint),
                   value: rating != null,

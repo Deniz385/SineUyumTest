@@ -5,8 +5,8 @@ import 'package:intl/intl.dart';
 
 import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
-import '../../widgets/poster_image.dart';
-import '../../widgets/state_views.dart';
+import '../../core/ui/poster_image.dart';
+import '../../core/ui/state_views.dart';
 
 class MessagesPage extends ConsumerWidget {
   const MessagesPage({super.key});
@@ -23,7 +23,7 @@ class MessagesPage extends ConsumerWidget {
       ),
       data: (conversations) => conversations.isEmpty
           ? EmptyView(
-              icon: Icons.chat_bubble_outline,
+              icon: Icons.chat_bubble_outline_rounded,
               message: context.l10n.messagesEmpty,
             )
           : RefreshIndicator(

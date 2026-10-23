@@ -35,7 +35,7 @@ void main() {
 
   testWidgets('no strip while online', (tester) async {
     await pump(tester);
-    expect(find.byIcon(Icons.cloud_off), findsNothing);
+    expect(find.byIcon(Icons.cloud_off_rounded), findsNothing);
     expect(find.text('content'), findsOneWidget);
   });
 
@@ -55,7 +55,7 @@ void main() {
     connectivity.set(true);
     await tester.pump();
     await tester.pump();
-    expect(find.byIcon(Icons.cloud_off), findsNothing);
+    expect(find.byIcon(Icons.cloud_off_rounded), findsNothing);
   });
 
   testWidgets('separate message when the network is up but the server '

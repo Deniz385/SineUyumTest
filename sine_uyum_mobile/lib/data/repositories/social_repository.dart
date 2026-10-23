@@ -60,6 +60,15 @@ class SocialRepository {
         .toList();
   }
 
+  /// People worth following (first-run welcome, Discover → People).
+  Future<PeopleSuggestions> peopleSuggestions({int limit = 10}) async {
+    final data = await _client.get<Map<String, dynamic>>(
+      '/api/v1/people/suggestions',
+      query: {'limit': limit},
+    );
+    return PeopleSuggestions.fromJson(data);
+  }
+
   Future<CompatibilityResult> compatibility(String userId) async {
     final data = await _client.get<Map<String, dynamic>>(
       '/api/v1/compatibility/$userId',

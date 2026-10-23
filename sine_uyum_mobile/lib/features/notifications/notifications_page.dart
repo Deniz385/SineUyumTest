@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../l10n/l10n.dart';
 import '../../providers/notification_provider.dart';
-import '../../widgets/state_views.dart';
+import '../../core/ui/state_views.dart';
 
 class NotificationsPage extends ConsumerWidget {
   const NotificationsPage({super.key});
@@ -37,7 +37,7 @@ class NotificationsPage extends ConsumerWidget {
           }
           if (state.items.isEmpty) {
             return EmptyView(
-              icon: Icons.notifications_none,
+              icon: Icons.notifications_none_rounded,
               message: l10n.notificationsEmpty,
             );
           }
@@ -52,8 +52,8 @@ class NotificationsPage extends ConsumerWidget {
                 return ListTile(
                   leading: Icon(
                     notification.isRead
-                        ? Icons.notifications_none
-                        : Icons.notifications_active,
+                        ? Icons.notifications_none_rounded
+                        : Icons.notifications_active_rounded,
                     color: notification.isRead
                         ? null
                         : Theme.of(context).colorScheme.primary,
@@ -94,7 +94,7 @@ String? _toMobileRoute(String? webUrl) {
   if (webUrl == null || webUrl.isEmpty) return null;
 
   if (webUrl == '/my-event') return '/event';
-  // Shared-list invitation: the invitations are on the Lists tab.
+  // Shared-list invitation: the invitations are on the My lists screen.
   if (webUrl == '/watchlist') return '/watchlists';
   if (webUrl.startsWith('/messages/')) {
     final userId = webUrl.substring('/messages/'.length);

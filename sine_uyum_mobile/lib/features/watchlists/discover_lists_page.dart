@@ -1,100 +1,86 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repositories/watchlist_repository.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/watchlist_provider.dart';
-import '../../widgets/state_views.dart';
+import '../../core/theme/tokens.dart';
+import '../../core/ui/search_field.dart';
+import '../../core/ui/state_views.dart';
 import 'list_cards.dart';
 
 /// Others' public lists: trending this week, popular, new and "for you",
-/// with a search over names and descriptions.
-class DiscoverListsPage extends ConsumerStatefulWidget {
+/// with a search over names and descriptions (also the Lists section of
+/// the Discover tab).
+class DiscoverListsPage extends StatelessWidget {
   const DiscoverListsPage({super.key});
 
   @override
-  ConsumerState<DiscoverListsPage> createState() => _DiscoverListsPageState();
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text(context.l10n.discoverListsTitle)),
+    body: const DiscoverListsView(),
+  );
 }
 
-class _DiscoverListsPageState extends ConsumerState<DiscoverListsPage> {
-  final _search = TextEditingController();
-  Timer? _debounce;
+/// Search, the sort control and the results, without a scaffold.
+class DiscoverListsView extends StatefulWidget {
+  const DiscoverListsView({super.key});
+
+  @override
+  State<DiscoverListsView> createState() => _DiscoverListsViewState();
+}
+
+class _DiscoverListsViewState extends State<DiscoverListsView> {
   String _query = '';
   DiscoverSort _sort = DiscoverSort.trending;
 
   @override
-  void dispose() {
-    _debounce?.cancel();
-    _search.dispose();
-    super.dispose();
-  }
-
-  void _onSearchChanged(String value) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), () {
-      if (mounted) setState(() => _query = value.trim());
-    });
-    // The clear button follows the text right away.
-    setState(() {});
-  }
-
-  void _clearSearch() {
-    _debounce?.cancel();
-    _search.clear();
-    setState(() => _query = '');
-  }
-
-  @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.discoverListsTitle)),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: TextField(
-              controller: _search,
-              onChanged: _onSearchChanged,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: l10n.discoverSearchHint,
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _search.text.isEmpty
-                    ? null
-                    : IconButton(
-                        tooltip: l10n.commonCancel,
-                        icon: const Icon(Icons.close),
-                        onPressed: _clearSearch,
-                      ),
-                border: const OutlineInputBorder(),
-                isDense: true,
-              ),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.gutter,
+            AppSpace.xs,
+            AppSpace.gutter,
+            0,
+          ),
+          child: SearchField(
+            hint: l10n.discoverSearchHint,
+            onQuery: (query) => setState(() => _query = query),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.gutter,
+            AppSpace.sm,
+            AppSpace.gutter,
+            AppSpace.xxs,
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<DiscoverSort>(
+              showSelectedIcon: false,
+              segments: [
+                for (final sort in DiscoverSort.values)
+                  ButtonSegment(
+                    value: sort,
+                    label: Text(
+                      _label(l10n, sort),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+              selected: {_sort},
+              onSelectionChanged: (selection) =>
+                  setState(() => _sort = selection.first),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: SizedBox(
-              width: double.infinity,
-              child: SegmentedButton<DiscoverSort>(
-                showSelectedIcon: false,
-                segments: [
-                  for (final sort in DiscoverSort.values)
-                    ButtonSegment(value: sort, label: Text(_label(l10n, sort))),
-                ],
-                selected: {_sort},
-                onSelectionChanged: (selection) =>
-                    setState(() => _sort = selection.first),
-              ),
-            ),
-          ),
-          Expanded(
-            child: _DiscoverResults(query: (sort: _sort, query: _query)),
-          ),
-        ],
-      ),
+        ),
+        Expanded(child: _DiscoverResults(query: (sort: _sort, query: _query))),
+      ],
     );
   }
 
@@ -146,14 +132,19 @@ class _DiscoverResults extends ConsumerWidget {
                   const SizedBox(height: 32),
                   EmptyView(
                     icon: query.sort == DiscoverSort.forYou
-                        ? Icons.favorite_border
-                        : Icons.travel_explore,
+                        ? Icons.favorite_border_rounded
+                        : Icons.travel_explore_rounded,
                     message: _emptyMessage(context.l10n),
                   ),
                 ],
               )
             : ListView.builder(
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpace.gutter,
+                  AppSpace.xxs,
+                  AppSpace.gutter,
+                  AppSpace.md,
+                ),
                 itemCount: state.items.length + (state.hasMore ? 1 : 0),
                 itemBuilder: (context, index) {
                   if (index < state.items.length) {
@@ -209,7 +200,7 @@ class _LoadMoreFooterState extends State<LoadMoreFooter> {
         child: widget.failed
             ? OutlinedButton.icon(
                 onPressed: widget.onLoadMore,
-                icon: const Icon(Icons.refresh),
+                icon: const Icon(Icons.refresh_rounded),
                 label: Text(context.l10n.commonRetry),
               )
             : const CircularProgressIndicator(),

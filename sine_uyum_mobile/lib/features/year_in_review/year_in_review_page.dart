@@ -15,7 +15,7 @@ import '../../data/models/profile.dart';
 import '../../data/models/year_in_review.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/year_in_review_provider.dart';
-import '../../widgets/poster_image.dart';
+import '../../core/ui/poster_image.dart';
 import '../profile/film_identity_page.dart' show imageSharerProvider;
 import 'year_in_review_share_card.dart';
 
@@ -125,15 +125,15 @@ class _YearInReviewPageState extends ConsumerState<YearInReviewPage> {
               colors: const [Color(0xFF1B1038), Color(0xFF0D2A4A)],
               child: _Message(
                 icon: _isAccessDenied(error)
-                    ? Icons.lock_outline
-                    : Icons.error_outline,
+                    ? Icons.lock_outline_rounded
+                    : Icons.error_outline_rounded,
                 message: error.toString(),
                 action: _isAccessDenied(error)
                     ? null
                     : OutlinedButton.icon(
                         onPressed: () =>
                             ref.invalidate(yearInReviewProvider(_key)),
-                        icon: const Icon(Icons.refresh),
+                        icon: const Icon(Icons.refresh_rounded),
                         label: Text(l10n.commonRetry),
                       ),
               ),
@@ -239,7 +239,10 @@ class _HeaderRow extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text('${recap.year}', style: yearStyle),
-                    const Icon(Icons.arrow_drop_down, color: Colors.white),
+                    const Icon(
+                      Icons.arrow_drop_down_rounded,
+                      color: Colors.white,
+                    ),
                   ],
                 ),
               ),
@@ -249,7 +252,7 @@ class _HeaderRow extends StatelessWidget {
         const Spacer(),
         IconButton(
           tooltip: l10n.recapClose,
-          icon: const Icon(Icons.close, color: Colors.white),
+          icon: const Icon(Icons.close_rounded, color: Colors.white),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
       ],
@@ -337,7 +340,7 @@ class _NotReady extends StatelessWidget {
         action: recap.isMine
             ? FilledButton.icon(
                 onPressed: () => context.push('/profile/$userId/diary'),
-                icon: const Icon(Icons.menu_book_outlined),
+                icon: const Icon(Icons.menu_book_rounded),
                 label: Text(l10n.recapOpenDiary),
               )
             : null,
@@ -1288,7 +1291,7 @@ class _TasteMateSlide extends StatelessWidget {
                   side: const BorderSide(color: Colors.white70),
                 ),
                 onPressed: () => context.push('/profile/${mate.user.id}'),
-                icon: const Icon(Icons.person_outline),
+                icon: const Icon(Icons.person_outline_rounded),
                 label: Text(l10n.viewProfile),
               ),
             ],
@@ -1341,7 +1344,7 @@ class _FinaleSlide extends StatelessWidget {
             foregroundColor: Colors.black,
           ),
           onPressed: onShare,
-          icon: const Icon(Icons.ios_share),
+          icon: const Icon(Icons.ios_share_rounded),
           label: Text(l10n.recapShare),
         ),
       ],

@@ -68,6 +68,10 @@ final popularMoviesProvider = FutureProvider<List<Movie>>(
   (ref) => ref.watch(movieRepositoryProvider).popular(),
 );
 
+final topRatedMoviesProvider = FutureProvider<List<Movie>>(
+  (ref) => ref.watch(movieRepositoryProvider).topRated(),
+);
+
 final movieDetailProvider = FutureProvider.family<Movie, int>(
   (ref, movieId) => ref.watch(movieRepositoryProvider).detail(movieId),
 );

@@ -24,20 +24,20 @@ class SettingsPage extends ConsumerWidget {
         children: [
           if (user != null)
             ListTile(
-              leading: const Icon(Icons.person_outline),
+              leading: const Icon(Icons.person_outline_rounded),
               title: Text(user.userName),
               subtitle: Text(user.email ?? ''),
               onTap: () => context.push('/profile/${user.id}'),
             ),
           ListTile(
-            leading: const Icon(Icons.lock_outline),
+            leading: const Icon(Icons.lock_outline_rounded),
             title: Text(l10n.privacyTitle),
             subtitle: Text(l10n.settingsPrivacySubtitle),
             onTap: () => context.push('/settings/privacy'),
           ),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.brightness_6_outlined),
+            leading: const Icon(Icons.brightness_6_rounded),
             title: Text(l10n.settingsTheme),
             subtitle: Text(switch (themeMode) {
               ThemeMode.light => l10n.themeLight,
@@ -73,7 +73,7 @@ class SettingsPage extends ConsumerWidget {
           const _LanguageSection(),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.workspace_premium_outlined),
+            leading: const Icon(Icons.workspace_premium_rounded),
             title: Text(l10n.commonSubscription),
             subtitle: Text(
               user?.isSubscribed == true
@@ -84,7 +84,7 @@ class SettingsPage extends ConsumerWidget {
           ),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.notifications_outlined),
+            leading: const Icon(Icons.notifications_rounded),
             title: Text(l10n.settingsPush),
             subtitle: Text(switch (ref.watch(pushProvider)) {
               PushStatus.registered => l10n.pushRegistered,
@@ -94,19 +94,19 @@ class SettingsPage extends ConsumerWidget {
             }),
           ),
           ListTile(
-            leading: const Icon(Icons.info_outline),
+            leading: const Icon(Icons.info_outline_rounded),
             title: Text(l10n.settingsVersion),
             subtitle: Text(AppConfig.appVersion),
           ),
           ListTile(
-            leading: const Icon(Icons.cloud_outlined),
+            leading: const Icon(Icons.cloud_rounded),
             title: Text(l10n.settingsApiUrl),
             subtitle: Text(AppConfig.apiUrl),
           ),
           const Divider(),
           ListTile(
             leading: Icon(
-              Icons.logout,
+              Icons.logout_rounded,
               color: Theme.of(context).colorScheme.error,
             ),
             title: Text(
@@ -159,7 +159,7 @@ class _LanguageSection extends ConsumerWidget {
     return Column(
       children: [
         ListTile(
-          leading: const Icon(Icons.language),
+          leading: const Icon(Icons.language_rounded),
           title: Text(l10n.settingsLanguage),
           subtitle: Text(
             chosen == null

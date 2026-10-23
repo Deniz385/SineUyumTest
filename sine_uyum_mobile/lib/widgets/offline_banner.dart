@@ -43,7 +43,7 @@ class OfflineBanner extends ConsumerWidget {
               child: Row(
                 children: [
                   Icon(
-                    Icons.cloud_off,
+                    Icons.cloud_off_rounded,
                     size: 18,
                     color: colors.onInverseSurface,
                   ),

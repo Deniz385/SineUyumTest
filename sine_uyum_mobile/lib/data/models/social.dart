@@ -248,3 +248,54 @@ class TasteTwin {
     isFollowing: json['isFollowing'] as bool? ?? false,
   );
 }
+
+/// One person in `/api/v1/people/suggestions`.
+class PersonSuggestion {
+  const PersonSuggestion({
+    required this.user,
+    this.bio,
+    this.compatibility,
+    this.commonMovieCount = 0,
+    this.followerCount = 0,
+  });
+
+  final Author user;
+  final String? bio;
+
+  /// Null for "popular" suggestions (too few common movies to compare).
+  final double? compatibility;
+  final int commonMovieCount;
+  final int followerCount;
+
+  factory PersonSuggestion.fromJson(Map<String, dynamic> json) =>
+      PersonSuggestion(
+        user: Author.fromJson(_map(json['user'])),
+        bio: json['bio'] as String?,
+        compatibility: (json['compatibility'] as num?)?.toDouble(),
+        commonMovieCount: (json['commonMovieCount'] as num?)?.toInt() ?? 0,
+        followerCount: (json['followerCount'] as num?)?.toInt() ?? 0,
+      );
+}
+
+/// `/api/v1/people/suggestions`: by taste when possible, otherwise the most
+/// followed people.
+class PeopleSuggestions {
+  const PeopleSuggestions({this.byTaste = true, this.items = const []});
+
+  /// false: "popular" (the viewer has too few ratings, or nobody similar).
+  final bool byTaste;
+  final List<PersonSuggestion> items;
+
+  factory PeopleSuggestions.fromJson(Map<String, dynamic> json) =>
+      PeopleSuggestions(
+        byTaste: json['basis'] != 'popular',
+        items:
+            (json['items'] as List?)
+                ?.whereType<Map>()
+                .map(
+                  (e) => PersonSuggestion.fromJson(e.cast<String, dynamic>()),
+                )
+                .toList() ??
+            const [],
+      );
+}

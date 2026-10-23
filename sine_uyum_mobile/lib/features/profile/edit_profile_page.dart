@@ -5,7 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/session_provider.dart';
-import '../../widgets/poster_image.dart';
+import '../../core/ui/poster_image.dart';
 
 /// Gallery/camera access; replaced with a fake in tests.
 final imagePickerProvider = Provider<ImagePicker>((ref) => ImagePicker());
@@ -98,19 +98,19 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
+              leading: const Icon(Icons.photo_library_rounded),
               title: Text(l10n.pickFromGallery),
               onTap: () => Navigator.of(context).pop('gallery'),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
+              leading: const Icon(Icons.photo_camera_rounded),
               title: Text(l10n.takePhoto),
               onTap: () => Navigator.of(context).pop('camera'),
             ),
             if (hasPhoto)
               ListTile(
                 leading: Icon(
-                  Icons.delete_outline,
+                  Icons.delete_outline_rounded,
                   color: Theme.of(context).colorScheme.error,
                 ),
                 title: Text(
@@ -192,7 +192,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 onPressed: _isUploading
                     ? null
                     : () => _showPhotoOptions(hasPhoto),
-                icon: const Icon(Icons.edit_outlined),
+                icon: const Icon(Icons.edit_rounded),
                 label: Text(hasPhoto ? l10n.changePhoto : l10n.addPhoto),
               ),
               const SizedBox(height: 12),

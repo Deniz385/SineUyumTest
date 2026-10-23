@@ -1,7 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-/// Small user preferences that must survive restarts (the app language and
-/// which yearly recap banner was dismissed).
+/// Small user preferences that must survive restarts (the app language, the
+/// theme and which yearly recap banner was dismissed).
 ///
 /// Uses the same secure storage as the tokens: it is already a dependency,
 /// and one short value does not justify adding shared_preferences. Unlike
@@ -39,6 +39,25 @@ class PreferencesStorage {
       } else {
         await _storage.write(key: _languageKey, value: code);
       }
+    } catch (_) {}
+  }
+
+  static const _themeKey = 'app_theme';
+
+  /// Saved theme ("light", "dark" or "system"), or null when never chosen.
+  /// A storage failure counts as "nothing saved".
+  Future<String?> readThemeMode() async {
+    try {
+      return await _storage.read(key: _themeKey);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Failures are ignored: the choice still applies for this session.
+  Future<void> writeThemeMode(String mode) async {
+    try {
+      await _storage.write(key: _themeKey, value: mode);
     } catch (_) {}
   }
 

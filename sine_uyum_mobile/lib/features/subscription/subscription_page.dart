@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import '../../data/models/app_user.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/session_provider.dart';
-import '../../widgets/state_views.dart';
+import '../../core/ui/state_views.dart';
 
 /// The subscription status is read from the server (the single source of
 /// truth).
@@ -96,8 +96,8 @@ class _StatusCard extends StatelessWidget {
               children: [
                 Icon(
                   info.isActive
-                      ? Icons.workspace_premium
-                      : Icons.workspace_premium_outlined,
+                      ? Icons.workspace_premium_rounded
+                      : Icons.workspace_premium_rounded,
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(width: 8),
@@ -142,7 +142,7 @@ class _Notice extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.info_outline, color: colors.onSecondaryContainer),
+          Icon(Icons.info_outline_rounded, color: colors.onSecondaryContainer),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -168,7 +168,7 @@ class _Benefit extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            Icons.check_circle_outline,
+            Icons.check_circle_outline_rounded,
             color: Theme.of(context).colorScheme.primary,
           ),
           const SizedBox(width: 8),

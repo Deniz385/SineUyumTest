@@ -704,7 +704,7 @@ void main() {
       await pumpStory(tester);
 
       expect(find.text('Bu profil gizli.'), findsOneWidget);
-      expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+      expect(find.byIcon(Icons.lock_outline_rounded), findsOneWidget);
       expect(find.text('Tekrar dene'), findsNothing);
       expect(find.byTooltip('Kapat'), findsOneWidget);
     });
@@ -834,6 +834,8 @@ void main() {
             preferencesStorageProvider.overrideWithValue(preferences),
             clockProvider.overrideWithValue(() => now),
             storySlideDurationProvider.overrideWithValue(null),
+            // My own profile also lists my lists.
+            myWatchlistsProvider.overrideWith((ref) async => const []),
           ],
           child: localizedRouterApp(routerConfig: router, locale: locale),
         ),

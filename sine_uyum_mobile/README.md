@@ -59,15 +59,20 @@ lib/
     network/     Dio client, token injection, silent refresh on 401, error mapping
     router/      go_router routes and session-based redirects
     storage/     Keeping tokens in secure storage (Keychain / Keystore)
-    theme/       Material 3 light/dark themes (aligned with the web palette)
+    theme/       Design tokens and Material 3 themes (docs/DESIGN-SYSTEM.md):
+                 cinematic dark by default, warm light as the alternative
+    ui/          Shared components: PosterImage, PosterCard, MovieRow,
+                 CompatibilityBadge, RatingInput, UserRow, skeletons,
+                 empty/error states, search field
   data/
     models/      Dart counterparts of the API responses
     repositories/ Data access per endpoint
   providers/     Riverpod providers (session, notifications, theme, data)
-  features/      Screens (auth, home, movies, profile, users, watchlists,
+  features/      Screens (auth, home, discover, movies, profile, watchlists,
                  messages, events, notifications, settings, subscription, shell)
-  widgets/       Shared components (poster, avatar, state views,
-                 compatibility badge, rating bottom sheet)
+  widgets/       App-wide overlays (offline banner)
+assets/fonts/    Bundled Inter and Bricolage Grotesque (SIL OFL, licenses
+                 next to the files)
 ```
 
 ### Session management

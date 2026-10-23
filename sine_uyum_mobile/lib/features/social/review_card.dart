@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import '../../data/models/social.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
-import '../../widgets/poster_image.dart';
+import '../../core/ui/poster_image.dart';
 
 /// Author row: avatar, name, rating and compatibility badge.
 class AuthorRow extends StatelessWidget {
@@ -57,7 +57,11 @@ class AuthorRow extends StatelessWidget {
         ),
         if (rating != null)
           Chip(
-            avatar: const Icon(Icons.star, size: 16, color: Colors.amber),
+            avatar: const Icon(
+              Icons.star_rounded,
+              size: 16,
+              color: Colors.amber,
+            ),
             label: Text(l10n.ratingOutOfTen(rating!)),
             visualDensity: VisualDensity.compact,
           ),
@@ -195,7 +199,7 @@ class _ReviewCardState extends ConsumerState<ReviewCard> {
             if (hidden)
               OutlinedButton.icon(
                 onPressed: () => setState(() => _revealed = true),
-                icon: const Icon(Icons.visibility_outlined),
+                icon: const Icon(Icons.visibility_rounded),
                 label: Text(l10n.spoilerReveal),
               )
             else
@@ -206,14 +210,16 @@ class _ReviewCardState extends ConsumerState<ReviewCard> {
                 TextButton.icon(
                   onPressed: _toggleLike,
                   icon: Icon(
-                    _review.likedByMe ? Icons.favorite : Icons.favorite_border,
+                    _review.likedByMe
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
                     color: _review.likedByMe ? Colors.redAccent : null,
                   ),
                   label: Text('${_review.likeCount}'),
                 ),
                 TextButton.icon(
                   onPressed: _openComments,
-                  icon: const Icon(Icons.chat_bubble_outline),
+                  icon: const Icon(Icons.chat_bubble_outline_rounded),
                   label: Text(l10n.commentCount(_review.commentCount)),
                 ),
               ],
@@ -354,7 +360,9 @@ class _CommentsSheetState extends ConsumerState<CommentsSheet> {
                               trailing: c.canDelete
                                   ? IconButton(
                                       tooltip: l10n.deleteComment,
-                                      icon: const Icon(Icons.delete_outline),
+                                      icon: const Icon(
+                                        Icons.delete_outline_rounded,
+                                      ),
                                       onPressed: () => _delete(c),
                                     )
                                   : null,
@@ -380,7 +388,7 @@ class _CommentsSheetState extends ConsumerState<CommentsSheet> {
                     IconButton(
                       tooltip: l10n.commonSend,
                       onPressed: _sending ? null : _send,
-                      icon: const Icon(Icons.send),
+                      icon: const Icon(Icons.send_rounded),
                     ),
                   ],
                 ),

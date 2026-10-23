@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
-import '../../widgets/movie_widgets.dart';
-import '../../widgets/state_views.dart';
+import '../../core/ui/movie_widgets.dart';
+import '../../core/ui/state_views.dart';
 
 class MovieSearchPage extends ConsumerStatefulWidget {
   const MovieSearchPage({super.key});
@@ -52,7 +52,7 @@ class _MovieSearchPageState extends ConsumerState<MovieSearchPage> {
             suffixIcon: _controller.text.isEmpty
                 ? null
                 : IconButton(
-                    icon: const Icon(Icons.clear),
+                    icon: const Icon(Icons.clear_rounded),
                     onPressed: () {
                       _controller.clear();
                       setState(() => _query = '');
@@ -62,7 +62,10 @@ class _MovieSearchPageState extends ConsumerState<MovieSearchPage> {
         ),
       ),
       body: _query.isEmpty
-          ? EmptyView(icon: Icons.search, message: l10n.movieSearchPrompt)
+          ? EmptyView(
+              icon: Icons.search_rounded,
+              message: l10n.movieSearchPrompt,
+            )
           : ref
                 .watch(movieSearchProvider(_query))
                 .when(

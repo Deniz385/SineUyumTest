@@ -8,10 +8,10 @@ import '../../providers/repository_providers.dart';
 import '../../providers/session_provider.dart';
 import '../../providers/watchlist_provider.dart';
 import '../../providers/year_in_review_provider.dart';
-import '../../widgets/movie_widgets.dart';
-import '../../widgets/poster_image.dart';
-import '../../widgets/state_views.dart';
-import '../watchlists/list_cards.dart';
+import '../../core/ui/movie_widgets.dart';
+import '../../core/ui/poster_image.dart';
+import '../../core/ui/state_views.dart';
+import '../watchlists/profile_lists_section.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key, required this.userId});
@@ -32,8 +32,14 @@ class ProfilePage extends ConsumerWidget {
         actions: [
           if (isOwnProfile)
             IconButton(
+              tooltip: l10n.commonSettings,
+              icon: const Icon(Icons.settings_rounded),
+              onPressed: () => context.push('/settings'),
+            ),
+          if (isOwnProfile)
+            IconButton(
               tooltip: l10n.editProfile,
-              icon: const Icon(Icons.edit_outlined),
+              icon: const Icon(Icons.edit_rounded),
               onPressed: () => context.push('/profile/edit'),
             ),
           if (!isOwnProfile && loaded != null && !loaded.isBlockedByMe)
@@ -87,7 +93,7 @@ class ProfilePage extends ConsumerWidget {
                         onPressed: () => context.push(
                           '/profile/$userId/identity${isOwnProfile ? '?mine=1' : ''}',
                         ),
-                        icon: const Icon(Icons.badge_outlined),
+                        icon: const Icon(Icons.badge_rounded),
                         label: Text(
                           isOwnProfile
                               ? l10n.myFilmIdentity
@@ -96,7 +102,7 @@ class ProfilePage extends ConsumerWidget {
                       ),
                     TextButton.icon(
                       onPressed: () => context.push('/profile/$userId/diary'),
-                      icon: const Icon(Icons.menu_book_outlined),
+                      icon: const Icon(Icons.menu_book_rounded),
                       label: Text(
                         isOwnProfile ? l10n.myDiary : l10n.diaryTitle,
                       ),
@@ -105,7 +111,7 @@ class ProfilePage extends ConsumerWidget {
                       onPressed: () => context.push(
                         '/profile/$userId/year-in-review?year=$recapYear',
                       ),
-                      icon: const Icon(Icons.auto_awesome_outlined),
+                      icon: const Icon(Icons.auto_awesome_rounded),
                       label: Text(
                         isOwnProfile
                             ? l10n.recapButtonMine(recapYear)
@@ -118,7 +124,7 @@ class ProfilePage extends ConsumerWidget {
                   const SizedBox(height: 20),
                   _SocialActions(userId: userId, userName: profile.userName),
                 ],
-                _PublicLists(userId: userId),
+                ProfileListsSection(userId: userId, isMine: isOwnProfile),
                 const SizedBox(height: 24),
                 ..._ratings(context, profile),
               ],
@@ -136,7 +142,10 @@ class ProfilePage extends ConsumerWidget {
     ),
     const SizedBox(height: 8),
     if (profile.ratings.isEmpty)
-      EmptyView(icon: Icons.star_outline, message: context.l10n.noRatedMovies)
+      EmptyView(
+        icon: Icons.star_outline_rounded,
+        message: context.l10n.noRatedMovies,
+      )
     else
       for (final rated in profile.ratings)
         MovieListTile(
@@ -193,7 +202,7 @@ class _RestrictedNotice extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: ListTile(
-        leading: const Icon(Icons.lock_outline),
+        leading: const Icon(Icons.lock_outline_rounded),
         title: Text(context.l10n.profileRestricted),
       ),
     );
@@ -406,12 +415,12 @@ class _SocialActions extends ConsumerWidget {
                 child: status.isFollowing
                     ? OutlinedButton.icon(
                         onPressed: () => toggleFollow(true),
-                        icon: const Icon(Icons.person_remove_outlined),
+                        icon: const Icon(Icons.person_remove_rounded),
                         label: Text(l10n.unfollow),
                       )
                     : FilledButton.icon(
                         onPressed: () => toggleFollow(false),
-                        icon: const Icon(Icons.person_add_outlined),
+                        icon: const Icon(Icons.person_add_rounded),
                         label: Text(l10n.commonFollow),
                       ),
               ),
@@ -421,7 +430,7 @@ class _SocialActions extends ConsumerWidget {
                   onPressed: () => context.push(
                     '/conversation/$userId?name=${Uri.encodeComponent(userName)}',
                   ),
-                  icon: const Icon(Icons.chat_bubble_outline),
+                  icon: const Icon(Icons.chat_bubble_outline_rounded),
                   label: Text(l10n.sendMessage),
                 ),
               ),
@@ -494,7 +503,10 @@ class _Insights extends StatelessWidget {
           if (favorite != null)
             Card(
               child: ListTile(
-                leading: const Icon(Icons.favorite, color: Colors.redAccent),
+                leading: const Icon(
+                  Icons.favorite_rounded,
+                  color: Colors.redAccent,
+                ),
                 title: Text(l10n.sharedFavorite(favorite.title)),
                 subtitle: Text(
                   l10n.sharedFavoriteRatings(
@@ -509,7 +521,7 @@ class _Insights extends StatelessWidget {
           if (debate != null)
             Card(
               child: ListTile(
-                leading: const Icon(Icons.forum_outlined),
+                leading: const Icon(Icons.forum_rounded),
                 title: Text(l10n.debateMovie(debate.title)),
                 subtitle: Text(
                   l10n.debateMovieRatings(
@@ -534,45 +546,6 @@ class _Insights extends StatelessWidget {
                 ),
               ),
             ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The profile's public lists in a horizontal carousel. Hidden while
-/// loading, when there are none and when the server refuses them (403/404:
-/// the same rule as the profile details).
-class _PublicLists extends ConsumerWidget {
-  const _PublicLists({required this.userId});
-
-  final String userId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final page = ref.watch(userPublicListsProvider(userId)).value;
-    if (page == null || page.items.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            context.l10n.publicListsTitle,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: WatchlistCardCompact.width + 52,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: page.items.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 12),
-              itemBuilder: (context, index) =>
-                  WatchlistCardCompact(card: page.items[index]),
-            ),
-          ),
         ],
       ),
     );

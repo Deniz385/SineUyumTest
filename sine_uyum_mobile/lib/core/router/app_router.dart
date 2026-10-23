@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/login_page.dart';
 import '../../features/auth/register_page.dart';
 import '../../features/diary/diary_page.dart';
+import '../../features/discover/discover_page.dart';
 import '../../features/events/event_page.dart';
 import '../../features/home/home_page.dart';
 import '../../features/messages/conversation_page.dart';
@@ -19,13 +20,14 @@ import '../../features/settings/privacy_settings_page.dart';
 import '../../features/settings/settings_page.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/shell/splash_page.dart';
+import '../../features/shell/tab_scaffold.dart';
 import '../../features/subscription/subscription_page.dart';
-import '../../features/users/user_search_page.dart';
 import '../../features/watchlists/discover_lists_page.dart';
 import '../../features/watchlists/public_watchlist_page.dart';
 import '../../features/watchlists/watchlist_detail_page.dart';
 import '../../features/watchlists/watchlists_page.dart';
 import '../../features/year_in_review/year_in_review_page.dart';
+import '../../l10n/l10n.dart';
 import '../../providers/session_provider.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -66,29 +68,43 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (_, _) => const LoginPage()),
       GoRoute(path: '/register', builder: (_, _) => const RegisterPage()),
 
-      // The five bottom-navigation tabs; each keeps its own state.
+      // The five bottom-navigation tabs (docs/DESIGN-SYSTEM.md §7); each
+      // keeps its own state. Keep AppShell.tabPaths in the same order.
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             AppShell(navigationShell: navigationShell),
         branches: [
           StatefulShellBranch(
             routes: [
-              GoRoute(path: '/home', builder: (_, _) => const HomePage()),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
               GoRoute(
-                path: '/people',
-                builder: (_, _) => const UserSearchPage(),
+                path: '/home',
+                builder: (context, _) => TabScaffold(
+                  title: context.l10n.appName,
+                  body: const HomePage(),
+                ),
               ),
             ],
           ),
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/watchlists',
-                builder: (_, _) => const WatchlistsPage(),
+                path: '/discover',
+                builder: (context, state) => DiscoverPage(
+                  section: DiscoverSection.parse(
+                    state.uri.queryParameters['section'],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/event',
+                builder: (context, _) => TabScaffold(
+                  title: context.l10n.navEvent,
+                  body: const EventPage(),
+                ),
               ),
             ],
           ),
@@ -96,17 +112,29 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/messages',
-                builder: (_, _) => const MessagesPage(),
+                builder: (context, _) => TabScaffold(
+                  title: context.l10n.navMessages,
+                  body: const MessagesPage(),
+                ),
               ),
             ],
           ),
           StatefulShellBranch(
             routes: [
-              GoRoute(path: '/event', builder: (_, _) => const EventPage()),
+              GoRoute(
+                path: '/profile',
+                builder: (_, _) => const MyProfileTab(),
+              ),
             ],
           ),
         ],
       ),
+
+      // The old People tab lives in Discover now; old links still work.
+      GoRoute(path: '/people', redirect: (_, _) => '/discover?section=people'),
+      // My lists, invitations and saved lists (the old Lists tab; the
+      // shared-list notification opens it).
+      GoRoute(path: '/watchlists', builder: (_, _) => const WatchlistsPage()),
 
       // Detail screens opened on top of the tabs.
       GoRoute(
@@ -190,3 +218,15 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+/// The Profile tab: the signed-in user's own profile.
+class MyProfileTab extends ConsumerWidget {
+  const MyProfileTab({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userId = ref.watch(sessionProvider.select((s) => s.user?.id));
+    if (userId == null) return const SizedBox.shrink();
+    return ProfilePage(userId: userId);
+  }
+}

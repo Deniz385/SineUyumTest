@@ -9,8 +9,8 @@ import '../../data/models/watchlist.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/watchlist_provider.dart';
-import '../../widgets/poster_image.dart';
-import '../../widgets/state_views.dart';
+import '../../core/ui/poster_image.dart';
+import '../../core/ui/state_views.dart';
 
 /// What the sheet asks its page to do after closing.
 enum WatchlistMembersAction { leave }
@@ -203,8 +203,8 @@ class _WatchlistMembersSheetState extends ConsumerState<WatchlistMembersSheet> {
                             : l10n.watchlistCancelInvitation,
                         icon: Icon(
                           member.accepted
-                              ? Icons.person_remove_outlined
-                              : Icons.close,
+                              ? Icons.person_remove_rounded
+                              : Icons.close_rounded,
                         ),
                         onPressed: _busy.contains(member.user.id)
                             ? null
@@ -231,7 +231,7 @@ class _WatchlistMembersSheetState extends ConsumerState<WatchlistMembersSheet> {
                   ),
                   onPressed: () =>
                       Navigator.of(context).pop(WatchlistMembersAction.leave),
-                  icon: const Icon(Icons.logout),
+                  icon: const Icon(Icons.logout_rounded),
                   label: Text(l10n.watchlistLeave),
                 ),
               ),
@@ -257,7 +257,7 @@ class _WatchlistMembersSheetState extends ConsumerState<WatchlistMembersSheet> {
           textInputAction: TextInputAction.search,
           decoration: InputDecoration(
             hintText: l10n.watchlistInviteHint,
-            prefixIcon: const Icon(Icons.person_add_alt_1_outlined),
+            prefixIcon: const Icon(Icons.person_add_alt_1_rounded),
           ),
         ),
       ),
@@ -328,7 +328,7 @@ class _PersonTile extends StatelessWidget {
           : Row(
               children: [
                 if (pending) ...[
-                  const Icon(Icons.schedule, size: 14),
+                  const Icon(Icons.schedule_rounded, size: 14),
                   const SizedBox(width: 4),
                 ],
                 Flexible(

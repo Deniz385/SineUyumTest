@@ -10,6 +10,10 @@ class MovieRepository {
 
   Future<List<Movie>> popular() => _list('/api/v1/movies/popular');
 
+  /// Well-known films of all time (the server serves pages 1–5).
+  Future<List<Movie>> topRated({int page = 1}) =>
+      _list('/api/v1/movies/top_rated', query: {'page': page});
+
   Future<List<Movie>> search(String query) async {
     if (query.trim().isEmpty) return const [];
     return _list('/api/v1/movies/search', query: {'query': query});

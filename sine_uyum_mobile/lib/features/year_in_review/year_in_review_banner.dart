@@ -51,7 +51,10 @@ class YearInReviewBanner extends ConsumerWidget {
             children: [
               const Padding(
                 padding: EdgeInsets.only(top: 10),
-                child: Icon(Icons.auto_awesome, color: Color(0xFFFFD54F)),
+                child: Icon(
+                  Icons.auto_awesome_rounded,
+                  color: Color(0xFFFFD54F),
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -69,7 +72,7 @@ class YearInReviewBanner extends ConsumerWidget {
               ),
               IconButton(
                 tooltip: l10n.recapBannerDismiss,
-                icon: const Icon(Icons.close, color: Colors.white70),
+                icon: const Icon(Icons.close_rounded, color: Colors.white70),
                 onPressed: () => ref
                     .read(recapBannerDismissedProvider(dismissedKey).notifier)
                     .dismiss(),

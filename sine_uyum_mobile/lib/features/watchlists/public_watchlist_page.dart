@@ -6,9 +6,9 @@ import '../../data/models/watchlist.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/session_provider.dart';
 import '../../providers/watchlist_provider.dart';
-import '../../widgets/movie_widgets.dart';
-import '../../widgets/poster_image.dart';
-import '../../widgets/state_views.dart';
+import '../../core/ui/movie_widgets.dart';
+import '../../core/ui/poster_image.dart';
+import '../../core/ui/state_views.dart';
 import 'list_cards.dart';
 
 /// Read-only view of a list I am not a member of: someone else's public list
@@ -45,7 +45,7 @@ class PublicWatchlistPage extends ConsumerWidget {
               const Divider(height: 1),
               if (list.items.isEmpty)
                 EmptyView(
-                  icon: Icons.movie_outlined,
+                  icon: Icons.movie_rounded,
                   message: l10n.publicListEmpty,
                 )
               else
@@ -133,7 +133,7 @@ class _Header extends ConsumerWidget {
               child: FilledButton.tonalIcon(
                 onPressed: () =>
                     context.pushReplacement('/watchlist/${list.id}'),
-                icon: const Icon(Icons.edit_outlined),
+                icon: const Icon(Icons.edit_rounded),
                 label: Text(l10n.watchlistOpenEditable),
               ),
             ),

@@ -19,7 +19,7 @@ class SplashPage extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.movie_filter_outlined,
+              Icons.movie_filter_rounded,
               size: 64,
               color: Theme.of(context).colorScheme.primary,
             ),

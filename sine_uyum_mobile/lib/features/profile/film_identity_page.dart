@@ -10,7 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../data/models/profile.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/repository_providers.dart';
-import '../../widgets/state_views.dart';
+import '../../core/ui/state_views.dart';
 
 final filmIdentityProvider = FutureProvider.autoDispose
     .family<FilmIdentity, String>(
@@ -100,7 +100,7 @@ class _FilmIdentityPageState extends ConsumerState<FilmIdentityPage> {
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: _sharing ? null : () => _share(data),
-              icon: const Icon(Icons.ios_share),
+              icon: const Icon(Icons.ios_share_rounded),
               label: Text(l10n.shareAsImage),
             ),
           ],
